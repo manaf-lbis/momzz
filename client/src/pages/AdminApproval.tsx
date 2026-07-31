@@ -29,11 +29,11 @@ export const AdminApproval: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-8 h-8 text-yellow-400" />
-              <h1 className="text-3xl font-extrabold tracking-tight text-zinc-100 uppercase">
+              <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-zinc-100 uppercase">
                 ADMIN TECHNICIAN APPROVALS
               </h1>
             </div>
-            <p className="text-xs font-mono text-zinc-400 mt-1">
+            <p className="text-[10px] sm:text-xs font-mono text-zinc-400 mt-1">
               REVIEW AND VERIFY PENDING WORKER ACCOUNT REGISTRATIONS
             </p>
           </div>
@@ -48,18 +48,18 @@ export const AdminApproval: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div className="industrial-card p-12 text-center text-zinc-400 font-mono">
+          <div className="industrial-card p-8 sm:p-12 text-center text-zinc-400 font-mono text-xs sm:text-sm">
             Loading pending worker registrations...
           </div>
         ) : isError ? (
           <div className="p-4 bg-red-950/60 border border-red-800 rounded-xl text-red-300 text-xs font-mono flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-400" />
+            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
             Failed to retrieve pending worker approvals. Ensure backend is running.
           </div>
         ) : pendingWorkers.length === 0 ? (
-          <div className="industrial-card p-12 text-center space-y-3 rounded-xl">
+          <div className="industrial-card p-8 sm:p-12 text-center space-y-3 rounded-xl">
             <UserCheck className="w-10 h-10 text-yellow-400 mx-auto opacity-75" />
-            <h3 className="text-lg font-bold uppercase tracking-wider text-zinc-200">
+            <h3 className="text-base sm:text-lg font-bold uppercase tracking-wider text-zinc-200">
               NO PENDING APPROVALS
             </h3>
             <p className="text-xs text-zinc-400 font-mono max-w-md mx-auto">
@@ -67,8 +67,44 @@ export const AdminApproval: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="industrial-card rounded-xl overflow-hidden shadow-2xl">
-            <div className="overflow-x-auto">
+          <div className="space-y-4">
+            {/* Mobile Card List View (Visible on small screens) */}
+            <div className="block md:hidden space-y-3">
+              {pendingWorkers.map((worker: any) => {
+                const workerId = worker.id || worker._id;
+                return (
+                  <div
+                    key={workerId}
+                    className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3 shadow-lg"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-bold text-zinc-100 text-base">{worker.name}</h4>
+                        <p className="text-xs font-mono text-zinc-400 mt-0.5">{worker.mobile}</p>
+                      </div>
+                      <Badge variant="zinc">{worker.role}</Badge>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-zinc-800 text-xs font-mono">
+                      <span className="text-zinc-500">
+                        {worker.createdAt ? formatDate(new Date(worker.createdAt)) : 'Recently'}
+                      </span>
+                      <Button
+                        variant="primary"
+                        className="text-xs py-1.5 px-3"
+                        isLoading={isApproving}
+                        onClick={() => handleApprove(workerId)}
+                      >
+                        <UserCheck className="w-4 h-4 mr-1.5" /> Approve
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View (Hidden on mobile) */}
+            <div className="hidden md:block industrial-card rounded-xl overflow-hidden shadow-2xl">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-zinc-900 border-b border-zinc-800 text-xs font-mono uppercase tracking-wider text-zinc-400">
