@@ -136,7 +136,17 @@ export class AuthService {
   }
 
   async getPendingWorkers() {
-    return await userRepository.findPendingUsers();
+    const pendingUsers = await userRepository.findPendingUsers();
+    return pendingUsers.map((user) => ({
+      id: user._id.toString(),
+      _id: user._id.toString(),
+      name: user.name,
+      mobile: user.mobile,
+      role: user.role,
+      isApproved: user.isApproved,
+      taskCount: user.taskCount,
+      createdAt: user.createdAt,
+    }));
   }
 }
 

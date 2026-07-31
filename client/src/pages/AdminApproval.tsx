@@ -80,28 +80,31 @@ export const AdminApproval: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800 text-sm font-sans">
-                  {pendingWorkers.map((worker) => (
-                    <tr key={worker.id} className="hover:bg-zinc-900/50 transition-colors">
-                      <td className="p-4 font-bold text-zinc-100">{worker.name}</td>
-                      <td className="p-4 font-mono text-zinc-300">{worker.mobile}</td>
-                      <td className="p-4">
-                        <Badge variant="zinc">{worker.role}</Badge>
-                      </td>
-                      <td className="p-4 text-xs font-mono text-zinc-400">
-                        {worker.id ? formatDate(new Date()) : 'Recently'}
-                      </td>
-                      <td className="p-4 text-right">
-                        <Button
-                          variant="primary"
-                          className="text-xs"
-                          isLoading={isApproving}
-                          onClick={() => handleApprove(worker.id)}
-                        >
-                          <UserCheck className="w-4 h-4 mr-1.5" /> Approve Technician
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                  {pendingWorkers.map((worker: any) => {
+                    const workerId = worker.id || worker._id;
+                    return (
+                      <tr key={workerId} className="hover:bg-zinc-900/50 transition-colors">
+                        <td className="p-4 font-bold text-zinc-100">{worker.name}</td>
+                        <td className="p-4 font-mono text-zinc-300">{worker.mobile}</td>
+                        <td className="p-4">
+                          <Badge variant="zinc">{worker.role}</Badge>
+                        </td>
+                        <td className="p-4 text-xs font-mono text-zinc-400">
+                          {worker.createdAt ? formatDate(new Date(worker.createdAt)) : 'Recently'}
+                        </td>
+                        <td className="p-4 text-right">
+                          <Button
+                            variant="primary"
+                            className="text-xs"
+                            isLoading={isApproving}
+                            onClick={() => handleApprove(workerId)}
+                          >
+                            <UserCheck className="w-4 h-4 mr-1.5" /> Approve Technician
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
