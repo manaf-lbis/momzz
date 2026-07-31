@@ -62,8 +62,11 @@ app.get('/.well-known/*', (req: Request, res: Response) => {
   res.status(200).json({ status: 'OK' });
 });
 
+import jobRouter from './router/jobRouter';
+
 // API Routes
 app.use('/api/auth', authRouter);
+app.use('/api/jobs', jobRouter);
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {

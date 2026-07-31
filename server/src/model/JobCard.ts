@@ -1,12 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { TASK_STATUS, TaskStatus } from '../constants/status';
 
 export interface IJobCard extends Document {
   vehicleName: string;
   vehicleNumber: string;
   customerName?: string;
-  status: TaskStatus;
-  createdBy: mongoose.Types.ObjectId;
+  status: 'IN_PROGRESS' | 'COMPLETED';
+  createdBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -14,12 +13,13 @@ export interface IJobCard extends Document {
 const JobCardSchema: Schema = new Schema(
   {
     vehicleName: { type: String, required: true, trim: true },
-    vehicleNumber: { type: String, required: true, trim: true },
+    vehicleNumber: { type: String, required: true, uppercase: true, trim: true },
     customerName: { type: String, trim: true },
-    status: { type: String, enum: Object.values(TASK_STATUS), default: TASK_STATUS.OPEN },
-    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    status: { type: String, enum: ['IN_PROGRESS', 'COMPLETED'], default: 'IN_PROGRESS' },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }
 );
 
-export default mongoose.model<IJobCard>('JobCard', JobCardSchema);
+export const JobCard = mongoose.model<IJobCard>('JobCard', JobCardSchema);
+export default JobCard;
