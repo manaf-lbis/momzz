@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { authService } from '../service/authService';
+import { userRepository } from '../repository/userRepository';
 import { sendSuccess, sendError } from '../utils/responseHandler';
 
 const COOKIE_OPTIONS = {
@@ -155,6 +156,15 @@ export class AuthController {
       return sendSuccess(res, `Worker approval status set to ${isApproved}.`, updatedUser, 200);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to update approval status.', 400);
+    }
+  }
+
+  async getLeaderboard(req: Request, res: Response) {
+    try {
+      const leaderboard = await userRepository.getLeaderboard(10);
+      return sendSuccess(res, 'Leaderboard fetched.', leaderboard, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to fetch leaderboard.', 400);
     }
   }
 }

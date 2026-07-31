@@ -93,6 +93,10 @@ export const authApi = apiSlice.injectEndpoints({
       query: () => '/dummy',
       providesTags: ['Dummy'],
     }),
+    getLeaderboard: builder.query<{ success: boolean; data: User[] }, void>({
+      query: () => '/auth/leaderboard',
+      providesTags: ['User'],
+    }),
   }),
 });
 
@@ -105,4 +109,5 @@ export const {
   useGetPendingWorkersQuery,
   useApproveWorkerMutation,
   useGetDummyQuery,
+  useGetLeaderboardQuery,
 } = authApi;

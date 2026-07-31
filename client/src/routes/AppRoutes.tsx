@@ -8,6 +8,8 @@ import { AdminHome } from '../pages/AdminHome';
 import { MechanicHome } from '../pages/MechanicHome';
 import { ProtectedRoute } from './ProtectedRoute';
 
+import { ProfilePage } from '../pages/ProfilePage';
+
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
@@ -19,6 +21,7 @@ export const AppRoutes: React.FC = () => {
       {/* Authenticated Routes */}
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Route>
 
       {/* Admin Only Routes */}

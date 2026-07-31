@@ -12,5 +12,6 @@ router.post('/logout', authController.logout);
 router.get('/me', authMiddleware, authController.getMe);
 router.get('/pending', authMiddleware, adminMiddleware, authController.getPendingWorkers);
 router.patch('/approve/:userId', authMiddleware, adminMiddleware, authController.approveWorker);
+router.get('/leaderboard', authMiddleware, authController.getLeaderboard);
 
 export default router;

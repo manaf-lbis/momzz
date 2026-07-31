@@ -55,9 +55,38 @@ export const jobApi = apiSlice.injectEndpoints({
         url: `/jobs/tasks/${taskId}/toggle`,
         method: 'PATCH',
       }),
+      invalidatesTags: ['JobCard', 'User'],
+    }),
+    addTask: builder.mutation<{ success: boolean; data: TaskItem }, { jobCardId: string; title: string }>({
+      query: ({ jobCardId, title }) => ({
+        url: `/jobs/${jobCardId}/tasks`,
+        method: 'POST',
+        body: { title },
+      }),
       invalidatesTags: ['JobCard'],
+    }),
+    deleteTask: builder.mutation<{ success: boolean; message: string }, { taskId: string }>({
+      query: ({ taskId }) => ({
+        url: `/jobs/tasks/${taskId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['JobCard', 'User'],
+    }),
+    deleteJobCard: builder.mutation<{ success: boolean; message: string }, { jobCardId: string }>({
+      query: ({ jobCardId }) => ({
+        url: `/jobs/${jobCardId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['JobCard', 'User'],
     }),
   }),
 });
 
-export const { useGetJobCardsQuery, useCreateJobMutation, useToggleTaskMutation } = jobApi;
+export const {
+  useGetJobCardsQuery,
+  useCreateJobMutation,
+  useToggleTaskMutation,
+  useAddTaskMutation,
+  useDeleteTaskMutation,
+  useDeleteJobCardMutation,
+} = jobApi;
