@@ -18,8 +18,7 @@ export const AppRoutes: React.FC = () => {
 
       {/* Authenticated Routes */}
       <Route element={<ProtectedRoute />}>
-  import { HomePage } from '../pages/HomePage';
-      <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<HomePage />} />
       </Route>
 
       {/* Admin Only Routes */}

@@ -31,10 +31,11 @@ export const Register: React.FC = () => {
     try {
       const response = await register({ name, mobile, password, role }).unwrap();
       if (response.success && response.data) {
+        const token = response.data.token || response.data.accessToken;
         dispatch(
           setCredentials({
             user: response.data.user,
-            token: response.data.token,
+            token,
           })
         );
         navigate('/');
