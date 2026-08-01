@@ -94,14 +94,17 @@ export const AuthPage = () => {
 
       {/* App Branding */}
       <div className="text-center mb-6">
-        <div className="w-10 h-10 rounded-xl bg-amber-400 dark:bg-yellow-400 flex items-center justify-center text-zinc-950 font-black mx-auto mb-2 shadow-sm">
-          <Wrench className="w-5 h-5 stroke-[2.5]" />
-        </div>
+        <img
+          src="/logo.png"
+          alt="MOMZ'Z AUTOMOTIVE"
+          className="w-16 h-16 rounded-2xl object-cover bg-black border border-zinc-800 shadow-xl mx-auto mb-3"
+        />
         <h1 className="text-2xl font-extrabold tracking-wider uppercase text-zinc-900 dark:text-zinc-100">
           MOMZ<span className="text-amber-600 dark:text-yellow-400">'Z</span> AUTO GARAGE
         </h1>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Vehicle &amp; Task Command Center</p>
       </div>
+
 
       {/* Main Card */}
       <div className="w-full max-w-sm industrial-card rounded-3xl p-6 shadow-xl">

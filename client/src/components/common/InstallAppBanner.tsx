@@ -69,9 +69,12 @@ export const InstallAppBanner: React.FC = () => {
   return (
     <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-zinc-950 px-3 sm:px-4 py-2.5 shadow-lg relative border-b border-yellow-500/50 flex flex-wrap items-center justify-between gap-2 z-40 animate-fadeIn">
       <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-8 h-8 rounded-lg bg-zinc-950 text-yellow-400 flex items-center justify-center font-bold shrink-0 shadow-md">
-          <Smartphone className="w-4 h-4 animate-bounce" />
-        </div>
+        <img
+          src="/logo.png"
+          alt="MOMZ'Z AUTOMOTIVE Logo"
+          className="w-8 h-8 rounded-lg object-cover bg-black border border-zinc-900 shrink-0 shadow-md"
+        />
+
         <div className="min-w-0">
           <p className="text-xs sm:text-sm font-extrabold uppercase tracking-tight flex items-center gap-1 truncate">
             <span>Install MOMZ'Z AUTO GARAGE App</span>

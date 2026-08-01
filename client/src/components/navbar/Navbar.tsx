@@ -29,15 +29,18 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center justify-between h-14">
           {/* Logo & Brand */}
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-amber-400 dark:bg-yellow-400 flex items-center justify-center text-zinc-950 font-black shadow-sm transform group-hover:scale-105 active:scale-95 transition-all">
-              <Wrench className="w-4 h-4 stroke-[2.5]" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="MOMZ'Z AUTOMOTIVE Logo"
+              className="w-9 h-9 rounded-lg object-cover bg-black border border-zinc-800 shadow-md transform group-hover:scale-105 active:scale-95 transition-all shrink-0"
+            />
             <div>
               <span className="font-extrabold text-base tracking-wider uppercase text-zinc-900 dark:text-zinc-100 flex items-center gap-1">
                 MOMZ<span className="text-amber-600 dark:text-yellow-400 font-black">'Z</span> AUTO GARAGE
               </span>
             </div>
           </Link>
+
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
