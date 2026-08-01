@@ -50,11 +50,45 @@ export const jobApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['JobCard'],
     }),
-    toggleTask: builder.mutation<{ success: boolean; data: TaskItem }, { taskId: string }>({
+    toggleTask: builder.mutation<{ success: boolean; data: TaskItem }, { taskId: string; currentUserName?: string }>({
       query: ({ taskId }) => ({
         url: `/jobs/tasks/${taskId}/toggle`,
         method: 'PATCH',
       }),
+      async onQueryStarted({ taskId, currentUserName }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          jobApi.util.updateQueryData('getJobCards', undefined, (draft) => {
+            for (const job of draft.data) {
+              const task = job.tasks?.find((t) => (t.id || t._id) === taskId);
+              if (task) {
+                const isCompleted = task.status === 'COMPLETED';
+                task.status = isCompleted ? 'OPEN' : 'COMPLETED';
+                if (!isCompleted) {
+                  task.completedBy = {
+                    name: currentUserName || 'Worker',
+                    mobile: '',
+                    role: 'WORKER',
+                  };
+                  task.completedAt = new Date().toISOString();
+                } else {
+                  task.completedBy = undefined;
+                  task.completedAt = undefined;
+                }
+
+                // Check if all tasks in job are finished
+                const allCompleted = job.tasks.every((t) => t.status === 'COMPLETED');
+                job.status = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
+                break;
+              }
+            }
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: ['JobCard', 'User'],
     }),
     addTask: builder.mutation<{ success: boolean; data: TaskItem }, { jobCardId: string; title: string }>({

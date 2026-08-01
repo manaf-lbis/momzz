@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wrench, Phone, Lock, User, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Phone, Lock, User, ArrowRight, ShieldAlert, Wrench } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLoginMutation, useRegisterMutation } from '../api/authApi';
 import { useAppDispatch } from '../hooks/useAppDispatch';
@@ -17,13 +17,12 @@ export const AuthPage = () => {
 
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { isAuthenticated } = useAppSelector(state => state.auth);
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [errorMsg, setErrorMsg] = useState('');
 
   const [login, { isLoading: isLoginLoading }] = useLoginMutation();
   const [register, { isLoading: isRegLoading }] = useRegisterMutation();
 
-  // Redirect authenticated users away from auth pages
   React.useEffect(() => {
     if (isAuthenticated) {
       navigate('/');
@@ -31,18 +30,15 @@ export const AuthPage = () => {
   }, [isAuthenticated, navigate]);
 
   const validateForm = () => {
-    // Name validation (only for signup)
     if (!isLogin && (!formData.name || formData.name.trim().length < 2)) {
       setErrorMsg('Name must be at least 2 characters long.');
       return false;
     }
-    // Mobile validation: exactly 10 digits
     const mobileRegex = /^[0-9]{10}$/;
     if (!mobileRegex.test(formData.mobile)) {
       setErrorMsg('Mobile number must be exactly 10 digits.');
       return false;
     }
-    // Password validation: min 8 chars, at least one number and one special character
     const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})/;
     if (!passwordRegex.test(formData.password)) {
       setErrorMsg('Password must be at least 8 characters, include a number and a special character.');
@@ -90,37 +86,43 @@ export const AuthPage = () => {
     }
   };
 
-
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col justify-center items-center p-4 transition-colors">
       {/* App Branding */}
       <div className="text-center mb-6">
-
-        <h1 className="text-2xl font-black tracking-wider uppercase">
-          MOMZ'Z
+        <div className="w-10 h-10 rounded-xl bg-amber-400 dark:bg-yellow-400 flex items-center justify-center text-zinc-950 font-black mx-auto mb-2 shadow-sm">
+          <Wrench className="w-5 h-5 stroke-[2.5]" />
+        </div>
+        <h1 className="text-2xl font-extrabold tracking-wider uppercase text-zinc-900 dark:text-zinc-100">
+          GARAGE<span className="text-amber-600 dark:text-yellow-400">HUB</span>
         </h1>
-        <p className="text-xs text-zinc-400 mt-1">Vehicle &amp; Task Management System</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Vehicle & Task Command Center</p>
       </div>
 
       {/* Main Card */}
-      <div className="w-full max-w-sm bg-zinc-900/90 border border-zinc-800 rounded-3xl p-6 shadow-2xl backdrop-blur-md">
-        
+      <div className="w-full max-w-sm industrial-card rounded-3xl p-6 shadow-xl">
         {/* Toggle Switch */}
-        <div className="grid grid-cols-2 p-1 bg-zinc-950 rounded-2xl border border-zinc-800/80 mb-6">
+        <div className="grid grid-cols-2 p-1 bg-zinc-100 dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 mb-6">
           <button
             type="button"
-            onClick={() => { setIsLogin(true); setErrorMsg(''); }}
+            onClick={() => {
+              setIsLogin(true);
+              setErrorMsg('');
+            }}
             className={`py-2 text-xs font-bold rounded-xl transition-all ${
-              isLogin ? 'bg-yellow-400 text-black shadow-md' : 'text-zinc-400 hover:text-zinc-200'
+              isLogin ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950 shadow-md' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
             LOGIN
           </button>
           <button
             type="button"
-            onClick={() => { setIsLogin(false); setErrorMsg(''); }}
+            onClick={() => {
+              setIsLogin(false);
+              setErrorMsg('');
+            }}
             className={`py-2 text-xs font-bold rounded-xl transition-all ${
-              !isLogin ? 'bg-yellow-400 text-black shadow-md' : 'text-zinc-400 hover:text-zinc-200'
+              !isLogin ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950 shadow-md' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
             SIGN UP
@@ -129,7 +131,7 @@ export const AuthPage = () => {
 
         {/* Error Notification */}
         {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -137,15 +139,14 @@ export const AuthPage = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          
           {/* Name Field (Signup Only) */}
           {!isLogin && (
             <div>
-              <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5">
+              <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-1.5">
                 Full Name
               </label>
               <div className="relative">
-                <User className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <User className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   name="name"
@@ -153,19 +154,19 @@ export const AuthPage = () => {
                   placeholder="e.g. Raju Kumar"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-10 pr-4 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 transition-all"
+                  className="w-full rounded-xl py-2.5 pl-10 pr-4 text-xs industrial-input font-medium"
                 />
               </div>
             </div>
           )}
 
-          {/* Mobile Number Field */}
+          {/* Mobile Field */}
           <div>
-            <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5">
+            <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-1.5">
               Mobile Number
             </label>
             <div className="relative">
-              <Phone className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Phone className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="tel"
                 name="mobile"
@@ -174,18 +175,18 @@ export const AuthPage = () => {
                 placeholder="10-digit mobile number"
                 value={formData.mobile}
                 onChange={handleInputChange}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-10 pr-4 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 transition-all"
+                className="w-full rounded-xl py-2.5 pl-10 pr-4 text-xs industrial-input font-mono"
               />
             </div>
           </div>
 
           {/* Password Field */}
           <div>
-            <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5">
+            <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-1.5">
               Password
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 name="password"
@@ -193,7 +194,7 @@ export const AuthPage = () => {
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-10 pr-4 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 transition-all"
+                className="w-full rounded-xl py-2.5 pl-10 pr-4 text-xs industrial-input font-mono"
               />
             </div>
           </div>
@@ -202,16 +203,15 @@ export const AuthPage = () => {
           <button
             type="submit"
             disabled={isLoginLoading || isRegLoading}
-            className="w-full mt-2 bg-yellow-400 hover:bg-yellow-500 active:scale-[0.98] text-black font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-yellow-400/10 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            className="w-full mt-2 bg-amber-400 dark:bg-yellow-400 hover:bg-amber-300 dark:hover:bg-yellow-300 active:scale-[0.98] text-zinc-950 font-mono font-bold text-xs py-3 px-4 rounded-xl shadow-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           >
             <span>{isLogin ? 'LOG IN' : 'CREATE ACCOUNT'}</span>
-            <ArrowRight className="w-4 h-4 stroke-[3]" />
+            <ArrowRight className="w-4 h-4 stroke-[2.5]" />
           </button>
         </form>
       </div>
 
-      {/* Footer Info */}
-      <p className="text-[11px] text-zinc-600 mt-6 text-center">
+      <p className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mt-6 text-center">
         Secured with Token Rotation • 15-Day Living Session
       </p>
     </div>

@@ -2,13 +2,11 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthPage } from '../pages/Auth';
 import { Dashboard } from '../pages/Dashboard';
+import { JobsListPage } from '../pages/JobsListPage';
+import { JobDetailPage } from '../pages/JobDetailPage';
 import { AdminApproval } from '../pages/AdminApproval';
 import { HomePage } from '../pages/HomePage';
-import { AdminHome } from '../pages/AdminHome';
-import { MechanicHome } from '../pages/MechanicHome';
 import { ProtectedRoute } from './ProtectedRoute';
-
-import { ProfilePage } from '../pages/ProfilePage';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -21,7 +19,9 @@ export const AppRoutes: React.FC = () => {
       {/* Authenticated Routes */}
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/jobs" element={<JobsListPage />} />
+        <Route path="/jobs/:id" element={<JobDetailPage />} />
       </Route>
 
       {/* Admin Only Routes */}

@@ -1,189 +1,223 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
-import { Badge } from '../components/common/Badge';
-import { useGetDummyQuery } from '../api/authApi';
-import { Wrench, Shield, CheckCircle2, Clock, Activity, Trophy, Car, Server, RefreshCw } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
+import { useGetJobCardsQuery } from '../api/jobApi';
+import { useGetPendingWorkersQuery } from '../api/authApi';
+import { useAppDispatch } from '../hooks/useAppDispatch';
+import { logout } from '../slice/authSlice';
+import { CreateJobModal } from '../components/jobCard/CreateJobModal';
+import { useNavigate } from 'react-router-dom';
+import {
+  ClipboardList,
+  PlusCircle,
+  ShieldAlert,
+  UserCheck,
+  LogOut,
+  Sun,
+  Moon,
+  ChevronRight,
+  Clock,
+} from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { user, isAdmin, isApproved } = useAuth();
-  const { data: dummyData, isLoading: isDummyLoading, isError: isDummyError, refetch: refetchDummy } = useGetDummyQuery();
+  const { theme, toggleTheme } = useTheme();
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
-  const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Live queries
+  const { data: jobsResponse } = useGetJobCardsQuery();
+  const { data: pendingResponse } = useGetPendingWorkersQuery(undefined, {
+    skip: !isAdmin,
+  });
+
+  const jobs = jobsResponse?.data || [];
+  const openJobsCount = jobs.filter((j) => j.status === 'IN_PROGRESS').length;
+  const pendingWorkersCount = pendingResponse?.data?.length || 0;
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/login');
+  };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
+    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Banner Alert for Pending Worker Approval */}
         {!isApproved && !isAdmin && (
-          <div className="p-4 bg-yellow-400/10 border border-yellow-500/40 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-yellow-glow">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-yellow-400/20 text-yellow-400 rounded-lg">
-                <Clock className="w-6 h-6 animate-pulse" />
-              </div>
+          <div className="p-3 bg-amber-500/10 dark:bg-yellow-500/10 border border-amber-500/30 dark:border-yellow-500/30 rounded-xl flex items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <Clock className="w-5 h-5 text-amber-600 dark:text-yellow-400 animate-pulse flex-shrink-0" />
               <div>
-                <h4 className="font-mono font-bold text-yellow-400 uppercase text-sm">
-                  ACCOUNT PENDING ADMIN APPROVAL
+                <h4 className="font-mono font-bold text-amber-600 dark:text-yellow-400 uppercase text-xs">
+                  ACCOUNT PENDING APPROVAL
                 </h4>
-                <p className="text-xs text-zinc-300">
-                  Your worker profile is under review by garage administrators. Job card assignment features will unlock once approved.
+                <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                  Profile under review by garage admin.
                 </p>
               </div>
             </div>
-            <Badge variant="yellow">PENDING REVIEW</Badge>
+            <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-600 dark:text-yellow-400 rounded-full text-[10px] font-mono font-bold uppercase">
+              PENDING
+            </span>
           </div>
         )}
 
-        {/* Header Title Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
+        {/* Dashboard Title Header */}
+        <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-extrabold tracking-tight text-zinc-100 uppercase">
-                GARAGE OPERATIONAL DASHBOARD
+              <h1 className="text-base sm:text-xl font-bold tracking-tight uppercase text-zinc-900 dark:text-zinc-100">
+                GARAGE OPERATIONAL HUB
               </h1>
-              <Badge variant="yellow" className="text-xs font-mono">SYS-ONLINE</Badge>
+              <span className="px-2 py-0.5 rounded bg-amber-400/10 text-amber-600 dark:text-yellow-400 border border-amber-400/30 font-mono text-[10px] font-bold uppercase">
+                ONLINE
+              </span>
             </div>
-            <p className="text-xs font-mono text-zinc-400 mt-1">
-              LOGGED IN AS: <span className="text-yellow-400 font-bold uppercase">{user?.name}</span> ({user?.role})
+            <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-0.5">
+              USER: <span className="text-amber-600 dark:text-yellow-400 font-bold uppercase">{user?.name}</span> ({user?.role})
             </p>
           </div>
-
-          {isAdmin && (
-            <Link
-              to="/admin/approvals"
-              className="inline-flex items-center gap-2 bg-yellow-400 text-zinc-950 font-mono font-bold text-xs uppercase px-4 py-2.5 rounded-lg shadow-yellow-glow hover:bg-yellow-300 transition-all"
-            >
-              <Shield className="w-4 h-4" /> Admin Approvals Panel
-            </Link>
-          )}
         </div>
 
-        {/* Live Dummy API Req/Res Test Panel */}
-        <div className="industrial-card p-6 rounded-xl border border-yellow-500/30 space-y-4">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-            <div className="flex items-center gap-2">
-              <Server className="w-5 h-5 text-yellow-400" />
-              <h3 className="font-mono font-bold text-sm uppercase text-zinc-100">
-                LIVE API CONNECTION WIDGET (USING VITE_SERVER_URL FROM .ENV)
-              </h3>
-            </div>
-            <button
-              onClick={() => refetchDummy()}
-              className="p-1.5 rounded bg-zinc-800 text-zinc-300 hover:text-yellow-400 hover:bg-zinc-700 transition-colors text-xs font-mono flex items-center gap-1.5"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> Ping API
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-            {/* Request Details */}
-            <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-800 space-y-2">
-              <p className="text-zinc-400 font-bold uppercase flex items-center justify-between">
-                <span>OUTGOING DUMMY REQ</span>
-                <span className="text-yellow-400">GET</span>
-              </p>
-              <div className="text-zinc-300 space-y-1">
-                <p><span className="text-zinc-500">Target Endpoint:</span> <span className="text-yellow-400">{serverUrl}/api/dummy</span></p>
-                <p><span className="text-zinc-500">Config Source:</span> client/.env (VITE_SERVER_URL)</p>
-                <p><span className="text-zinc-500">Headers:</span> Bearer {localStorage.getItem('token')?.slice(0, 15)}...</p>
-              </div>
-            </div>
-
-            {/* Response Details */}
-            <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-800 space-y-2">
-              <p className="text-zinc-400 font-bold uppercase flex items-center justify-between">
-                <span>INCOMING DUMMY RES</span>
-                {isDummyLoading ? (
-                  <span className="text-yellow-400 animate-pulse">CONNECTING...</span>
-                ) : isDummyError ? (
-                  <span className="text-red-400">FAILED</span>
-                ) : (
-                  <span className="text-emerald-400">200 OK</span>
-                )}
-              </p>
-              {isDummyLoading ? (
-                <p className="text-zinc-500">Fetching server response...</p>
-              ) : isDummyError ? (
-                <p className="text-red-400">Backend server is starting up or unreachable at {serverUrl}.</p>
-              ) : (
-                <pre className="text-emerald-400 bg-zinc-900/80 p-2.5 rounded text-[11px] overflow-x-auto border border-emerald-500/20">
-                  {JSON.stringify(dummyData, null, 2)}
-                </pre>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="industrial-card p-6 rounded-xl relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-mono text-zinc-400 uppercase tracking-wider">TECHNICIAN STATUS</p>
-                <p className="text-xl font-extrabold mt-2 text-zinc-100 flex items-center gap-2">
-                  {isApproved || isAdmin ? 'VERIFIED ACTIVE' : 'PENDING APPROVAL'}
-                </p>
-              </div>
-              <div className="p-3 bg-zinc-900 border border-zinc-800 text-yellow-400 rounded-lg">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-            </div>
-          </div>
-
-          <div className="industrial-card p-6 rounded-xl relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-mono text-zinc-400 uppercase tracking-wider">COMPLETED TASKS</p>
-                <p className="text-2xl font-extrabold mt-1 text-yellow-400 font-mono">
-                  {user?.taskCount || 0}
-                </p>
-              </div>
-              <div className="p-3 bg-zinc-900 border border-zinc-800 text-yellow-400 rounded-lg">
-                <Trophy className="w-6 h-6" />
-              </div>
-            </div>
-          </div>
-
-          <div className="industrial-card p-6 rounded-xl relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-mono text-zinc-400 uppercase tracking-wider">SERVER ENDPOINT</p>
-                <p className="text-sm font-extrabold mt-2 text-yellow-400 font-mono">
-                  {serverUrl}
-                </p>
-              </div>
-              <div className="p-3 bg-zinc-900 border border-zinc-800 text-yellow-400 rounded-lg">
-                <Activity className="w-6 h-6" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Content Section Placeholder for Job Cards */}
-        <div className="industrial-card p-8 rounded-xl space-y-4">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+        {/* 4 Compact Mobile-First Action Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* TILE 1: My Jobs */}
+          <div
+            onClick={() => navigate('/jobs')}
+            className="industrial-card p-4 rounded-2xl cursor-pointer group hover:border-amber-500 dark:hover:border-yellow-400 transition-all active:scale-[0.98] flex items-center justify-between"
+          >
             <div className="flex items-center gap-3">
-              <Car className="w-6 h-6 text-yellow-400" />
-              <h3 className="text-lg font-bold uppercase tracking-wide text-zinc-100">
-                ACTIVE VEHICLE JOB CARDS
-              </h3>
+              <div className="p-2.5 bg-amber-400/10 dark:bg-yellow-400/10 text-amber-600 dark:text-yellow-400 rounded-xl group-hover:scale-105 transition-transform">
+                <ClipboardList className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold uppercase text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-colors">
+                  📋 My Jobs
+                </h3>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono font-medium">
+                  {openJobsCount} Active Vehicles
+                </span>
+              </div>
             </div>
-            <Badge variant="zinc">BASIC AUTH & DUMMY API READY</Badge>
+            <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-1 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-all" />
           </div>
 
-          <div className="p-6 bg-zinc-950/60 border border-dashed border-zinc-800 rounded-lg text-center space-y-2">
-            <Wrench className="w-8 h-8 text-zinc-600 mx-auto" />
-            <p className="text-sm text-zinc-300 font-semibold uppercase">
-              AUTHENTICATION & REPOSITORY CORE READY
-            </p>
-            <p className="text-xs text-zinc-500 font-mono max-w-lg mx-auto">
-              The basic authentication flow, Redux RTK Query store, JWT authorization headers, and Mongo User repository layer are live. Job Card CRUD modules will connect next.
-            </p>
+          {/* TILE 2: Create Job (Admin Only) */}
+          {isAdmin ? (
+            <div
+              onClick={() => setIsCreateModalOpen(true)}
+              className="industrial-card p-4 rounded-2xl cursor-pointer group hover:border-amber-500 dark:hover:border-yellow-400 transition-all active:scale-[0.98] flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-400/10 dark:bg-yellow-400/10 text-amber-600 dark:text-yellow-400 rounded-xl group-hover:scale-105 transition-transform">
+                  <PlusCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold uppercase text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-colors">
+                    ➕ Create Job
+                  </h3>
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono font-medium">
+                    New Vehicle Card
+                  </span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-1 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-all" />
+            </div>
+          ) : (
+            <div className="industrial-card p-4 rounded-2xl opacity-50 flex items-center justify-between cursor-not-allowed">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-500 rounded-xl">
+                  <PlusCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold uppercase text-zinc-500">➕ Create Job</h3>
+                  <span className="text-xs text-zinc-400 font-mono">Admin Restricted</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TILE 3: Pending Approvals (Admin Only) */}
+          {isAdmin ? (
+            <div
+              onClick={() => navigate('/admin/approvals')}
+              className="industrial-card p-4 rounded-2xl cursor-pointer group hover:border-amber-500 dark:hover:border-yellow-400 transition-all active:scale-[0.98] flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-400/10 dark:bg-yellow-400/10 text-amber-600 dark:text-yellow-400 rounded-xl group-hover:scale-105 transition-transform">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold uppercase text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-colors">
+                    🛡️ Pending Approvals
+                  </h3>
+                  <span className="text-xs text-amber-600 dark:text-amber-400 font-mono font-bold">
+                    ⚡ {pendingWorkersCount} Pending
+                  </span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-1 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-all" />
+            </div>
+          ) : (
+            <div className="industrial-card p-4 rounded-2xl opacity-50 flex items-center justify-between cursor-not-allowed">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-500 rounded-xl">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold uppercase text-zinc-500">🛡️ Pending Approvals</h3>
+                  <span className="text-xs text-zinc-400 font-mono">Admin Restricted</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TILE 4: My Profile */}
+          <div className="industrial-card p-4 rounded-2xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-400/10 dark:bg-yellow-400/10 text-amber-600 dark:text-yellow-400 rounded-xl">
+                <UserCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold uppercase text-zinc-900 dark:text-zinc-100">
+                  👤 My Profile
+                </h3>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+                  {user?.mobile}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={toggleTheme}
+                className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-amber-600 dark:hover:text-yellow-400 transition-colors"
+                title="Toggle Theme"
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-amber-600" />}
+              </button>
+              <button
+                onClick={handleLogout}
+                className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Modal for Creating Job */}
+        <CreateJobModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+        />
       </main>
     </div>
   );
