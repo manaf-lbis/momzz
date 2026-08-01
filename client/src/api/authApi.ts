@@ -97,6 +97,34 @@ export const authApi = apiSlice.injectEndpoints({
       query: () => '/auth/leaderboard',
       providesTags: ['User'],
     }),
+    getAllUsers: builder.query<{ success: boolean; data: User[] }, void>({
+      query: () => '/auth/users',
+      providesTags: ['AllUsers', 'PendingWorkers', 'User'],
+    }),
+    toggleUserStatus: builder.mutation<{ success: boolean; message: string; data: User }, { userId: string; status: 'ACTIVE' | 'BLOCKED' }>({
+      query: ({ userId, status }) => ({
+        url: `/auth/users/${userId}/status`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: ['AllUsers', 'PendingWorkers', 'User'],
+    }),
+    adminResetPassword: builder.mutation<{ success: boolean; message: string }, { userId: string; newPassword: string }>({
+      query: ({ userId, newPassword }) => ({
+        url: `/auth/users/${userId}/reset-password`,
+        method: 'POST',
+        body: { newPassword },
+      }),
+      invalidatesTags: ['AllUsers'],
+    }),
+    changePassword: builder.mutation<{ success: boolean; message: string }, { currentPassword: string; newPassword: string }>({
+      query: (body) => ({
+        url: '/auth/change-password',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['User'],
+    }),
   }),
 });
 
@@ -110,4 +138,8 @@ export const {
   useApproveWorkerMutation,
   useGetDummyQuery,
   useGetLeaderboardQuery,
+  useGetAllUsersQuery,
+  useToggleUserStatusMutation,
+  useAdminResetPasswordMutation,
+  useChangePasswordMutation,
 } = authApi;

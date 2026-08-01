@@ -42,19 +42,19 @@ export const AdminHome: React.FC = () => {
 
   // Filter jobs where admin has claimed/completed tasks if filterMyJobs is active
   const filteredJobs = filterMyJobs
-    ? jobs.filter((job) =>
-        job.tasks.some(
-          (t) =>
+    ? jobs.filter((job: any) =>
+        job.tasks?.some(
+          (t: any) =>
             t.completedBy &&
-            (t.completedBy.id === user?.id || (t.completedBy as any)._id === user?.id)
+            (t.completedBy.id === user?.id || t.completedBy._id === user?.id)
         )
       )
     : jobs;
 
   // Calculate my active claimed task count
   let myActiveTasksCount = 0;
-  jobs.forEach((j) => {
-    j.tasks.forEach((t) => {
+  jobs.forEach((j: any) => {
+    j.tasks?.forEach((t: any) => {
       if (
         t.status === 'COMPLETED' &&
         t.completedBy &&
@@ -289,7 +289,7 @@ export const AdminHome: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredJobs.map((job) => (
+              {filteredJobs.map((job: any) => (
                 <VehicleCard key={job.id || job._id} job={job} compact={true} />
               ))}
             </div>

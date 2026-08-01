@@ -6,6 +6,7 @@ export interface AuthUserPayload {
   mobile: string;
   role: UserRole;
   isApproved: boolean;
+  status?: 'ACTIVE' | 'BLOCKED';
 }
 
 declare global {

@@ -18,6 +18,7 @@ import {
   Moon,
   ChevronRight,
   Clock,
+  Users,
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -34,8 +35,9 @@ export const Dashboard: React.FC = () => {
     skip: !isAdmin,
   });
 
-  const jobs = jobsResponse?.data || [];
-  const openJobsCount = jobs.filter((j) => j.status === 'IN_PROGRESS').length;
+  const jobsData = jobsResponse?.data;
+  const jobs = Array.isArray(jobsData) ? jobsData : jobsData?.jobs || [];
+  const openJobsCount = jobs.filter((j: any) => j.status === 'IN_PROGRESS').length;
   const pendingWorkersCount = pendingResponse?.data?.length || 0;
 
   const handleLogout = () => {
@@ -85,7 +87,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* 4 Compact Mobile-First Action Cards */}
+        {/* Action Cards (Workers strictly see ONLY My Jobs & My Profile; Admins see all 4) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* TILE 1: My Jobs */}
           <div
@@ -109,7 +111,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* TILE 2: Create Job (Admin Only) */}
-          {isAdmin ? (
+          {isAdmin && (
             <div
               onClick={() => setIsCreateModalOpen(true)}
               className="industrial-card p-4 rounded-2xl cursor-pointer group hover:border-amber-500 dark:hover:border-yellow-400 transition-all active:scale-[0.98] flex items-center justify-between"
@@ -129,22 +131,10 @@ export const Dashboard: React.FC = () => {
               </div>
               <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-1 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-all" />
             </div>
-          ) : (
-            <div className="industrial-card p-4 rounded-2xl opacity-50 flex items-center justify-between cursor-not-allowed">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-500 rounded-xl">
-                  <PlusCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold uppercase text-zinc-500">➕ Create Job</h3>
-                  <span className="text-xs text-zinc-400 font-mono">Admin Restricted</span>
-                </div>
-              </div>
-            </div>
           )}
 
           {/* TILE 3: Pending Approvals (Admin Only) */}
-          {isAdmin ? (
+          {isAdmin && (
             <div
               onClick={() => navigate('/admin/approvals')}
               className="industrial-card p-4 rounded-2xl cursor-pointer group hover:border-amber-500 dark:hover:border-yellow-400 transition-all active:scale-[0.98] flex items-center justify-between"
@@ -164,28 +154,42 @@ export const Dashboard: React.FC = () => {
               </div>
               <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-1 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-all" />
             </div>
-          ) : (
-            <div className="industrial-card p-4 rounded-2xl opacity-50 flex items-center justify-between cursor-not-allowed">
+          )}
+
+          {/* TILE 4: User Management (Admin Only) */}
+          {isAdmin && (
+            <div
+              onClick={() => navigate('/admin/users')}
+              className="industrial-card p-4 rounded-2xl cursor-pointer group hover:border-amber-500 dark:hover:border-yellow-400 transition-all active:scale-[0.98] flex items-center justify-between"
+            >
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-500 rounded-xl">
-                  <ShieldAlert className="w-5 h-5" />
+                <div className="p-2.5 bg-amber-400/10 dark:bg-yellow-400/10 text-amber-600 dark:text-yellow-400 rounded-xl group-hover:scale-105 transition-transform">
+                  <Users className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold uppercase text-zinc-500">🛡️ Pending Approvals</h3>
-                  <span className="text-xs text-zinc-400 font-mono">Admin Restricted</span>
+                  <h3 className="text-sm font-bold uppercase text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-colors">
+                    👥 User Management
+                  </h3>
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono font-medium">
+                    Block & Reset Passwords
+                  </span>
                 </div>
               </div>
+              <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-1 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-all" />
             </div>
           )}
 
-          {/* TILE 4: My Profile */}
-          <div className="industrial-card p-4 rounded-2xl flex items-center justify-between">
+          {/* TILE 5: My Profile */}
+          <div
+            onClick={() => navigate('/profile')}
+            className="industrial-card p-4 rounded-2xl flex items-center justify-between cursor-pointer group hover:border-amber-500 dark:hover:border-yellow-400 transition-all active:scale-[0.98]"
+          >
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-amber-400/10 dark:bg-yellow-400/10 text-amber-600 dark:text-yellow-400 rounded-xl">
                 <UserCheck className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold uppercase text-zinc-900 dark:text-zinc-100">
+                <h3 className="text-sm font-bold uppercase text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-colors">
                   👤 My Profile
                 </h3>
                 <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
@@ -194,7 +198,7 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={toggleTheme}
                 className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-amber-600 dark:hover:text-yellow-400 transition-colors"

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { jobRepository } from '../repository/jobRepository';
 import { sendSuccess, sendError } from '../utils/responseHandler';
+import { emitJobCreated, emitTaskAdded, emitTaskCompleted } from '../config/socket';
 
 export const createJobWithTasks = async (req: Request, res: Response) => {
   try {
@@ -20,9 +21,17 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
       jobCardId: newJob._id,
       title: taskTitle,
     }));
-    await jobRepository.createSubTasks(taskDocs);
+    const createdTasks = await jobRepository.createSubTasks(taskDocs);
 
-    return sendSuccess(res, 'Job Card Published!', newJob, 201);
+    const fullJob = {
+      ...newJob.toObject(),
+      id: newJob._id.toString(),
+      tasks: createdTasks.map((t) => ({ ...t.toObject(), id: t._id.toString() })),
+    };
+
+    emitJobCreated(fullJob);
+
+    return sendSuccess(res, 'Job Card Published!', fullJob, 201);
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to create job card.', 500);
   }
@@ -30,6 +39,49 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
 
 export const getJobCards = async (req: Request, res: Response) => {
   try {
+    const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const timeframe = req.query.timeframe as string | undefined;
+
+    if (page || limit || timeframe) {
+      const paginatedResult = await jobRepository.findPaginatedJobs({ page, limit, timeframe });
+      const jobsWithTasks = await Promise.all(
+        paginatedResult.jobs.map(async (job) => {
+          const tasks = await jobRepository.findTasksByJobCardId(job._id.toString());
+          const allCompleted = tasks.length > 0 && tasks.every((t) => t.status === 'COMPLETED');
+          const targetStatus = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
+
+          if (job.status !== targetStatus) {
+            await jobRepository.updateJobStatus(job._id.toString(), targetStatus);
+            job.status = targetStatus;
+          }
+
+          return {
+            ...job.toObject(),
+            id: job._id.toString(),
+            tasks: tasks.map((t) => ({
+              ...t.toObject(),
+              id: t._id.toString(),
+            })),
+          };
+        })
+      );
+
+      return sendSuccess(
+        res,
+        'Job cards retrieved successfully.',
+        {
+          jobs: jobsWithTasks,
+          pagination: {
+            total: paginatedResult.total,
+            page: paginatedResult.page,
+            totalPages: paginatedResult.totalPages,
+          },
+        },
+        200
+      );
+    }
+
     const jobs = await jobRepository.findAllJobs();
 
     const jobsWithTasks = await Promise.all(
@@ -71,13 +123,17 @@ export const toggleTaskComplete = async (req: Request, res: Response) => {
       return sendError(res, 'Task not found.', 404);
     }
 
+    const formattedTask = {
+      ...updatedTask.toObject(),
+      id: updatedTask._id.toString(),
+    };
+
+    emitTaskCompleted(updatedTask.jobCardId.toString(), taskId, formattedTask.completedBy);
+
     return sendSuccess(
       res,
       `Task status updated to ${updatedTask.status}`,
-      {
-        ...updatedTask.toObject(),
-        id: updatedTask._id.toString(),
-      },
+      formattedTask,
       200
     );
   } catch (error: any) {
@@ -101,13 +157,17 @@ export const addTaskToJob = async (req: Request, res: Response) => {
 
     const newTask = await jobRepository.addTaskToJob(jobCardId, title);
 
+    const formattedTask = {
+      ...newTask.toObject(),
+      id: newTask._id.toString(),
+    };
+
+    emitTaskAdded(jobCardId, formattedTask);
+
     return sendSuccess(
       res,
       'Task added successfully.',
-      {
-        ...newTask.toObject(),
-        id: newTask._id.toString(),
-      },
+      formattedTask,
       201
     );
   } catch (error: any) {

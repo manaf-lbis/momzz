@@ -167,6 +167,62 @@ export class AuthController {
       return sendError(res, error.message || 'Failed to fetch leaderboard.', 400);
     }
   }
+
+  async getAllUsers(req: Request, res: Response) {
+    try {
+      const users = await authService.getAllUsers();
+      return sendSuccess(res, 'All users retrieved successfully.', users, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to fetch users.', 400);
+    }
+  }
+
+  async toggleUserStatus(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+      const { status } = req.body;
+      if (!status || !['ACTIVE', 'BLOCKED'].includes(status)) {
+        return sendError(res, 'Status must be ACTIVE or BLOCKED.', 400);
+      }
+
+      const updatedUser = await authService.toggleUserStatus(userId, status);
+      return sendSuccess(res, `User status updated to ${status}.`, updatedUser, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to update user status.', 400);
+    }
+  }
+
+  async adminResetPassword(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+      const { newPassword } = req.body;
+      if (!newPassword) {
+        return sendError(res, 'New password is required.', 400);
+      }
+
+      const result = await authService.adminResetPassword(userId, newPassword);
+      return sendSuccess(res, result.message, null, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to reset password.', 400);
+    }
+  }
+
+  async changePassword(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return sendError(res, 'Unauthenticated user.', 401);
+      }
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return sendError(res, 'Current password and new password are required.', 400);
+      }
+
+      const result = await authService.changePassword(req.user.id, currentPassword, newPassword);
+      return sendSuccess(res, result.message, null, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to change password.', 400);
+    }
+  }
 }
 
 export const authController = new AuthController();

@@ -36,10 +36,29 @@ export interface CreateJobRequest {
   tasks: string[];
 }
 
+export interface PaginatedJobResponse {
+  success: boolean;
+  data: {
+    jobs: JobCardData[];
+    pagination: {
+      total: number;
+      page: number;
+      totalPages: number;
+    };
+  } | JobCardData[];
+}
+
 export const jobApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getJobCards: builder.query<{ success: boolean; data: JobCardData[] }, void>({
-      query: () => '/jobs',
+    getJobCards: builder.query<{ success: boolean; data: any }, { page?: number; limit?: number; timeframe?: string } | void>({
+      query: (params) => {
+        if (!params) return '/jobs';
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append('page', params.page.toString());
+        if (params.limit) queryParams.append('limit', params.limit.toString());
+        if (params.timeframe) queryParams.append('timeframe', params.timeframe);
+        return `/jobs?${queryParams.toString()}`;
+      },
       providesTags: ['JobCard'],
     }),
     createJob: builder.mutation<{ success: boolean; message: string; data: JobCardData }, CreateJobRequest>({
@@ -58,8 +77,9 @@ export const jobApi = apiSlice.injectEndpoints({
       async onQueryStarted({ taskId, currentUserName }, { dispatch, queryFulfilled }) {
         const patchResult = dispatch(
           jobApi.util.updateQueryData('getJobCards', undefined, (draft) => {
-            for (const job of draft.data) {
-              const task = job.tasks?.find((t) => (t.id || t._id) === taskId);
+            const jobsList = Array.isArray(draft.data) ? draft.data : (draft.data as any)?.jobs || [];
+            for (const job of jobsList) {
+              const task = job.tasks?.find((t: TaskItem) => (t.id || t._id) === taskId);
               if (task) {
                 const isCompleted = task.status === 'COMPLETED';
                 task.status = isCompleted ? 'OPEN' : 'COMPLETED';
@@ -76,7 +96,7 @@ export const jobApi = apiSlice.injectEndpoints({
                 }
 
                 // Check if all tasks in job are finished
-                const allCompleted = job.tasks.every((t) => t.status === 'COMPLETED');
+                const allCompleted = job.tasks.every((t: TaskItem) => t.status === 'COMPLETED');
                 job.status = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
                 break;
               }

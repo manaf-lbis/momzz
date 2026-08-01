@@ -3,10 +3,12 @@ import { UserRole } from '../constants/roles';
 
 export interface User {
   id: string;
+  _id?: string;
   name: string;
   mobile: string;
   role: UserRole;
   isApproved: boolean;
+  status?: 'ACTIVE' | 'BLOCKED';
   taskCount?: number;
 }
 

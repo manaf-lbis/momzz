@@ -7,7 +7,9 @@ import {
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
   TaskItem,
+  JobCardData,
 } from '../api/jobApi';
+
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
 import {
@@ -39,8 +41,10 @@ export const JobDetailPage: React.FC = () => {
   const [deleteTask] = useDeleteTaskMutation();
   const [deleteJobCard] = useDeleteJobCardMutation();
 
-  const currentJob = jobsResponse?.data?.find(
-    (j) => j.id === id || j._id === id
+  const jobsData = jobsResponse?.data;
+  const jobsList: JobCardData[] = Array.isArray(jobsData) ? jobsData : jobsData?.jobs || [];
+  const currentJob = jobsList.find(
+    (j: JobCardData) => j.id === id || j._id === id
   );
 
   // Local state for optimistic updates

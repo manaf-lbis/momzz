@@ -7,6 +7,7 @@ export interface IUser extends Document {
   password: string;
   role: UserRole;
   isApproved: boolean;
+  status: 'ACTIVE' | 'BLOCKED';
   taskCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -37,6 +38,11 @@ const UserSchema: Schema = new Schema(
     isApproved: {
       type: Boolean,
       default: false,
+    },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'BLOCKED'],
+      default: 'ACTIVE',
     },
     taskCount: {
       type: Number,

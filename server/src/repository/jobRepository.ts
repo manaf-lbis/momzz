@@ -15,6 +15,50 @@ export class JobRepository {
     return await JobCard.find().sort({ createdAt: -1 });
   }
 
+  async findPaginatedJobs(options: {
+    page?: number;
+    limit?: number;
+    timeframe?: string;
+  }): Promise<{ jobs: IJobCard[]; total: number; page: number; totalPages: number }> {
+    const page = Math.max(1, options.page || 1);
+    const limit = Math.max(1, options.limit || 10);
+    const skip = (page - 1) * limit;
+
+    const query: any = {};
+
+    if (options.timeframe && options.timeframe !== 'all') {
+      const now = new Date();
+      let startDate = new Date();
+
+      switch (options.timeframe.toLowerCase()) {
+        case 'day':
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'week':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          startDate.setDate(now.getDate() - 30);
+          break;
+        case 'year':
+          startDate.setDate(now.getDate() - 365);
+          break;
+        default:
+          break;
+      }
+      query.createdAt = { $gte: startDate };
+    }
+
+    const [jobs, total] = await Promise.all([
+      JobCard.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      JobCard.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return { jobs, total, page, totalPages };
+  }
+
   async findTasksByJobCardId(jobCardId: string): Promise<ITask[]> {
     return await Task.find({ jobCardId }).populate('completedBy', 'name mobile role');
   }

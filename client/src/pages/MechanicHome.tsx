@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
-import { useGetJobCardsQuery } from '../api/jobApi';
+import { useGetJobCardsQuery, JobCardData } from '../api/jobApi';
 import { useGetLeaderboardQuery } from '../api/authApi';
 import { VehicleCard } from '../components/jobCard/VehicleCard';
 import {
@@ -19,32 +19,90 @@ import { Link } from 'react-router-dom';
 
 export const MechanicHome: React.FC = () => {
   const { user } = useAuth();
-  const { data: jobsData, isLoading, isError, refetch } = useGetJobCardsQuery();
-  const { data: leaderboardData } = useGetLeaderboardQuery();
   const [filterMyJobs, setFilterMyJobs] = useState(false);
+  const [page, setPage] = useState(1);
+  const [accumulatedJobs, setAccumulatedJobs] = useState<JobCardData[]>([]);
 
-  const jobs = jobsData?.data || [];
+  const {
+    data: jobsData,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetJobCardsQuery({ page, limit: 10 });
+
+  const { data: leaderboardData } = useGetLeaderboardQuery();
   const leaderboard = leaderboardData?.data || [];
 
-  // Filter jobs where mechanic has claimed/completed tasks if filterMyJobs is active
+  const responseData = jobsData?.data;
+  const rawJobs: JobCardData[] = Array.isArray(responseData)
+    ? responseData
+    : responseData?.jobs || [];
+  const pagination = !Array.isArray(responseData) ? responseData?.pagination : undefined;
+  const totalPages = pagination?.totalPages || 1;
+
+  // Accumulate jobs for infinite scroll
+  useEffect(() => {
+    if (rawJobs.length > 0) {
+      if (page === 1) {
+        setAccumulatedJobs(rawJobs);
+      } else {
+        setAccumulatedJobs((prev) => {
+          const existingIds = new Set(prev.map((j) => j.id || j._id));
+          const newUnique = rawJobs.filter((j) => !existingIds.has(j.id || j._id));
+          return [...prev, ...newUnique];
+        });
+      }
+    }
+  }, [rawJobs, page]);
+
+  // Infinite Scroll sentinel
+  const observerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (isLoading || page >= totalPages) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && page < totalPages) {
+          setPage((prev) => prev + 1);
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [isLoading, page, totalPages]);
+
+  const handleRefetch = () => {
+    setPage(1);
+    setAccumulatedJobs([]);
+    refetch();
+  };
+
+  const displayJobs = accumulatedJobs.length > 0 ? accumulatedJobs : rawJobs;
+
+  // Filter jobs where mechanic has claimed/completed tasks
   const filteredJobs = filterMyJobs
-    ? jobs.filter((job) =>
-        job.tasks.some(
-          (t) =>
+    ? displayJobs.filter((job: any) =>
+        job.tasks?.some(
+          (t: any) =>
             t.completedBy &&
-            (t.completedBy.id === user?.id || (t.completedBy as any)._id === user?.id)
+            (t.completedBy.id === user?.id || t.completedBy._id === user?.id)
         )
       )
-    : jobs;
+    : displayJobs;
 
   // Calculate my completed task count
   let myActiveTasksCount = 0;
-  jobs.forEach((j) => {
-    j.tasks.forEach((t) => {
+  displayJobs.forEach((j: any) => {
+    j.tasks?.forEach((t: any) => {
       if (
         t.status === 'COMPLETED' &&
         t.completedBy &&
-        (t.completedBy.id === user?.id || (t.completedBy as any)._id === user?.id)
+        (t.completedBy.id === user?.id || t.completedBy._id === user?.id)
       ) {
         myActiveTasksCount++;
       }
@@ -74,7 +132,7 @@ export const MechanicHome: React.FC = () => {
 
           <Button
             variant="outline"
-            onClick={() => refetch()}
+            onClick={handleRefetch}
             className="text-xs px-3 py-1.5 flex items-center gap-1.5"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
@@ -125,7 +183,7 @@ export const MechanicHome: React.FC = () => {
           )}
         </div>
 
-        {/* SECTION 3: QUICK ACTION CARDS GRID */}
+        {/* SECTION 3: QUICK ACTION CARDS GRID (Worker-Only) */}
         <div className="grid grid-cols-2 gap-3">
           {/* Card A: My Active Jobs */}
           <button
@@ -143,12 +201,12 @@ export const MechanicHome: React.FC = () => {
             <div>
               <h3 className="text-xs font-extrabold uppercase tracking-wide">My Active Jobs</h3>
               <p className="text-[11px] font-mono text-zinc-400 mt-0.5">
-                {myActiveTasksCount} Tasks Completed Today
+                {myActiveTasksCount} Tasks Completed
               </p>
             </div>
           </button>
 
-          {/* Card D: My Profile */}
+          {/* Card B: My Profile */}
           <Link
             to="/profile"
             className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 text-left transition-all space-y-2 shadow-lg"
@@ -169,7 +227,7 @@ export const MechanicHome: React.FC = () => {
             </h2>
             {filterMyJobs && (
               <span className="text-xs font-mono text-yellow-400 flex items-center gap-1">
-                Showing Filtered My Jobs{' '}
+                My Jobs Filter{' '}
                 <button onClick={() => setFilterMyJobs(false)} className="underline hover:text-zinc-200">
                   Reset
                 </button>
@@ -177,7 +235,7 @@ export const MechanicHome: React.FC = () => {
             )}
           </div>
 
-          {isLoading ? (
+          {isLoading && page === 1 ? (
             <div className="industrial-card p-8 text-center text-zinc-400 font-mono text-xs sm:text-sm">
               Loading active garage job cards...
             </div>
@@ -200,9 +258,21 @@ export const MechanicHome: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredJobs.map((job) => (
+              {filteredJobs.map((job: any) => (
                 <VehicleCard key={job.id || job._id} job={job} compact={true} />
               ))}
+
+              {/* Infinite Scroll Sentinel */}
+              <div ref={observerRef} className="py-4 text-center">
+                {isLoading && page > 1 && (
+                  <div className="flex items-center justify-center gap-2 text-xs font-mono text-yellow-400">
+                    <Wrench className="w-4 h-4 animate-spin" /> Loading more vehicles...
+                  </div>
+                )}
+                {page >= totalPages && accumulatedJobs.length > 10 && (
+                  <p className="text-[11px] font-mono text-zinc-600">— All vehicles loaded —</p>
+                )}
+              </div>
             </div>
           )}
         </div>

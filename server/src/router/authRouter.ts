@@ -13,5 +13,11 @@ router.get('/me', authMiddleware, authController.getMe);
 router.get('/pending', authMiddleware, adminMiddleware, authController.getPendingWorkers);
 router.patch('/approve/:userId', authMiddleware, adminMiddleware, authController.approveWorker);
 router.get('/leaderboard', authMiddleware, authController.getLeaderboard);
+router.post('/change-password', authMiddleware, authController.changePassword);
+
+// Admin User Management Routes
+router.get('/users', authMiddleware, adminMiddleware, authController.getAllUsers);
+router.patch('/users/:userId/status', authMiddleware, adminMiddleware, authController.toggleUserStatus);
+router.post('/users/:userId/reset-password', authMiddleware, adminMiddleware, authController.adminResetPassword);
 
 export default router;

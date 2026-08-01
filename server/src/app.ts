@@ -121,10 +121,16 @@ const seedAdmin = async () => {
   }
 };
 
+import http from 'http';
+import { initSocket } from './config/socket';
+
 // Bootstrapping Database & Server
+const server = http.createServer(app);
+initSocket(server);
+
 connectDB().then(async () => {
   await seedAdmin();
-  app.listen(ENV.PORT, () => {
+  server.listen(ENV.PORT, () => {
     console.log(`[SERVER] Momzz backend listening on http://localhost:${ENV.PORT}`);
     console.log(`[SERVER] Configured Client URL from env: ${ENV.CLIENT_URL}`);
   });

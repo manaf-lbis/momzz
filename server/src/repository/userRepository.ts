@@ -32,6 +32,18 @@ export class UserRepository {
   async incrementTaskCount(userId: string): Promise<IUser | null> {
     return await User.findByIdAndUpdate(userId, { $inc: { taskCount: 1 } }, { new: true });
   }
+
+  async findAllUsers(): Promise<IUser[]> {
+    return await User.find({}).select('-password').sort({ createdAt: -1 });
+  }
+
+  async updateUserStatus(id: string, status: 'ACTIVE' | 'BLOCKED'): Promise<IUser | null> {
+    return await User.findByIdAndUpdate(id, { status }, { new: true }).select('-password');
+  }
+
+  async updateUserPassword(id: string, hashedPassword: string): Promise<IUser | null> {
+    return await User.findByIdAndUpdate(id, { password: hashedPassword }, { new: true });
+  }
 }
 
 export const userRepository = new UserRepository();
