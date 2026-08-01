@@ -57,7 +57,7 @@ export const Register: React.FC = () => {
           </div>
         </div>
         <h2 className="mt-4 text-center text-3xl font-extrabold tracking-tight text-zinc-100 uppercase font-sans">
-          JOIN <span className="text-yellow-400">MOMZZ</span>
+          JOIN <span className="text-yellow-400">MOMZ'Z</span> AUTO GARAGE
         </h2>
         <p className="mt-1 text-center text-xs font-mono text-zinc-400 uppercase tracking-widest">
           NEW USER REGISTRATION & ROLE PROPOSITION

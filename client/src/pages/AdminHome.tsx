@@ -118,7 +118,7 @@ export const AdminHome: React.FC = () => {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-100 uppercase">
-                MOMZZ GARAGE HUB
+                MOMZ'Z AUTO GARAGE
               </h1>
               <p className="text-xs font-mono text-zinc-400">
                 ADMIN: <span className="text-yellow-400 font-bold uppercase">{user?.name}</span>

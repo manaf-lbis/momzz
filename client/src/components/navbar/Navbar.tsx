@@ -5,6 +5,7 @@ import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { logout } from '../../slice/authSlice';
 import { useTheme } from '../../context/ThemeContext';
 import { Wrench, LogOut, Sun, Moon } from 'lucide-react';
+import { InstallAppBanner } from '../common/InstallAppBanner';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -20,7 +21,10 @@ export const Navbar: React.FC = () => {
   if (!isAuthenticated || !user) return null;
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 transition-colors">
+    <>
+      <InstallAppBanner />
+      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 transition-colors">
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           {/* Logo & Brand */}
@@ -30,7 +34,7 @@ export const Navbar: React.FC = () => {
             </div>
             <div>
               <span className="font-extrabold text-base tracking-wider uppercase text-zinc-900 dark:text-zinc-100 flex items-center gap-1">
-                GARAGE<span className="text-amber-600 dark:text-yellow-400 font-black">HUB</span>
+                MOMZ<span className="text-amber-600 dark:text-yellow-400 font-black">'Z</span> AUTO GARAGE
               </span>
             </div>
           </Link>
@@ -70,5 +74,7 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
     </header>
+    </>
   );
 };
+

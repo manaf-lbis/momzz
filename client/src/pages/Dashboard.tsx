@@ -74,7 +74,7 @@ export const Dashboard: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-xl font-bold tracking-tight uppercase text-zinc-900 dark:text-zinc-100">
-                GARAGE OPERATIONAL HUB
+                MOMZ'Z AUTO GARAGE
               </h1>
               <span className="px-2 py-0.5 rounded bg-amber-400/10 text-amber-600 dark:text-yellow-400 border border-amber-400/30 font-mono text-[10px] font-bold uppercase">
                 ONLINE

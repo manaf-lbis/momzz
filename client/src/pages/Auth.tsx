@@ -5,6 +5,7 @@ import { useLoginMutation, useRegisterMutation } from '../api/authApi';
 import { useAppDispatch } from '../hooks/useAppDispatch';
 import { setCredentials } from '../slice/authSlice';
 import { useAppSelector } from '../hooks/useAppSelector';
+import { InstallAppBanner } from '../components/common/InstallAppBanner';
 
 export const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -87,16 +88,19 @@ export const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col justify-center items-center p-4 transition-colors">
+    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col justify-between transition-colors">
+      <InstallAppBanner />
+      <div className="flex-1 flex flex-col justify-center items-center p-4">
+
       {/* App Branding */}
       <div className="text-center mb-6">
         <div className="w-10 h-10 rounded-xl bg-amber-400 dark:bg-yellow-400 flex items-center justify-center text-zinc-950 font-black mx-auto mb-2 shadow-sm">
           <Wrench className="w-5 h-5 stroke-[2.5]" />
         </div>
         <h1 className="text-2xl font-extrabold tracking-wider uppercase text-zinc-900 dark:text-zinc-100">
-          GARAGE<span className="text-amber-600 dark:text-yellow-400">HUB</span>
+          MOMZ<span className="text-amber-600 dark:text-yellow-400">'Z</span> AUTO GARAGE
         </h1>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Vehicle & Task Command Center</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Vehicle &amp; Task Command Center</p>
       </div>
 
       {/* Main Card */}
@@ -214,6 +218,8 @@ export const AuthPage = () => {
       <p className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mt-6 text-center">
         Secured with Token Rotation • 15-Day Living Session
       </p>
+      </div>
     </div>
   );
 };
+
