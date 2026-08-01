@@ -50,18 +50,26 @@ export interface PaginatedJobResponse {
 
 export const jobApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getJobCards: builder.query<{ success: boolean; data: any }, { page?: number; limit?: number; timeframe?: string } | void>({
+    getJobCards: builder.query<
+      { success: boolean; data: any },
+      { page?: number; limit?: number; timeframe?: string } | void
+    >({
       query: (params) => {
         if (!params) return '/jobs';
         const queryParams = new URLSearchParams();
         if (params.page) queryParams.append('page', params.page.toString());
         if (params.limit) queryParams.append('limit', params.limit.toString());
         if (params.timeframe) queryParams.append('timeframe', params.timeframe);
-        return `/jobs?${queryParams.toString()}`;
+        const qs = queryParams.toString();
+        return qs ? `/jobs?${qs}` : '/jobs';
       },
       providesTags: ['JobCard'],
     }),
-    createJob: builder.mutation<{ success: boolean; message: string; data: JobCardData }, CreateJobRequest>({
+
+    createJob: builder.mutation<
+      { success: boolean; message: string; data: JobCardData },
+      CreateJobRequest
+    >({
       query: (body) => ({
         url: '/jobs/create',
         method: 'POST',
@@ -69,64 +77,51 @@ export const jobApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['JobCard'],
     }),
-    toggleTask: builder.mutation<{ success: boolean; data: TaskItem }, { taskId: string; currentUserName?: string }>({
-      query: ({ taskId }) => ({
-        url: `/jobs/tasks/${taskId}/toggle`,
-        method: 'PATCH',
-      }),
-      async onQueryStarted({ taskId, currentUserName }, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-          jobApi.util.updateQueryData('getJobCards', undefined, (draft) => {
-            const jobsList = Array.isArray(draft.data) ? draft.data : (draft.data as any)?.jobs || [];
-            for (const job of jobsList) {
-              const task = job.tasks?.find((t: TaskItem) => (t.id || t._id) === taskId);
-              if (task) {
-                const isCompleted = task.status === 'COMPLETED';
-                task.status = isCompleted ? 'OPEN' : 'COMPLETED';
-                if (!isCompleted) {
-                  task.completedBy = {
-                    name: currentUserName || 'Worker',
-                    mobile: '',
-                    role: 'WORKER',
-                  };
-                  task.completedAt = new Date().toISOString();
-                } else {
-                  task.completedBy = undefined;
-                  task.completedAt = undefined;
-                }
 
-                // Check if all tasks in job are finished
-                const allCompleted = job.tasks.every((t: TaskItem) => t.status === 'COMPLETED');
-                job.status = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
-                break;
-              }
-            }
-          })
-        );
-        try {
-          await queryFulfilled;
-        } catch {
-          patchResult.undo();
-        }
-      },
-      invalidatesTags: ['JobCard', 'User'],
+    /**
+     * Explicit set task status — sends { action: 'COMPLETE' | 'REOPEN' } in body.
+     * NOT a toggle. Prevents race conditions when two workers click simultaneously.
+     */
+    setTaskStatus: builder.mutation<
+      { success: boolean; data: TaskItem },
+      { taskId: string; action: 'COMPLETE' | 'REOPEN'; currentUserName?: string; currentUserId?: string }
+    >({
+      query: ({ taskId, action }) => ({
+        url: `/jobs/tasks/${taskId}/status`,
+        method: 'PATCH',
+        body: { action },
+      }),
+      // DO NOT invalidatesTags here — the socket event handles cache updates for ALL clients.
+      // The calling client applies an optimistic update in the component.
     }),
-    addTask: builder.mutation<{ success: boolean; data: TaskItem }, { jobCardId: string; title: string }>({
+
+    addTask: builder.mutation<
+      { success: boolean; data: TaskItem },
+      { jobCardId: string; title: string }
+    >({
       query: ({ jobCardId, title }) => ({
         url: `/jobs/${jobCardId}/tasks`,
         method: 'POST',
         body: { title },
       }),
-      invalidatesTags: ['JobCard'],
+      // Socket handles live update
     }),
-    deleteTask: builder.mutation<{ success: boolean; message: string }, { taskId: string }>({
+
+    deleteTask: builder.mutation<
+      { success: boolean; message: string },
+      { taskId: string }
+    >({
       query: ({ taskId }) => ({
         url: `/jobs/tasks/${taskId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['JobCard', 'User'],
+      // Socket handles live update
     }),
-    deleteJobCard: builder.mutation<{ success: boolean; message: string }, { jobCardId: string }>({
+
+    deleteJobCard: builder.mutation<
+      { success: boolean; message: string },
+      { jobCardId: string }
+    >({
       query: ({ jobCardId }) => ({
         url: `/jobs/${jobCardId}`,
         method: 'DELETE',
@@ -139,7 +134,7 @@ export const jobApi = apiSlice.injectEndpoints({
 export const {
   useGetJobCardsQuery,
   useCreateJobMutation,
-  useToggleTaskMutation,
+  useSetTaskStatusMutation,
   useAddTaskMutation,
   useDeleteTaskMutation,
   useDeleteJobCardMutation,

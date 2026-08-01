@@ -7,7 +7,7 @@ let io: Server | null = null;
 export const initSocket = (server: HttpServer): Server => {
   io = new Server(server, {
     cors: {
-      origin: ENV.CLIENT_URL || '*',
+      origin: '*',
       methods: ['GET', 'POST', 'PATCH', 'DELETE'],
       credentials: true,
     },
@@ -33,30 +33,69 @@ export const initSocket = (server: HttpServer): Server => {
 };
 
 export const getIO = (): Server => {
-  if (!io) {
-    throw new Error('Socket.io has not been initialized!');
-  }
+  if (!io) throw new Error('Socket.io has not been initialized!');
   return io;
 };
 
-// Event Broadcasters
+// ── Job Card Events ─────────────────────────────────────────────────────────
+
 export const emitJobCreated = (jobCard: any) => {
   if (io) {
+    console.log('[SOCKET] Emitting jobCard:created for', jobCard?.vehicleNumber);
     io.emit('jobCard:created', jobCard);
+  } else {
+    console.error('[SOCKET] io is null, cannot emit jobCard:created');
   }
 };
+
+export const emitJobDeleted = (jobCardId: string) => {
+  if (io) {
+    console.log('[SOCKET] Emitting jobCard:deleted for', jobCardId);
+    io.emit('jobCard:deleted', { jobCardId });
+  } else {
+    console.error('[SOCKET] io is null, cannot emit jobCard:deleted');
+  }
+};
+
+// ── Task Events ─────────────────────────────────────────────────────────────
 
 export const emitTaskAdded = (jobCardId: string, task: any) => {
   if (io) {
+    console.log('[SOCKET] Emitting task:added for job', jobCardId);
     io.emit('task:added', { jobCardId, task });
+  } else {
+    console.error('[SOCKET] io is null, cannot emit task:added');
   }
 };
 
-export const emitTaskCompleted = (jobCardId: string, taskId: string, completedBy: any) => {
+/**
+ * Emitted when a task status is explicitly set to COMPLETE or REOPEN.
+ * Sends the full updated task object + the action so clients can apply it deterministically.
+ */
+export const emitTaskUpdated = (
+  jobCardId: string,
+  taskId: string,
+  task: any,
+  action: 'COMPLETE' | 'REOPEN'
+) => {
   if (io) {
-    io.emit('task:completed', { jobCardId, taskId, completedBy });
+    console.log('[SOCKET] Emitting task:updated', taskId, '-> action:', action, 'status:', task?.status);
+    io.emit('task:updated', { jobCardId, taskId, task, action });
+  } else {
+    console.error('[SOCKET] io is null, cannot emit task:updated');
   }
 };
+
+export const emitTaskDeleted = (jobCardId: string, taskId: string) => {
+  if (io) {
+    console.log('[SOCKET] Emitting task:deleted', taskId);
+    io.emit('task:deleted', { jobCardId, taskId });
+  } else {
+    console.error('[SOCKET] io is null, cannot emit task:deleted');
+  }
+};
+
+// ── User Events ─────────────────────────────────────────────────────────────
 
 export const emitUserApproved = (userId: string) => {
   if (io) {

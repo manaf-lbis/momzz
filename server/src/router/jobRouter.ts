@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   createJobWithTasks,
   getJobCards,
-  toggleTaskComplete,
+  setTaskStatus,
   addTaskToJob,
   deleteTask,
   deleteJobCard,
@@ -16,7 +16,7 @@ router.use(authMiddleware);
 
 router.get('/', getJobCards);
 router.post('/create', adminMiddleware, createJobWithTasks);
-router.patch('/tasks/:taskId/toggle', toggleTaskComplete);
+router.patch('/tasks/:taskId/status', setTaskStatus);
 router.post('/:jobCardId/tasks', adminMiddleware, addTaskToJob);
 router.delete('/tasks/:taskId', adminMiddleware, deleteTask);
 router.delete('/:jobCardId', adminMiddleware, deleteJobCard);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
 import { useTheme } from '../context/ThemeContext';
-import { useGetJobCardsQuery } from '../api/jobApi';
+import { useGetJobCardsQuery, JobCardData } from '../api/jobApi';
 import { useGetPendingWorkersQuery } from '../api/authApi';
 import { useAppDispatch } from '../hooks/useAppDispatch';
 import { logout } from '../slice/authSlice';
@@ -35,9 +35,8 @@ export const Dashboard: React.FC = () => {
     skip: !isAdmin,
   });
 
-  const jobsData = jobsResponse?.data;
-  const jobs = Array.isArray(jobsData) ? jobsData : jobsData?.jobs || [];
-  const openJobsCount = jobs.filter((j: any) => j.status === 'IN_PROGRESS').length;
+  const jobs = jobsResponse?.data || [];
+  const openJobsCount = jobs.filter((j: JobCardData) => j.status === 'IN_PROGRESS').length;
   const pendingWorkersCount = pendingResponse?.data?.length || 0;
 
   const handleLogout = () => {
@@ -57,7 +56,7 @@ export const Dashboard: React.FC = () => {
               <Clock className="w-5 h-5 text-amber-600 dark:text-yellow-400 animate-pulse flex-shrink-0" />
               <div>
                 <h4 className="font-mono font-bold text-amber-600 dark:text-yellow-400 uppercase text-xs">
-                  ACCOUNT PENDING APPROVAL
+                  ACCOUNT PENDING ADMIN APPROVAL
                 </h4>
                 <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
                   Profile under review by garage admin.
@@ -85,11 +84,20 @@ export const Dashboard: React.FC = () => {
               USER: <span className="text-amber-600 dark:text-yellow-400 font-bold uppercase">{user?.name}</span> ({user?.role})
             </p>
           </div>
+
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/admin/users')}
+              className="px-3 py-1.5 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-mono text-xs font-bold rounded-xl transition-all flex items-center gap-1.5"
+            >
+              <Users className="w-4 h-4" /> Manage Users
+            </button>
+          )}
         </div>
 
-        {/* Action Cards (Workers strictly see ONLY My Jobs & My Profile; Admins see all 4) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* TILE 1: My Jobs */}
+        {/* Navigation Cards Grid: Admin sees 4 cards; Worker sees ONLY My Jobs & My Profile */}
+        <div className={`grid gap-4 ${isAdmin ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'}`}>
+          {/* CARD 1: My Jobs */}
           <div
             onClick={() => navigate('/jobs')}
             className="industrial-card p-4 rounded-2xl cursor-pointer group hover:border-amber-500 dark:hover:border-yellow-400 transition-all active:scale-[0.98] flex items-center justify-between"
@@ -110,7 +118,7 @@ export const Dashboard: React.FC = () => {
             <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-1 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-all" />
           </div>
 
-          {/* TILE 2: Create Job (Admin Only) */}
+          {/* CARD 2: Create Job (ADMIN ONLY - HIDDEN FOR WORKERS) */}
           {isAdmin && (
             <div
               onClick={() => setIsCreateModalOpen(true)}
@@ -133,7 +141,7 @@ export const Dashboard: React.FC = () => {
             </div>
           )}
 
-          {/* TILE 3: Pending Approvals (Admin Only) */}
+          {/* CARD 3: Pending Approvals (ADMIN ONLY - HIDDEN FOR WORKERS) */}
           {isAdmin && (
             <div
               onClick={() => navigate('/admin/approvals')}
@@ -156,36 +164,13 @@ export const Dashboard: React.FC = () => {
             </div>
           )}
 
-          {/* TILE 4: User Management (Admin Only) */}
-          {isAdmin && (
-            <div
-              onClick={() => navigate('/admin/users')}
-              className="industrial-card p-4 rounded-2xl cursor-pointer group hover:border-amber-500 dark:hover:border-yellow-400 transition-all active:scale-[0.98] flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-amber-400/10 dark:bg-yellow-400/10 text-amber-600 dark:text-yellow-400 rounded-xl group-hover:scale-105 transition-transform">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold uppercase text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-colors">
-                    👥 User Management
-                  </h3>
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono font-medium">
-                    Block & Reset Passwords
-                  </span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-1 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-all" />
-            </div>
-          )}
-
-          {/* TILE 5: My Profile */}
+          {/* CARD 4: My Profile */}
           <div
             onClick={() => navigate('/profile')}
-            className="industrial-card p-4 rounded-2xl flex items-center justify-between cursor-pointer group hover:border-amber-500 dark:hover:border-yellow-400 transition-all active:scale-[0.98]"
+            className="industrial-card p-4 rounded-2xl cursor-pointer group hover:border-amber-500 dark:hover:border-yellow-400 transition-all active:scale-[0.98] flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-amber-400/10 dark:bg-yellow-400/10 text-amber-600 dark:text-yellow-400 rounded-xl">
+              <div className="p-2.5 bg-amber-400/10 dark:bg-yellow-400/10 text-amber-600 dark:text-yellow-400 rounded-xl group-hover:scale-105 transition-transform">
                 <UserCheck className="w-5 h-5" />
               </div>
               <div>
@@ -193,7 +178,7 @@ export const Dashboard: React.FC = () => {
                   👤 My Profile
                 </h3>
                 <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                  {user?.mobile}
+                  {user?.name} ({user?.mobile})
                 </span>
               </div>
             </div>
@@ -217,7 +202,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Modal for Creating Job */}
+        {/* Modal for Creating Job (Admin Only) */}
         <CreateJobModal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}

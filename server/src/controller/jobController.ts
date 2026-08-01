@@ -1,7 +1,13 @@
 import { Request, Response } from 'express';
 import { jobRepository } from '../repository/jobRepository';
 import { sendSuccess, sendError } from '../utils/responseHandler';
-import { emitJobCreated, emitTaskAdded, emitTaskCompleted } from '../config/socket';
+import {
+  emitJobCreated,
+  emitJobDeleted,
+  emitTaskAdded,
+  emitTaskUpdated,
+  emitTaskDeleted,
+} from '../config/socket';
 
 export const createJobWithTasks = async (req: Request, res: Response) => {
   try {
@@ -113,12 +119,21 @@ export const getJobCards = async (req: Request, res: Response) => {
   }
 };
 
-export const toggleTaskComplete = async (req: Request, res: Response) => {
+/**
+ * Explicit set task status — accepts `action` in body: 'COMPLETE' or 'REOPEN'.
+ * NOT a toggle. Idempotent and race-condition safe.
+ */
+export const setTaskStatus = async (req: Request, res: Response) => {
   try {
     const { taskId } = req.params;
+    const { action } = req.body;
     const userId = req.user?.id;
 
-    const updatedTask = await jobRepository.toggleTaskStatus(taskId, userId!);
+    if (!action || !['COMPLETE', 'REOPEN'].includes(action)) {
+      return sendError(res, 'Action must be "COMPLETE" or "REOPEN".', 400);
+    }
+
+    const updatedTask = await jobRepository.setTaskStatus(taskId, action, userId!);
     if (!updatedTask) {
       return sendError(res, 'Task not found.', 404);
     }
@@ -128,11 +143,12 @@ export const toggleTaskComplete = async (req: Request, res: Response) => {
       id: updatedTask._id.toString(),
     };
 
-    emitTaskCompleted(updatedTask.jobCardId.toString(), taskId, formattedTask.completedBy);
+    // Emit with the explicit action so clients know exactly what happened
+    emitTaskUpdated(updatedTask.jobCardId.toString(), taskId, formattedTask, action);
 
     return sendSuccess(
       res,
-      `Task status updated to ${updatedTask.status}`,
+      `Task ${action === 'COMPLETE' ? 'completed' : 'reopened'} successfully.`,
       formattedTask,
       200
     );
@@ -164,12 +180,7 @@ export const addTaskToJob = async (req: Request, res: Response) => {
 
     emitTaskAdded(jobCardId, formattedTask);
 
-    return sendSuccess(
-      res,
-      'Task added successfully.',
-      formattedTask,
-      201
-    );
+    return sendSuccess(res, 'Task added successfully.', formattedTask, 201);
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to add task.', 500);
   }
@@ -178,16 +189,20 @@ export const addTaskToJob = async (req: Request, res: Response) => {
 export const deleteTask = async (req: Request, res: Response) => {
   try {
     const { taskId } = req.params;
-    const deleted = await jobRepository.deleteTask(taskId);
-    if (!deleted) {
+    const deletedTask = await jobRepository.deleteTask(taskId);
+    if (!deletedTask) {
       return sendError(res, 'Task not found.', 404);
     }
+
+    // Emit with the correct jobCardId from the deleted task document
+    emitTaskDeleted(deletedTask.jobCardId.toString(), taskId);
 
     return sendSuccess(res, 'Task deleted successfully.', null, 200);
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to delete task.', 500);
   }
 };
+
 
 export const deleteJobCard = async (req: Request, res: Response) => {
   try {
@@ -196,6 +211,8 @@ export const deleteJobCard = async (req: Request, res: Response) => {
     if (!deleted) {
       return sendError(res, 'Job card not found.', 404);
     }
+
+    emitJobDeleted(jobCardId);
 
     return sendSuccess(res, 'Job card and all sub-tasks deleted successfully.', null, 200);
   } catch (error: any) {

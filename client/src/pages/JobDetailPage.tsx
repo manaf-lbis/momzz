@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   useGetJobCardsQuery,
-  useToggleTaskMutation,
+  useSetTaskStatusMutation,
   useAddTaskMutation,
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
-  TaskItem,
   JobCardData,
+  TaskItem,
 } from '../api/jobApi';
-
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
 import {
@@ -24,6 +23,7 @@ import {
   AlertTriangle,
   Sparkles,
   Check,
+  RotateCcw,
 } from 'lucide-react';
 
 export const JobDetailPage: React.FC = () => {
@@ -36,25 +36,21 @@ export const JobDetailPage: React.FC = () => {
   const [isDeletingJob, setIsDeletingJob] = useState(false);
 
   const { data: jobsResponse, isLoading, isError } = useGetJobCardsQuery();
-  const [toggleTask] = useToggleTaskMutation();
+  const [setTaskStatus] = useSetTaskStatusMutation();
   const [addTask, { isLoading: isAddingTask }] = useAddTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
   const [deleteJobCard] = useDeleteJobCardMutation();
 
-  const jobsData = jobsResponse?.data;
-  const jobsList: JobCardData[] = Array.isArray(jobsData) ? jobsData : jobsData?.jobs || [];
+  // Handle both flat array and paginated {jobs, pagination} response shapes
+  const rawData = jobsResponse?.data;
+  const jobsList: JobCardData[] = Array.isArray(rawData)
+    ? rawData
+    : rawData?.jobs || [];
+
   const currentJob = jobsList.find(
     (j: JobCardData) => j.id === id || j._id === id
   );
 
-  // Local state for optimistic updates
-  const [localTasks, setLocalTasks] = useState<TaskItem[]>([]);
-
-  useEffect(() => {
-    if (currentJob?.tasks) {
-      setLocalTasks(currentJob.tasks);
-    }
-  }, [currentJob?.tasks]);
 
   if (isLoading) {
     return (
@@ -86,20 +82,19 @@ export const JobDetailPage: React.FC = () => {
     );
   }
 
-  const tasksToDisplay = localTasks.length > 0 ? localTasks : (currentJob.tasks || []);
+  const tasks = currentJob.tasks || [];
 
-  // Sorted list: OPEN tasks first, COMPLETED tasks moved to bottom
-  const sortedTasks = [...tasksToDisplay].sort((a: TaskItem, b: TaskItem) => {
+  // Sorted: OPEN first, COMPLETED at bottom
+  const sortedTasks = [...tasks].sort((a: TaskItem, b: TaskItem) => {
     if (a.status === b.status) return 0;
     return a.status === 'OPEN' ? -1 : 1;
   });
 
-  const totalTasks = tasksToDisplay.length;
-  const completedCount = tasksToDisplay.filter((t: TaskItem) => t.status === 'COMPLETED').length;
+  const totalTasks = tasks.length;
+  const completedCount = tasks.filter((t: TaskItem) => t.status === 'COMPLETED').length;
   const progressPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
   const isAllCompleted = totalTasks > 0 && completedCount === totalTasks;
 
-  // Format duration elapsed between job creation and task completion
   const formatDuration = (task: TaskItem) => {
     if (!task.completedAt || !currentJob.createdAt) return null;
     const created = new Date(currentJob.createdAt).getTime();
@@ -111,45 +106,30 @@ export const JobDetailPage: React.FC = () => {
     return `Took ${hours}h ${remainingMins}m`;
   };
 
-  // Handle Task Action (Optimistic Update)
+  /**
+   * Explicit Complete or Reopen — NOT a toggle.
+   * Sends the desired action so two workers clicking "Complete" simultaneously
+   * both send action='COMPLETE', and the server handles it idempotently.
+   */
   const handleCompleteTask = async (taskId: string) => {
     setErrorMessage('');
-    const previousTasks = [...localTasks];
+    const targetTask = tasks.find((t: TaskItem) => (t.id || t._id!) === taskId);
+    if (!targetTask) return;
 
-    // Optimistically update local task state immediately
-    setLocalTasks((prev) =>
-      prev.map((task) => {
-        if ((task.id || task._id) === taskId) {
-          const isCompleted = task.status === 'COMPLETED';
-          return {
-            ...task,
-            status: isCompleted ? 'OPEN' : 'COMPLETED',
-            completedBy: isCompleted
-              ? undefined
-              : {
-                  name: user?.name || 'Worker',
-                  mobile: user?.mobile || '',
-                  role: user?.role || 'WORKER',
-                },
-            completedAt: isCompleted ? undefined : new Date().toISOString(),
-          } as TaskItem;
-        }
-        return task;
-      })
-    );
+    const action = targetTask.status === 'COMPLETED' ? 'REOPEN' : 'COMPLETE';
 
     try {
-      await toggleTask({
+      await setTaskStatus({
         taskId,
+        action,
         currentUserName: user?.name,
+        currentUserId: user?.id,
       }).unwrap();
     } catch (err: any) {
-      setLocalTasks(previousTasks);
-      setErrorMessage(err?.data?.message || 'Failed to update task status. Rolled back.');
+      setErrorMessage(err?.data?.message || `Failed to ${action.toLowerCase()} task.`);
     }
   };
 
-  // Handle Add Sub-Task (Admin Only)
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
@@ -165,7 +145,6 @@ export const JobDetailPage: React.FC = () => {
     }
   };
 
-  // Handle Delete Sub-Task (Admin Only)
   const handleDeleteTask = async (taskId: string) => {
     try {
       await deleteTask({ taskId }).unwrap();
@@ -174,11 +153,8 @@ export const JobDetailPage: React.FC = () => {
     }
   };
 
-  // Handle Delete Job Card (Admin Only)
   const handleDeleteJobCard = async () => {
-    if (!window.confirm('Are you sure you want to permanently delete this job card?')) {
-      return;
-    }
+    if (!window.confirm('Are you sure you want to permanently delete this job card?')) return;
     setIsDeletingJob(true);
     try {
       await deleteJobCard({ jobCardId: currentJob.id || currentJob._id! }).unwrap();
@@ -200,7 +176,6 @@ export const JobDetailPage: React.FC = () => {
             <button
               onClick={() => navigate('/jobs')}
               className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 transition-all active:scale-95"
-              title="Back to Jobs List"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -226,13 +201,11 @@ export const JobDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Admin Only Delete Button */}
           {isAdmin && (
             <button
               onClick={handleDeleteJobCard}
               disabled={isDeletingJob}
-              className="p-2 bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 text-xs font-mono rounded-xl transition-all active:scale-95 flex items-center gap-1"
-              title="Delete Job Card"
+              className="p-2 bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 text-xs font-mono rounded-xl transition-all active:scale-95"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -245,7 +218,7 @@ export const JobDetailPage: React.FC = () => {
           </div>
         )}
 
-        {/* Compact Service Progress Bar */}
+        {/* Progress Bar */}
         <div className="industrial-card p-4 rounded-2xl space-y-2">
           <div className="flex items-center justify-between text-xs font-mono">
             <span className="text-zinc-500 dark:text-zinc-400 font-bold">SERVICE CHECKLIST</span>
@@ -253,7 +226,6 @@ export const JobDetailPage: React.FC = () => {
               {completedCount} / {totalTasks} Completed ({progressPercent}%)
             </span>
           </div>
-
           <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-amber-500 dark:bg-yellow-400 rounded-full transition-all duration-300"
@@ -262,7 +234,7 @@ export const JobDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Admin Control: Add Sub-task On The Fly */}
+        {/* Admin: Add Sub-task */}
         {isAdmin && (
           <form onSubmit={handleAddTask} className="flex gap-2">
             <input
@@ -282,10 +254,10 @@ export const JobDetailPage: React.FC = () => {
           </form>
         )}
 
-        {/* Unified Sub-Task Checklist */}
+        {/* Sub-Task Checklist */}
         <div className="space-y-2">
           <h2 className="text-xs font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400 px-1">
-            SUB-TASKS CHECKLIST ({completedCount}/{totalTasks})
+            SUB-TASKS ({completedCount}/{totalTasks})
           </h2>
 
           {sortedTasks.length === 0 ? (
@@ -302,21 +274,17 @@ export const JobDetailPage: React.FC = () => {
                 return (
                   <div
                     key={taskId}
-                    onClick={() => handleCompleteTask(taskId)}
-                    className={`industrial-card p-3.5 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all active:scale-[0.99] ${
+                    className={`industrial-card p-3.5 rounded-2xl flex items-center justify-between gap-3 transition-all ${
                       isCompleted
                         ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-500/20'
-                        : 'hover:border-amber-400 dark:hover:border-yellow-400'
+                        : ''
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {/* Modern Custom Animated Checkbox Circle */}
+                      {/* Checkbox */}
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCompleteTask(taskId);
-                        }}
+                        onClick={() => handleCompleteTask(taskId)}
                         className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all flex-shrink-0 active:scale-90 ${
                           isCompleted
                             ? 'bg-emerald-500 text-white shadow-sm'
@@ -337,11 +305,10 @@ export const JobDetailPage: React.FC = () => {
                           {task.title}
                         </p>
 
-                        {/* Completed Metadata Tag */}
                         {isCompleted && (
                           <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
                             <span className="flex items-center gap-1 font-semibold">
-                              <UserCheck className="w-3 h-3" /> Completed by {task.completedBy?.name || 'Worker'}
+                              <UserCheck className="w-3 h-3" /> {task.completedBy?.name || 'Worker'}
                             </span>
                             {durationText && (
                               <span className="text-zinc-400 dark:text-zinc-500 font-medium">({durationText})</span>
@@ -351,30 +318,28 @@ export const JobDetailPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Action Pill / Reopen & Delete Controls */}
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
                       {!isCompleted ? (
                         <button
                           onClick={() => handleCompleteTask(taskId)}
                           className="px-3 py-1.5 bg-amber-400 dark:bg-yellow-400 text-zinc-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 dark:hover:bg-yellow-300 transition-all active:scale-95 flex items-center gap-1 whitespace-nowrap"
                         >
-                          <Sparkles className="w-3 h-3" /> [ Complete ]
+                          <Sparkles className="w-3 h-3" /> Complete
                         </button>
                       ) : (
                         <button
                           onClick={() => handleCompleteTask(taskId)}
-                          className="px-2.5 py-1 bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 text-[10px] font-mono rounded-lg transition-colors"
+                          className="px-2.5 py-1 bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 text-[10px] font-mono rounded-lg transition-colors flex items-center gap-1"
                         >
-                          Reopen
+                          <RotateCcw className="w-3 h-3" /> Reopen
                         </button>
                       )}
 
-                      {/* Admin Only Delete Task */}
                       {isAdmin && (
                         <button
                           onClick={() => handleDeleteTask(taskId)}
                           className="p-1 text-zinc-400 hover:text-red-500 transition-colors"
-                          title="Delete Sub-task"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

@@ -75,28 +75,47 @@ export class JobRepository {
     return await Task.findById(taskId);
   }
 
-  async toggleTaskStatus(taskId: string, userId: string): Promise<ITask | null> {
+  /**
+   * Explicit set task status — NOT a toggle.
+   * Accepts the desired target action ('COMPLETE' or 'REOPEN') to prevent race conditions
+   * when two workers click at the same time.
+   */
+  async setTaskStatus(
+    taskId: string,
+    action: 'COMPLETE' | 'REOPEN',
+    userId: string
+  ): Promise<ITask | null> {
     const task = await Task.findById(taskId);
     if (!task) return null;
 
-    if (task.status === 'COMPLETED') {
-      task.status = 'OPEN';
+    if (action === 'COMPLETE') {
+      // If already completed, this is a no-op (idempotent)
+      if (task.status === 'COMPLETED') {
+        return await Task.findById(taskId).populate('completedBy', 'name mobile role');
+      }
+
+      task.status = 'COMPLETED';
+      task.completedBy = userId as any;
+      task.completedAt = new Date();
+      await User.findByIdAndUpdate(userId, { $inc: { taskCount: 1 } });
+    } else {
+      // REOPEN
+      if (task.status === 'OPEN') {
+        return await Task.findById(taskId).populate('completedBy', 'name mobile role');
+      }
+
       const prevUser = task.completedBy;
+      task.status = 'OPEN';
       task.completedBy = undefined;
       task.completedAt = undefined;
       if (prevUser) {
         await User.findByIdAndUpdate(prevUser, { $inc: { taskCount: -1 } });
       }
-    } else {
-      task.status = 'COMPLETED';
-      task.completedBy = userId as any;
-      task.completedAt = new Date();
-      await User.findByIdAndUpdate(userId, { $inc: { taskCount: 1 } });
     }
 
     await task.save();
 
-    // Check sibling tasks completion status for parent job update
+    // Recalculate parent job card status from sibling tasks
     const siblingTasks = await Task.find({ jobCardId: task.jobCardId });
     const allCompleted = siblingTasks.every((t) => t.status === 'COMPLETED');
     await JobCard.findByIdAndUpdate(task.jobCardId, {
@@ -115,9 +134,9 @@ export class JobRepository {
     return newTask;
   }
 
-  async deleteTask(taskId: string): Promise<boolean> {
+  async deleteTask(taskId: string): Promise<ITask | null> {
     const task = await Task.findById(taskId);
-    if (!task) return false;
+    if (!task) return null;
 
     if (task.completedBy) {
       await User.findByIdAndUpdate(task.completedBy, { $inc: { taskCount: -1 } });
@@ -134,8 +153,9 @@ export class JobRepository {
       });
     }
 
-    return true;
+    return task; // Return the task so the controller can access jobCardId
   }
+
 
   async deleteJobCard(jobCardId: string): Promise<boolean> {
     const job = await JobCard.findById(jobCardId);

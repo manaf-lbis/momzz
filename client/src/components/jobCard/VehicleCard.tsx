@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
   JobCardData,
-  useToggleTaskMutation,
+  useSetTaskStatusMutation,
   useAddTaskMutation,
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
 } from '../../api/jobApi';
+
 import {
   CheckCircle2,
   Clock,
@@ -32,7 +33,8 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const [toggleTask, { isLoading: isToggling }] = useToggleTaskMutation();
+  const [setTaskStatus, { isLoading: isUpdating }] = useSetTaskStatusMutation();
+
   const [addTask, { isLoading: isAddingTask }] = useAddTaskMutation();
   const [deleteTask, { isLoading: isDeletingTask }] = useDeleteTaskMutation();
   const [deleteJobCard, { isLoading: isDeletingJob }] = useDeleteJobCardMutation();
@@ -62,11 +64,12 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
     return `${mins}m`;
   };
 
-  const handleToggle = async (taskId: string) => {
+  const handleToggle = async (taskId: string, currentStatus: string) => {
+    const action = currentStatus === 'COMPLETED' ? 'REOPEN' : 'COMPLETE';
     try {
-      await toggleTask({ taskId }).unwrap();
+      await setTaskStatus({ taskId, action }).unwrap();
     } catch (err) {
-      console.error('Failed to toggle task:', err);
+      console.error('Failed to update task status:', err);
     }
   };
 
@@ -280,17 +283,17 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
 
                     <div className="flex items-center gap-2 shrink-0">
                       <button
-                        disabled={isToggling}
-                        onClick={() => handleToggle(taskId)}
+                        disabled={isUpdating}
+                        onClick={() => handleToggle(taskId, task.status)}
                         className={`px-3 py-2 rounded-xl text-xs font-bold font-mono transition-all flex items-center gap-1.5 ${
                           isCompleted
-                            ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                            ? 'bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-yellow-400 hover:border-yellow-400 active:scale-95'
                             : 'bg-yellow-400 text-zinc-950 hover:bg-yellow-300 active:scale-95 shadow-yellow-glow'
                         }`}
                       >
                         {isCompleted ? (
                           <>
-                            <CheckCircle2 className="w-4 h-4" /> Completed
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Reopen
                           </>
                         ) : (
                           <>
