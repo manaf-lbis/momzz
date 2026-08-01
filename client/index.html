@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>MOMZ'Z AUTO GARAGE - Vehicle & Task Management System</title>
     
+    <!-- Early PWA Prompt Capture -->
+    <script>
+      window.deferredPwaPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.deferredPwaPrompt = e;
+        console.log('[PWA] Global beforeinstallprompt captured!');
+      });
+    </script>
+
     <!-- PWA & Mobile Web App Capabilities -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#facc15" />
