@@ -258,9 +258,6 @@ export const AuthPage = () => {
           </form>
         </motion.div>
 
-        <p className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mt-6 text-center">
-          Secured with Token Rotation • 30-Day Living Session
-        </p>
         <Link to="/track" className="block mt-3 text-center text-xs font-mono text-amber-600 dark:text-yellow-400 hover:underline">Track a vehicle service</Link>
       </div>
     </div>

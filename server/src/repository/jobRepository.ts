@@ -92,7 +92,7 @@ export class JobRepository {
       isDeleted: { $ne: true },
       vehicleNumber: vehicleNumber.trim().toUpperCase(),
       ...contactQuery,
-    }).sort({ createdAt: -1 });
+    }).sort({ status: -1, createdAt: -1 });
   }
 
   async updateJobStatus(jobCardId: string, status: 'IN_PROGRESS' | 'COMPLETED'): Promise<IJobCard | null> {

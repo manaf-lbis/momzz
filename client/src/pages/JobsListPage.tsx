@@ -211,7 +211,7 @@ export const JobsListPage: React.FC = () => {
                       <div>
                         <h3 className="text-sm font-extrabold uppercase text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-yellow-400 transition-colors flex items-center gap-1.5">
                           <Car className="w-4 h-4 text-amber-500 dark:text-yellow-400" />
-                          {job.vehicleName}
+                          {job.vehicleName}{job.vehicleColor && <span className="text-amber-600 dark:text-yellow-400">({job.vehicleColor})</span>}
                         </h3>
                         <span className="inline-block mt-0.5 text-[11px] font-mono font-bold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-950 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">
                           {job.vehicleNumber}
