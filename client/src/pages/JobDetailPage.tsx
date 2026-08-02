@@ -242,23 +242,23 @@ export const JobDetailPage: React.FC = () => {
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-4 space-y-3">
         {/* Header */}
-        <div className="industrial-card rounded-2xl p-3.5 flex items-start justify-between gap-3">
-          <div className="flex items-start gap-2.5 min-w-0">
+        <div className="industrial-card rounded-2xl p-3 flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2 min-w-0 flex-1">
             <button
               onClick={() => navigate('/jobs')}
               className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 transition-all active:scale-95"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-base sm:text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h1 className="min-w-0 truncate text-base sm:text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                   <Car className="w-5 h-5 text-amber-500 dark:text-yellow-400" />
                   {currentJob.vehicleName} {currentJob.vehicleColor && <span className="text-amber-500 dark:text-yellow-400">({currentJob.vehicleColor})</span>}
                 </h1>
                 <span className="text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-yellow-400 border border-amber-500/20 px-2 py-0.5 rounded-full">⏱ {getGarageDuration()}</span>
               </div>
-              <div className="flex items-center gap-2 flex-wrap mt-1">
+              <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap mt-1 pb-0.5 no-scrollbar">
                 <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-950 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">REG: <b className="uppercase">{currentJob.vehicleNumber}</b>{!isAdmin && currentJob.customerMobile ? ` • ${currentJob.customerMobile}` : ''}</span>
                 {isAllCompleted ? (
                   <span className="px-2.5 py-0.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-full font-mono text-[10px] font-extrabold uppercase flex items-center gap-1 shadow-sm">

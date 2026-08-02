@@ -5,14 +5,18 @@ import { store } from './store/store';
 import { AppRoutes } from './routes/AppRoutes';
 import { ThemeProvider } from './context/ThemeContext';
 import { SocketProvider } from './context/SocketContext';
+import { SessionLoginSound } from './components/common/SessionLoginSound';
+import { Footer } from './components/common/Footer';
 
 export const App: React.FC = () => {
   return (
     <Provider store={store}>
+      <SessionLoginSound />
       <ThemeProvider>
         <BrowserRouter>
           <SocketProvider>
             <AppRoutes />
+            <Footer />
           </SocketProvider>
         </BrowserRouter>
       </ThemeProvider>

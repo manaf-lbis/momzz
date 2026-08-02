@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Link } from 'react-router-dom';
+import { PageShimmer } from '../components/common/PageShimmer';
 
 export const MechanicHome: React.FC = () => {
   const { user } = useAuth();
@@ -242,9 +243,7 @@ export const MechanicHome: React.FC = () => {
           </div>
 
           {isLoading && page === 1 ? (
-            <div className="industrial-card p-8 text-center text-zinc-400 font-mono text-xs sm:text-sm">
-              Loading active garage job cards...
-            </div>
+            <PageShimmer label="Loading active garage jobs" cards={3} />
           ) : isError ? (
             <div className="p-4 bg-red-950/60 border border-red-800 rounded-xl text-red-300 text-xs font-mono flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />

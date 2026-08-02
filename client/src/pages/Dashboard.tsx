@@ -18,6 +18,7 @@ import {
   Wrench,
   Package,
 } from 'lucide-react';
+import { PageShimmer } from '../components/common/PageShimmer';
 
 const DashCard: React.FC<{
   icon: React.ReactNode;
@@ -54,7 +55,7 @@ export const Dashboard: React.FC = () => {
   const { user, isAdmin, isApproved } = useAuth();
   const navigate = useNavigate();
 
-  const { data: jobsResponse } = useGetJobCardsQuery();
+  const { data: jobsResponse, isLoading: isJobsLoading } = useGetJobCardsQuery();
   const { data: pendingResponse } = useGetPendingWorkersQuery(undefined, { skip: !isAdmin });
 
   const allJobs: JobCardData[] = Array.isArray(jobsResponse?.data)
@@ -66,6 +67,10 @@ export const Dashboard: React.FC = () => {
   ).length;
 
   const pendingWorkersCount = pendingResponse?.data?.length || 0;
+
+  if (isJobsLoading) {
+    return <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col"><Navbar /><main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6"><PageShimmer label="Loading dashboard" cards={5} /></main></div>;
+  }
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors">
