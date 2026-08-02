@@ -11,7 +11,7 @@ import {
 
 export const createJobWithTasks = async (req: Request, res: Response) => {
   try {
-    const { vehicleName, vehicleNumber, color, customerMobile, customerEmail, tasks } = req.body;
+    const { vehicleName, vehicleNumber, vehicleColor, customerName, customerMobile, customerEmail, tasks } = req.body;
 
     if (!vehicleName || !vehicleNumber || !Array.isArray(tasks) || tasks.length === 0) {
       return sendError(res, 'Vehicle Name, Vehicle Number, and at least one Task are required.', 400);
@@ -20,7 +20,8 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
     const newJob = await jobRepository.createJobCard({
       vehicleName,
       vehicleNumber,
-      color: color?.trim() || undefined,
+      vehicleColor: vehicleColor?.trim() || undefined,
+      customerName: customerName?.trim() || undefined,
       customerMobile: customerMobile?.trim() || undefined,
       customerEmail: customerEmail?.trim() || undefined,
       createdBy: req.user?.id!,
@@ -43,6 +44,45 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
     return sendSuccess(res, 'Job Card Published!', fullJob, 201);
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to create job card.', 500);
+  }
+};
+
+export const updateJobCard = async (req: Request, res: Response) => {
+  try {
+    const { jobCardId } = req.params;
+    const allowedFields = ['vehicleName', 'vehicleNumber', 'vehicleColor', 'customerName', 'customerMobile', 'customerEmail'];
+    const updates = Object.fromEntries(
+      allowedFields
+        .filter((field) => field in req.body)
+        .map((field) => [field, typeof req.body[field] === 'string' ? req.body[field].trim() : req.body[field]])
+    );
+    if (updates.vehicleNumber) updates.vehicleNumber = updates.vehicleNumber.toUpperCase();
+    const updatedJob = await jobRepository.updateJobCard(jobCardId, updates);
+    if (!updatedJob) return sendError(res, 'Job card not found.', 404);
+    return sendSuccess(res, 'Job card updated successfully.', { ...updatedJob.toObject(), id: updatedJob._id.toString() });
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to update job card.', 500);
+  }
+};
+
+export const trackPublicJobs = async (req: Request, res: Response) => {
+  try {
+    const { vehicleNumber, mobile, email } = req.body;
+    if (!vehicleNumber || (!mobile && !email)) {
+      return sendError(res, 'Vehicle number and either mobile number or email address are required.', 400);
+    }
+    const jobs = await jobRepository.findPublicJobs(vehicleNumber, { mobile, email });
+    const publicJobs = await Promise.all(jobs.map(async (job) => {
+      const tasks = await jobRepository.findTasksByJobCardId(job._id.toString());
+      return {
+        id: job._id.toString(), vehicleName: job.vehicleName, vehicleNumber: job.vehicleNumber,
+        vehicleColor: job.vehicleColor, status: job.status, createdAt: job.createdAt, updatedAt: job.updatedAt,
+        tasks: tasks.map((task) => ({ id: task._id.toString(), title: task.title, status: task.status, completedAt: task.completedAt })),
+      };
+    }));
+    return sendSuccess(res, 'Service history retrieved.', publicJobs);
+  } catch (error: any) {
+    return sendError(res, error.message || 'Unable to track service.', 500);
   }
 };
 

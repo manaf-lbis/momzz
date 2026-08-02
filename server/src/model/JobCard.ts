@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IJobCard extends Document {
   vehicleName: string;
   vehicleNumber: string;
-  color?: string;
+  vehicleColor?: string;
   customerName?: string;
   customerMobile?: string;
   customerEmail?: string;
@@ -19,8 +19,8 @@ export interface IJobCard extends Document {
 const JobCardSchema: Schema = new Schema(
   {
     vehicleName: { type: String, required: true, trim: true },
-    vehicleNumber: { type: String, required: true, uppercase: true, trim: true },
-    color: { type: String, trim: true },
+    vehicleNumber: { type: String, required: true, uppercase: true, trim: true, index: true },
+    vehicleColor: { type: String, trim: true },
     customerName: { type: String, trim: true },
     customerMobile: { type: String, trim: true },
     customerEmail: { type: String, trim: true, lowercase: true },

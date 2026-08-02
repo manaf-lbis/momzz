@@ -11,6 +11,7 @@ import { UserManagementPage } from '../pages/UserManagementPage';
 import { AnalyticsPage } from '../pages/AnalyticsPage';
 import { CreateJobPage } from '../pages/CreateJobPage';
 import { InventoryPage } from '../pages/InventoryPage';
+import { TrackServicePage } from '../pages/TrackServicePage';
 import { ProtectedRoute } from './ProtectedRoute';
 
 export const AppRoutes: React.FC = () => {
@@ -20,6 +21,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/login" element={<AuthPage />} />
       <Route path="/register" element={<AuthPage />} />
+      <Route path="/track" element={<TrackServicePage />} />
 
       {/* Authenticated Routes — available to all logged-in users */}
       <Route element={<ProtectedRoute />}>

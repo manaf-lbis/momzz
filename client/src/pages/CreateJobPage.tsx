@@ -30,6 +30,7 @@ export const CreateJobPage: React.FC = () => {
   const [vehicleName, setVehicleName] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [color, setColor] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [taskInput, setTaskInput] = useState('');
@@ -78,7 +79,8 @@ export const CreateJobPage: React.FC = () => {
       await createJob({
         vehicleName: vehicleName.trim(),
         vehicleNumber: vehicleNumber.trim().toUpperCase(),
-        color: color.trim() || undefined,
+        vehicleColor: color.trim() || undefined,
+        customerName: customerName.trim() || undefined,
         customerMobile: customerMobile.trim() || undefined,
         customerEmail: customerEmail.trim() || undefined,
         tasks,
@@ -207,30 +209,29 @@ export const CreateJobPage: React.FC = () => {
                 </div>
               </div>
 
+            </div>
+
+            {/* Customer Info Card */}
+            <div className="industrial-card rounded-3xl p-5 space-y-4">
+              <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                Customer Information (Optional)
+              </h2>
+              <div>
+                <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-1.5">Customer Name (Optional)</label>
+                <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="e.g. Anil Kumar" className="w-full rounded-xl py-2.5 px-4 text-xs industrial-input font-medium" />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-1.5">
                     <Phone className="w-3.5 h-3.5 inline mr-1" /> Customer Mobile No. (Optional)
                   </label>
-                  <input
-                    type="tel"
-                    value={customerMobile}
-                    onChange={(e) => setCustomerMobile(e.target.value)}
-                    placeholder="e.g. 98765 43210"
-                    className="w-full rounded-xl py-2.5 px-4 text-xs industrial-input font-medium"
-                  />
+                  <input type="tel" value={customerMobile} onChange={(e) => setCustomerMobile(e.target.value)} placeholder="e.g. 98765 43210" className="w-full rounded-xl py-2.5 px-4 text-xs industrial-input font-medium" />
                 </div>
                 <div>
                   <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-1.5">
                     <Mail className="w-3.5 h-3.5 inline mr-1" /> Customer Email ID (Optional)
                   </label>
-                  <input
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="e.g. customer@email.com"
-                    className="w-full rounded-xl py-2.5 px-4 text-xs industrial-input font-medium"
-                  />
+                  <input type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="e.g. customer@email.com" className="w-full rounded-xl py-2.5 px-4 text-xs industrial-input font-medium" />
                 </div>
               </div>
             </div>

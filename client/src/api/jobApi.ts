@@ -23,7 +23,7 @@ export interface JobCardData {
   _id?: string;
   vehicleName: string;
   vehicleNumber: string;
-  color?: string;
+  vehicleColor?: string;
   customerName?: string;
   customerMobile?: string;
   customerEmail?: string;
@@ -36,7 +36,8 @@ export interface JobCardData {
 export interface CreateJobRequest {
   vehicleName: string;
   vehicleNumber: string;
-  color?: string;
+  vehicleColor?: string;
+  customerName?: string;
   customerMobile?: string;
   customerEmail?: string;
   tasks: string[];
@@ -82,6 +83,14 @@ export const jobApi = apiSlice.injectEndpoints({
         method: 'POST',
         body,
       }),
+      invalidatesTags: ['JobCard'],
+    }),
+
+    updateJob: builder.mutation<
+      { success: boolean; data: JobCardData },
+      { jobCardId: string } & Partial<Pick<CreateJobRequest, 'vehicleName' | 'vehicleNumber' | 'vehicleColor' | 'customerName' | 'customerMobile' | 'customerEmail'>>
+    >({
+      query: ({ jobCardId, ...body }) => ({ url: `/jobs/${jobCardId}`, method: 'PATCH', body }),
       invalidatesTags: ['JobCard'],
     }),
 
@@ -141,6 +150,7 @@ export const jobApi = apiSlice.injectEndpoints({
 export const {
   useGetJobCardsQuery,
   useCreateJobMutation,
+  useUpdateJobMutation,
   useSetTaskStatusMutation,
   useAddTaskMutation,
   useDeleteTaskMutation,

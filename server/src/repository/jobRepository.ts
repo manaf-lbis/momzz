@@ -6,7 +6,8 @@ export class JobRepository {
   async createJobCard(data: {
     vehicleName: string;
     vehicleNumber: string;
-    color?: string;
+    vehicleColor?: string;
+    customerName?: string;
     customerMobile?: string;
     customerEmail?: string;
     createdBy: string;
@@ -20,7 +21,7 @@ export class JobRepository {
   }
 
   async findAllJobs(): Promise<IJobCard[]> {
-    return await JobCard.find({ isDeleted: { $ne: true } }).sort({ createdAt: -1 });
+    return await JobCard.find({ isDeleted: { $ne: true } }).sort({ status: -1, createdAt: -1 });
   }
 
   async findPaginatedJobs(options: {
@@ -58,7 +59,7 @@ export class JobRepository {
     }
 
     const [jobs, total] = await Promise.all([
-      JobCard.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      JobCard.find(query).sort({ status: -1, createdAt: -1 }).skip(skip).limit(limit),
       JobCard.countDocuments(query),
     ]);
 
@@ -73,6 +74,25 @@ export class JobRepository {
 
   async findJobById(jobCardId: string): Promise<IJobCard | null> {
     return await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
+  }
+
+  async updateJobCard(jobCardId: string, data: Partial<Pick<IJobCard, 'vehicleName' | 'vehicleNumber' | 'vehicleColor' | 'customerName' | 'customerMobile' | 'customerEmail'>>) {
+    return await JobCard.findOneAndUpdate(
+      { _id: jobCardId, isDeleted: { $ne: true } },
+      { $set: data },
+      { new: true, runValidators: true }
+    );
+  }
+
+  async findPublicJobs(vehicleNumber: string, contact: { mobile?: string; email?: string }) {
+    const contactQuery = contact.mobile
+      ? { customerMobile: contact.mobile.trim() }
+      : { customerEmail: contact.email!.trim().toLowerCase() };
+    return await JobCard.find({
+      isDeleted: { $ne: true },
+      vehicleNumber: vehicleNumber.trim().toUpperCase(),
+      ...contactQuery,
+    }).sort({ createdAt: -1 });
   }
 
   async updateJobStatus(jobCardId: string, status: 'IN_PROGRESS' | 'COMPLETED'): Promise<IJobCard | null> {

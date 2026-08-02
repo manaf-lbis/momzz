@@ -215,8 +215,8 @@ export const AdminHome: React.FC = () => {
           </button>
 
           {/* Card B: Create Job Card (Admin Only) */}
-          <button
-            onClick={() => setShowModal(true)}
+          <Link
+            to="/jobs/create"
             className="bg-zinc-900 border border-zinc-800 hover:border-yellow-400/60 rounded-2xl p-4 text-left transition-all space-y-2 group shadow-lg"
           >
             <div className="w-8 h-8 rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400 group-hover:bg-yellow-400 group-hover:text-zinc-950 transition-colors">
@@ -226,7 +226,7 @@ export const AdminHome: React.FC = () => {
               <h3 className="text-xs font-extrabold uppercase tracking-wide text-zinc-100">Create Job</h3>
               <p className="text-[11px] font-mono text-zinc-400 mt-0.5">Publish New Car</p>
             </div>
-          </button>
+          </Link>
 
           {/* Card C: Pending Approvals (Admin Only) */}
           <Link

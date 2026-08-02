@@ -146,7 +146,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
           <div className="flex items-center gap-2">
             <Car className="w-5 h-5 text-yellow-400 shrink-0" />
             <h3 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-100 uppercase truncate">
-              {job.vehicleName}
+              {job.vehicleName}{!isAdmin && job.vehicleColor ? ` ${job.vehicleColor}` : ''}
             </h3>
             {compact && (
               <span className="text-zinc-400 hover:text-yellow-400">
@@ -155,8 +155,9 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
             )}
           </div>
           <p className="text-xs font-mono text-zinc-400 font-bold bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800 inline-block">
-            {job.vehicleNumber}
+            {job.vehicleNumber}{!isAdmin && job.customerMobile ? ` • ${job.customerMobile}` : ''}
           </p>
+          <p className="text-[11px] font-mono text-zinc-500">⏱ {getElapsedTime(job.createdAt)} in garage</p>
         </div>
 
         {/* Visual Status Headers */}

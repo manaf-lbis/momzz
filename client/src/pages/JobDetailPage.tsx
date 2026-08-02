@@ -6,6 +6,7 @@ import {
   useAddTaskMutation,
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
+  useUpdateJobMutation,
   JobCardData,
   TaskItem,
 } from '../api/jobApi';
@@ -64,12 +65,15 @@ export const JobDetailPage: React.FC = () => {
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editDetails, setEditDetails] = useState<Partial<JobCardData>>({});
 
   const { data: jobsResponse, isLoading, isError } = useGetJobCardsQuery();
   const [setTaskStatus] = useSetTaskStatusMutation();
   const [addTask] = useAddTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
   const [deleteJobCard] = useDeleteJobCardMutation();
+  const [updateJob, { isLoading: isUpdatingDetails }] = useUpdateJobMutation();
 
   // Handle flat vs paginated response shape
   const rawData = jobsResponse?.data;
@@ -116,6 +120,13 @@ export const JobDetailPage: React.FC = () => {
   const completedCount = tasks.filter((t: TaskItem) => t.status === 'COMPLETED').length;
   const progressPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
   const isAllCompleted = totalTasks > 0 && completedCount === totalTasks;
+
+  const saveJobDetails = async () => {
+    try {
+      await updateJob({ jobCardId: currentJob.id || currentJob._id!, ...editDetails }).unwrap();
+      setIsEditingDetails(false);
+    } catch (err: any) { setErrorMessage(err?.data?.message || 'Failed to update job details.'); }
+  };
 
   // Filter tasks based on selected status filter
   const filteredTasks = tasks.filter((t: TaskItem) => {
@@ -247,16 +258,12 @@ export const JobDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {isAdmin && (
-            <button
-              onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
-              className="p-2 bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 text-xs font-mono rounded-xl transition-all active:scale-95"
-              title="Delete Job Card"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
+          {isAdmin && <div className="flex gap-2"><button onClick={() => { setEditDetails({ vehicleName: currentJob.vehicleName, vehicleNumber: currentJob.vehicleNumber, vehicleColor: currentJob.vehicleColor, customerName: currentJob.customerName, customerMobile: currentJob.customerMobile, customerEmail: currentJob.customerEmail }); setIsEditingDetails(true); }} className="px-2 py-1.5 bg-amber-400/10 border border-amber-400/30 text-amber-600 dark:text-yellow-400 text-xs font-mono rounded-xl">Edit</button><button onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })} className="p-2 bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 text-xs font-mono rounded-xl transition-all active:scale-95" title="Delete Job Card"><Trash2 className="w-4 h-4" /></button></div>}
         </div>
+
+        {isAdmin && (currentJob.customerName || currentJob.customerMobile || currentJob.customerEmail) && <div className="text-xs rounded-xl bg-zinc-100 dark:bg-zinc-900 p-3 text-zinc-600 dark:text-zinc-300">Customer: {currentJob.customerName || '—'} · {currentJob.customerMobile || '—'} · {currentJob.customerEmail || '—'}</div>}
+
+        {isEditingDetails && <div className="industrial-card rounded-2xl p-4 space-y-3"><h2 className="text-sm font-bold">Edit vehicle and customer details</h2><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{(['vehicleName', 'vehicleNumber', 'vehicleColor', 'customerName', 'customerMobile', 'customerEmail'] as const).map((field) => <input key={field} value={(editDetails[field] as string) || ''} onChange={(e) => setEditDetails((prev) => ({ ...prev, [field]: e.target.value }))} placeholder={field.replace(/([A-Z])/g, ' $1')} className="industrial-input rounded-xl p-2 text-sm" />)}</div><div className="flex gap-2"><button onClick={() => setIsEditingDetails(false)} className="px-3 py-2 text-xs">Cancel</button><button disabled={isUpdatingDetails} onClick={saveJobDetails} className="px-3 py-2 rounded-xl bg-amber-400 text-zinc-950 text-xs font-bold">{isUpdatingDetails ? 'Saving...' : 'Save changes'}</button></div></div>}
 
         {errorMessage && (
           <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-xs font-mono">

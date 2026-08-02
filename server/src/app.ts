@@ -79,11 +79,13 @@ app.get('/.well-known/*', (req: Request, res: Response) => {
 
 import jobRouter from './router/jobRouter';
 import inventoryRouter from './router/inventoryRouter';
+import publicRouter from './router/publicRouter';
 
 // API Routes
 app.use('/api/auth', authRouter);
 app.use('/api/jobs', jobRouter);
 app.use('/api/inventory', inventoryRouter);
+app.use('/api/public', publicRouter);
 
 
 // Health check
