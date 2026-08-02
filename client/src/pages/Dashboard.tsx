@@ -98,9 +98,6 @@ export const Dashboard: React.FC = () => {
 
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-4">
-          <div className="w-10 h-10 rounded-xl bg-yellow-400 text-zinc-950 flex items-center justify-center font-bold shadow-md shrink-0">
-            <Wrench className="w-5 h-5 stroke-[2.5]" />
-          </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
