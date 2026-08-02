@@ -51,6 +51,8 @@ export class AuthService {
       role,
       isApproved,
       taskCount: 0,
+      totalLoginAttempts: 0,
+      isOnline: false,
     });
 
     const tokens = this.generateTokens(user);
@@ -63,6 +65,9 @@ export class AuthService {
   }
 
   async login(mobile: string, pass: string) {
+    // Record login attempt regardless of success/failure
+    await userRepository.recordLoginAttempt(mobile);
+
     const user = await this.authRepo.findByMobile(mobile);
     if (!user) {
       throw new Error('Invalid mobile number or password');
@@ -157,7 +162,11 @@ export class AuthService {
       role: user.role,
       isApproved: user.isApproved,
       status: user.status || 'ACTIVE',
-      taskCount: user.taskCount,
+      taskCount: user.taskCount || 0,
+      lastLoginAttempt: user.lastLoginAttempt,
+      totalLoginAttempts: user.totalLoginAttempts || 0,
+      isOnline: !!user.isOnline,
+      lastSeen: user.lastSeen,
       createdAt: user.createdAt,
     }));
   }
@@ -172,7 +181,11 @@ export class AuthService {
       role: user.role,
       isApproved: user.isApproved,
       status: user.status || 'ACTIVE',
-      taskCount: user.taskCount,
+      taskCount: user.taskCount || 0,
+      lastLoginAttempt: user.lastLoginAttempt,
+      totalLoginAttempts: user.totalLoginAttempts || 0,
+      isOnline: !!user.isOnline,
+      lastSeen: user.lastSeen,
       createdAt: user.createdAt,
     }));
   }
@@ -204,7 +217,6 @@ export class AuthService {
 
     const user = await userRepository.findByMobile((await userRepository.findById(userId))?.mobile || '');
     if (!user) {
-      // Try findById directly
       const rawUser = await (await import('../model/User')).default.findById(userId);
       if (!rawUser) throw new Error('User not found.');
       const isMatch = await bcrypt.compare(currentPassword, rawUser.password);

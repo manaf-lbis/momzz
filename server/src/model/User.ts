@@ -9,6 +9,10 @@ export interface IUser extends Document {
   isApproved: boolean;
   status: 'ACTIVE' | 'BLOCKED';
   taskCount: number;
+  lastLoginAttempt?: Date;
+  totalLoginAttempts: number;
+  isOnline: boolean;
+  lastSeen?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +51,22 @@ const UserSchema: Schema = new Schema(
     taskCount: {
       type: Number,
       default: 0,
+    },
+    lastLoginAttempt: {
+      type: Date,
+      default: null,
+    },
+    totalLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+    lastSeen: {
+      type: Date,
+      default: null,
     },
   },
   {

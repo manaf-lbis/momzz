@@ -44,6 +44,29 @@ export class UserRepository {
   async updateUserPassword(id: string, hashedPassword: string): Promise<IUser | null> {
     return await User.findByIdAndUpdate(id, { password: hashedPassword }, { new: true });
   }
+
+  async recordLoginAttempt(mobile: string): Promise<void> {
+    await User.updateOne(
+      { mobile },
+      {
+        $inc: { totalLoginAttempts: 1 },
+        $set: { lastLoginAttempt: new Date() },
+      }
+    );
+  }
+
+  async setUserOnlineStatus(userId: string, isOnline: boolean): Promise<IUser | null> {
+    return await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          isOnline,
+          lastSeen: new Date(),
+        },
+      },
+      { new: true }
+    ).select('-password');
+  }
 }
 
 export const userRepository = new UserRepository();
