@@ -11,6 +11,8 @@ export interface IUser extends Document {
   taskCount: number;
   lastLoginAttempt?: Date;
   totalLoginAttempts: number;
+  failedLoginAttempts: number;
+  loginLockedUntil?: Date;
   isOnline: boolean;
   lastSeen?: Date;
   createdAt: Date;
@@ -59,6 +61,14 @@ const UserSchema: Schema = new Schema(
     totalLoginAttempts: {
       type: Number,
       default: 0,
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    loginLockedUntil: {
+      type: Date,
+      default: null,
     },
     isOnline: {
       type: Boolean,

@@ -26,6 +26,10 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       return sendError(res, 'Your account has been blocked by an administrator.', 403);
     }
 
+    if (!userDoc.isApproved && userDoc.role !== 'ADMIN') {
+      return sendError(res, 'Your account is awaiting administrator approval.', 403);
+    }
+
     req.user = {
       ...decoded,
       isApproved: userDoc.isApproved,

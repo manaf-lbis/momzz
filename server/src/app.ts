@@ -4,9 +4,6 @@ import cookieParser from 'cookie-parser';
 import { ENV } from './config/env';
 import { connectDB } from './config/db';
 import authRouter from './router/authRouter';
-import bcrypt from 'bcryptjs';
-import { userRepository } from './repository/userRepository';
-import { ROLES } from './constants/status';
 
 const app: Application = express();
 
@@ -23,12 +20,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Dynamic CORS origin handler
-const allowedOrigins = [
-  ENV.CLIENT_URL,
-  ENV.CLIENT_URL.replace(/\/$/, ''),
-  'http://localhost:5173',
-  'http://localhost:3000',
-];
+const allowedOrigins = ENV.CORS_ORIGINS;
 
 const isAllowedOrigin = (origin: string) => {
   const cleanOrigin = origin.replace(/\/$/, '');
@@ -45,6 +37,7 @@ const corsOptions: cors.CorsOptions = {
     if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
+      console.warn(`[CORS] Rejected origin: ${origin}`);
       callback(null, false);
     }
   },
@@ -117,39 +110,6 @@ app.get('/api/dummy', (req: Request, res: Response) => {
   });
 });
 
-// Seed Admin User on startup
-const seedAdmin = async () => {
-  const adminMobile = process.env.ADMIN_MOBILE;
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminMobile || !adminPassword) {
-    console.warn('[SEED] Admin seed skipped: ADMIN_MOBILE and ADMIN_PASSWORD are required.');
-    return;
-  }
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(adminPassword, salt);
-
-  const existing = await userRepository.findByMobile(adminMobile);
-  if (existing) {
-    // Use mongoose directly to update password (findByMobile returns without password via select)
-    const mongoose = (await import('mongoose')).default;
-    await mongoose.model('User').updateOne(
-      { mobile: adminMobile },
-      { $set: { password: hashedPassword, role: ROLES.ADMIN, isApproved: true } }
-    );
-    console.log('[SEED] Admin user password updated successfully.');
-  } else {
-    await userRepository.createUser({
-      name: 'Admin',
-      mobile: adminMobile,
-      password: hashedPassword,
-      role: ROLES.ADMIN,
-      isApproved: true,
-      taskCount: 0,
-    } as any);
-    console.log('[SEED] Admin user created successfully.');
-  }
-};
-
 import http from 'http';
 import { initSocket } from './config/socket';
 
@@ -157,8 +117,7 @@ import { initSocket } from './config/socket';
 const server = http.createServer(app);
 initSocket(server);
 
-connectDB().then(async () => {
-  await seedAdmin();
+connectDB().then(() => {
   server.listen(ENV.PORT, () => {
     console.log(`[SERVER] Momzz backend listening on http://localhost:${ENV.PORT}`);
     console.log(`[SERVER] Configured Client URL from env: ${ENV.CLIENT_URL}`);

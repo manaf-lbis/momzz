@@ -55,6 +55,24 @@ export class UserRepository {
     );
   }
 
+  async recordFailedPasswordAttempt(userId: string): Promise<void> {
+    const user = await User.findById(userId);
+    if (!user) return;
+
+    const failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+    user.failedLoginAttempts = failedLoginAttempts;
+    if (failedLoginAttempts >= 5) {
+      user.loginLockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+    }
+    await user.save();
+  }
+
+  async clearFailedPasswordAttempts(userId: string): Promise<void> {
+    await User.findByIdAndUpdate(userId, {
+      $set: { failedLoginAttempts: 0, loginLockedUntil: null },
+    });
+  }
+
   async setUserOnlineStatus(userId: string, isOnline: boolean): Promise<IUser | null> {
     return await User.findByIdAndUpdate(
       userId,

@@ -14,6 +14,7 @@ import { Navbar } from '../components/navbar/Navbar';
 import { ConfirmationModal } from '../components/common/ConfirmationModal';
 import { TaskAutoComplete } from '../components/common/TaskAutoComplete';
 import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../utils/confetti';
+import { playCompletionSound } from '../utils/completionSound';
 import {
   ArrowLeft,
   Car,
@@ -148,6 +149,9 @@ export const JobDetailPage: React.FC = () => {
     const taskId = task.id || task._id!;
     setUpdatingTaskId(taskId);
     try {
+      if (action === 'COMPLETE') {
+        playCompletionSound();
+      }
       await setTaskStatus({
         taskId,
         action,

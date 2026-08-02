@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env';
-import { ROLES, UserRole } from '../constants/status';
+import { ROLES } from '../constants/status';
 import { AuthRepository } from '../repository/authRepository';
 import { userRepository } from '../repository/userRepository';
 import { emitUserApproved, emitUserBlocked } from '../config/socket';
@@ -10,7 +10,6 @@ export interface RegisterDTO {
   name: string;
   mobile: string;
   password: string;
-  role?: string;
 }
 
 export class AuthService {
@@ -41,8 +40,9 @@ export class AuthService {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(data.password, salt);
 
-    const role = data.role && Object.values(ROLES).includes(data.role as UserRole) ? data.role : ROLES.WORKER;
-    const isApproved = role === ROLES.ADMIN;
+    // Public registration is worker-only. Administrator accounts are managed directly in the database.
+    const role = ROLES.WORKER;
+    const isApproved = false;
 
     const user = await this.authRepo.createUser({
       name: data.name,
@@ -73,14 +73,21 @@ export class AuthService {
       throw new Error('Invalid mobile number or password');
     }
 
+    if (user.loginLockedUntil && user.loginLockedUntil > new Date()) {
+      throw new Error('Too many failed login attempts. Please try again in 15 minutes.');
+    }
+
     if (user.status === 'BLOCKED') {
       throw new Error('ACCOUNT_BLOCKED: Your account has been blocked by an administrator.');
     }
 
     const isMatch = await bcrypt.compare(pass, user.password);
     if (!isMatch) {
+      await userRepository.recordFailedPasswordAttempt(user._id.toString());
       throw new Error('Invalid mobile number or password');
     }
+
+    await userRepository.clearFailedPasswordAttempts(user._id.toString());
 
     if (!user.isApproved && user.role !== ROLES.ADMIN) {
       throw new Error('ACCOUNT_PENDING: Waiting for Admin Approval');

@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { logout } from '../../slice/authSlice';
 import { useTheme } from '../../context/ThemeContext';
-import { Wrench, LogOut, Sun, Moon } from 'lucide-react';
+import { Wrench, LogOut, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
 import { InstallAppBanner } from '../common/InstallAppBanner';
+import { isCompletionSoundEnabled, setCompletionSoundEnabled } from '../../utils/completionSound';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [isSoundEnabled, setIsSoundEnabled] = useState(isCompletionSoundEnabled);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -44,6 +46,19 @@ export const Navbar: React.FC = () => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const nextValue = !isSoundEnabled;
+                setIsSoundEnabled(nextValue);
+                setCompletionSoundEnabled(nextValue);
+              }}
+              className="p-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all active:scale-95"
+              title={isSoundEnabled ? 'Turn completion sound off' : 'Turn completion sound on'}
+              aria-label={isSoundEnabled ? 'Turn completion sound off' : 'Turn completion sound on'}
+            >
+              {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
@@ -80,4 +95,3 @@ export const Navbar: React.FC = () => {
     </>
   );
 };
-

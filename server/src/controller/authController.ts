@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { authService } from '../service/authService';
 import { userRepository } from '../repository/userRepository';
 import { sendSuccess, sendError } from '../utils/responseHandler';
+import { clearFailedLoginAttempts, recordFailedLogin } from '../middleware/loginRateLimitMiddleware';
 
 const getRefreshCookieOptions = (req: Request) => {
   const forwardedProtocol = req.headers['x-forwarded-proto'];
@@ -26,12 +27,12 @@ const getRefreshCookieOptions = (req: Request) => {
 export class AuthController {
   async register(req: Request, res: Response) {
     try {
-      const { name, mobile, password, role } = req.body;
+      const { name, mobile, password } = req.body;
       if (!name || !mobile || !password) {
         return sendError(res, 'Name, mobile number, and password are required.', 400);
       }
 
-      const result = await authService.register({ name, mobile, password, role });
+      const result = await authService.register({ name, mobile, password });
 
       res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions(req));
 
@@ -65,6 +66,8 @@ export class AuthController {
 
       const result = await authService.login(mobile, password);
 
+      clearFailedLoginAttempts(req);
+
       res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions(req));
 
       return sendSuccess(
@@ -84,6 +87,7 @@ export class AuthController {
         200
       );
     } catch (error: any) {
+      recordFailedLogin(req);
       return sendError(res, error.message || 'Authentication failed.', 401);
     }
   }
