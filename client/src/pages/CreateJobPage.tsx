@@ -18,8 +18,7 @@ import { useCreateJobMutation } from '../api/jobApi';
 import { ConfirmationModal } from '../components/common/ConfirmationModal';
 
 const COLOR_PRESETS = [
-  'White', 'Black', 'Silver', 'Grey', 'Red', 'Blue', 'Green',
-  'Yellow', 'Orange', 'Pearl White', 'Midnight Black', 'Champagne Gold',
+  'White', 'Black', 'Red', 'Blue'
 ];
 
 export const CreateJobPage: React.FC = () => {

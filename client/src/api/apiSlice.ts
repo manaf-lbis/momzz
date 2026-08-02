@@ -15,6 +15,25 @@ const baseQuery = fetchBaseQuery({
   },
 });
 
+let refreshRequest: Promise<any> | null = null;
+
+const refreshAccessToken = (
+  api: Parameters<BaseQueryFn>[1],
+  extraOptions: Parameters<BaseQueryFn>[2]
+) => {
+  if (!refreshRequest) {
+    refreshRequest = Promise.resolve(baseQuery(
+      { url: '/auth/refresh', method: 'POST' },
+      api,
+      extraOptions
+    )).finally(() => {
+      refreshRequest = null;
+    });
+  }
+
+  return refreshRequest!;
+};
+
 const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
   args,
   api,
@@ -27,11 +46,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
     // Prevent infinite loop if /auth/refresh itself fails
     const url = typeof args === 'string' ? args : args.url;
     if (url !== '/auth/refresh' && url !== '/auth/login') {
-      const refreshResult = await baseQuery(
-        { url: '/auth/refresh', method: 'POST' },
-        api,
-        extraOptions
-      );
+      const refreshResult = await refreshAccessToken(api, extraOptions);
 
       if (refreshResult.data) {
         const data = refreshResult.data as any;
@@ -59,4 +74,3 @@ export const apiSlice = createApi({
   tagTypes: ['User', 'PendingWorkers', 'AllUsers', 'JobCard', 'Task', 'Dummy', 'TaskInventory'],
   endpoints: () => ({}),
 });
-

@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env';
 import { ROLES } from '../constants/status';
@@ -23,7 +24,8 @@ export class AuthService {
     );
 
     const refreshToken = jwt.sign(
-      { id: user._id, mobile: user.mobile },
+      // A unique ID makes every browser/device login its own refresh session.
+      { id: user._id, mobile: user.mobile, jti: randomUUID() },
       ENV.JWT_REFRESH_SECRET,
       { expiresIn: '30d' }
     );
@@ -104,19 +106,14 @@ export class AuthService {
   }
 
   async rotateRefreshToken(oldRefreshToken: string) {
-    const existingToken = await this.authRepo.findRefreshToken(oldRefreshToken);
+    // Consume the token in one database operation so two requests cannot rotate it twice.
+    const existingToken = await this.authRepo.consumeRefreshToken(oldRefreshToken);
 
-    // Automatic Reuse Detection: Token hijacked!
+    // A missing token may be an already-completed parallel refresh. Do not sign every
+    // device out: each login maintains an independent refresh session.
     if (!existingToken) {
-      try {
-        const decoded: any = jwt.verify(oldRefreshToken, ENV.JWT_REFRESH_SECRET);
-        await this.authRepo.revokeAllUserTokens(decoded.id);
-      } catch (err) {}
-      throw new Error('Security Alert: Compromised Refresh Token. Please Login Again.');
+      throw new Error('Refresh session has expired. Please log in again.');
     }
-
-    // Delete used token (Rotation)
-    await this.authRepo.deleteRefreshToken(oldRefreshToken);
 
     const decoded: any = jwt.verify(oldRefreshToken, ENV.JWT_REFRESH_SECRET);
     const user = await this.authRepo.findByMobile(decoded.mobile);

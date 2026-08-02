@@ -141,6 +141,9 @@ export const JobDetailPage: React.FC = () => {
   // Always show confirmation modal before any status change (COMPLETE or REOPEN)
   const promptTaskStatusChange = (task: TaskItem) => {
     const action = task.status === 'COMPLETED' ? 'REOPEN' : 'COMPLETE';
+    if (action === 'REOPEN') {
+      playReopenSound();
+    }
     setConfirmTaskModal({ isOpen: true, task, action });
   };
 
@@ -167,8 +170,6 @@ export const JobDetailPage: React.FC = () => {
             triggerVehicleReadyConfetti();
           }, 300);
         }
-      } else {
-        playReopenSound();
       }
     } catch (err: any) {
       setErrorMessage(err?.data?.message || `Failed to set task status.`);

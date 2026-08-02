@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../common/Button';
 import { ConfirmationModal } from '../common/ConfirmationModal';
+import { playReopenSound } from '../../utils/completionSound';
 
 interface VehicleCardProps {
   job: JobCardData;
@@ -100,6 +101,11 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
       setUpdatingTaskId(null);
       setConfirmReopen(null);
     }
+  };
+
+  const promptReopen = (taskId: string, title: string) => {
+    playReopenSound();
+    setConfirmReopen({ taskId, title });
   };
 
   const handleAddNewTask = async (e: React.FormEvent) => {
@@ -323,7 +329,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
                       {isCompleted ? (
                         <button
                           disabled={isTaskUpdating}
-                          onClick={() => setConfirmReopen({ taskId, title: task.title })}
+                          onClick={() => promptReopen(taskId, task.title)}
                           className="px-3 py-2 rounded-xl text-xs font-bold font-mono bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-yellow-400 hover:border-yellow-400 active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-50"
                         >
                           {isTaskUpdating ? (

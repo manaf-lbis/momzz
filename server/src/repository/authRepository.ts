@@ -25,6 +25,10 @@ export class AuthRepository {
     return await RefreshToken.findOne({ token: hashRefreshToken(token) });
   }
 
+  async consumeRefreshToken(token: string) {
+    return await RefreshToken.findOneAndDelete({ token: hashRefreshToken(token) });
+  }
+
   async deleteRefreshToken(token: string) {
     return await RefreshToken.deleteOne({ token: hashRefreshToken(token) });
   }
