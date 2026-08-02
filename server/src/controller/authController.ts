@@ -7,8 +7,9 @@ const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
-  maxAge: 15 * 24 * 60 * 60 * 1000, // 15 days
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
 };
+
 
 export class AuthController {
   async register(req: Request, res: Response) {

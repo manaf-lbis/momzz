@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   useGetJobCardsQuery,
@@ -11,6 +11,8 @@ import {
 } from '../api/jobApi';
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
+import { ConfirmationModal } from '../components/common/ConfirmationModal';
+import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../utils/confetti';
 import {
   ArrowLeft,
   Car,
@@ -24,7 +26,10 @@ import {
   Sparkles,
   Check,
   RotateCcw,
+  Filter,
 } from 'lucide-react';
+
+type TaskFilterType = 'ALL' | 'PENDING' | 'COMPLETED';
 
 export const JobDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,7 +38,29 @@ export const JobDetailPage: React.FC = () => {
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isDeletingJob, setIsDeletingJob] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<TaskFilterType>('ALL');
+
+  // Confirmation Modals State
+  const [confirmTaskModal, setConfirmTaskModal] = useState<{
+    isOpen: boolean;
+    task: TaskItem | null;
+    action: 'COMPLETE' | 'REOPEN';
+  }>({
+    isOpen: false,
+    task: null,
+    action: 'COMPLETE',
+  });
+
+  const [confirmDeleteModal, setConfirmDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'JOB_CARD' | 'TASK';
+    taskId?: string;
+  }>({
+    isOpen: false,
+    type: 'TASK',
+  });
+
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: jobsResponse, isLoading, isError } = useGetJobCardsQuery();
   const [setTaskStatus] = useSetTaskStatusMutation();
@@ -41,7 +68,7 @@ export const JobDetailPage: React.FC = () => {
   const [deleteTask] = useDeleteTaskMutation();
   const [deleteJobCard] = useDeleteJobCardMutation();
 
-  // Handle both flat array and paginated {jobs, pagination} response shapes
+  // Handle flat vs paginated response shape
   const rawData = jobsResponse?.data;
   const jobsList: JobCardData[] = Array.isArray(rawData)
     ? rawData
@@ -50,7 +77,6 @@ export const JobDetailPage: React.FC = () => {
   const currentJob = jobsList.find(
     (j: JobCardData) => j.id === id || j._id === id
   );
-
 
   if (isLoading) {
     return (
@@ -83,41 +109,45 @@ export const JobDetailPage: React.FC = () => {
   }
 
   const tasks = currentJob.tasks || [];
-
-  // Sorted: OPEN first, COMPLETED at bottom
-  const sortedTasks = [...tasks].sort((a: TaskItem, b: TaskItem) => {
-    if (a.status === b.status) return 0;
-    return a.status === 'OPEN' ? -1 : 1;
-  });
-
   const totalTasks = tasks.length;
   const completedCount = tasks.filter((t: TaskItem) => t.status === 'COMPLETED').length;
   const progressPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
   const isAllCompleted = totalTasks > 0 && completedCount === totalTasks;
 
-  const formatDuration = (task: TaskItem) => {
+  // Filter tasks based on selected status filter
+  const filteredTasks = tasks.filter((t: TaskItem) => {
+    if (statusFilter === 'PENDING') return t.status === 'OPEN';
+    if (statusFilter === 'COMPLETED') return t.status === 'COMPLETED';
+    return true;
+  });
+
+  // Sorted: OPEN first, COMPLETED at bottom
+  const sortedTasks = [...filteredTasks].sort((a: TaskItem, b: TaskItem) => {
+    if (a.status === b.status) return 0;
+    return a.status === 'OPEN' ? -1 : 1;
+  });
+
+  const getAuditText = (task: TaskItem) => {
     if (!task.completedAt || !currentJob.createdAt) return null;
     const created = new Date(currentJob.createdAt).getTime();
     const completed = new Date(task.completedAt).getTime();
-    const diffMins = Math.max(1, Math.round((completed - created) / (1000 * 60)));
-    if (diffMins < 60) return `Took ${diffMins} mins`;
-    const hours = Math.floor(diffMins / 60);
-    const remainingMins = diffMins % 60;
-    return `Took ${hours}h ${remainingMins}m`;
+    const elapsedMins = Math.max(1, Math.round((completed - created) / (1000 * 60)));
+    return `Done by ${task.completedBy?.name || 'Technician'} • ${elapsedMins} mins after arrival`;
   };
 
-  /**
-   * Explicit Complete or Reopen — NOT a toggle.
-   * Sends the desired action so two workers clicking "Complete" simultaneously
-   * both send action='COMPLETE', and the server handles it idempotently.
-   */
-  const handleCompleteTask = async (taskId: string) => {
+  // Open task confirmation modal before status change
+  const promptTaskStatusChange = (task: TaskItem) => {
+    const action = task.status === 'COMPLETED' ? 'REOPEN' : 'COMPLETE';
+    if (action === 'COMPLETE') {
+      setConfirmTaskModal({ isOpen: true, task, action });
+    } else {
+      executeTaskStatusChange(task, 'REOPEN');
+    }
+  };
+
+  const executeTaskStatusChange = async (task: TaskItem, action: 'COMPLETE' | 'REOPEN') => {
     setErrorMessage('');
-    const targetTask = tasks.find((t: TaskItem) => (t.id || t._id!) === taskId);
-    if (!targetTask) return;
-
-    const action = targetTask.status === 'COMPLETED' ? 'REOPEN' : 'COMPLETE';
-
+    const taskId = task.id || task._id!;
     try {
       await setTaskStatus({
         taskId,
@@ -125,8 +155,22 @@ export const JobDetailPage: React.FC = () => {
         currentUserName: user?.name,
         currentUserId: user?.id,
       }).unwrap();
+
+      if (action === 'COMPLETE') {
+        // Trigger subtask confetti burst
+        triggerSubTaskConfetti();
+
+        // Check if completing this task finishes all tasks on the car
+        if (completedCount + 1 === totalTasks) {
+          setTimeout(() => {
+            triggerVehicleReadyConfetti();
+          }, 300);
+        }
+      }
     } catch (err: any) {
-      setErrorMessage(err?.data?.message || `Failed to ${action.toLowerCase()} task.`);
+      setErrorMessage(err?.data?.message || `Failed to set task status.`);
+    } finally {
+      setConfirmTaskModal({ isOpen: false, task: null, action: 'COMPLETE' });
     }
   };
 
@@ -145,23 +189,21 @@ export const JobDetailPage: React.FC = () => {
     }
   };
 
-  const handleDeleteTask = async (taskId: string) => {
+  const executeDelete = async () => {
+    setIsDeleting(true);
+    setErrorMessage('');
     try {
-      await deleteTask({ taskId }).unwrap();
+      if (confirmDeleteModal.type === 'JOB_CARD') {
+        await deleteJobCard({ jobCardId: currentJob.id || currentJob._id! }).unwrap();
+        navigate('/jobs');
+      } else if (confirmDeleteModal.type === 'TASK' && confirmDeleteModal.taskId) {
+        await deleteTask({ taskId: confirmDeleteModal.taskId }).unwrap();
+      }
     } catch (err: any) {
-      setErrorMessage(err?.data?.message || 'Failed to delete task.');
-    }
-  };
-
-  const handleDeleteJobCard = async () => {
-    if (!window.confirm('Are you sure you want to permanently delete this job card?')) return;
-    setIsDeletingJob(true);
-    try {
-      await deleteJobCard({ jobCardId: currentJob.id || currentJob._id! }).unwrap();
-      navigate('/jobs');
-    } catch (err: any) {
-      setIsDeletingJob(false);
-      setErrorMessage(err?.data?.message || 'Failed to delete job card.');
+      setErrorMessage(err?.data?.message || 'Delete operation failed.');
+    } finally {
+      setIsDeleting(false);
+      setConfirmDeleteModal({ isOpen: false, type: 'TASK' });
     }
   };
 
@@ -186,12 +228,12 @@ export const JobDetailPage: React.FC = () => {
                   {currentJob.vehicleName}
                 </h1>
                 {isAllCompleted ? (
-                  <span className="px-2 py-0.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-full font-mono text-[10px] font-bold uppercase flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> Ready
+                  <span className="px-2.5 py-0.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-full font-mono text-[10px] font-extrabold uppercase flex items-center gap-1 shadow-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Delivery
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-full font-mono text-[10px] font-bold uppercase flex items-center gap-1">
-                    <Clock className="w-3 h-3 animate-pulse" /> In Progress
+                  <span className="px-2.5 py-0.5 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-full font-mono text-[10px] font-bold uppercase flex items-center gap-1">
+                    <Clock className="w-3 h-3 animate-pulse" /> In Workroom
                   </span>
                 )}
               </div>
@@ -203,9 +245,9 @@ export const JobDetailPage: React.FC = () => {
 
           {isAdmin && (
             <button
-              onClick={handleDeleteJobCard}
-              disabled={isDeletingJob}
+              onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
               className="p-2 bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 text-xs font-mono rounded-xl transition-all active:scale-95"
+              title="Delete Job Card"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -218,19 +260,47 @@ export const JobDetailPage: React.FC = () => {
           </div>
         )}
 
-        {/* Progress Bar */}
-        <div className="industrial-card p-4 rounded-2xl space-y-2">
+        {/* Progress Bar & Vehicle Ready Banner */}
+        <div className="industrial-card p-4 rounded-2xl space-y-3">
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-zinc-500 dark:text-zinc-400 font-bold">SERVICE CHECKLIST</span>
+            <span className="text-zinc-500 dark:text-zinc-400 font-bold uppercase flex items-center gap-1.5">
+              Service Progress Checklist
+            </span>
             <span className="text-amber-600 dark:text-yellow-400 font-extrabold">
               {completedCount} / {totalTasks} Completed ({progressPercent}%)
             </span>
           </div>
-          <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+          <div className="w-full h-2.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
-              className="h-full bg-amber-500 dark:bg-yellow-400 rounded-full transition-all duration-300"
+              className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
             />
+          </div>
+        </div>
+
+        {/* Unified Task List Filter */}
+        <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-amber-500 dark:text-yellow-400" />
+            <h2 className="text-xs font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400">
+              TASK STATUS FILTER
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-1 p-1 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800">
+            {(['ALL', 'PENDING', 'COMPLETED'] as TaskFilterType[]).map((ft) => (
+              <button
+                key={ft}
+                onClick={() => setStatusFilter(ft)}
+                className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold uppercase transition-all ${
+                  statusFilter === ft
+                    ? 'bg-yellow-400 text-zinc-950 shadow-sm'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+              >
+                {ft}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -239,52 +309,49 @@ export const JobDetailPage: React.FC = () => {
           <form onSubmit={handleAddTask} className="flex gap-2">
             <input
               type="text"
-              placeholder="Add sub-task (Admin)..."
+              placeholder="Add sub-task (e.g. Engine Oil Flush)..."
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
-              className="flex-1 px-3.5 py-2 rounded-xl industrial-input text-xs font-medium"
+              className="flex-1 px-4 py-2.5 rounded-xl industrial-input text-xs font-medium"
             />
             <button
               type="submit"
               disabled={isAddingTask}
-              className="px-3.5 py-2 bg-amber-400 dark:bg-yellow-400 text-zinc-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 dark:hover:bg-yellow-300 transition-all active:scale-95 flex items-center gap-1"
+              className="px-4 py-2.5 bg-amber-400 dark:bg-yellow-400 text-zinc-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 dark:hover:bg-yellow-300 transition-all active:scale-95 flex items-center gap-1 shadow-sm shrink-0"
             >
-              <Plus className="w-4 h-4" /> Add
+              <Plus className="w-4 h-4" /> Add Task
             </button>
           </form>
         )}
 
         {/* Sub-Task Checklist */}
         <div className="space-y-2">
-          <h2 className="text-xs font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400 px-1">
-            SUB-TASKS ({completedCount}/{totalTasks})
-          </h2>
-
           {sortedTasks.length === 0 ? (
-            <div className="p-6 industrial-card rounded-2xl text-center text-zinc-500 text-xs font-mono">
-              NO SUB-TASKS ASSIGNED TO THIS VEHICLE
+            <div className="p-8 industrial-card rounded-2xl text-center text-zinc-500 text-xs font-mono space-y-1">
+              <p className="uppercase font-bold">No tasks match filter ({statusFilter})</p>
+              <p className="text-[11px] text-zinc-400">Select 'ALL' to view all job card sub-tasks.</p>
             </div>
           ) : (
             <div className="space-y-2">
               {sortedTasks.map((task: TaskItem) => {
                 const taskId = task.id || task._id!;
                 const isCompleted = task.status === 'COMPLETED';
-                const durationText = formatDuration(task);
+                const auditText = getAuditText(task);
 
                 return (
                   <div
                     key={taskId}
-                    className={`industrial-card p-3.5 rounded-2xl flex items-center justify-between gap-3 transition-all ${
+                    className={`industrial-card p-4 rounded-2xl flex items-center justify-between gap-3 transition-all ${
                       isCompleted
                         ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-500/20'
                         : ''
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {/* Checkbox */}
+                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      {/* Interactive Checkbox */}
                       <button
                         type="button"
-                        onClick={() => handleCompleteTask(taskId)}
+                        onClick={() => promptTaskStatusChange(task)}
                         className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all flex-shrink-0 active:scale-90 ${
                           isCompleted
                             ? 'bg-emerald-500 text-white shadow-sm'
@@ -294,7 +361,7 @@ export const JobDetailPage: React.FC = () => {
                         {isCompleted && <Check className="w-4 h-4 stroke-[3]" />}
                       </button>
 
-                      <div className="space-y-0.5 min-w-0 flex-1">
+                      <div className="space-y-1 min-w-0 flex-1">
                         <p
                           className={`text-xs sm:text-sm font-bold transition-all ${
                             isCompleted
@@ -305,14 +372,11 @@ export const JobDetailPage: React.FC = () => {
                           {task.title}
                         </p>
 
-                        {isCompleted && (
-                          <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
-                            <span className="flex items-center gap-1 font-semibold">
-                              <UserCheck className="w-3 h-3" /> {task.completedBy?.name || 'Worker'}
-                            </span>
-                            {durationText && (
-                              <span className="text-zinc-400 dark:text-zinc-500 font-medium">({durationText})</span>
-                            )}
+                        {/* Task Audit Metadata */}
+                        {isCompleted && auditText && (
+                          <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                            <UserCheck className="w-3 h-3 shrink-0 text-emerald-500" />
+                            <span className="font-semibold">{auditText}</span>
                           </div>
                         )}
                       </div>
@@ -322,15 +386,15 @@ export const JobDetailPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       {!isCompleted ? (
                         <button
-                          onClick={() => handleCompleteTask(taskId)}
-                          className="px-3 py-1.5 bg-amber-400 dark:bg-yellow-400 text-zinc-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 dark:hover:bg-yellow-300 transition-all active:scale-95 flex items-center gap-1 whitespace-nowrap"
+                          onClick={() => promptTaskStatusChange(task)}
+                          className="px-3 py-1.5 bg-amber-400 dark:bg-yellow-400 text-zinc-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 dark:hover:bg-yellow-300 transition-all active:scale-95 flex items-center gap-1 whitespace-nowrap shadow-sm cursor-pointer"
                         >
-                          <Sparkles className="w-3 h-3" /> Complete
+                          <Sparkles className="w-3.5 h-3.5" /> Complete
                         </button>
                       ) : (
                         <button
-                          onClick={() => handleCompleteTask(taskId)}
-                          className="px-2.5 py-1 bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 text-[10px] font-mono rounded-lg transition-colors flex items-center gap-1"
+                          onClick={() => promptTaskStatusChange(task)}
+                          className="px-2.5 py-1 bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 text-[10px] font-mono font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                         >
                           <RotateCcw className="w-3 h-3" /> Reopen
                         </button>
@@ -338,10 +402,11 @@ export const JobDetailPage: React.FC = () => {
 
                       {isAdmin && (
                         <button
-                          onClick={() => handleDeleteTask(taskId)}
-                          className="p-1 text-zinc-400 hover:text-red-500 transition-colors"
+                          onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'TASK', taskId })}
+                          className="p-1.5 text-zinc-400 hover:text-red-500 transition-colors rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          title="Delete Sub-task"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       )}
                     </div>
@@ -351,6 +416,36 @@ export const JobDetailPage: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Task Completion Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={confirmTaskModal.isOpen}
+          onClose={() => setConfirmTaskModal({ isOpen: false, task: null, action: 'COMPLETE' })}
+          onConfirm={() =>
+            confirmTaskModal.task &&
+            executeTaskStatusChange(confirmTaskModal.task, confirmTaskModal.action)
+          }
+          title="Complete Sub-Task"
+          message={`Are you sure you have completed "${confirmTaskModal.task?.title}" for ${currentJob.vehicleName}?`}
+          confirmText="Yes, Complete"
+          variant="primary"
+        />
+
+        {/* Delete Confirmation Modal (Admin Only) */}
+        <ConfirmationModal
+          isOpen={confirmDeleteModal.isOpen}
+          onClose={() => setConfirmDeleteModal({ isOpen: false, type: 'TASK' })}
+          onConfirm={executeDelete}
+          isLoading={isDeleting}
+          title={confirmDeleteModal.type === 'JOB_CARD' ? 'Delete Vehicle Job Card' : 'Delete Sub-task'}
+          message={
+            confirmDeleteModal.type === 'JOB_CARD'
+              ? `Are you sure you want to permanently delete vehicle card "${currentJob.vehicleName}"? This action cannot be undone.`
+              : 'Are you sure you want to delete this sub-task?'
+          }
+          confirmText="Delete Permanently"
+          variant="danger"
+        />
       </main>
     </div>
   );

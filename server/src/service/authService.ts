@@ -26,7 +26,7 @@ export class AuthService {
     const refreshToken = jwt.sign(
       { id: user._id, mobile: user.mobile },
       ENV.JWT_REFRESH_SECRET,
-      { expiresIn: '15d' }
+      { expiresIn: '30d' }
     );
 
     return { accessToken, refreshToken };
@@ -56,7 +56,7 @@ export class AuthService {
     const tokens = this.generateTokens(user);
 
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 15);
+    expiresAt.setDate(expiresAt.getDate() + 30);
     await this.authRepo.saveRefreshToken(user._id.toString(), tokens.refreshToken, expiresAt);
 
     return { user, ...tokens };
@@ -85,7 +85,7 @@ export class AuthService {
 
     // Save Refresh Token for Rotation
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 15);
+    expiresAt.setDate(expiresAt.getDate() + 30);
     await this.authRepo.saveRefreshToken(user._id.toString(), tokens.refreshToken, expiresAt);
 
     return { user, ...tokens };
@@ -120,7 +120,7 @@ export class AuthService {
 
     // Save new Refresh Token
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 15);
+    expiresAt.setDate(expiresAt.getDate() + 30);
     await this.authRepo.saveRefreshToken(user._id.toString(), tokens.refreshToken, expiresAt);
 
     return { user, ...tokens };

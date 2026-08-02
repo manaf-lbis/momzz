@@ -8,6 +8,7 @@ import { AdminApproval } from '../pages/AdminApproval';
 import { HomePage } from '../pages/HomePage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { UserManagementPage } from '../pages/UserManagementPage';
+import { AnalyticsPage } from '../pages/AnalyticsPage';
 import { ProtectedRoute } from './ProtectedRoute';
 
 export const AppRoutes: React.FC = () => {
@@ -24,8 +25,10 @@ export const AppRoutes: React.FC = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/jobs" element={<JobsListPage />} />
         <Route path="/jobs/:id" element={<JobDetailPage />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
+
 
       {/* Admin Only Routes */}
       <Route element={<ProtectedRoute requireAdmin={true} />}>
