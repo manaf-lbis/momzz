@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   useGetJobCardsQuery,
@@ -67,6 +68,12 @@ export const JobDetailPage: React.FC = () => {
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editDetails, setEditDetails] = useState<Partial<JobCardData>>({});
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const { data: jobsResponse, isLoading, isError } = useGetJobCardsQuery();
   const [setTaskStatus] = useSetTaskStatusMutation();
@@ -89,9 +96,9 @@ export const JobDetailPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors">
         <Navbar />
-        <div className="flex-1 flex flex-col items-center justify-center space-y-3">
-          <Wrench className="w-6 h-6 text-amber-500 dark:text-yellow-400 animate-spin" />
-          <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">LOADING WORKROOM...</p>
+        <div className="flex-1 max-w-4xl w-full mx-auto px-4 py-6 space-y-4">
+          {[0, 1, 2, 3].map((item) => <motion.div key={item} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative overflow-hidden rounded-2xl h-20 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300/50 dark:border-zinc-800"><motion.div className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/60 dark:via-zinc-700/50 to-transparent" animate={{ x: ['-120%', '260%'] }} transition={{ duration: 1.25, repeat: Infinity, delay: item * 0.12, ease: 'linear' }} /></motion.div>)}
+          <div className="flex justify-center items-center gap-2 text-xs font-mono text-amber-600 dark:text-yellow-400"><span className="w-5 h-5 rounded-full border-2 border-t-amber-400 border-r-transparent border-b-amber-400/30 border-l-transparent animate-spin shadow-lg shadow-amber-400/20" />SYNCING WORKROOM</div>
         </div>
       </div>
     );
@@ -120,6 +127,13 @@ export const JobDetailPage: React.FC = () => {
   const completedCount = tasks.filter((t: TaskItem) => t.status === 'COMPLETED').length;
   const progressPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
   const isAllCompleted = totalTasks > 0 && completedCount === totalTasks;
+  const getGarageDuration = () => {
+    const totalMinutes = Math.max(0, Math.floor((now - new Date(currentJob.createdAt).getTime()) / 60000));
+    if (totalMinutes < 60) return `${Math.max(1, totalMinutes)}m in garage`;
+    const hours = Math.floor(totalMinutes / 60);
+    if (hours < 24) return `${hours}h ${totalMinutes % 60}m in garage`;
+    return `${Math.floor(hours / 24)}d ${hours % 24}h in garage`;
+  };
 
   const saveJobDetails = async () => {
     try {
@@ -226,10 +240,10 @@ export const JobDetailPage: React.FC = () => {
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors">
       <Navbar />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-4 space-y-3">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
-          <div className="flex items-center gap-2.5">
+        <div className="industrial-card rounded-2xl p-3.5 flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5 min-w-0">
             <button
               onClick={() => navigate('/jobs')}
               className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 transition-all active:scale-95"
@@ -237,11 +251,15 @@ export const JobDetailPage: React.FC = () => {
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-xl font-bold uppercase tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-base sm:text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                   <Car className="w-5 h-5 text-amber-500 dark:text-yellow-400" />
-                  {currentJob.vehicleName}
+                  {currentJob.vehicleName} {currentJob.vehicleColor && <span className="text-amber-500 dark:text-yellow-400">({currentJob.vehicleColor})</span>}
                 </h1>
+                <span className="text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-yellow-400 border border-amber-500/20 px-2 py-0.5 rounded-full">⏱ {getGarageDuration()}</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-950 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">REG: <b className="uppercase">{currentJob.vehicleNumber}</b>{!isAdmin && currentJob.customerMobile ? ` • ${currentJob.customerMobile}` : ''}</span>
                 {isAllCompleted ? (
                   <span className="px-2.5 py-0.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-full font-mono text-[10px] font-extrabold uppercase flex items-center gap-1 shadow-sm">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Delivery
@@ -252,9 +270,6 @@ export const JobDetailPage: React.FC = () => {
                   </span>
                 )}
               </div>
-              <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-0.5">
-                REG: <span className="text-amber-600 dark:text-yellow-400 font-bold uppercase">{currentJob.vehicleNumber}</span>
-              </p>
             </div>
           </div>
 
@@ -272,7 +287,7 @@ export const JobDetailPage: React.FC = () => {
         )}
 
         {/* Progress Bar & Vehicle Ready Banner */}
-        <div className="industrial-card p-4 rounded-2xl space-y-3">
+        <div className="industrial-card p-3.5 rounded-2xl space-y-2">
           <div className="flex items-center justify-between text-xs font-mono">
             <span className="text-zinc-500 dark:text-zinc-400 font-bold uppercase flex items-center gap-1.5">
               Service Progress Checklist
@@ -290,7 +305,7 @@ export const JobDetailPage: React.FC = () => {
         </div>
 
         {/* Unified Task List Filter */}
-        <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-amber-500 dark:text-yellow-400" />
             <h2 className="text-xs font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400">
@@ -317,7 +332,7 @@ export const JobDetailPage: React.FC = () => {
 
         {/* Admin: Add Sub-task with Inventory Auto-Complete */}
         {isAdmin && (
-          <div className="industrial-card p-3 rounded-2xl">
+          <div className="industrial-card p-2.5 rounded-2xl max-w-md mx-auto w-full">
             <TaskAutoComplete
               value={newTaskTitle}
               onChange={setNewTaskTitle}
@@ -344,9 +359,12 @@ export const JobDetailPage: React.FC = () => {
                 const auditText = getAuditText(task);
 
                 return (
-                  <div
+                  <motion.div
                     key={taskId}
-                    className={`industrial-card p-4 rounded-2xl flex items-center justify-between gap-3 transition-all ${
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.18 }}
+                    className={`bg-white/70 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 p-3.5 rounded-2xl flex items-center justify-between gap-3 transition-all shadow-sm ${
                       isCompleted
                         ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-500/20'
                         : ''
@@ -442,7 +460,7 @@ export const JobDetailPage: React.FC = () => {
                         </button>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
