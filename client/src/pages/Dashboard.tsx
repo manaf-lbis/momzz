@@ -103,19 +103,15 @@ export const Dashboard: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-xl font-black tracking-tight uppercase text-zinc-900 dark:text-zinc-100">
-                MOMZ'Z AUTO GARAGE
+              <h1 className="text-base sm:text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
+                Welcome back, {user?.name}
               </h1>
               <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-mono text-[10px] font-bold uppercase">
                 ONLINE
               </span>
             </div>
             <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-0.5">
-              USER:{' '}
-              <span className="text-amber-600 dark:text-yellow-400 font-bold uppercase">
-                {user?.name}
-              </span>{' '}
-              ({user?.role})
+              {user?.role} workspace
             </p>
           </div>
         </div>
@@ -124,7 +120,7 @@ export const Dashboard: React.FC = () => {
         <section className="space-y-3">
           <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             <Wrench className="w-4 h-4 text-yellow-400" />
-            <span>Section 1 · Jobs Management</span>
+            <span>Job Management</span>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -159,7 +155,7 @@ export const Dashboard: React.FC = () => {
           <section className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               <Users className="w-4 h-4 text-yellow-400" />
-              <span>Section 2 · User &amp; Team Management</span>
+              <span>User &amp; Team Management</span>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -191,7 +187,7 @@ export const Dashboard: React.FC = () => {
         <section className="space-y-3">
           <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             <Trophy className="w-4 h-4 text-yellow-400" />
-            <span>Section 3 · Analytics &amp; Master Inventory</span>
+            <span>Analytics &amp; Master Inventory</span>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -229,7 +225,7 @@ export const Dashboard: React.FC = () => {
         <section className="space-y-3">
           <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             <UserCheck className="w-4 h-4 text-yellow-400" />
-            <span>Section 4 · Account</span>
+            <span>Account</span>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

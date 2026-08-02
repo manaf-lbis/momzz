@@ -13,7 +13,7 @@ export class JobRepository {
   }
 
   async findAllJobs(): Promise<IJobCard[]> {
-    return await JobCard.find().sort({ createdAt: -1 });
+    return await JobCard.find({ isDeleted: { $ne: true } }).sort({ createdAt: -1 });
   }
 
   async findPaginatedJobs(options: {
@@ -25,7 +25,7 @@ export class JobRepository {
     const limit = Math.max(1, options.limit || 10);
     const skip = (page - 1) * limit;
 
-    const query: any = {};
+    const query: any = { isDeleted: { $ne: true } };
 
     if (options.timeframe && options.timeframe !== 'all') {
       const now = new Date();
@@ -65,7 +65,7 @@ export class JobRepository {
   }
 
   async findJobById(jobCardId: string): Promise<IJobCard | null> {
-    return await JobCard.findById(jobCardId);
+    return await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
   }
 
   async updateJobStatus(jobCardId: string, status: 'IN_PROGRESS' | 'COMPLETED'): Promise<IJobCard | null> {
@@ -158,20 +158,21 @@ export class JobRepository {
   }
 
 
-  async deleteJobCard(jobCardId: string): Promise<boolean> {
-    const job = await JobCard.findById(jobCardId);
-    if (!job) return false;
+  async deleteJobCard(jobCardId: string, deletedBy: string): Promise<boolean> {
+    const job = await JobCard.findOneAndUpdate(
+      { _id: jobCardId, isDeleted: { $ne: true } },
+      {
+        $set: {
+          isDeleted: true,
+          deletedAt: new Date(),
+          deletedBy,
+        },
+      },
+      { new: true }
+    );
 
-    const tasks = await Task.find({ jobCardId });
-    for (const t of tasks) {
-      if (t.completedBy) {
-        await User.findByIdAndUpdate(t.completedBy, { $inc: { taskCount: -1 } });
-      }
-    }
-
-    await Task.deleteMany({ jobCardId });
-    await JobCard.findByIdAndDelete(jobCardId);
-    return true;
+    // Keep the job card and its tasks so the record can be restored or audited later.
+    return !!job;
   }
 }
 

@@ -208,14 +208,14 @@ export const deleteTask = async (req: Request, res: Response) => {
 export const deleteJobCard = async (req: Request, res: Response) => {
   try {
     const { jobCardId } = req.params;
-    const deleted = await jobRepository.deleteJobCard(jobCardId);
+    const deleted = await jobRepository.deleteJobCard(jobCardId, req.user?.id!);
     if (!deleted) {
       return sendError(res, 'Job card not found.', 404);
     }
 
     emitJobDeleted(jobCardId);
 
-    return sendSuccess(res, 'Job card and all sub-tasks deleted successfully.', null, 200);
+    return sendSuccess(res, 'Job card moved to deleted records successfully.', null, 200);
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to delete job card.', 500);
   }

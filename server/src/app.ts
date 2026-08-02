@@ -13,6 +13,14 @@ const app: Application = express();
 // Required when the API is deployed behind a proxy (for example, Render or Vercel).
 // This lets Express correctly detect HTTPS from the X-Forwarded-Proto header.
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
 
 // Dynamic CORS origin handler
 const allowedOrigins = [
@@ -22,20 +30,22 @@ const allowedOrigins = [
   'http://localhost:3000',
 ];
 
+const isAllowedOrigin = (origin: string) => {
+  const cleanOrigin = origin.replace(/\/$/, '');
+  return allowedOrigins.some(
+    (allowed) => allowed && allowed.replace(/\/$/, '') === cleanOrigin
+  );
+};
+
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
     
-    const cleanOrigin = origin.replace(/\/$/, '');
-    const isAllowed = allowedOrigins.some(
-      (allowed) => allowed && allowed.replace(/\/$/, '') === cleanOrigin
-    ) || origin.endsWith('.vercel.app');
-
-    if (isAllowed) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
-      callback(null, true); // Fallback allow to avoid breaking production deployments
+      callback(null, false);
     }
   },
   credentials: true,
@@ -44,7 +54,15 @@ const corsOptions: cors.CorsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const origin = req.headers.origin;
+  const isStateChanging = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  if (isStateChanging && origin && !isAllowedOrigin(origin)) {
+    return res.status(403).json({ success: false, message: 'Request origin is not allowed.' });
+  }
+  next();
+});
+app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
 
 // Root endpoint
@@ -101,8 +119,12 @@ app.get('/api/dummy', (req: Request, res: Response) => {
 
 // Seed Admin User on startup
 const seedAdmin = async () => {
-  const adminMobile = '7994414155';
-  const adminPassword = 'Login@121';
+  const adminMobile = process.env.ADMIN_MOBILE;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminMobile || !adminPassword) {
+    console.warn('[SEED] Admin seed skipped: ADMIN_MOBILE and ADMIN_PASSWORD are required.');
+    return;
+  }
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(adminPassword, salt);
 

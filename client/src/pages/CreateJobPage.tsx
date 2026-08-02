@@ -15,6 +15,7 @@ import {
 import { Navbar } from '../components/navbar/Navbar';
 import { TaskAutoComplete } from '../components/common/TaskAutoComplete';
 import { useCreateJobMutation } from '../api/jobApi';
+import { ConfirmationModal } from '../components/common/ConfirmationModal';
 
 const COLOR_PRESETS = [
   'White', 'Black', 'Silver', 'Grey', 'Red', 'Blue', 'Green',
@@ -31,6 +32,7 @@ export const CreateJobPage: React.FC = () => {
   const [taskInput, setTaskInput] = useState('');
   const [tasks, setTasks] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showPublishConfirmation, setShowPublishConfirmation] = useState(false);
 
   const handleAddTask = (title: string) => {
     const trimmed = title.trim();
@@ -48,7 +50,7 @@ export const CreateJobPage: React.FC = () => {
     setTasks((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -65,6 +67,10 @@ export const CreateJobPage: React.FC = () => {
       return;
     }
 
+    setShowPublishConfirmation(true);
+  };
+
+  const handlePublishJob = async () => {
     try {
       await createJob({
         vehicleName: vehicleName.trim(),
@@ -75,6 +81,7 @@ export const CreateJobPage: React.FC = () => {
 
       navigate('/jobs');
     } catch (err: any) {
+      setShowPublishConfirmation(false);
       setErrorMsg(err?.data?.message || 'Failed to create job card. Please try again.');
     }
   };
@@ -208,7 +215,7 @@ export const CreateJobPage: React.FC = () => {
                 value={taskInput}
                 onChange={setTaskInput}
                 onAddTask={handleAddTask}
-                placeholder="Type a task e.g. Engine Oil Change..."
+                placeholder="Type a task e.g. Sports Kit..."
               />
 
               {/* Added Tasks List */}
@@ -281,6 +288,18 @@ export const CreateJobPage: React.FC = () => {
           </form>
         </motion.div>
       </main>
+
+      <ConfirmationModal
+        isOpen={showPublishConfirmation}
+        onClose={() => setShowPublishConfirmation(false)}
+        onConfirm={handlePublishJob}
+        title="Publish job card?"
+        message={`Create a job card for ${vehicleName.trim()} (${vehicleNumber.trim().toUpperCase()}) with ${tasks.length} checklist item${tasks.length === 1 ? '' : 's'}?`}
+        confirmText="Publish Job"
+        cancelText="Review Details"
+        variant="primary"
+        isLoading={isLoading}
+      />
     </div>
   );
 };

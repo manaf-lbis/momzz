@@ -19,6 +19,5 @@ export const sendError = (res: Response, message: string, statusCode = 400, erro
   return res.status(statusCode).json({
     success: false,
     message,
-    error: error || undefined,
   });
 };

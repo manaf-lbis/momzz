@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useGetJobCardsQuery, JobCardData } from '../api/jobApi';
 import { Navbar } from '../components/navbar/Navbar';
@@ -15,7 +16,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { CreateJobModal } from '../components/jobCard/CreateJobModal';
 
 type TimeFilter = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'ALL';
 
@@ -24,7 +24,6 @@ export const JobsListPage: React.FC = () => {
   const { isAdmin } = useAuth();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [accumulatedJobs, setAccumulatedJobs] = useState<JobCardData[]>([]);
 
@@ -118,7 +117,7 @@ export const JobsListPage: React.FC = () => {
 
           {isAdmin && (
             <button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => navigate('/jobs/create')}
               className="px-3 py-1.5 bg-amber-400 dark:bg-yellow-400 text-zinc-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 dark:hover:bg-yellow-300 transition-all active:scale-95 flex items-center gap-1"
             >
               <Plus className="w-4 h-4" /> Create Job
@@ -166,7 +165,13 @@ export const JobsListPage: React.FC = () => {
         {/* Vehicle Cards Grid */}
         {isLoading && page === 1 ? (
           <div className="py-16 text-center space-y-3">
-            <Wrench className="w-6 h-6 text-amber-500 dark:text-yellow-400 animate-spin mx-auto" />
+            <motion.div
+              className="w-fit mx-auto"
+              animate={{ rotate: [-18, 18, -18], y: [0, -2, 0] }}
+              transition={{ duration: 0.85, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <Wrench className="w-6 h-6 text-amber-500 dark:text-yellow-400" />
+            </motion.div>
             <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">LOADING VEHICLE JOB CARDS...</p>
           </div>
         ) : isError ? (
@@ -248,7 +253,13 @@ export const JobsListPage: React.FC = () => {
             <div ref={observerRef} className="py-4 text-center">
               {isLoading && (
                 <div className="flex items-center justify-center gap-2 text-xs font-mono text-amber-500">
-                  <Wrench className="w-4 h-4 animate-spin" /> Loading more vehicles...
+                  <motion.div
+                    animate={{ rotate: [-18, 18, -18] }}
+                    transition={{ duration: 0.85, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <Wrench className="w-4 h-4" />
+                  </motion.div>
+                  Loading more vehicles...
                 </div>
               )}
 
@@ -276,12 +287,6 @@ export const JobsListPage: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Modal for Creating Job */}
-        <CreateJobModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-        />
       </main>
     </div>
   );

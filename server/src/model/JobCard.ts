@@ -7,6 +7,9 @@ export interface IJobCard extends Document {
   customerName?: string;
   status: 'IN_PROGRESS' | 'READY' | 'COMPLETED';
   createdBy?: mongoose.Types.ObjectId;
+  isDeleted: boolean;
+  deletedAt?: Date;
+  deletedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,6 +22,9 @@ const JobCardSchema: Schema = new Schema(
     customerName: { type: String, trim: true },
     status: { type: String, enum: ['IN_PROGRESS', 'READY', 'COMPLETED'], default: 'IN_PROGRESS' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true }
 );

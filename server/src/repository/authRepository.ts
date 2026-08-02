@@ -1,5 +1,8 @@
 import User from '../model/User';
 import { RefreshToken } from '../model/RefreshToken';
+import { createHash } from 'crypto';
+
+const hashRefreshToken = (token: string) => createHash('sha256').update(token).digest('hex');
 
 export class AuthRepository {
   async findByMobile(mobile: string) {
@@ -15,15 +18,15 @@ export class AuthRepository {
   }
 
   async saveRefreshToken(userId: string, token: string, expiresAt: Date) {
-    return await RefreshToken.create({ userId, token, expiresAt });
+    return await RefreshToken.create({ userId, token: hashRefreshToken(token), expiresAt });
   }
 
   async findRefreshToken(token: string) {
-    return await RefreshToken.findOne({ token });
+    return await RefreshToken.findOne({ token: hashRefreshToken(token) });
   }
 
   async deleteRefreshToken(token: string) {
-    return await RefreshToken.deleteOne({ token });
+    return await RefreshToken.deleteOne({ token: hashRefreshToken(token) });
   }
 
   async revokeAllUserTokens(userId: string) {
