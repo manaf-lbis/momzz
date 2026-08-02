@@ -84,16 +84,22 @@ export const MechanicHome: React.FC = () => {
 
   const displayJobs = accumulatedJobs.length > 0 ? accumulatedJobs : rawJobs;
 
-  // Filter jobs where mechanic has claimed/completed tasks
-  const filteredJobs = filterMyJobs
-    ? displayJobs.filter((job: any) =>
-        job.tasks?.some(
-          (t: any) =>
-            t.completedBy &&
-            (t.completedBy.id === user?.id || t.completedBy._id === user?.id)
-        )
-      )
-    : displayJobs;
+  // Filter active garage vehicles (strictly cars with pending works currently in garage)
+  const activeGarageJobs = displayJobs.filter((job: any) => {
+    const isPendingInGarage = job.status === 'IN_PROGRESS' || (job.tasks || []).some((t: any) => t.status === 'OPEN');
+    if (!isPendingInGarage) return false;
+    if (filterMyJobs) {
+      return job.tasks?.some(
+        (t: any) =>
+          t.completedBy &&
+          (t.completedBy.id === user?.id || t.completedBy._id === user?.id)
+      );
+    }
+    return true;
+  });
+
+  const filteredJobs = activeGarageJobs;
+
 
   // Calculate my completed task count
   let myActiveTasksCount = 0;

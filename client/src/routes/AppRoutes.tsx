@@ -9,6 +9,8 @@ import { HomePage } from '../pages/HomePage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { UserManagementPage } from '../pages/UserManagementPage';
 import { AnalyticsPage } from '../pages/AnalyticsPage';
+import { CreateJobPage } from '../pages/CreateJobPage';
+import { InventoryPage } from '../pages/InventoryPage';
 import { ProtectedRoute } from './ProtectedRoute';
 
 export const AppRoutes: React.FC = () => {
@@ -19,7 +21,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/login" element={<AuthPage />} />
       <Route path="/register" element={<AuthPage />} />
 
-      {/* Authenticated Routes */}
+      {/* Authenticated Routes — available to all logged-in users */}
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -29,11 +31,12 @@ export const AppRoutes: React.FC = () => {
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
 
-
-      {/* Admin Only Routes */}
+      {/* Admin-Only Routes */}
       <Route element={<ProtectedRoute requireAdmin={true} />}>
         <Route path="/admin/approvals" element={<AdminApproval />} />
         <Route path="/admin/users" element={<UserManagementPage />} />
+        <Route path="/jobs/create" element={<CreateJobPage />} />
+        <Route path="/inventory" element={<InventoryPage />} />
       </Route>
 
       {/* Catch-all redirect */}

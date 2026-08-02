@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   useGetJobCardsQuery,
@@ -12,13 +12,13 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
 import { ConfirmationModal } from '../components/common/ConfirmationModal';
+import { TaskAutoComplete } from '../components/common/TaskAutoComplete';
 import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../utils/confetti';
 import {
   ArrowLeft,
   Car,
   CheckCircle2,
   Clock,
-  Plus,
   Trash2,
   UserCheck,
   Wrench,
@@ -27,6 +27,7 @@ import {
   Check,
   RotateCcw,
   Filter,
+  Loader2,
 } from 'lucide-react';
 
 type TaskFilterType = 'ALL' | 'PENDING' | 'COMPLETED';
@@ -61,10 +62,11 @@ export const JobDetailPage: React.FC = () => {
   });
 
   const [isDeleting, setIsDeleting] = useState(false);
+  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
   const { data: jobsResponse, isLoading, isError } = useGetJobCardsQuery();
   const [setTaskStatus] = useSetTaskStatusMutation();
-  const [addTask, { isLoading: isAddingTask }] = useAddTaskMutation();
+  const [addTask] = useAddTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
   const [deleteJobCard] = useDeleteJobCardMutation();
 
@@ -135,19 +137,16 @@ export const JobDetailPage: React.FC = () => {
     return `Done by ${task.completedBy?.name || 'Technician'} • ${elapsedMins} mins after arrival`;
   };
 
-  // Open task confirmation modal before status change
+  // Always show confirmation modal before any status change (COMPLETE or REOPEN)
   const promptTaskStatusChange = (task: TaskItem) => {
     const action = task.status === 'COMPLETED' ? 'REOPEN' : 'COMPLETE';
-    if (action === 'COMPLETE') {
-      setConfirmTaskModal({ isOpen: true, task, action });
-    } else {
-      executeTaskStatusChange(task, 'REOPEN');
-    }
+    setConfirmTaskModal({ isOpen: true, task, action });
   };
 
   const executeTaskStatusChange = async (task: TaskItem, action: 'COMPLETE' | 'REOPEN') => {
     setErrorMessage('');
     const taskId = task.id || task._id!;
+    setUpdatingTaskId(taskId);
     try {
       await setTaskStatus({
         taskId,
@@ -170,18 +169,18 @@ export const JobDetailPage: React.FC = () => {
     } catch (err: any) {
       setErrorMessage(err?.data?.message || `Failed to set task status.`);
     } finally {
+      setUpdatingTaskId(null);
       setConfirmTaskModal({ isOpen: false, task: null, action: 'COMPLETE' });
     }
   };
 
-  const handleAddTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTaskTitle.trim()) return;
-
+  const handleAddTask = async (title: string) => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
     try {
       await addTask({
         jobCardId: currentJob.id || currentJob._id!,
-        title: newTaskTitle.trim(),
+        title: trimmed,
       }).unwrap();
       setNewTaskTitle('');
     } catch (err: any) {
@@ -304,24 +303,17 @@ export const JobDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Admin: Add Sub-task */}
+        {/* Admin: Add Sub-task with Inventory Auto-Complete */}
         {isAdmin && (
-          <form onSubmit={handleAddTask} className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Add sub-task (e.g. Engine Oil Flush)..."
+          <div className="industrial-card p-3 rounded-2xl">
+            <TaskAutoComplete
               value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              className="flex-1 px-4 py-2.5 rounded-xl industrial-input text-xs font-medium"
+              onChange={setNewTaskTitle}
+              onAddTask={handleAddTask}
+              placeholder="Search or type a sub-task..."
+              disabled={false}
             />
-            <button
-              type="submit"
-              disabled={isAddingTask}
-              className="px-4 py-2.5 bg-amber-400 dark:bg-yellow-400 text-zinc-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 dark:hover:bg-yellow-300 transition-all active:scale-95 flex items-center gap-1 shadow-sm shrink-0"
-            >
-              <Plus className="w-4 h-4" /> Add Task
-            </button>
-          </form>
+          </div>
         )}
 
         {/* Sub-Task Checklist */}
@@ -336,6 +328,7 @@ export const JobDetailPage: React.FC = () => {
               {sortedTasks.map((task: TaskItem) => {
                 const taskId = task.id || task._id!;
                 const isCompleted = task.status === 'COMPLETED';
+                const isTaskUpdating = updatingTaskId === taskId;
                 const auditText = getAuditText(task);
 
                 return (
@@ -351,6 +344,7 @@ export const JobDetailPage: React.FC = () => {
                       {/* Interactive Checkbox */}
                       <button
                         type="button"
+                        disabled={isTaskUpdating}
                         onClick={() => promptTaskStatusChange(task)}
                         className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all flex-shrink-0 active:scale-90 ${
                           isCompleted
@@ -358,7 +352,11 @@ export const JobDetailPage: React.FC = () => {
                             : 'border-2 border-zinc-300 dark:border-zinc-700 hover:border-amber-500 dark:hover:border-yellow-400 bg-white dark:bg-zinc-900'
                         }`}
                       >
-                        {isCompleted && <Check className="w-4 h-4 stroke-[3]" />}
+                        {isTaskUpdating ? (
+                          <Loader2 className="w-4 h-4 text-amber-500 dark:text-yellow-400 animate-spin" />
+                        ) : (
+                          isCompleted && <Check className="w-4 h-4 stroke-[3]" />
+                        )}
                       </button>
 
                       <div className="space-y-1 min-w-0 flex-1">
@@ -386,17 +384,39 @@ export const JobDetailPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       {!isCompleted ? (
                         <button
+                          disabled={isTaskUpdating}
                           onClick={() => promptTaskStatusChange(task)}
-                          className="px-3 py-1.5 bg-amber-400 dark:bg-yellow-400 text-zinc-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 dark:hover:bg-yellow-300 transition-all active:scale-95 flex items-center gap-1 whitespace-nowrap shadow-sm cursor-pointer"
+                          className="px-3 py-1.5 bg-amber-400 dark:bg-yellow-400 text-zinc-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 dark:hover:bg-yellow-300 transition-all active:scale-95 flex items-center gap-1.5 whitespace-nowrap shadow-sm cursor-pointer disabled:opacity-60"
                         >
-                          <Sparkles className="w-3.5 h-3.5" /> Complete
+                          {isTaskUpdating ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Saving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>Complete</span>
+                            </>
+                          )}
                         </button>
                       ) : (
                         <button
+                          disabled={isTaskUpdating}
                           onClick={() => promptTaskStatusChange(task)}
-                          className="px-2.5 py-1 bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 text-[10px] font-mono font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1 bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 text-[10px] font-mono font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-60"
                         >
-                          <RotateCcw className="w-3 h-3" /> Reopen
+                          {isTaskUpdating ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>Reopening...</span>
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Reopen</span>
+                            </>
+                          )}
                         </button>
                       )}
 
@@ -417,18 +437,23 @@ export const JobDetailPage: React.FC = () => {
           )}
         </div>
 
-        {/* Task Completion Confirmation Modal */}
+        {/* Task Status Confirmation Modal (COMPLETE & REOPEN) */}
         <ConfirmationModal
           isOpen={confirmTaskModal.isOpen}
+          isLoading={!!updatingTaskId}
           onClose={() => setConfirmTaskModal({ isOpen: false, task: null, action: 'COMPLETE' })}
           onConfirm={() =>
             confirmTaskModal.task &&
             executeTaskStatusChange(confirmTaskModal.task, confirmTaskModal.action)
           }
-          title="Complete Sub-Task"
-          message={`Are you sure you have completed "${confirmTaskModal.task?.title}" for ${currentJob.vehicleName}?`}
-          confirmText="Yes, Complete"
-          variant="primary"
+          title={confirmTaskModal.action === 'COMPLETE' ? 'Complete Sub-Task?' : 'Reopen Sub-Task?'}
+          message={
+            confirmTaskModal.action === 'COMPLETE'
+              ? `Mark "${confirmTaskModal.task?.title}" as completed for ${currentJob.vehicleName}?`
+              : `Reopen "${confirmTaskModal.task?.title}" — this will unmark it and decrement the worker's task count.`
+          }
+          confirmText={confirmTaskModal.action === 'COMPLETE' ? 'Yes, Complete' : 'Yes, Reopen'}
+          variant={confirmTaskModal.action === 'REOPEN' ? 'warning' : 'primary'}
         />
 
         {/* Delete Confirmation Modal (Admin Only) */}

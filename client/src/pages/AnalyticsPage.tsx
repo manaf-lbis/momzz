@@ -1,12 +1,32 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Award, Calendar, ChevronLeft, CheckCircle2, Clock, Users, ArrowUpRight, Wrench } from 'lucide-react';
+import { Trophy, Award, Calendar, ChevronLeft, CheckCircle2, Clock, Users, Wrench, Car, UserCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useGetJobCardsQuery, JobCardData } from '../api/jobApi';
 import { useGetLeaderboardQuery } from '../api/authApi';
 
 type Timeframe = 'today' | 'week' | 'month' | 'year';
+
+const formatCompletedAt = (isoString?: string) => {
+  if (!isoString) return 'Recently';
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return 'Recently';
+
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  const dateStr = d.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
+
+  if (diffHours < 24 && d.getDate() === now.getDate()) {
+    return `Today at ${timeStr}`;
+  } else if (diffHours < 48 && (now.getDate() - d.getDate() === 1 || diffHours < 36)) {
+    return `Yesterday at ${timeStr}`;
+  }
+  return `${dateStr} at ${timeStr}`;
+};
 
 export const AnalyticsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,16 +36,13 @@ export const AnalyticsPage: React.FC = () => {
   const { data: jobsResponse, isLoading: isJobsLoading } = useGetJobCardsQuery({ limit: 100 });
   const { data: leaderboardResponse, isLoading: isLeaderboardLoading } = useGetLeaderboardQuery();
 
+  // Parse actual jobs array from server (no dummy fallback)
   const jobs: JobCardData[] = useMemo(() => {
     if (!jobsResponse?.data) return [];
     if (Array.isArray(jobsResponse.data)) return jobsResponse.data;
     if (jobsResponse.data.jobs) return jobsResponse.data.jobs;
     return [];
   }, [jobsResponse]);
-
-  const leaderboardUsers = useMemo(() => {
-    return leaderboardResponse?.data || [];
-  }, [leaderboardResponse]);
 
   // Compute timeframe date boundary
   const filterDate = useMemo(() => {
@@ -52,16 +69,18 @@ export const AnalyticsPage: React.FC = () => {
     return 0;
   }, [timeframe]);
 
-  // Extract completed tasks in the timeframe
+  // Extract actual completed tasks with full vehicle name, vehicle number, work done, completedAt, and duration
   const filteredCompletedTasks = useMemo(() => {
     const list: Array<{
       taskId: string;
-      title: string;
+      workTitle: string;
       vehicleName: string;
+      vehicleNumber: string;
       completedByName: string;
-      completedById?: string;
-      completedAt: string;
-      elapsedMins?: number;
+      completedAtIso: string;
+      completedAtFormatted: string;
+      elapsedMins: number;
+      durationText: string;
     }> = [];
 
     jobs.forEach((job) => {
@@ -70,25 +89,32 @@ export const AnalyticsPage: React.FC = () => {
         if (t.status === 'COMPLETED' && t.completedAt) {
           const compTime = new Date(t.completedAt).getTime();
           if (compTime >= filterDate) {
-            const elapsed = Math.max(1, Math.round((compTime - jobCreatedTime) / 60000));
+            const elapsedMins = Math.max(1, Math.round((compTime - jobCreatedTime) / 60000));
+            const hours = Math.floor(elapsedMins / 60);
+            const remainingMins = elapsedMins % 60;
+            const durationText = hours > 0 ? `${hours}h ${remainingMins}m` : `${elapsedMins} mins`;
+
             list.push({
               taskId: t.id || (t as any)._id || Math.random().toString(),
-              title: t.title,
-              vehicleName: `${job.vehicleName} (${job.vehicleNumber})`,
+              workTitle: t.title,
+              vehicleName: job.vehicleName || 'Vehicle',
+              vehicleNumber: job.vehicleNumber || 'N/A',
               completedByName: t.completedBy?.name || 'Technician',
-              completedById: t.completedBy?.id || (t.completedBy as any)?._id,
-              completedAt: t.completedAt,
-              elapsedMins: elapsed,
+              completedAtIso: t.completedAt,
+              completedAtFormatted: formatCompletedAt(t.completedAt),
+              elapsedMins,
+              durationText,
             });
           }
         }
       });
     });
 
-    return list;
+    // Sort by most recently completed first
+    return list.sort((a, b) => new Date(b.completedAtIso).getTime() - new Date(a.completedAtIso).getTime());
   }, [jobs, filterDate]);
 
-  // Calculate stats by worker
+  // Calculate worker stats ranked by total tasks completed
   const workerStats = useMemo(() => {
     const map: Record<string, { name: string; count: number; totalElapsedMins: number }> = {};
 
@@ -184,7 +210,7 @@ export const AnalyticsPage: React.FC = () => {
               {filteredCompletedTasks.length}
             </p>
             <p className="text-[11px] font-mono text-zinc-400">
-              In selected time filter ({timeframe})
+              Actual work completed ({timeframe})
             </p>
           </motion.div>
 
@@ -219,7 +245,7 @@ export const AnalyticsPage: React.FC = () => {
             <p className="text-3xl font-black text-zinc-900 dark:text-zinc-100 font-mono">
               {avgCompletionTime} <span className="text-base font-normal text-zinc-400">mins</span>
             </p>
-            <p className="text-[11px] font-mono text-zinc-400">Average time per job sub-task</p>
+            <p className="text-[11px] font-mono text-zinc-400">Average time taken per job sub-task</p>
           </motion.div>
         </div>
 
@@ -255,11 +281,11 @@ export const AnalyticsPage: React.FC = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80"
+                    className="flex items-center justify-between p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80"
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-7 h-7 rounded-xl flex items-center justify-center font-mono font-extrabold text-xs shadow-sm ${
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-mono font-extrabold text-xs shadow-sm ${
                           idx === 0
                             ? 'bg-yellow-400 text-zinc-950 ring-2 ring-yellow-400/50'
                             : idx === 1
@@ -295,44 +321,66 @@ export const AnalyticsPage: React.FC = () => {
             )}
           </div>
 
-          {/* Recent Task Completion Work Log */}
+          {/* Detailed Work Log */}
           <div className="industrial-card rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 space-y-4">
             <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
               <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-amber-500" />
                 <h3 className="font-extrabold text-sm uppercase tracking-wider">
-                  Live Task Completion Log
+                  Detailed Work Log
                 </h3>
               </div>
               <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-                LOGS
+                ACTUAL LOGS
               </span>
             </div>
 
             {filteredCompletedTasks.length === 0 ? (
               <div className="py-8 text-center text-xs font-mono text-zinc-400">
-                No recent activity logged for this time range.
+                No work completed in this time range.
               </div>
             ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 no-scrollbar">
-                {filteredCompletedTasks.slice(0, 15).map((log, idx) => (
+              <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1 no-scrollbar">
+                {filteredCompletedTasks.map((log, idx) => (
                   <div
                     key={`${log.taskId}-${idx}`}
-                    className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs space-y-1"
+                    className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80 space-y-2"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                        {log.title}
-                      </span>
-                      <span className="font-mono text-[10px] text-amber-600 dark:text-yellow-400 font-bold">
-                        {log.elapsedMins} mins elapsed
+                    {/* Work / Task Title & Elapsed Time */}
+                    <div className="flex items-start justify-between gap-2 border-b border-zinc-200/60 dark:border-zinc-800/60 pb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <h4 className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100 uppercase truncate">
+                          {log.workTitle}
+                        </h4>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-amber-400/10 text-amber-600 dark:text-yellow-400 border border-amber-400/20 font-mono text-[10px] font-bold shrink-0">
+                        Took {log.durationText}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
-                      <span>Vehicle: {log.vehicleName}</span>
-                      <span>By: {log.completedByName}</span>
+                    {/* Vehicle Details & Completion Metadata */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Car className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                        <span>
+                          Vehicle: <strong className="text-zinc-800 dark:text-zinc-200 uppercase">{log.vehicleName}</strong> ({log.vehicleNumber})
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 truncate">
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>
+                          Completed by: <strong className="text-zinc-800 dark:text-zinc-200">{log.completedByName}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Completion Date/Time */}
+                    <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 pt-1 border-t border-zinc-200/40 dark:border-zinc-800/40">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-zinc-500" /> Finished: {log.completedAtFormatted}
+                      </span>
                     </div>
                   </div>
                 ))}

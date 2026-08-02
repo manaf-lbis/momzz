@@ -17,10 +17,12 @@ import {
   ChevronDown,
   Trash2,
   AlertTriangle,
-  UserCheck,
+  RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../common/Button';
+import { ConfirmationModal } from '../common/ConfirmationModal';
 
 interface VehicleCardProps {
   job: JobCardData;
@@ -32,9 +34,12 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
   const [isExpanded, setIsExpanded] = useState(!compact);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [taskError, setTaskError] = useState('');
+  const [confirmReopen, setConfirmReopen] = useState<{ taskId: string; title: string } | null>(null);
+  const [isReopening, setIsReopening] = useState(false);
+  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
-  const [setTaskStatus, { isLoading: isUpdating }] = useSetTaskStatusMutation();
-
+  const [setTaskStatus] = useSetTaskStatusMutation();
   const [addTask, { isLoading: isAddingTask }] = useAddTaskMutation();
   const [deleteTask, { isLoading: isDeletingTask }] = useDeleteTaskMutation();
   const [deleteJobCard, { isLoading: isDeletingJob }] = useDeleteJobCardMutation();
@@ -65,11 +70,35 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
   };
 
   const handleToggle = async (taskId: string, currentStatus: string) => {
+    setTaskError('');
+    setUpdatingTaskId(taskId);
     const action = currentStatus === 'COMPLETED' ? 'REOPEN' : 'COMPLETE';
     try {
       await setTaskStatus({ taskId, action }).unwrap();
-    } catch (err) {
-      console.error('Failed to update task status:', err);
+    } catch (err: any) {
+      const msg = err?.data?.message || `Failed to ${action === 'COMPLETE' ? 'complete' : 'reopen'} task.`;
+      setTaskError(msg);
+      setTimeout(() => setTaskError(''), 5000);
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
+  const handleReopen = async () => {
+    if (!confirmReopen) return;
+    setIsReopening(true);
+    setUpdatingTaskId(confirmReopen.taskId);
+    setTaskError('');
+    try {
+      await setTaskStatus({ taskId: confirmReopen.taskId, action: 'REOPEN' }).unwrap();
+    } catch (err: any) {
+      const msg = err?.data?.message || 'Failed to reopen task.';
+      setTaskError(msg);
+      setTimeout(() => setTaskError(''), 5000);
+    } finally {
+      setIsReopening(false);
+      setUpdatingTaskId(null);
+      setConfirmReopen(null);
     }
   };
 
@@ -147,6 +176,14 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
           )}
         </div>
       </div>
+
+      {/* Task Error Banner */}
+      {taskError && (
+        <div className="p-2.5 bg-red-950/70 border border-red-800 rounded-xl flex items-center gap-2 text-[11px] font-mono text-red-300">
+          <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+          {taskError}
+        </div>
+      )}
 
       {/* Delete Confirmation Alert Modal */}
       {showDeleteConfirm && (
@@ -257,6 +294,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
               job.tasks.map((task) => {
                 const isCompleted = task.status === 'COMPLETED';
                 const taskId = task.id || (task as any)._id;
+                const isTaskUpdating = updatingTaskId === taskId;
                 return (
                   <div
                     key={taskId}
@@ -282,25 +320,43 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        disabled={isUpdating}
-                        onClick={() => handleToggle(taskId, task.status)}
-                        className={`px-3 py-2 rounded-xl text-xs font-bold font-mono transition-all flex items-center gap-1.5 ${
-                          isCompleted
-                            ? 'bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-yellow-400 hover:border-yellow-400 active:scale-95'
-                            : 'bg-yellow-400 text-zinc-950 hover:bg-yellow-300 active:scale-95 shadow-yellow-glow'
-                        }`}
-                      >
-                        {isCompleted ? (
-                          <>
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Reopen
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="w-4 h-4" /> Claim & Complete
-                          </>
-                        )}
-                      </button>
+                      {isCompleted ? (
+                        <button
+                          disabled={isTaskUpdating}
+                          onClick={() => setConfirmReopen({ taskId, title: task.title })}
+                          className="px-3 py-2 rounded-xl text-xs font-bold font-mono bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-yellow-400 hover:border-yellow-400 active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          {isTaskUpdating ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Reopening...</span>
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Reopen</span>
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <button
+                          disabled={isTaskUpdating}
+                          onClick={() => handleToggle(taskId, task.status)}
+                          className="px-3 py-2 rounded-xl text-xs font-bold font-mono bg-yellow-400 text-zinc-950 hover:bg-yellow-300 active:scale-95 shadow-yellow-glow transition-all flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          {isTaskUpdating ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin text-zinc-950" />
+                              <span>Saving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              <span>Claim & Complete</span>
+                            </>
+                          )}
+                        </button>
+                      )}
 
                       {isAdmin && (
                         <button
@@ -320,6 +376,18 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
           </div>
         </div>
       )}
+
+      {/* Reopen Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!confirmReopen}
+        onClose={() => setConfirmReopen(null)}
+        onConfirm={handleReopen}
+        isLoading={isReopening}
+        title="Reopen Sub-Task?"
+        message={`Reopen "${confirmReopen?.title}"? This will unmark it as completed and decrement the worker's task count.`}
+        confirmText="Yes, Reopen"
+        variant="warning"
+      />
     </div>
   );
 };

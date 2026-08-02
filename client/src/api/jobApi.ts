@@ -23,6 +23,7 @@ export interface JobCardData {
   _id?: string;
   vehicleName: string;
   vehicleNumber: string;
+  color?: string;
   customerName?: string;
   status: 'IN_PROGRESS' | 'COMPLETED';
   createdAt: string;
@@ -33,8 +34,10 @@ export interface JobCardData {
 export interface CreateJobRequest {
   vehicleName: string;
   vehicleNumber: string;
+  color?: string;
   tasks: string[];
 }
+
 
 export interface PaginatedJobResponse {
   success: boolean;

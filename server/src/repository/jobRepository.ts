@@ -3,9 +3,10 @@ import { Task, ITask } from '../model/Task';
 import User from '../model/User';
 
 export class JobRepository {
-  async createJobCard(data: { vehicleName: string; vehicleNumber: string; createdBy: string }): Promise<IJobCard> {
+  async createJobCard(data: { vehicleName: string; vehicleNumber: string; color?: string; createdBy: string }): Promise<IJobCard> {
     return await JobCard.create(data);
   }
+
 
   async createSubTasks(tasks: { jobCardId: any; title: string }[]): Promise<ITask[]> {
     return await Task.insertMany(tasks);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, X, Loader2 } from 'lucide-react';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -47,7 +47,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onClose}
+          onClick={isLoading ? undefined : onClose}
           className="fixed inset-0 bg-black/75 backdrop-blur-sm"
         />
 
@@ -61,7 +61,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         >
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-1.5 rounded-xl text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 transition-colors"
+            disabled={isLoading}
+            className="absolute top-4 right-4 p-1.5 rounded-xl text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 transition-colors disabled:opacity-50"
           >
             <X className="w-4 h-4" />
           </button>
@@ -87,7 +88,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 py-2.5 px-4 rounded-xl text-xs font-mono font-bold uppercase border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]"
+              className="flex-1 py-2.5 px-4 rounded-xl text-xs font-mono font-bold uppercase border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {cancelText}
             </button>
@@ -95,9 +96,16 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               type="button"
               onClick={onConfirm}
               disabled={isLoading}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-mono uppercase font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-50 ${confirmBtnVariants[variant]}`}
+              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-mono uppercase font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 ${confirmBtnVariants[variant]}`}
             >
-              {isLoading ? 'Processing...' : confirmText}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                confirmText
+              )}
             </button>
           </div>
         </motion.div>
