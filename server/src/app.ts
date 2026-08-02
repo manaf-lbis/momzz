@@ -10,6 +10,10 @@ import { ROLES } from './constants/status';
 
 const app: Application = express();
 
+// Required when the API is deployed behind a proxy (for example, Render or Vercel).
+// This lets Express correctly detect HTTPS from the X-Forwarded-Proto header.
+app.set('trust proxy', 1);
+
 // Dynamic CORS origin handler
 const allowedOrigins = [
   ENV.CLIENT_URL,

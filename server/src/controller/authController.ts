@@ -3,11 +3,23 @@ import { authService } from '../service/authService';
 import { userRepository } from '../repository/userRepository';
 import { sendSuccess, sendError } from '../utils/responseHandler';
 
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
-  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+const getRefreshCookieOptions = (req: Request) => {
+  const forwardedProtocol = req.headers['x-forwarded-proto'];
+  const isHttps =
+    req.secure ||
+    forwardedProtocol === 'https' ||
+    (Array.isArray(forwardedProtocol) && forwardedProtocol.includes('https')) ||
+    process.env.NODE_ENV === 'production';
+
+  return {
+    httpOnly: true,
+    // Cross-site requests (separate frontend and API domains) require None + Secure.
+    // Local HTTP development continues to use Lax so cookies work without HTTPS.
+    secure: isHttps,
+    sameSite: (isHttps ? 'none' : 'lax') as 'none' | 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    path: '/',
+  };
 };
 
 
@@ -21,7 +33,7 @@ export class AuthController {
 
       const result = await authService.register({ name, mobile, password, role });
 
-      res.cookie('refreshToken', result.refreshToken, COOKIE_OPTIONS);
+      res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions(req));
 
       return sendSuccess(
         res,
@@ -53,7 +65,7 @@ export class AuthController {
 
       const result = await authService.login(mobile, password);
 
-      res.cookie('refreshToken', result.refreshToken, COOKIE_OPTIONS);
+      res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions(req));
 
       return sendSuccess(
         res,
@@ -85,7 +97,7 @@ export class AuthController {
 
       const result = await authService.rotateRefreshToken(refreshToken);
 
-      res.cookie('refreshToken', result.refreshToken, COOKIE_OPTIONS);
+      res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions(req));
 
       return sendSuccess(
         res,
@@ -104,7 +116,7 @@ export class AuthController {
         200
       );
     } catch (error: any) {
-      res.clearCookie('refreshToken');
+      res.clearCookie('refreshToken', getRefreshCookieOptions(req));
       return sendError(res, error.message || 'Token rotation failed.', 401);
     }
   }
@@ -115,10 +127,10 @@ export class AuthController {
       if (refreshToken) {
         await authService.logout(refreshToken);
       }
-      res.clearCookie('refreshToken');
+      res.clearCookie('refreshToken', getRefreshCookieOptions(req));
       return sendSuccess(res, 'Logout successful.', null, 200);
     } catch (error: any) {
-      res.clearCookie('refreshToken');
+      res.clearCookie('refreshToken', getRefreshCookieOptions(req));
       return sendSuccess(res, 'Logout completed.', null, 200);
     }
   }

@@ -5,8 +5,20 @@ import {
   useToggleUserStatusMutation,
   useAdminResetPasswordMutation,
 } from '../api/authApi';
-import { Users, Ban, CheckCircle, KeyRound, ShieldCheck, Phone, Search } from 'lucide-react';
+import {
+  Users,
+  Ban,
+  CheckCircle,
+  KeyRound,
+  Phone,
+  Search,
+  Circle,
+  Clock3,
+  LogIn,
+  Activity,
+} from 'lucide-react';
 import { Button } from '../components/common/Button';
+import { formatDate } from '../utils/formatters';
 
 export const UserManagementPage: React.FC = () => {
   const { data, isLoading } = useGetAllUsersQuery();
@@ -19,6 +31,11 @@ export const UserManagementPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const formatActivityTime = (value?: string) => {
+    if (!value) return 'No attempts recorded';
+    return formatDate(value);
+  };
 
   const filteredUsers = users.filter(
     (u) =>
@@ -133,6 +150,50 @@ export const UserManagementPage: React.FC = () => {
                     >
                       {isBlocked ? 'BLOCKED' : u.isApproved ? 'ACTIVE' : 'PENDING'}
                     </span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs font-mono">
+                    <div className="rounded-xl bg-zinc-100 dark:bg-zinc-800/70 p-2.5">
+                      <p className="flex items-center gap-1 text-zinc-500">
+                        <Circle
+                          className={`h-3 w-3 fill-current ${
+                            u.isOnline ? 'text-emerald-500' : 'text-zinc-400'
+                          }`}
+                        />
+                        Presence
+                      </p>
+                      <p
+                        className={`mt-1 font-bold uppercase ${
+                          u.isOnline ? 'text-emerald-500' : 'text-zinc-500'
+                        }`}
+                      >
+                        {u.isOnline ? 'Online now' : 'Offline'}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-zinc-100 dark:bg-zinc-800/70 p-2.5">
+                      <p className="flex items-center gap-1 text-zinc-500">
+                        <Activity className="h-3 w-3" /> Login attempts
+                      </p>
+                      <p className="mt-1 font-bold text-zinc-800 dark:text-zinc-100">
+                        {u.totalLoginAttempts ?? 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 rounded-xl border border-zinc-200 bg-zinc-50 p-2.5 text-xs font-mono dark:border-zinc-800 dark:bg-zinc-950/40">
+                    <p className="flex items-center gap-1.5 text-zinc-500">
+                      <LogIn className="h-3.5 w-3.5 text-amber-500" />
+                      Last login attempt
+                    </p>
+                    <p className="mt-1 text-zinc-700 dark:text-zinc-300">
+                      {formatActivityTime(u.lastLoginAttempt)}
+                    </p>
+                    {!u.isOnline && u.lastSeen && (
+                      <p className="mt-1 flex items-center gap-1 text-zinc-500">
+                        <Clock3 className="h-3 w-3" /> Last seen {formatDate(u.lastSeen)}
+                      </p>
+                    )}
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2">

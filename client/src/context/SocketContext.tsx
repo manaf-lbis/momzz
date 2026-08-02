@@ -216,6 +216,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       dispatch(apiSlice.util.invalidateTags(['PendingWorkers', 'AllUsers', 'User']));
     });
 
+    socket.on('user:status_changed', () => {
+      dispatch(apiSlice.util.invalidateTags(['AllUsers']));
+    });
+
     socket.on('user:approved', ({ userId }: { userId: string }) => {
       console.log('[SOCKET] 📥 user:approved for:', userId);
       dispatch(apiSlice.util.invalidateTags(['User', 'PendingWorkers']));

@@ -10,6 +10,11 @@ export interface User {
   isApproved: boolean;
   status?: 'ACTIVE' | 'BLOCKED';
   taskCount?: number;
+  lastLoginAttempt?: string;
+  totalLoginAttempts?: number;
+  isOnline?: boolean;
+  lastSeen?: string;
+  createdAt?: string;
 }
 
 interface AuthState {
