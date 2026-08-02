@@ -31,6 +31,8 @@ export const AdminHome: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [vehicleName, setVehicleName] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
+  const [customerMobile, setCustomerMobile] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
   const [taskInput, setTaskInput] = useState('');
   const [tasks, setTasks] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
@@ -99,11 +101,15 @@ export const AdminHome: React.FC = () => {
       await createJob({
         vehicleName: vehicleName.trim(),
         vehicleNumber: vehicleNumber.trim(),
+        customerMobile: customerMobile.trim() || undefined,
+        customerEmail: customerEmail.trim() || undefined,
         tasks,
       }).unwrap();
 
       setVehicleName('');
       setVehicleNumber('');
+      setCustomerMobile('');
+      setCustomerEmail('');
       setTasks([]);
       setShowModal(false);
     } catch (err: any) {
@@ -346,6 +352,29 @@ export const AdminHome: React.FC = () => {
                   onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm font-mono text-zinc-100 focus:border-yellow-400 outline-none uppercase"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-mono text-zinc-400 mb-1">CUSTOMER MOBILE NO. (OPTIONAL)</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 98765 43210"
+                    value={customerMobile}
+                    onChange={(e) => setCustomerMobile(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-100 focus:border-yellow-400 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-zinc-400 mb-1">CUSTOMER EMAIL ID (OPTIONAL)</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. customer@email.com"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-100 focus:border-yellow-400 outline-none"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

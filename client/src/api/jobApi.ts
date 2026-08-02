@@ -25,6 +25,8 @@ export interface JobCardData {
   vehicleNumber: string;
   color?: string;
   customerName?: string;
+  customerMobile?: string;
+  customerEmail?: string;
   status: 'IN_PROGRESS' | 'COMPLETED';
   createdAt: string;
   updatedAt: string;
@@ -35,6 +37,8 @@ export interface CreateJobRequest {
   vehicleName: string;
   vehicleNumber: string;
   color?: string;
+  customerMobile?: string;
+  customerEmail?: string;
   tasks: string[];
 }
 

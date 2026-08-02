@@ -11,7 +11,7 @@ import {
 
 export const createJobWithTasks = async (req: Request, res: Response) => {
   try {
-    const { vehicleName, vehicleNumber, color, tasks } = req.body;
+    const { vehicleName, vehicleNumber, color, customerMobile, customerEmail, tasks } = req.body;
 
     if (!vehicleName || !vehicleNumber || !Array.isArray(tasks) || tasks.length === 0) {
       return sendError(res, 'Vehicle Name, Vehicle Number, and at least one Task are required.', 400);
@@ -21,6 +21,8 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
       vehicleName,
       vehicleNumber,
       color: color?.trim() || undefined,
+      customerMobile: customerMobile?.trim() || undefined,
+      customerEmail: customerEmail?.trim() || undefined,
       createdBy: req.user?.id!,
     });
 

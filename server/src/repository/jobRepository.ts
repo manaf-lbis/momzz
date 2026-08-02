@@ -3,7 +3,14 @@ import { Task, ITask } from '../model/Task';
 import User from '../model/User';
 
 export class JobRepository {
-  async createJobCard(data: { vehicleName: string; vehicleNumber: string; color?: string; createdBy: string }): Promise<IJobCard> {
+  async createJobCard(data: {
+    vehicleName: string;
+    vehicleNumber: string;
+    color?: string;
+    customerMobile?: string;
+    customerEmail?: string;
+    createdBy: string;
+  }): Promise<IJobCard> {
     return await JobCard.create(data);
   }
 

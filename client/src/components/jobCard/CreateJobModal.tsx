@@ -12,6 +12,8 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({ isOpen, onClose 
   const [step, setStep] = useState<'FILL' | 'VERIFY'>('FILL');
   const [vehicleName, setVehicleName] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
+  const [customerMobile, setCustomerMobile] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
   const [tasks, setTasks] = useState<string[]>([]);
   const [taskInput, setTaskInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -37,6 +39,8 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({ isOpen, onClose 
     setStep('FILL');
     setVehicleName('');
     setVehicleNumber('');
+    setCustomerMobile('');
+    setCustomerEmail('');
     setTasks([]);
     setTaskInput('');
     setErrorMsg('');
@@ -66,6 +70,8 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({ isOpen, onClose 
       await createJob({
         vehicleName: vehicleName.trim(),
         vehicleNumber: vehicleNumber.trim().toUpperCase(),
+        customerMobile: customerMobile.trim() || undefined,
+        customerEmail: customerEmail.trim() || undefined,
         tasks,
       }).unwrap();
 
@@ -136,6 +142,33 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({ isOpen, onClose 
                   value={vehicleNumber}
                   onChange={(e) => setVehicleNumber(e.target.value)}
                   className="w-full px-3.5 py-2 rounded-xl industrial-input text-xs font-mono uppercase"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-mono font-semibold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                  Customer Mobile No. (Optional)
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 98765 43210"
+                  value={customerMobile}
+                  onChange={(e) => setCustomerMobile(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl industrial-input text-xs font-medium"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-mono font-semibold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                  Customer Email ID (Optional)
+                </label>
+                <input
+                  type="email"
+                  placeholder="e.g. customer@email.com"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl industrial-input text-xs font-medium"
                 />
               </div>
             </div>

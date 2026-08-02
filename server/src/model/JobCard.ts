@@ -5,6 +5,8 @@ export interface IJobCard extends Document {
   vehicleNumber: string;
   color?: string;
   customerName?: string;
+  customerMobile?: string;
+  customerEmail?: string;
   status: 'IN_PROGRESS' | 'READY' | 'COMPLETED';
   createdBy?: mongoose.Types.ObjectId;
   isDeleted: boolean;
@@ -20,6 +22,8 @@ const JobCardSchema: Schema = new Schema(
     vehicleNumber: { type: String, required: true, uppercase: true, trim: true },
     color: { type: String, trim: true },
     customerName: { type: String, trim: true },
+    customerMobile: { type: String, trim: true },
+    customerEmail: { type: String, trim: true, lowercase: true },
     status: { type: String, enum: ['IN_PROGRESS', 'READY', 'COMPLETED'], default: 'IN_PROGRESS' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     isDeleted: { type: Boolean, default: false },
