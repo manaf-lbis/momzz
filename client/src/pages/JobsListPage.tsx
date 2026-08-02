@@ -16,6 +16,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { PageShimmer } from '../components/common/PageShimmer';
 
 type TimeFilter = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'ALL';
 
@@ -164,16 +165,7 @@ export const JobsListPage: React.FC = () => {
 
         {/* Vehicle Cards Grid */}
         {isLoading && page === 1 ? (
-          <div className="py-16 text-center space-y-3">
-            <motion.div
-              className="w-fit mx-auto"
-              animate={{ rotate: [-18, 18, -18], y: [0, -2, 0] }}
-              transition={{ duration: 0.85, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <Wrench className="w-6 h-6 text-amber-500 dark:text-yellow-400" />
-            </motion.div>
-            <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">LOADING VEHICLE JOB CARDS...</p>
-          </div>
+          <PageShimmer label="Loading vehicle job cards" cards={6} />
         ) : isError ? (
           <div className="p-6 text-center bg-red-500/10 border border-red-500/30 rounded-xl space-y-2">
             <p className="text-xs font-mono text-red-500">Failed to load vehicle job cards.</p>

@@ -20,6 +20,7 @@ import {
   InventoryItem,
 } from '../api/inventoryApi';
 import { ConfirmationModal } from '../components/common/ConfirmationModal';
+import { PageShimmer } from '../components/common/PageShimmer';
 
 const CATEGORY_OPTIONS = ['General', 'Service', 'Repair', 'Parts', 'Cleaning', 'Electrical', 'Body Work'];
 
@@ -194,9 +195,7 @@ export const InventoryPage: React.FC = () => {
               </div>
 
               {isLoading ? (
-                <div className="py-10 text-center text-xs font-mono text-zinc-400 animate-pulse">
-                  Loading inventory...
-                </div>
+                <PageShimmer label="Loading inventory" cards={3} />
               ) : isError ? (
                 <div className="py-8 text-center text-xs font-mono text-red-400 flex items-center justify-center gap-2">
                   <AlertTriangle className="w-4 h-4" /> Failed to load inventory.

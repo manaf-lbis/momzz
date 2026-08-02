@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Navbar } from '../components/navbar/Navbar';
+import { PageShimmer } from '../components/common/PageShimmer';
 import {
   useGetAllUsersQuery,
   useToggleUserStatusMutation,
@@ -104,9 +105,7 @@ export const UserManagementPage: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12 text-zinc-500 font-mono text-xs">
-            Loading team members...
-          </div>
+          <PageShimmer label="Loading team members" cards={4} />
         ) : filteredUsers.length === 0 ? (
           <div className="text-center py-12 text-zinc-400 font-mono text-xs">
             No team members found.

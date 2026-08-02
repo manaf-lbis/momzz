@@ -5,6 +5,7 @@ import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import { ShieldCheck, UserCheck, RefreshCw, AlertCircle } from 'lucide-react';
 import { formatDate } from '../utils/formatters';
+import { PageShimmer } from '../components/common/PageShimmer';
 
 export const AdminApproval: React.FC = () => {
   const { data, isLoading, isError, refetch } = useGetPendingWorkersQuery();
@@ -48,9 +49,7 @@ export const AdminApproval: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div className="industrial-card p-8 text-center text-zinc-500 dark:text-zinc-400 font-mono text-xs">
-            Loading pending worker registrations...
-          </div>
+          <PageShimmer label="Loading pending registrations" cards={3} />
         ) : isError ? (
           <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-xs font-mono flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
