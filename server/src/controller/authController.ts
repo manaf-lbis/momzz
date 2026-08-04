@@ -41,6 +41,7 @@ export class AuthController {
         'User registered successfully.',
         {
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
           user: {
             id: result.user._id,
             name: result.user.name,
@@ -75,6 +76,7 @@ export class AuthController {
         'Login successful.',
         {
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
           user: {
             id: result.user._id,
             name: result.user.name,
@@ -94,7 +96,7 @@ export class AuthController {
 
   async refreshToken(req: Request, res: Response) {
     try {
-      const refreshToken = req.cookies?.refreshToken;
+      const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
       if (!refreshToken) {
         return sendError(res, 'Refresh token cookie missing.', 401);
       }
@@ -108,6 +110,7 @@ export class AuthController {
         'Token refreshed successfully.',
         {
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
           user: {
             id: result.user._id,
             name: result.user.name,

@@ -2,26 +2,21 @@ import React, { useState } from 'react';
 import {
   JobCardData,
   useSetTaskStatusMutation,
-  useAddTaskMutation,
-  useDeleteTaskMutation,
-  useDeleteJobCardMutation,
 } from '../../api/jobApi';
 
 import {
   CheckCircle2,
   Clock,
   Check,
-  Plus,
+  Sparkles,
   Car,
   ChevronRight,
   ChevronDown,
-  Trash2,
   AlertTriangle,
   RotateCcw,
   Loader2,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../common/Button';
 import { ConfirmationModal } from '../common/ConfirmationModal';
 import { playReopenSound } from '../../utils/completionSound';
 
@@ -33,17 +28,12 @@ interface VehicleCardProps {
 export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }) => {
   const { isAdmin } = useAuth();
   const [isExpanded, setIsExpanded] = useState(!compact);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [taskError, setTaskError] = useState('');
   const [confirmReopen, setConfirmReopen] = useState<{ taskId: string; title: string } | null>(null);
   const [isReopening, setIsReopening] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
   const [setTaskStatus] = useSetTaskStatusMutation();
-  const [addTask, { isLoading: isAddingTask }] = useAddTaskMutation();
-  const [deleteTask, { isLoading: isDeletingTask }] = useDeleteTaskMutation();
-  const [deleteJobCard, { isLoading: isDeletingJob }] = useDeleteJobCardMutation();
 
   const totalTasks = job.tasks.length;
   const completedTasks = job.tasks.filter((t) => t.status === 'COMPLETED').length;
@@ -68,6 +58,17 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
     const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     if (hours > 0) return `${hours}h ${mins}m`;
     return `${mins}m`;
+  };
+
+  const getTaskAudit = (task: JobCardData['tasks'][number]) => {
+    if (!task.completedAt) return null;
+    const startedAt = new Date(task.createdAt || job.createdAt).getTime();
+    const finishedAt = new Date(task.completedAt);
+    const minutes = Math.max(1, Math.round((finishedAt.getTime() - startedAt) / 60000));
+    const finishedLabel = new Intl.DateTimeFormat(undefined, {
+      day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
+    }).format(finishedAt);
+    return `Completed by ${task.completedBy?.name || 'Technician'} • Took ${minutes} min • Finished ${finishedLabel}`;
   };
 
   const handleToggle = async (taskId: string, currentStatus: string) => {
@@ -108,33 +109,6 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
     setConfirmReopen({ taskId, title });
   };
 
-  const handleAddNewTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTaskTitle.trim()) return;
-    try {
-      await addTask({ jobCardId: job.id || (job as any)._id, title: newTaskTitle.trim() }).unwrap();
-      setNewTaskTitle('');
-    } catch (err) {
-      console.error('Failed to add task:', err);
-    }
-  };
-
-  const handleDeleteTask = async (taskId: string) => {
-    try {
-      await deleteTask({ taskId }).unwrap();
-    } catch (err) {
-      console.error('Failed to delete task:', err);
-    }
-  };
-
-  const handleDeleteJob = async () => {
-    try {
-      await deleteJobCard({ jobCardId: job.id || (job as any)._id }).unwrap();
-    } catch (err) {
-      console.error('Failed to delete job card:', err);
-    }
-  };
-
   return (
     <div className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 sm:p-5 shadow-2xl transition-all space-y-4 relative overflow-hidden">
       {/* Visual Accent Top Bar */}
@@ -172,15 +146,6 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
             </span>
           )}
 
-          {isAdmin && (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
-              title="Delete Job Card"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
         </div>
       </div>
 
@@ -189,32 +154,6 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
         <div className="p-2.5 bg-red-950/70 border border-red-800 rounded-xl flex items-center gap-2 text-[11px] font-mono text-red-300">
           <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
           {taskError}
-        </div>
-      )}
-
-      {/* Delete Confirmation Alert Modal */}
-      {showDeleteConfirm && (
-        <div className="p-3 bg-red-950/80 border border-red-800 rounded-xl space-y-2 text-xs font-mono text-red-200">
-          <p className="flex items-center gap-1.5 font-bold">
-            <AlertTriangle className="w-4 h-4 text-red-400" /> Are you sure you want to delete this vehicle job card?
-          </p>
-          <div className="flex gap-2 pt-1">
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteConfirm(false)}
-              className="text-[11px] py-1 px-2 text-zinc-300"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleDeleteJob}
-              isLoading={isDeletingJob}
-              className="text-[11px] py-1 px-2 bg-red-600 hover:bg-red-500 text-white"
-            >
-              Confirm Delete
-            </Button>
-          </div>
         </div>
       )}
 
@@ -260,7 +199,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
         </div>
       </div>
 
-      {/* Expanded Vehicle Workroom Checklist & Admin On-The-Fly Add */}
+      {/* Expanded vehicle checklist. Task changes are managed from the job card editor. */}
       {isExpanded && (
         <div className="space-y-3 pt-3 border-t border-zinc-800/80">
           <div className="flex items-center justify-between">
@@ -277,28 +216,12 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
             )}
           </div>
 
-          {/* Admin On-The-Fly Task Add */}
-          {isAdmin && (
-            <form onSubmit={handleAddNewTask} className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Add new repair sub-task..."
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-100 focus:border-yellow-400 outline-none font-sans"
-              />
-              <Button type="submit" variant="outline" isLoading={isAddingTask} className="text-xs py-1.5 px-3">
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add Task
-              </Button>
-            </form>
-          )}
-
           {/* Interactive Checklist */}
           <div className="space-y-2">
             {job.tasks.length === 0 ? (
               <p className="text-xs font-mono text-zinc-500 italic text-center py-2">No tasks added yet.</p>
             ) : (
-              job.tasks.map((task) => {
+              [...job.tasks].sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })).map((task) => {
                 const isCompleted = task.status === 'COMPLETED';
                 const taskId = task.id || (task as any)._id;
                 const isTaskUpdating = updatingTaskId === taskId;
@@ -314,14 +237,14 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
                     <div className="min-w-0 flex-1">
                       <p
                         className={`text-sm font-medium ${
-                          isCompleted ? 'line-through text-zinc-400 decoration-emerald-500' : 'text-zinc-100'
+                          isCompleted ? 'text-zinc-100' : 'text-zinc-100'
                         }`}
                       >
                         {task.title}
                       </p>
-                      {isCompleted && task.completedBy && (
+                      {isCompleted && getTaskAudit(task) && (
                         <p className="text-[11px] font-mono text-emerald-400 mt-0.5 flex items-center gap-1">
-                          <Check className="w-3 h-3" /> Done by {task.completedBy.name}
+                          <Check className="w-3 h-3" /> {getTaskAudit(task)}
                         </p>
                       )}
                     </div>
@@ -358,23 +281,13 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
                             </>
                           ) : (
                             <>
-                              <Plus className="w-4 h-4" />
+                              <Sparkles className="w-4 h-4" />
                               <span>Claim & Complete</span>
                             </>
                           )}
                         </button>
                       )}
 
-                      {isAdmin && (
-                        <button
-                          disabled={isDeletingTask}
-                          onClick={() => handleDeleteTask(taskId)}
-                          className="p-1.5 text-zinc-600 hover:text-red-400 transition-colors"
-                          title="Delete Task"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
                     </div>
                   </div>
                 );

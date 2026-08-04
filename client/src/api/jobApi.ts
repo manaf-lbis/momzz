@@ -30,6 +30,8 @@ export interface JobCardData {
   status: 'IN_PROGRESS' | 'COMPLETED';
   createdAt: string;
   updatedAt: string;
+  verifiedBy?: { name: string };
+  verifiedAt?: string;
   tasks: TaskItem[];
 }
 
@@ -144,6 +146,10 @@ export const jobApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['JobCard', 'User'],
     }),
+    verifyJobCard: builder.mutation<{ success: boolean; data: JobCardData }, { jobCardId: string }>({
+      query: ({ jobCardId }) => ({ url: `/jobs/${jobCardId}/verify`, method: 'PATCH' }),
+      invalidatesTags: ['JobCard'],
+    }),
   }),
 });
 
@@ -155,4 +161,5 @@ export const {
   useAddTaskMutation,
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
+  useVerifyJobCardMutation,
 } = jobApi;

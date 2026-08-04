@@ -145,9 +145,9 @@ export const Dashboard: React.FC = () => {
 
             <DashCard
               icon={<Car className="w-6 h-6" />}
-              title="🚘 Active Cars"
-              subtitle="Garage Workroom View"
-              onClick={() => navigate('/jobs')}
+              title="All Vehicles & History"
+              subtitle="Completed and active job cards"
+              onClick={() => navigate('/jobs', { state: { view: 'all' } })}
             />
           </div>
         </section>

@@ -7,6 +7,7 @@ export interface AuthResponse {
   message: string;
   data: {
     accessToken: string;
+    refreshToken?: string;
     token?: string;
     user: User;
   };

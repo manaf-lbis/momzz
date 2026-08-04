@@ -23,7 +23,7 @@ const refreshAccessToken = (
 ) => {
   if (!refreshRequest) {
     refreshRequest = Promise.resolve(baseQuery(
-      { url: '/auth/refresh', method: 'POST' },
+      { url: '/auth/refresh', method: 'POST', body: { refreshToken: localStorage.getItem('refreshToken') } },
       api,
       extraOptions
     )).finally(() => {
@@ -54,7 +54,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
         const user = data.data.user;
 
         // Update Redux state & localStorage
-        api.dispatch(setCredentials({ user, token: newAccessToken }));
+        api.dispatch(setCredentials({ user, token: newAccessToken, refreshToken: data.data.refreshToken }));
 
         // Retry original API call with new access token
         result = await baseQuery(args, api, extraOptions);

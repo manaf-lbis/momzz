@@ -21,7 +21,7 @@ export class JobRepository {
   }
 
   async findAllJobs(): Promise<IJobCard[]> {
-    return await JobCard.find({ isDeleted: { $ne: true } }).sort({ status: -1, createdAt: -1 });
+    return await JobCard.find({ isDeleted: { $ne: true } }).populate('verifiedBy', 'name mobile role').sort({ status: -1, createdAt: -1 });
   }
 
   async findPaginatedJobs(options: {
@@ -59,7 +59,7 @@ export class JobRepository {
     }
 
     const [jobs, total] = await Promise.all([
-      JobCard.find(query).sort({ status: -1, createdAt: -1 }).skip(skip).limit(limit),
+      JobCard.find(query).populate('verifiedBy', 'name mobile role').sort({ status: -1, createdAt: -1 }).skip(skip).limit(limit),
       JobCard.countDocuments(query),
     ]);
 
@@ -97,6 +97,14 @@ export class JobRepository {
 
   async updateJobStatus(jobCardId: string, status: 'IN_PROGRESS' | 'COMPLETED'): Promise<IJobCard | null> {
     return await JobCard.findByIdAndUpdate(jobCardId, { status }, { new: true });
+  }
+
+  async verifyJobCard(jobCardId: string, userId: string): Promise<IJobCard | null> {
+    return await JobCard.findOneAndUpdate(
+      { _id: jobCardId, isDeleted: { $ne: true }, verifiedAt: null },
+      { $set: { verifiedBy: userId, verifiedAt: new Date(), status: 'COMPLETED' } },
+      { new: true }
+    ).populate('verifiedBy', 'name mobile role');
   }
 
   async findTaskById(taskId: string): Promise<ITask | null> {

@@ -12,6 +12,8 @@ export interface IJobCard extends Document {
   isDeleted: boolean;
   deletedAt?: Date;
   deletedBy?: mongoose.Types.ObjectId;
+  verifiedBy?: mongoose.Types.ObjectId;
+  verifiedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +31,8 @@ const JobCardSchema: Schema = new Schema(
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    verifiedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    verifiedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

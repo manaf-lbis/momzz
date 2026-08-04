@@ -68,6 +68,7 @@ export const AuthPage = () => {
             setCredentials({
               user: response.data.user,
               token,
+              refreshToken: response.data.refreshToken,
             })
           );
           navigate('/');
@@ -80,6 +81,7 @@ export const AuthPage = () => {
             setCredentials({
               user: response.data.user,
               token,
+              refreshToken: response.data.refreshToken,
             })
           );
           navigate('/');

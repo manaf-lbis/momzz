@@ -33,6 +33,7 @@ export const Login: React.FC = () => {
           setCredentials({
             user: response.data.user,
             token,
+            refreshToken: response.data.refreshToken,
           })
         );
         navigate('/');

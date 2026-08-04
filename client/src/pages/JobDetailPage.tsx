@@ -8,6 +8,7 @@ import {
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
   useUpdateJobMutation,
+  useVerifyJobCardMutation,
   JobCardData,
   TaskItem,
 } from '../api/jobApi';
@@ -81,6 +82,7 @@ export const JobDetailPage: React.FC = () => {
   const [deleteTask] = useDeleteTaskMutation();
   const [deleteJobCard] = useDeleteJobCardMutation();
   const [updateJob, { isLoading: isUpdatingDetails }] = useUpdateJobMutation();
+  const [verifyJobCard, { isLoading: isVerifying }] = useVerifyJobCardMutation();
 
   // Handle flat vs paginated response shape
   const rawData = jobsResponse?.data;
@@ -135,6 +137,13 @@ export const JobDetailPage: React.FC = () => {
     return `${Math.floor(hours / 24)}d ${hours % 24}h in garage`;
   };
 
+  const formatDuration = (minutes: number) => {
+    if (minutes < 60) return `${Math.max(1, minutes)}m`;
+    if (minutes < 1440) return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+    if (minutes < 10080) return `${Math.floor(minutes / 1440)}d ${Math.floor((minutes % 1440) / 60)}h`;
+    return `${Math.floor(minutes / 10080)}w ${Math.floor((minutes % 10080) / 1440)}d`;
+  };
+
   const saveJobDetails = async () => {
     try {
       await updateJob({ jobCardId: currentJob.id || currentJob._id!, ...editDetails }).unwrap();
@@ -149,18 +158,25 @@ export const JobDetailPage: React.FC = () => {
     return true;
   });
 
-  // Sorted: OPEN first, COMPLETED at bottom
+  // Keep every checklist view predictable: task names are always A-Z.
   const sortedTasks = [...filteredTasks].sort((a: TaskItem, b: TaskItem) => {
-    if (a.status === b.status) return 0;
-    return a.status === 'OPEN' ? -1 : 1;
+    return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
   });
 
   const getAuditText = (task: TaskItem) => {
-    if (!task.completedAt || !currentJob.createdAt) return null;
-    const created = new Date(currentJob.createdAt).getTime();
+    if (!task.completedAt) return null;
+    const created = new Date(task.createdAt || currentJob.createdAt).getTime();
     const completed = new Date(task.completedAt).getTime();
     const elapsedMins = Math.max(1, Math.round((completed - created) / (1000 * 60)));
-    return `Done by ${task.completedBy?.name || 'Technician'} • ${elapsedMins} mins after arrival`;
+    const finishedAt = new Intl.DateTimeFormat(undefined, {
+      day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
+    }).format(new Date(task.completedAt));
+    return `Completed by ${task.completedBy?.name || 'Technician'} • Took ${formatDuration(elapsedMins)} • Finished ${finishedAt}`;
+  };
+
+  const handleVerify = async () => {
+    try { await verifyJobCard({ jobCardId: currentJob.id || currentJob._id! }).unwrap(); }
+    catch (err: any) { setErrorMessage(err?.data?.message || 'Unable to verify this job card.'); }
   };
 
   // Always show confirmation modal before any status change (COMPLETE or REOPEN)
@@ -242,7 +258,8 @@ export const JobDetailPage: React.FC = () => {
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-4 space-y-3">
         {/* Header */}
-        <div className="industrial-card rounded-2xl p-3 flex items-start justify-between gap-2">
+        <div className="industrial-card rounded-2xl p-3 sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-2 min-w-0 flex-1">
             <button
               onClick={() => navigate('/jobs')}
@@ -251,14 +268,14 @@ export const JobDetailPage: React.FC = () => {
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <h1 className="min-w-0 truncate text-base sm:text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                <h1 className="min-w-0 break-words text-base sm:text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                   <Car className="w-5 h-5 text-amber-500 dark:text-yellow-400" />
                   {currentJob.vehicleName} {currentJob.vehicleColor && <span className="text-amber-500 dark:text-yellow-400">({currentJob.vehicleColor})</span>}
                 </h1>
                 <span className="text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-yellow-400 border border-amber-500/20 px-2 py-0.5 rounded-full">⏱ {getGarageDuration()}</span>
               </div>
-              <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap mt-1 pb-0.5 no-scrollbar">
+              <div className="flex flex-wrap items-center gap-1.5 mt-1">
                 <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-950 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">REG: <b className="uppercase">{currentJob.vehicleNumber}</b>{!isAdmin && currentJob.customerMobile ? ` • ${currentJob.customerMobile}` : ''}</span>
                 {isAllCompleted ? (
                   <span className="px-2.5 py-0.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-full font-mono text-[10px] font-extrabold uppercase flex items-center gap-1 shadow-sm">
@@ -273,18 +290,30 @@ export const JobDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {isAdmin && <div className="flex gap-2"><button onClick={() => { setEditDetails({ vehicleName: currentJob.vehicleName, vehicleNumber: currentJob.vehicleNumber, vehicleColor: currentJob.vehicleColor, customerName: currentJob.customerName, customerMobile: currentJob.customerMobile, customerEmail: currentJob.customerEmail }); setIsEditingDetails(true); }} className="px-2 py-1.5 bg-amber-400/10 border border-amber-400/30 text-amber-600 dark:text-yellow-400 text-xs font-mono rounded-xl">Edit</button><button onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })} className="p-2 bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 text-xs font-mono rounded-xl transition-all active:scale-95" title="Delete Job Card"><Trash2 className="w-4 h-4" /></button></div>}
+          {isAdmin && <button onClick={() => { setEditDetails({ vehicleName: currentJob.vehicleName, vehicleNumber: currentJob.vehicleNumber, vehicleColor: currentJob.vehicleColor, customerName: currentJob.customerName, customerMobile: currentJob.customerMobile, customerEmail: currentJob.customerEmail }); setIsEditingDetails(true); }} className="self-end sm:self-auto px-3 py-1.5 bg-amber-400/10 border border-amber-400/30 text-amber-600 dark:text-yellow-400 text-xs font-mono rounded-xl">Edit job card</button>}
+          </div>
         </div>
 
         {isAdmin && (currentJob.customerName || currentJob.customerMobile || currentJob.customerEmail) && <div className="text-xs rounded-xl bg-zinc-100 dark:bg-zinc-900 p-3 text-zinc-600 dark:text-zinc-300">Customer: {currentJob.customerName || '—'} · {currentJob.customerMobile || '—'} · {currentJob.customerEmail || '—'}</div>}
 
-        {isEditingDetails && <div className="industrial-card rounded-2xl p-4 space-y-3"><h2 className="text-sm font-bold">Edit vehicle and customer details</h2><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{(['vehicleName', 'vehicleNumber', 'vehicleColor', 'customerName', 'customerMobile', 'customerEmail'] as const).map((field) => <input key={field} value={(editDetails[field] as string) || ''} onChange={(e) => setEditDetails((prev) => ({ ...prev, [field]: e.target.value }))} placeholder={field.replace(/([A-Z])/g, ' $1')} className="industrial-input rounded-xl p-2 text-sm" />)}</div><div className="flex gap-2"><button onClick={() => setIsEditingDetails(false)} className="px-3 py-2 text-xs">Cancel</button><button disabled={isUpdatingDetails} onClick={saveJobDetails} className="px-3 py-2 rounded-xl bg-amber-400 text-zinc-950 text-xs font-bold">{isUpdatingDetails ? 'Saving...' : 'Save changes'}</button></div></div>}
+        {isEditingDetails && <div className="industrial-card rounded-2xl p-4 space-y-4"><div><h2 className="text-sm font-bold">Edit job card</h2><p className="text-xs text-zinc-500 mt-1">Update vehicle details or manage its task list.</p></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{(['vehicleName', 'vehicleNumber', 'vehicleColor', 'customerName', 'customerMobile', 'customerEmail'] as const).map((field) => <input key={field} value={(editDetails[field] as string) || ''} onChange={(e) => setEditDetails((prev) => ({ ...prev, [field]: e.target.value }))} placeholder={field.replace(/([A-Z])/g, ' $1')} className="industrial-input rounded-xl p-2 text-sm" />)}</div><div className="flex flex-wrap gap-2"><button onClick={() => setIsEditingDetails(false)} className="px-3 py-2 text-xs">Close editor</button><button disabled={isUpdatingDetails} onClick={saveJobDetails} className="px-3 py-2 rounded-xl bg-amber-400 text-zinc-950 text-xs font-bold">{isUpdatingDetails ? 'Saving...' : 'Save changes'}</button><button onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })} className="ml-auto px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-bold">Delete job card</button></div><div className="border-t border-zinc-200 dark:border-zinc-800 pt-4 space-y-2"><p className="text-xs font-mono font-bold uppercase text-zinc-500">Add task</p><TaskAutoComplete value={newTaskTitle} onChange={setNewTaskTitle} onAddTask={handleAddTask} placeholder="Search or type a sub-task..." disabled={false} /></div></div>}
 
         {errorMessage && (
           <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-xs font-mono">
             {errorMessage}
           </div>
         )}
+
+        {currentJob.verifiedAt ? (
+          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300">
+            <b>Final verification complete.</b> Verified by {currentJob.verifiedBy?.name || 'a team member'} at {new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(currentJob.verifiedAt))}. {isAdmin ? 'Administrators can still make changes.' : 'This job card is now view-only.'}
+          </div>
+        ) : isAllCompleted ? (
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <span><b>All tasks completed.</b> Cross-check the vehicle before final verification.</span>
+            <button disabled={isVerifying} onClick={handleVerify} className="px-3 py-2 rounded-xl bg-emerald-500 text-zinc-950 font-bold disabled:opacity-60">{isVerifying ? 'Verifying...' : 'Final verify'}</button>
+          </div>
+        ) : null}
 
         {/* Progress Bar & Vehicle Ready Banner */}
         <div className="industrial-card p-3.5 rounded-2xl space-y-2">
@@ -330,19 +359,6 @@ export const JobDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Admin: Add Sub-task with Inventory Auto-Complete */}
-        {isAdmin && (
-          <div className="industrial-card p-2.5 rounded-2xl max-w-md mx-auto w-full">
-            <TaskAutoComplete
-              value={newTaskTitle}
-              onChange={setNewTaskTitle}
-              onAddTask={handleAddTask}
-              placeholder="Search or type a sub-task..."
-              disabled={false}
-            />
-          </div>
-        )}
-
         {/* Sub-Task Checklist */}
         <div className="space-y-2">
           {sortedTasks.length === 0 ? (
@@ -374,7 +390,7 @@ export const JobDetailPage: React.FC = () => {
                       {/* Interactive Checkbox */}
                       <button
                         type="button"
-                        disabled={isTaskUpdating}
+                        disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
                         onClick={() => promptTaskStatusChange(task)}
                         className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all flex-shrink-0 active:scale-90 ${
                           isCompleted
@@ -393,7 +409,7 @@ export const JobDetailPage: React.FC = () => {
                         <p
                           className={`text-xs sm:text-sm font-bold transition-all ${
                             isCompleted
-                              ? 'line-through text-zinc-400 dark:text-zinc-500'
+                              ? 'text-zinc-700 dark:text-zinc-200'
                               : 'text-zinc-900 dark:text-zinc-100'
                           }`}
                         >
@@ -414,7 +430,7 @@ export const JobDetailPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       {!isCompleted ? (
                         <button
-                          disabled={isTaskUpdating}
+                          disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
                           onClick={() => promptTaskStatusChange(task)}
                           className="px-3 py-1.5 bg-amber-400 dark:bg-yellow-400 text-zinc-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 dark:hover:bg-yellow-300 transition-all active:scale-95 flex items-center gap-1.5 whitespace-nowrap shadow-sm cursor-pointer disabled:opacity-60"
                         >
@@ -432,7 +448,7 @@ export const JobDetailPage: React.FC = () => {
                         </button>
                       ) : (
                         <button
-                          disabled={isTaskUpdating}
+                          disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
                           onClick={() => promptTaskStatusChange(task)}
                           className="px-2.5 py-1 bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 text-[10px] font-mono font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-60"
                         >
@@ -450,7 +466,7 @@ export const JobDetailPage: React.FC = () => {
                         </button>
                       )}
 
-                      {isAdmin && (
+                      {isAdmin && isEditingDetails && (
                         <button
                           onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'TASK', taskId })}
                           className="p-1.5 text-zinc-400 hover:text-red-500 transition-colors rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"

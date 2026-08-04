@@ -20,10 +20,11 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { formatDate } from '../utils/formatters';
+import { ConfirmationModal } from '../components/common/ConfirmationModal';
 
 export const UserManagementPage: React.FC = () => {
   const { data, isLoading } = useGetAllUsersQuery();
-  const [toggleUserStatus] = useToggleUserStatusMutation();
+  const [toggleUserStatus, { isLoading: isUpdatingStatus }] = useToggleUserStatusMutation();
   const [adminResetPassword] = useAdminResetPasswordMutation();
 
   const users = data?.data || [];
@@ -32,6 +33,7 @@ export const UserManagementPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [statusConfirm, setStatusConfirm] = useState<{ id: string; name: string; status: 'ACTIVE' | 'BLOCKED' } | null>(null);
 
   const formatActivityTime = (value?: string) => {
     if (!value) return 'No attempts recorded';
@@ -43,12 +45,16 @@ export const UserManagementPage: React.FC = () => {
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.mobile.includes(search) ||
       u.role.toLowerCase().includes(search.toLowerCase())
-  );
+  ).sort((a, b) => {
+    const rank = (user: typeof a) => user.status === 'BLOCKED' ? 3 : !user.isApproved ? 2 : user.isOnline ? 0 : 1;
+    return rank(a) - rank(b) || a.name.localeCompare(b.name);
+  });
 
-  const handleToggleBlock = async (userId: string, currentStatus?: string) => {
-    const newStatus = currentStatus === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED';
+  const handleToggleBlock = async () => {
+    if (!statusConfirm) return;
     try {
-      await toggleUserStatus({ userId, status: newStatus }).unwrap();
+      await toggleUserStatus({ userId: statusConfirm.id, status: statusConfirm.status }).unwrap();
+      setStatusConfirm(null);
     } catch (err: any) {
       alert(err?.data?.message || 'Failed to update user status.');
     }
@@ -205,7 +211,7 @@ export const UserManagementPage: React.FC = () => {
 
                     {u.role !== 'ADMIN' && (
                       <button
-                        onClick={() => handleToggleBlock(u.id || u._id || '', u.status)}
+                        onClick={() => setStatusConfirm({ id: u.id || u._id || '', name: u.name, status: isBlocked ? 'ACTIVE' : 'BLOCKED' })}
                         className={`px-2.5 py-1 text-xs font-mono rounded-lg flex items-center gap-1.5 transition-colors ${
                           isBlocked
                             ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
@@ -284,6 +290,7 @@ export const UserManagementPage: React.FC = () => {
           </div>
         )}
       </main>
+      <ConfirmationModal isOpen={!!statusConfirm} onClose={() => setStatusConfirm(null)} onConfirm={handleToggleBlock} isLoading={isUpdatingStatus} title={statusConfirm?.status === 'BLOCKED' ? 'Block team member?' : 'Unblock team member?'} message={`${statusConfirm?.status === 'BLOCKED' ? 'Block' : 'Unblock'} ${statusConfirm?.name || 'this user'}?`} confirmText={statusConfirm?.status === 'BLOCKED' ? 'Block user' : 'Unblock user'} variant={statusConfirm?.status === 'BLOCKED' ? 'danger' : 'primary'} />
     </div>
   );
 };

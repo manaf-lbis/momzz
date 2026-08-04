@@ -176,6 +176,12 @@ export const setTaskStatus = async (req: Request, res: Response) => {
       return sendError(res, 'Action must be "COMPLETE" or "REOPEN".', 400);
     }
 
+    const task = await jobRepository.findTaskById(taskId);
+    if (!task) return sendError(res, 'Task not found.', 404);
+    const job = await jobRepository.findJobById(task.jobCardId.toString());
+    if (job?.verifiedAt && req.user?.role !== 'ADMIN') {
+      return sendError(res, 'This job card has been verified and is view-only for mechanics.', 403);
+    }
     const updatedTask = await jobRepository.setTaskStatus(taskId, action, userId!);
     if (!updatedTask) {
       return sendError(res, 'Task not found.', 404);
@@ -197,6 +203,23 @@ export const setTaskStatus = async (req: Request, res: Response) => {
     );
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to update task status.', 500);
+  }
+};
+
+export const verifyJobCard = async (req: Request, res: Response) => {
+  try {
+    const { jobCardId } = req.params;
+    const job = await jobRepository.findJobById(jobCardId);
+    if (!job) return sendError(res, 'Job card not found.', 404);
+    const tasks = await jobRepository.findTasksByJobCardId(jobCardId);
+    if (!tasks.length || tasks.some((task) => task.status !== 'COMPLETED')) {
+      return sendError(res, 'Complete every task before final verification.', 400);
+    }
+    const verifiedJob = await jobRepository.verifyJobCard(jobCardId, req.user!.id);
+    if (!verifiedJob) return sendError(res, 'This job card has already been verified.', 400);
+    return sendSuccess(res, 'Job card verified successfully.', { ...verifiedJob.toObject(), id: verifiedJob._id.toString() });
+  } catch (error: any) {
+    return sendError(res, error.message || 'Unable to verify job card.', 500);
   }
 };
 
