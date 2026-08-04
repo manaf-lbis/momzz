@@ -88,6 +88,14 @@ export const JobsListPage: React.FC = () => {
 
   const displayJobs = accumulatedJobs.length > 0 ? accumulatedJobs : rawJobs;
 
+  const getGarageDuration = (createdAt: string) => {
+    const minutes = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000));
+    if (minutes < 60) return `${Math.max(1, minutes)}m in garage`;
+    if (minutes < 1440) return `${Math.floor(minutes / 60)}h ${minutes % 60}m in garage`;
+    if (minutes < 10080) return `${Math.floor(minutes / 1440)}d ${Math.floor((minutes % 1440) / 60)}h in garage`;
+    return `${Math.floor(minutes / 10080)}w ${Math.floor((minutes % 10080) / 1440)}d in garage`;
+  };
+
   const filteredJobs = displayJobs.filter((job) => {
     if (jobsView === 'MY_JOBS' && !job.tasks?.some((task) => task.status === 'OPEN')) return false;
     if (jobsView === 'PENDING_VERIFICATION' && (!job.tasks?.length || job.tasks.some((task) => task.status !== 'COMPLETED') || job.verifiedAt)) return false;
@@ -220,6 +228,9 @@ export const JobsListPage: React.FC = () => {
                         <span className="inline-block mt-0.5 text-[11px] font-mono font-bold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-950 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">
                           {job.vehicleNumber}
                         </span>
+                        <p className="mt-1 text-[10px] font-mono text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-500 dark:text-yellow-400" /> {getGarageDuration(job.createdAt)}
+                        </p>
                       </div>
 
                       {isReadyForDelivery ? (

@@ -16,6 +16,7 @@ export interface TaskItem {
   };
   completedAt?: string;
   createdAt: string;
+  activityLog?: { action: 'COMPLETED' | 'REOPENED'; at: string; user?: { name: string } }[];
 }
 
 export interface JobCardData {

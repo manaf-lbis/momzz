@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -44,6 +44,8 @@ export const JobDetailPage: React.FC = () => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [statusFilter, setStatusFilter] = useState<TaskFilterType>('ALL');
+  const [activityTask, setActivityTask] = useState<TaskItem | null>(null);
+  const longPressTimer = useRef<number | null>(null);
 
   // Confirmation Modals State
   const [confirmTaskModal, setConfirmTaskModal] = useState<{
@@ -177,6 +179,14 @@ export const JobDetailPage: React.FC = () => {
   const handleVerify = async () => {
     try { await verifyJobCard({ jobCardId: currentJob.id || currentJob._id! }).unwrap(); }
     catch (err: any) { setErrorMessage(err?.data?.message || 'Unable to verify this job card.'); }
+  };
+
+  const startLongPress = (task: TaskItem) => {
+    longPressTimer.current = window.setTimeout(() => setActivityTask(task), 1000);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+    longPressTimer.current = null;
   };
 
   // Always show confirmation modal before any status change (COMPLETE or REOPEN)
@@ -380,6 +390,10 @@ export const JobDetailPage: React.FC = () => {
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.18 }}
+                    onPointerDown={() => startLongPress(task)}
+                    onPointerUp={cancelLongPress}
+                    onPointerLeave={cancelLongPress}
+                    onPointerCancel={cancelLongPress}
                     className={`bg-white/70 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 p-3.5 rounded-2xl flex items-center justify-between gap-3 transition-all shadow-sm ${
                       isCompleted
                         ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-500/20'
@@ -482,6 +496,15 @@ export const JobDetailPage: React.FC = () => {
             </div>
           )}
         </div>
+
+        {activityTask && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4" onClick={() => setActivityTask(null)}>
+            <div className="w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+              <div className="flex items-center justify-between gap-3"><div><h2 className="font-bold text-sm">Task activity</h2><p className="text-xs text-zinc-500">{activityTask.title}</p></div><button onClick={() => setActivityTask(null)} className="text-xs text-zinc-500">Close</button></div>
+              <div className="mt-4 space-y-3">{activityTask.activityLog?.length ? [...activityTask.activityLog].reverse().map((entry, index) => <div key={`${entry.at}-${index}`} className="border-l-2 border-amber-400 pl-3 text-xs"><b>{entry.action === 'COMPLETED' ? 'Completed' : 'Reopened'}</b> by {entry.user?.name || 'Team member'}<p className="text-zinc-500 mt-0.5">{new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(entry.at))}</p></div>) : <p className="text-xs text-zinc-500">No activity recorded yet.</p>}</div>
+            </div>
+          </div>
+        )}
 
         {/* Task Status Confirmation Modal (COMPLETE & REOPEN) */}
         <ConfirmationModal

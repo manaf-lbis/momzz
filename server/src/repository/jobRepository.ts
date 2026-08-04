@@ -69,7 +69,7 @@ export class JobRepository {
   }
 
   async findTasksByJobCardId(jobCardId: string): Promise<ITask[]> {
-    return await Task.find({ jobCardId }).populate('completedBy', 'name mobile role');
+    return await Task.find({ jobCardId }).populate('completedBy', 'name mobile role').populate('activityLog.user', 'name mobile role');
   }
 
   async findJobById(jobCardId: string): Promise<IJobCard | null> {
@@ -133,6 +133,7 @@ export class JobRepository {
       task.status = 'COMPLETED';
       task.completedBy = userId as any;
       task.completedAt = new Date();
+      task.activityLog.push({ action: 'COMPLETED', user: userId as any, at: new Date() });
       await User.findByIdAndUpdate(userId, { $inc: { taskCount: 1 } });
     } else {
       // REOPEN
@@ -144,6 +145,7 @@ export class JobRepository {
       task.status = 'OPEN';
       task.completedBy = undefined;
       task.completedAt = undefined;
+      task.activityLog.push({ action: 'REOPENED', user: userId as any, at: new Date() });
       if (prevUser) {
         await User.findByIdAndUpdate(prevUser, { $inc: { taskCount: -1 } });
       }
@@ -160,7 +162,7 @@ export class JobRepository {
       status: allCompleted ? 'COMPLETED' : 'IN_PROGRESS',
     });
 
-    return await Task.findById(taskId).populate('completedBy', 'name mobile role');
+    return await Task.findById(taskId).populate('completedBy', 'name mobile role').populate('activityLog.user', 'name mobile role');
   }
 
   async addTaskToJob(jobCardId: string, title: string): Promise<ITask> {
