@@ -19,13 +19,13 @@ import { useAuth } from '../hooks/useAuth';
 import { PageShimmer } from '../components/common/PageShimmer';
 
 type TimeFilter = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'ALL';
-type JobsView = 'MY_JOBS' | 'ALL_VEHICLES';
+type JobsView = 'MY_JOBS' | 'PENDING_VERIFICATION' | 'ALL_VEHICLES';
 
 export const JobsListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAdmin } = useAuth();
-  const [jobsView, setJobsView] = useState<JobsView>(location.state?.view === 'all' ? 'ALL_VEHICLES' : 'MY_JOBS');
+  const [jobsView, setJobsView] = useState<JobsView>(location.state?.view === 'verify' ? 'PENDING_VERIFICATION' : location.state?.view === 'all' ? 'ALL_VEHICLES' : 'MY_JOBS');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -90,6 +90,7 @@ export const JobsListPage: React.FC = () => {
 
   const filteredJobs = displayJobs.filter((job) => {
     if (jobsView === 'MY_JOBS' && !job.tasks?.some((task) => task.status === 'OPEN')) return false;
+    if (jobsView === 'PENDING_VERIFICATION' && (!job.tasks?.length || job.tasks.some((task) => task.status !== 'COMPLETED') || job.verifiedAt)) return false;
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
     return (
@@ -136,6 +137,7 @@ export const JobsListPage: React.FC = () => {
         <div className="space-y-3">
           <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-zinc-200/80 dark:bg-zinc-900/60">
             <button onClick={() => setJobsView('MY_JOBS')} className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase ${jobsView === 'MY_JOBS' ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950' : 'text-zinc-600 dark:text-zinc-400'}`}>My Jobs</button>
+            <button onClick={() => setJobsView('PENDING_VERIFICATION')} className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase ${jobsView === 'PENDING_VERIFICATION' ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950' : 'text-zinc-600 dark:text-zinc-400'}`}>Pending verification</button>
             <button onClick={() => setJobsView('ALL_VEHICLES')} className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase ${jobsView === 'ALL_VEHICLES' ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950' : 'text-zinc-600 dark:text-zinc-400'}`}>All Vehicles & History</button>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">

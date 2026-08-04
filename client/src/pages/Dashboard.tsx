@@ -12,6 +12,7 @@ import {
   UserCheck,
   ChevronRight,
   Clock,
+  CheckCircle2,
   Users,
   Car,
   Trophy,
@@ -64,6 +65,9 @@ export const Dashboard: React.FC = () => {
 
   const activeCount = allJobs.filter(
     (j) => j.status === 'IN_PROGRESS' && j.tasks?.some((t) => t.status === 'OPEN')
+  ).length;
+  const pendingVerificationCount = allJobs.filter(
+    (job) => !job.verifiedAt && job.tasks?.length > 0 && job.tasks.every((task) => task.status === 'COMPLETED')
   ).length;
 
   const pendingWorkersCount = pendingResponse?.data?.length || 0;
@@ -148,6 +152,12 @@ export const Dashboard: React.FC = () => {
               title="All Vehicles & History"
               subtitle="Completed and active job cards"
               onClick={() => navigate('/jobs', { state: { view: 'all' } })}
+            />
+            <DashCard
+              icon={<CheckCircle2 className="w-6 h-6" />}
+              title="Pending Final Verification"
+              subtitle={`${pendingVerificationCount} vehicle${pendingVerificationCount === 1 ? '' : 's'} to cross-check`}
+              onClick={() => navigate('/jobs', { state: { view: 'verify' } })}
             />
           </div>
         </section>

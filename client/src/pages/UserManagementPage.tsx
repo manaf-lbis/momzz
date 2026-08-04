@@ -47,7 +47,9 @@ export const UserManagementPage: React.FC = () => {
       u.role.toLowerCase().includes(search.toLowerCase())
   ).sort((a, b) => {
     const rank = (user: typeof a) => user.status === 'BLOCKED' ? 3 : !user.isApproved ? 2 : user.isOnline ? 0 : 1;
-    return rank(a) - rank(b) || a.name.localeCompare(b.name);
+    const activityA = new Date(a.lastLoginAttempt || a.lastSeen || 0).getTime();
+    const activityB = new Date(b.lastLoginAttempt || b.lastSeen || 0).getTime();
+    return rank(a) - rank(b) || activityB - activityA || a.name.localeCompare(b.name);
   });
 
   const handleToggleBlock = async () => {

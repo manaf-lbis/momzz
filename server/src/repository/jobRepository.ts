@@ -79,7 +79,7 @@ export class JobRepository {
   async updateJobCard(jobCardId: string, data: Partial<Pick<IJobCard, 'vehicleName' | 'vehicleNumber' | 'vehicleColor' | 'customerName' | 'customerMobile' | 'customerEmail'>>) {
     return await JobCard.findOneAndUpdate(
       { _id: jobCardId, isDeleted: { $ne: true } },
-      { $set: data },
+      { $set: { ...data, verifiedBy: null, verifiedAt: null } },
       { new: true, runValidators: true }
     );
   }
@@ -147,6 +147,8 @@ export class JobRepository {
       if (prevUser) {
         await User.findByIdAndUpdate(prevUser, { $inc: { taskCount: -1 } });
       }
+      // Reopening work invalidates the completed cross-check.
+      await JobCard.findByIdAndUpdate(task.jobCardId, { $set: { verifiedBy: null, verifiedAt: null } });
     }
 
     await task.save();
@@ -166,7 +168,7 @@ export class JobRepository {
       jobCardId,
       title: title.trim(),
     });
-    await JobCard.findByIdAndUpdate(jobCardId, { status: 'IN_PROGRESS' });
+    await JobCard.findByIdAndUpdate(jobCardId, { $set: { status: 'IN_PROGRESS', verifiedBy: null, verifiedAt: null } });
     return newTask;
   }
 
@@ -180,6 +182,7 @@ export class JobRepository {
 
     const jobCardId = task.jobCardId;
     await Task.findByIdAndDelete(taskId);
+    await JobCard.findByIdAndUpdate(jobCardId, { $set: { verifiedBy: null, verifiedAt: null } });
 
     const remainingTasks = await Task.find({ jobCardId });
     if (remainingTasks.length > 0) {
