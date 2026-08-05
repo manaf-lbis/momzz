@@ -15,6 +15,7 @@ export interface IUser extends Document {
   loginLockedUntil?: Date;
   isOnline: boolean;
   lastSeen?: Date;
+  profileImageUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,6 +78,10 @@ const UserSchema: Schema = new Schema(
     lastSeen: {
       type: Date,
       default: null,
+    },
+    profileImageUrl: {
+      type: String,
+      default: '',
     },
   },
   {

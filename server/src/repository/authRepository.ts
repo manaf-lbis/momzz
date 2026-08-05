@@ -17,6 +17,10 @@ export class AuthRepository {
     return await User.create(userData);
   }
 
+  async updateProfileImage(userId: string, profileImageUrl: string) {
+    return await User.findByIdAndUpdate(userId, { profileImageUrl }, { new: true }).select('-password');
+  }
+
   async saveRefreshToken(userId: string, token: string, expiresAt: Date) {
     return await RefreshToken.create({ userId, token: hashRefreshToken(token), expiresAt });
   }

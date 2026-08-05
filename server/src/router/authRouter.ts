@@ -11,6 +11,7 @@ router.post('/login', loginRateLimitMiddleware, authController.login);
 router.post('/refresh', authController.refreshToken);
 router.post('/logout', authController.logout);
 router.get('/me', authMiddleware, authController.getMe);
+router.patch('/profile-image', authMiddleware, authController.updateProfileImage);
 router.get('/pending', authMiddleware, adminMiddleware, authController.getPendingWorkers);
 router.patch('/approve/:userId', authMiddleware, adminMiddleware, authController.approveWorker);
 router.get('/leaderboard', authMiddleware, authController.getLeaderboard);

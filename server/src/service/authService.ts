@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env';
 import { ROLES } from '../constants/status';
@@ -145,6 +145,41 @@ export class AuthService {
     const user = await this.authRepo.findById(userId);
     if (!user) throw new Error('User not found');
     return user;
+  }
+
+  async updateProfileImage(userId: string, imageData: string) {
+    if (!ENV.CLOUDINARY_CLOUD_NAME || !ENV.CLOUDINARY_API_KEY || !ENV.CLOUDINARY_API_SECRET) {
+      throw new Error('Image uploads are not configured.');
+    }
+
+    if (!/^data:image\/(jpeg|jpg|png|webp);base64,/.test(imageData)) {
+      throw new Error('Please upload a JPG, PNG, or WebP image.');
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = createHash('sha1')
+      .update(`folder=momzz/profiles&timestamp=${timestamp}${ENV.CLOUDINARY_API_SECRET}`)
+      .digest('hex');
+    const form = new FormData();
+    form.append('file', imageData);
+    form.append('api_key', ENV.CLOUDINARY_API_KEY);
+    form.append('timestamp', String(timestamp));
+    form.append('folder', 'momzz/profiles');
+    form.append('signature', signature);
+
+    const upload = await fetch(`https://api.cloudinary.com/v1_1/${ENV.CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      method: 'POST',
+      body: form,
+    });
+    const uploadData = await upload.json() as { secure_url?: string; error?: { message?: string } };
+    if (!upload.ok || !uploadData.secure_url) {
+      throw new Error(uploadData.error?.message || 'Profile image upload failed.');
+    }
+
+    const user = await this.authRepo.updateProfileImage(userId, uploadData.secure_url);
+    if (!user) throw new Error('User not found.');
+    const profile = user.toObject();
+    return { ...profile, id: user._id.toString(), _id: user._id.toString() };
   }
 
   async approveWorker(userId: string, isApproved: boolean) {

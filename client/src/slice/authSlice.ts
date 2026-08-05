@@ -15,6 +15,7 @@ export interface User {
   isOnline?: boolean;
   lastSeen?: string;
   createdAt?: string;
+  profileImageUrl?: string;
 }
 
 interface AuthState {

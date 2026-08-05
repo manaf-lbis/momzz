@@ -1,24 +1,15 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { useAppDispatch } from '../../hooks/useAppDispatch';
-import { logout } from '../../slice/authSlice';
 import { useTheme } from '../../context/ThemeContext';
-import { Wrench, LogOut, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
+import { User, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
 import { InstallAppBanner } from '../common/InstallAppBanner';
 import { isCompletionSoundEnabled, setCompletionSoundEnabled } from '../../utils/completionSound';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const [isSoundEnabled, setIsSoundEnabled] = useState(isCompletionSoundEnabled);
-
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/login');
-  };
 
   if (!isAuthenticated || !user) return null;
 
@@ -79,15 +70,18 @@ export const Navbar: React.FC = () => {
               )}
             </button>
 
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="p-1.5 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-red-500 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all active:scale-95"
-              title="Logout"
-              aria-label="Logout"
+            <Link
+              to="/profile"
+              className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all active:scale-95"
+              title="My profile"
+              aria-label="My profile"
             >
-              <LogOut className="w-4 h-4" />
-            </button>
+              {user.profileImageUrl ? (
+                <img src={user.profileImageUrl} alt="Your profile" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-4 h-4" />
+              )}
+            </Link>
           </div>
         </div>
       </div>

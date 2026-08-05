@@ -49,6 +49,7 @@ export class AuthController {
             role: result.user.role,
             isApproved: result.user.isApproved,
             taskCount: result.user.taskCount,
+            profileImageUrl: result.user.profileImageUrl || '',
           },
         },
         201
@@ -84,6 +85,7 @@ export class AuthController {
             role: result.user.role,
             isApproved: result.user.isApproved,
             taskCount: result.user.taskCount,
+            profileImageUrl: result.user.profileImageUrl || '',
           },
         },
         200
@@ -118,6 +120,7 @@ export class AuthController {
             role: result.user.role,
             isApproved: result.user.isApproved,
             taskCount: result.user.taskCount,
+            profileImageUrl: result.user.profileImageUrl || '',
           },
         },
         200
@@ -151,6 +154,18 @@ export class AuthController {
       return sendSuccess(res, 'Profile retrieved successfully.', user, 200);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to fetch user profile.', 400);
+    }
+  }
+
+  async updateProfileImage(req: Request, res: Response) {
+    try {
+      if (!req.user) return sendError(res, 'Unauthenticated user.', 401);
+      const { image } = req.body;
+      if (!image || typeof image !== 'string') return sendError(res, 'A cropped profile image is required.', 400);
+      const user = await authService.updateProfileImage(req.user.id, image);
+      return sendSuccess(res, 'Profile photo updated successfully.', user, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to update profile photo.', 400);
     }
   }
 

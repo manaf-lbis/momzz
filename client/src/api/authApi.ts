@@ -78,6 +78,14 @@ export const authApi = apiSlice.injectEndpoints({
       query: () => '/auth/me',
       providesTags: ['User'],
     }),
+    updateProfileImage: builder.mutation<{ success: boolean; message: string; data: User }, { image: string }>({
+      query: (body) => ({
+        url: '/auth/profile-image',
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['User'],
+    }),
     getPendingWorkers: builder.query<PendingWorkersResponse, void>({
       query: () => '/auth/pending',
       providesTags: ['PendingWorkers'],
@@ -135,6 +143,7 @@ export const {
   useRefreshTokenMutation,
   useLogoutApiMutation,
   useGetMeQuery,
+  useUpdateProfileImageMutation,
   useGetPendingWorkersQuery,
   useApproveWorkerMutation,
   useGetDummyQuery,
