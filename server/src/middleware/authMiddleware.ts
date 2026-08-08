@@ -35,6 +35,14 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       isApproved: userDoc.isApproved,
       status: userDoc.status,
     };
+
+    // Update lastSeen timestamp if older than 60 seconds
+    const now = Date.now();
+    const lastSeenTime = userDoc.lastSeen ? new Date(userDoc.lastSeen).getTime() : 0;
+    if (now - lastSeenTime > 60000) {
+      userRepository.setUserOnlineStatus(userDoc.id, true).catch(() => {});
+    }
+
     next();
   } catch (error) {
     return sendError(res, 'Invalid or expired access token.', 401, error);

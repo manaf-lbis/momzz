@@ -66,7 +66,9 @@ export class AuthController {
         return sendError(res, 'Mobile number and password are required.', 400);
       }
 
-      const result = await authService.login(mobile, password);
+      const forwardedFor = req.headers['x-forwarded-for'];
+      const ipAddress = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor?.split(',')[0])?.trim() || req.ip || 'Unknown';
+      const result = await authService.login(mobile, password, ipAddress);
 
       clearFailedLoginAttempts(req);
 
@@ -196,7 +198,8 @@ export class AuthController {
 
   async getLeaderboard(req: Request, res: Response) {
     try {
-      const leaderboard = await userRepository.getLeaderboard(10);
+      // The profile uses this list to calculate a genuine garage-wide position.
+      const leaderboard = await userRepository.getLeaderboard();
       return sendSuccess(res, 'Leaderboard fetched.', leaderboard, 200);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to fetch leaderboard.', 400);
@@ -224,6 +227,19 @@ export class AuthController {
       return sendSuccess(res, `User status updated to ${status}.`, updatedUser, 200);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to update user status.', 400);
+    }
+  }
+
+  async updateUserRole(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+      if (!role || !['ADMIN', 'WORKER'].includes(role)) return sendError(res, 'Role must be ADMIN or WORKER.', 400);
+      if (req.user?.id === userId) return sendError(res, 'You cannot change your own role.', 400);
+      const updatedUser = await authService.updateUserRole(userId, role);
+      return sendSuccess(res, 'User role updated.', updatedUser, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to update user role.', 400);
     }
   }
 
@@ -256,6 +272,17 @@ export class AuthController {
       return sendSuccess(res, result.message, null, 200);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to change password.', 400);
+    }
+  }
+
+  async updateUserByAdmin(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+      const { name, mobile, role, status } = req.body;
+      const updatedUser = await authService.updateUserByAdmin(userId, { name, mobile, role, status });
+      return sendSuccess(res, 'User updated successfully.', updatedUser, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to update user details.', 400);
     }
   }
 }

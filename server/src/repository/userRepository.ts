@@ -22,11 +22,11 @@ export class UserRepository {
     return await User.find({ isApproved: false }).select('-password').sort({ createdAt: -1 });
   }
 
-  async getLeaderboard(limit = 10): Promise<IUser[]> {
-    return await User.find({ isApproved: true })
+  async getLeaderboard(limit?: number): Promise<IUser[]> {
+    const query = User.find({ isApproved: true })
       .select('name role taskCount')
-      .sort({ taskCount: -1 })
-      .limit(limit);
+      .sort({ taskCount: -1, createdAt: 1 });
+    return limit ? await query.limit(limit) : await query;
   }
 
   async incrementTaskCount(userId: string): Promise<IUser | null> {
@@ -41,6 +41,10 @@ export class UserRepository {
     return await User.findByIdAndUpdate(id, { status }, { new: true }).select('-password');
   }
 
+  async updateUserRole(id: string, role: IUser['role']): Promise<IUser | null> {
+    return await User.findByIdAndUpdate(id, { role }, { new: true }).select('-password');
+  }
+
   async updateUserPassword(id: string, hashedPassword: string): Promise<IUser | null> {
     return await User.findByIdAndUpdate(id, { password: hashedPassword }, { new: true });
   }
@@ -52,6 +56,13 @@ export class UserRepository {
         $inc: { totalLoginAttempts: 1 },
         $set: { lastLoginAttempt: new Date() },
       }
+    );
+  }
+
+  async recordLoginAudit(mobile: string, status: 'SUCCESS' | 'FAILED', ipAddress: string): Promise<void> {
+    await User.updateOne(
+      { mobile },
+      { $push: { loginAudit: { $each: [{ timestamp: new Date(), status, ipAddress }], $slice: -5 } } }
     );
   }
 
@@ -84,6 +95,10 @@ export class UserRepository {
       },
       { new: true }
     ).select('-password');
+  }
+
+  async updateUserByAdmin(userId: string, updates: Partial<IUser>): Promise<IUser | null> {
+    return await User.findByIdAndUpdate(userId, { $set: updates }, { new: true }).select('-password');
   }
 }
 

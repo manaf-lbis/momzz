@@ -27,11 +27,23 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
       createdBy: req.user?.id!,
     });
 
-    const taskDocs = tasks.map((taskTitle: string) => ({
-      jobCardId: newJob._id,
-      title: taskTitle,
-    }));
-    const createdTasks = await jobRepository.createSubTasks(taskDocs);
+    const createdTasks = [];
+    for (const task of tasks) {
+      // Keep accepting legacy text tasks, while allowing the job creator to send
+      // catalog products/services with their selected quantity and discount.
+      if (typeof task === 'string') {
+        createdTasks.push(await jobRepository.addTaskToJob(newJob._id.toString(), task));
+        continue;
+      }
+
+      if (!task?.itemId) throw new Error('Each selected inventory item needs an item id.');
+      createdTasks.push(await jobRepository.addInventoryTask(
+        newJob._id.toString(),
+        task.itemId,
+        Number(task.quantityUsed || 1),
+        Number(task.discountAmount || 0),
+      ));
+    }
 
     const fullJob = {
       ...newJob.toObject(),
@@ -169,7 +181,7 @@ export const getJobCards = async (req: Request, res: Response) => {
 export const setTaskStatus = async (req: Request, res: Response) => {
   try {
     const { taskId } = req.params;
-    const { action } = req.body;
+    const { action, partnerIds } = req.body;
     const userId = req.user?.id;
 
     if (!action || !['COMPLETE', 'REOPEN'].includes(action)) {
@@ -182,7 +194,13 @@ export const setTaskStatus = async (req: Request, res: Response) => {
     if (job?.verifiedAt && req.user?.role !== 'ADMIN') {
       return sendError(res, 'This job card has been verified and is view-only for mechanics.', 403);
     }
-    const updatedTask = await jobRepository.setTaskStatus(taskId, action, userId!);
+
+    // partnerIds can be an array from the client, or undefined for solo work
+    const normalizedPartnerIds: string[] | undefined = Array.isArray(partnerIds)
+      ? partnerIds.filter((id: any) => typeof id === 'string' && id.trim())
+      : undefined;
+
+    const updatedTask = await jobRepository.setTaskStatus(taskId, action, userId!, normalizedPartnerIds);
     if (!updatedTask) {
       return sendError(res, 'Task not found.', 404);
     }
@@ -250,6 +268,20 @@ export const addTaskToJob = async (req: Request, res: Response) => {
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to add task.', 500);
   }
+};
+
+export const addInventoryTaskToJob = async (req: Request, res: Response) => {
+  try {
+    const { jobCardId } = req.params;
+    const { itemId, quantityUsed = 1, discountAmount = 0 } = req.body;
+    if (!itemId || Number(quantityUsed) < 1 || Number(discountAmount) < 0) return sendError(res, 'A valid item, quantity, and discount are required.', 400);
+    const job = await jobRepository.findJobById(jobCardId);
+    if (!job) return sendError(res, 'Job card not found.', 404);
+    const task = await jobRepository.addInventoryTask(jobCardId, itemId, Number(quantityUsed), Number(discountAmount));
+    const formattedTask = { ...task.toObject(), id: task._id.toString() };
+    emitTaskAdded(jobCardId, formattedTask);
+    return sendSuccess(res, 'Inventory item added to job.', formattedTask, 201);
+  } catch (error: any) { return sendError(res, error.message || 'Could not add inventory item.', 400); }
 };
 
 export const deleteTask = async (req: Request, res: Response) => {

@@ -16,6 +16,7 @@ export interface IUser extends Document {
   isOnline: boolean;
   lastSeen?: Date;
   profileImageUrl?: string;
+  loginAudit: Array<{ timestamp: Date; status: 'SUCCESS' | 'FAILED'; ipAddress: string }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,6 +83,10 @@ const UserSchema: Schema = new Schema(
     profileImageUrl: {
       type: String,
       default: '',
+    },
+    loginAudit: {
+      type: [{ timestamp: Date, status: String, ipAddress: String }],
+      default: [],
     },
   },
   {

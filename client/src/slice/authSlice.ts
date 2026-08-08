@@ -16,6 +16,7 @@ export interface User {
   lastSeen?: string;
   createdAt?: string;
   profileImageUrl?: string;
+  loginAudit?: Array<{ timestamp: string; status: 'SUCCESS' | 'FAILED'; ipAddress: string }>;
 }
 
 interface AuthState {

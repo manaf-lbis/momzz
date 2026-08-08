@@ -66,7 +66,7 @@ export class AuthService {
     return { user, ...tokens };
   }
 
-  async login(mobile: string, pass: string) {
+  async login(mobile: string, pass: string, ipAddress = 'Unknown') {
     // Record login attempt regardless of success/failure
     await userRepository.recordLoginAttempt(mobile);
 
@@ -76,26 +76,31 @@ export class AuthService {
     }
 
     if (user.loginLockedUntil && user.loginLockedUntil > new Date()) {
+      await userRepository.recordLoginAudit(mobile, 'FAILED', ipAddress);
       throw new Error('Too many failed login attempts. Please try again in 15 minutes.');
     }
 
     if (user.status === 'BLOCKED') {
+      await userRepository.recordLoginAudit(mobile, 'FAILED', ipAddress);
       throw new Error('ACCOUNT_BLOCKED: Your account has been blocked by an administrator.');
     }
 
     const isMatch = await bcrypt.compare(pass, user.password);
     if (!isMatch) {
       await userRepository.recordFailedPasswordAttempt(user._id.toString());
+      await userRepository.recordLoginAudit(mobile, 'FAILED', ipAddress);
       throw new Error('Invalid mobile number or password');
     }
 
     await userRepository.clearFailedPasswordAttempts(user._id.toString());
 
     if (!user.isApproved && user.role !== ROLES.ADMIN) {
+      await userRepository.recordLoginAudit(mobile, 'FAILED', ipAddress);
       throw new Error('ACCOUNT_PENDING: Waiting for Admin Approval');
     }
 
     const tokens = this.generateTokens(user);
+    await userRepository.recordLoginAudit(mobile, 'SUCCESS', ipAddress);
 
     // Save Refresh Token for Rotation
     const expiresAt = new Date();
@@ -206,6 +211,8 @@ export class AuthService {
       totalLoginAttempts: user.totalLoginAttempts || 0,
       isOnline: !!user.isOnline,
       lastSeen: user.lastSeen,
+      profileImageUrl: user.profileImageUrl || '',
+      loginAudit: user.loginAudit || [],
       createdAt: user.createdAt,
     }));
   }
@@ -225,6 +232,8 @@ export class AuthService {
       totalLoginAttempts: user.totalLoginAttempts || 0,
       isOnline: !!user.isOnline,
       lastSeen: user.lastSeen,
+      profileImageUrl: user.profileImageUrl || '',
+      loginAudit: user.loginAudit || [],
       createdAt: user.createdAt,
     }));
   }
@@ -235,6 +244,12 @@ export class AuthService {
     if (status === 'BLOCKED') {
       emitUserBlocked(userId);
     }
+    return user;
+  }
+
+  async updateUserRole(userId: string, role: typeof ROLES[keyof typeof ROLES]) {
+    const user = await userRepository.updateUserRole(userId, role);
+    if (!user) throw new Error('User not found.');
     return user;
   }
 
@@ -273,6 +288,12 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     await userRepository.updateUserPassword(userId, hashedPassword);
     return { message: 'Password changed successfully.' };
+  }
+
+  async updateUserByAdmin(userId: string, updates: { name?: string; mobile?: string; role?: any; status?: any; isApproved?: boolean }) {
+    const user = await userRepository.updateUserByAdmin(userId, updates);
+    if (!user) throw new Error('User not found.');
+    return user;
   }
 }
 

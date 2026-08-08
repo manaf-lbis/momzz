@@ -118,6 +118,14 @@ export const authApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['AllUsers', 'PendingWorkers', 'User'],
     }),
+    updateUserRole: builder.mutation<{ success: boolean; message: string; data: User }, { userId: string; role: UserRole }>({
+      query: ({ userId, role }) => ({
+        url: `/auth/users/${userId}/role`,
+        method: 'PATCH',
+        body: { role },
+      }),
+      invalidatesTags: ['AllUsers', 'User'],
+    }),
     adminResetPassword: builder.mutation<{ success: boolean; message: string }, { userId: string; newPassword: string }>({
       query: ({ userId, newPassword }) => ({
         url: `/auth/users/${userId}/reset-password`,
@@ -125,6 +133,14 @@ export const authApi = apiSlice.injectEndpoints({
         body: { newPassword },
       }),
       invalidatesTags: ['AllUsers'],
+    }),
+    updateUserByAdmin: builder.mutation<{ success: boolean; message: string; data: User }, { userId: string; name?: string; mobile?: string; role?: UserRole; status?: 'ACTIVE' | 'BLOCKED' }>({
+      query: ({ userId, ...body }) => ({
+        url: `/auth/users/${userId}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['AllUsers', 'User'],
     }),
     changePassword: builder.mutation<{ success: boolean; message: string }, { currentPassword: string; newPassword: string }>({
       query: (body) => ({
@@ -150,6 +166,8 @@ export const {
   useGetLeaderboardQuery,
   useGetAllUsersQuery,
   useToggleUserStatusMutation,
+  useUpdateUserRoleMutation,
   useAdminResetPasswordMutation,
+  useUpdateUserByAdminMutation,
   useChangePasswordMutation,
 } = authApi;

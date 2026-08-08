@@ -1,6 +1,7 @@
 import { JobCard, IJobCard } from '../model/JobCard';
 import { Task, ITask } from '../model/Task';
 import User from '../model/User';
+import { catalogRepository } from './catalogRepository';
 
 export class JobRepository {
   async createJobCard(data: {
@@ -16,8 +17,26 @@ export class JobRepository {
   }
 
 
-  async createSubTasks(tasks: { jobCardId: any; title: string }[]): Promise<ITask[]> {
-    return await Task.insertMany(tasks);
+  async createSubTasks(tasks: Array<{ jobCardId: any; title?: string | { itemId: string; quantityUsed?: number; discountAmount?: number }; itemId?: string; quantityUsed?: number; discountAmount?: number }>): Promise<ITask[]> {
+    const normalized = await Promise.all(tasks.map(async (task) => {
+      const taskValue = task.title ?? (task.itemId ? {
+        itemId: task.itemId,
+        quantityUsed: task.quantityUsed,
+        discountAmount: task.discountAmount,
+      } : undefined);
+
+      if (typeof taskValue === 'string') return { jobCardId: task.jobCardId, title: taskValue.trim() };
+      if (!taskValue?.itemId) throw new Error('Each selected inventory item needs an item id.');
+
+      const item = await catalogRepository.findItem(taskValue.itemId);
+      if (!item) throw new Error('Selected inventory item was not found.');
+      const quantity = Math.max(1, Number(taskValue.quantityUsed || 1));
+      const stockTracked = item.itemType === 'PRODUCT' && item.trackStock !== false;
+      if (stockTracked && !await catalogRepository.deductStock(item._id.toString(), quantity)) throw new Error('Insufficient stock for this item.');
+      const discountAmount = Math.max(0, Number(taskValue.discountAmount || 0));
+      return { jobCardId: task.jobCardId, title: item.title, inventoryItem: item._id, itemType: item.itemType, quantityUsed: quantity, stockTracked, unitPrice: item.price, discountAmount, finalPrice: Math.max(0, item.price * quantity - discountAmount) } as any;
+    }));
+    return await Task.insertMany(normalized) as unknown as ITask[];
   }
 
   async findAllJobs(): Promise<IJobCard[]> {
@@ -69,7 +88,11 @@ export class JobRepository {
   }
 
   async findTasksByJobCardId(jobCardId: string): Promise<ITask[]> {
-    return await Task.find({ jobCardId }).populate('completedBy', 'name mobile role').populate('activityLog.user', 'name mobile role');
+    return await Task.find({ jobCardId })
+      .populate('completedBy', 'name mobile role profileImageUrl')
+      .populate('partners', 'name mobile role profileImageUrl')
+      .populate('activityLog.user', 'name mobile role profileImageUrl')
+      .populate('inventoryItem', 'title thumbnailUrl itemType stockQuantity');
   }
 
   async findJobById(jobCardId: string): Promise<IJobCard | null> {
@@ -112,44 +135,76 @@ export class JobRepository {
   }
 
   /**
-   * Explicit set task status — NOT a toggle.
-   * Accepts the desired target action ('COMPLETE' or 'REOPEN') to prevent race conditions
-   * when two workers click at the same time.
+   * Explicit set task status.
+   * Supports multiple co-workers: points = 1 / (1 + partners.length) for each person.
    */
   async setTaskStatus(
     taskId: string,
     action: 'COMPLETE' | 'REOPEN',
-    userId: string
+    userId: string,
+    partnerIds?: string[]
   ): Promise<ITask | null> {
     const task = await Task.findById(taskId);
     if (!task) return null;
 
     if (action === 'COMPLETE') {
-      // If already completed, this is a no-op (idempotent)
       if (task.status === 'COMPLETED') {
-        return await Task.findById(taskId).populate('completedBy', 'name mobile role');
+        return await Task.findById(taskId)
+          .populate('completedBy', 'name mobile role profileImageUrl')
+          .populate('partners', 'name mobile role profileImageUrl');
       }
+
+      // Filter out the current user from partners list (safety guard)
+      const validPartnerIds = (partnerIds || []).filter((id) => id && id !== userId);
+      const isShared = validPartnerIds.length > 0;
+      // Total workers = primary + N partners; each gets an equal fraction
+      const totalWorkers = 1 + validPartnerIds.length;
+      const pointsEach = parseFloat((1 / totalWorkers).toFixed(4));
 
       task.status = 'COMPLETED';
       task.completedBy = userId as any;
+      task.partners = isShared ? (validPartnerIds as any[]) : [];
+      task.isShared = isShared;
       task.completedAt = new Date();
       task.activityLog.push({ action: 'COMPLETED', user: userId as any, at: new Date() });
-      await User.findByIdAndUpdate(userId, { $inc: { taskCount: 1 } });
+
+      // Award points to primary worker
+      await User.findByIdAndUpdate(userId, { $inc: { taskCount: pointsEach } });
+
+      // Award equal points to each co-worker
+      for (const pid of validPartnerIds) {
+        await User.findByIdAndUpdate(pid, { $inc: { taskCount: pointsEach } });
+      }
     } else {
       // REOPEN
       if (task.status === 'OPEN') {
-        return await Task.findById(taskId).populate('completedBy', 'name mobile role');
+        return await Task.findById(taskId)
+          .populate('completedBy', 'name mobile role profileImageUrl')
+          .populate('partners', 'name mobile role profileImageUrl');
       }
 
       const prevUser = task.completedBy;
+      const prevPartners: any[] = (task.partners as any) || [];
+      const wasShared = !!task.isShared;
+      const totalWorkers = 1 + prevPartners.length;
+      const pointsEach = parseFloat((1 / totalWorkers).toFixed(4));
+
       task.status = 'OPEN';
       task.completedBy = undefined;
+      task.partners = [];
+      task.isShared = false;
       task.completedAt = undefined;
       task.activityLog.push({ action: 'REOPENED', user: userId as any, at: new Date() });
-      if (prevUser) {
-        await User.findByIdAndUpdate(prevUser, { $inc: { taskCount: -1 } });
+
+      if (wasShared) {
+        if (prevUser) await User.findByIdAndUpdate(prevUser, { $inc: { taskCount: -pointsEach } });
+        for (const pid of prevPartners) {
+          await User.findByIdAndUpdate(pid, { $inc: { taskCount: -pointsEach } });
+        }
+      } else {
+        if (prevUser) await User.findByIdAndUpdate(prevUser, { $inc: { taskCount: -1 } });
       }
-      // Reopening work invalidates the completed cross-check.
+
       await JobCard.findByIdAndUpdate(task.jobCardId, { $set: { verifiedBy: null, verifiedAt: null } });
     }
 
@@ -162,7 +217,10 @@ export class JobRepository {
       status: allCompleted ? 'COMPLETED' : 'IN_PROGRESS',
     });
 
-    return await Task.findById(taskId).populate('completedBy', 'name mobile role').populate('activityLog.user', 'name mobile role');
+    return await Task.findById(taskId)
+      .populate('completedBy', 'name mobile role profileImageUrl')
+      .populate('partners', 'name mobile role profileImageUrl')
+      .populate('activityLog.user', 'name mobile role profileImageUrl');
   }
 
   async addTaskToJob(jobCardId: string, title: string): Promise<ITask> {
@@ -174,6 +232,20 @@ export class JobRepository {
     return newTask;
   }
 
+  async addInventoryTask(jobCardId: string, itemId: string, quantityUsed: number, discountAmount: number): Promise<ITask> {
+    const item = await catalogRepository.findItem(itemId);
+    if (!item || !item.isAvailable) throw new Error('Inventory item is unavailable.');
+    const stockTracked = item.itemType === 'PRODUCT' && item.trackStock !== false;
+    const quantity = item.itemType === 'PRODUCT' ? quantityUsed : 1;
+    if (stockTracked && !await catalogRepository.deductStock(itemId, quantity)) throw new Error('Insufficient stock for this item.');
+    try {
+      const finalPrice = Math.max(0, item.price * quantity - discountAmount);
+      const task = await Task.create({ jobCardId, title: item.title, inventoryItem: item._id, itemType: item.itemType, quantityUsed: quantity, stockTracked, unitPrice: item.price, discountAmount, finalPrice });
+      await JobCard.findByIdAndUpdate(jobCardId, { $set: { status: 'IN_PROGRESS', verifiedBy: null, verifiedAt: null } });
+      return task;
+    } catch (error) { if (stockTracked) await catalogRepository.restoreStock(itemId, quantity); throw error; }
+  }
+
   async deleteTask(taskId: string): Promise<ITask | null> {
     const task = await Task.findById(taskId);
     if (!task) return null;
@@ -183,6 +255,7 @@ export class JobRepository {
     }
 
     const jobCardId = task.jobCardId;
+    if (task.inventoryItem && task.itemType === 'PRODUCT' && task.stockTracked !== false) await catalogRepository.restoreStock(task.inventoryItem.toString(), task.quantityUsed || 1);
     await Task.findByIdAndDelete(taskId);
     await JobCard.findByIdAndUpdate(jobCardId, { $set: { verifiedBy: null, verifiedAt: null } });
 

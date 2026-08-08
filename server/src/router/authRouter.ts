@@ -19,7 +19,9 @@ router.post('/change-password', authMiddleware, authController.changePassword);
 
 // Admin User Management Routes
 router.get('/users', authMiddleware, adminMiddleware, authController.getAllUsers);
+router.patch('/users/:userId', authMiddleware, adminMiddleware, authController.updateUserByAdmin);
 router.patch('/users/:userId/status', authMiddleware, adminMiddleware, authController.toggleUserStatus);
+router.patch('/users/:userId/role', authMiddleware, adminMiddleware, authController.updateUserRole);
 router.post('/users/:userId/reset-password', authMiddleware, adminMiddleware, authController.adminResetPassword);
 
 export default router;

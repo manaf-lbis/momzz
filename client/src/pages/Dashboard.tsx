@@ -18,6 +18,7 @@ import {
   Trophy,
   Wrench,
   Package,
+  ShoppingCart,
 } from 'lucide-react';
 import { PageShimmer } from '../components/common/PageShimmer';
 
@@ -146,6 +147,12 @@ export const Dashboard: React.FC = () => {
                 onClick={() => navigate('/jobs/create')}
               />
             )}
+            <DashCard
+              icon={<ShoppingCart className="w-6 h-6" />}
+              title="POS Sales"
+              subtitle="Direct sales counter"
+              onClick={() => navigate('/sales')}
+            />
 
             <DashCard
               icon={<Car className="w-6 h-6" />}
@@ -220,7 +227,7 @@ export const Dashboard: React.FC = () => {
             {isAdmin && (
               <DashCard
                 icon={<Package className="w-6 h-6" />}
-                title="📦 Task Inventory"
+                title="📦 Inventory"
                 subtitle="Auto-suggestion Dictionary"
                 onClick={() => navigate('/inventory')}
                 badge={

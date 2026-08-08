@@ -6,6 +6,12 @@ export interface TaskItem {
   jobCardId: string;
   title: string;
   description?: string;
+  inventoryItem?: { id?: string; _id?: string; title: string; thumbnailUrl?: string; itemType: 'PRODUCT' | 'SERVICE' };
+  itemType?: 'PRODUCT' | 'SERVICE';
+  quantityUsed?: number;
+  unitPrice?: number;
+  discountAmount?: number;
+  finalPrice?: number;
   status: 'OPEN' | 'COMPLETED';
   completedBy?: {
     id?: string;
@@ -13,10 +19,28 @@ export interface TaskItem {
     name: string;
     mobile: string;
     role: string;
+    profileImageUrl?: string;
   };
+  partnerBy?: {
+    id?: string;
+    _id?: string;
+    name: string;
+    mobile: string;
+    role: string;
+    profileImageUrl?: string;
+  };
+  partners?: {
+    id?: string;
+    _id?: string;
+    name: string;
+    mobile: string;
+    role: string;
+    profileImageUrl?: string;
+  }[];
+  isShared?: boolean;
   completedAt?: string;
   createdAt: string;
-  activityLog?: { action: 'COMPLETED' | 'REOPENED'; at: string; user?: { name: string } }[];
+  activityLog?: { action: 'COMPLETED' | 'REOPENED'; at: string; user?: { name: string; profileImageUrl?: string } }[];
 }
 
 export interface JobCardData {
@@ -43,7 +67,7 @@ export interface CreateJobRequest {
   customerName?: string;
   customerMobile?: string;
   customerEmail?: string;
-  tasks: string[];
+  tasks: Array<string | { itemId: string; quantityUsed: number; discountAmount?: number }>;
 }
 
 
@@ -98,20 +122,17 @@ export const jobApi = apiSlice.injectEndpoints({
     }),
 
     /**
-     * Explicit set task status — sends { action: 'COMPLETE' | 'REOPEN' } in body.
-     * NOT a toggle. Prevents race conditions when two workers click simultaneously.
+     * Explicit set task status — sends { action: 'COMPLETE' | 'REOPEN', partnerId?: string } in body.
      */
     setTaskStatus: builder.mutation<
       { success: boolean; data: TaskItem },
-      { taskId: string; action: 'COMPLETE' | 'REOPEN'; currentUserName?: string; currentUserId?: string }
+      { taskId: string; action: 'COMPLETE' | 'REOPEN'; partnerIds?: string[]; currentUserName?: string; currentUserId?: string }
     >({
-      query: ({ taskId, action }) => ({
+      query: ({ taskId, action, partnerIds }) => ({
         url: `/jobs/tasks/${taskId}/status`,
         method: 'PATCH',
-        body: { action },
+        body: { action, partnerIds },
       }),
-      // DO NOT invalidatesTags here — the socket event handles cache updates for ALL clients.
-      // The calling client applies an optimistic update in the component.
     }),
 
     addTask: builder.mutation<
@@ -124,6 +145,13 @@ export const jobApi = apiSlice.injectEndpoints({
         body: { title },
       }),
       // Socket handles live update
+    }),
+    addInventoryTask: builder.mutation<
+      { success: boolean; data: TaskItem },
+      { jobCardId: string; itemId: string; quantityUsed: number; discountAmount: number }
+    >({
+      query: ({ jobCardId, ...body }) => ({ url: `/jobs/${jobCardId}/inventory-tasks`, method: 'POST', body }),
+      invalidatesTags: ['JobCard', 'Task', 'Catalog'],
     }),
 
     deleteTask: builder.mutation<
@@ -160,6 +188,7 @@ export const {
   useUpdateJobMutation,
   useSetTaskStatusMutation,
   useAddTaskMutation,
+  useAddInventoryTaskMutation,
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
   useVerifyJobCardMutation,

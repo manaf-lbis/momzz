@@ -7,6 +7,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { SocketProvider } from './context/SocketContext';
 import { SessionLoginSound } from './components/common/SessionLoginSound';
 import { Footer } from './components/common/Footer';
+import { LeaderboardWelcomeModal } from './components/common/LeaderboardWelcomeModal';
 
 export const App: React.FC = () => {
   return (
@@ -15,9 +16,10 @@ export const App: React.FC = () => {
       <ThemeProvider>
         <BrowserRouter>
           <SocketProvider>
-            <AppRoutes />
-            <Footer />
-          </SocketProvider>
+              <LeaderboardWelcomeModal />
+              <AppRoutes />
+              <Footer />
+            </SocketProvider>
         </BrowserRouter>
       </ThemeProvider>
     </Provider>
