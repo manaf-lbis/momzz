@@ -344,51 +344,67 @@ export const SalesPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
-              {products.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => add(item)}
-                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white text-left shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/10 active:scale-[0.98] dark:border-slate-800 dark:bg-slate-900"
-                >
-                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-                    {item.thumbnailUrl ? (
-                      <img
-                        src={item.thumbnailUrl}
-                        alt=""
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-600">
-                        <ShoppingBag className="h-8 w-8 stroke-[1.5]" />
-                      </div>
-                    )}
-                    <span
-                      className={`absolute right-2 top-2 rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-sm backdrop-blur-md ${
-                        item.itemType === 'SERVICE'
-                          ? 'bg-violet-600/90 text-white'
-                          : 'bg-amber-400/90 text-slate-950'
-                      }`}
+              {isFetching && !products.length
+                ? [...Array(8)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900"
                     >
-                      {item.itemType}
-                    </span>
-                  </div>
-
-                  <div className="p-3.5 flex flex-1 flex-col justify-between">
-                    <b className="block line-clamp-1 text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-500 dark:group-hover:text-amber-300 transition-colors">
-                      {item.title}
-                    </b>
-
-                    <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-100 pt-2 dark:border-slate-800">
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {item.itemType === 'PRODUCT' ? `${item.stockQuantity} in stock` : 'Service Item'}
-                      </span>
-                      <strong className="text-base font-black text-slate-900 dark:text-white">
-                        {money(item.price)}
-                      </strong>
+                      <div className="aspect-[4/3] w-full bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                      <div className="p-3.5 space-y-3">
+                        <div className="h-4 w-3/4 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                        <div className="flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-800">
+                          <div className="h-3 w-16 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                          <div className="h-5 w-14 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))}
+                  ))
+                : products.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => add(item)}
+                      className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white text-left shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/10 active:scale-[0.98] dark:border-slate-800 dark:bg-slate-900"
+                    >
+                      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+                        {item.thumbnailUrl ? (
+                          <img
+                            src={item.thumbnailUrl}
+                            alt=""
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-600">
+                            <ShoppingBag className="h-8 w-8 stroke-[1.5]" />
+                          </div>
+                        )}
+                        <span
+                          className={`absolute right-2 top-2 rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-sm backdrop-blur-md ${
+                            item.itemType === 'SERVICE'
+                              ? 'bg-violet-600/90 text-white'
+                              : 'bg-amber-400/90 text-slate-950'
+                          }`}
+                        >
+                          {item.itemType}
+                        </span>
+                      </div>
+
+                      <div className="p-3.5 flex flex-1 flex-col justify-between">
+                        <b className="block line-clamp-1 text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-500 dark:group-hover:text-amber-300 transition-colors">
+                          {item.title}
+                        </b>
+
+                        <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-100 pt-2 dark:border-slate-800">
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {item.itemType === 'PRODUCT' ? `${item.stockQuantity} in stock` : 'Service Item'}
+                          </span>
+                          <strong className="text-base font-black text-slate-900 dark:text-white">
+                            {money(item.price)}
+                          </strong>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
             </div>
 
             {!isFetching && !products.length && (

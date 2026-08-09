@@ -1,4 +1,5 @@
 import User, { IUser } from '../model/User';
+import Task from '../model/Task';
 
 export class UserRepository {
   async findByMobile(mobile: string): Promise<IUser | null> {
@@ -23,10 +24,59 @@ export class UserRepository {
   }
 
   async getLeaderboard(limit?: number): Promise<IUser[]> {
-    const query = User.find({ isApproved: true })
-      .select('name role taskCount')
-      .sort({ taskCount: -1, createdAt: 1 });
-    return limit ? await query.limit(limit) : await query;
+    const users = await User.find({ 
+      isApproved: true, 
+      status: { $ne: 'BLOCKED' },
+      role: 'WORKER'
+    })
+      .select('name role taskCount profileImageUrl mobile status isApproved createdAt')
+      .lean();
+
+    const completedTasks = await Task.find({ status: 'COMPLETED' })
+      .select('completedBy partners isShared');
+
+    const pointsMap: Record<string, number> = {};
+    users.forEach((u) => {
+      pointsMap[u._id.toString()] = 0;
+    });
+
+    for (const t of completedTasks) {
+      const primaryId = t.completedBy ? t.completedBy.toString() : null;
+      const partnerIds = (t.partners || []).map((p) => p.toString()).filter(Boolean);
+
+      if (t.isShared && partnerIds.length > 0) {
+        const allWorkerIds = Array.from(new Set([primaryId, ...partnerIds].filter(Boolean) as string[]));
+        const ptsEach = 1 / allWorkerIds.length;
+        for (const wid of allWorkerIds) {
+          if (wid in pointsMap) {
+            pointsMap[wid] = (pointsMap[wid] || 0) + ptsEach;
+          }
+        }
+      } else if (primaryId && primaryId in pointsMap) {
+        pointsMap[primaryId] = (pointsMap[primaryId] || 0) + 1;
+      }
+    }
+
+    const userObjects = users.map((u) => {
+      const computedPts = parseFloat((pointsMap[u._id.toString()] || 0).toFixed(2));
+      if (u.taskCount !== computedPts) {
+        User.findByIdAndUpdate(u._id, { taskCount: computedPts }).catch(() => {});
+        u.taskCount = computedPts;
+      }
+      return {
+        ...u,
+        id: u._id.toString(), // Explicitly set id to match frontend expectation
+      } as unknown as IUser;
+    });
+
+    userObjects.sort((a, b) => {
+      if (b.taskCount !== a.taskCount) {
+        return b.taskCount - a.taskCount;
+      }
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+
+    return limit ? userObjects.slice(0, limit) : userObjects;
   }
 
   async incrementTaskCount(userId: string): Promise<IUser | null> {

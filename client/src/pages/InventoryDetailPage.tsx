@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  ImagePlus,
   Maximize2,
   Package,
   Save,
+  Star,
   Tag,
   Trash2,
   Wrench,
@@ -25,6 +27,7 @@ import {
   useUpdateCatalogItemMutation,
 } from '../api/catalogApi';
 import { useAuth } from '../hooks/useAuth';
+import { ImageCropperModal } from '../components/common/ImageCropperModal';
 
 const money = (value: number) =>
   new Intl.NumberFormat('en-IN', {
@@ -65,6 +68,10 @@ export const InventoryDetailPage: React.FC = () => {
   const [[page, direction], setPage] = useState([0, 0]);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [editImages, setEditImages] = useState<string[]>([]);
+  const [editThumbnailIndex, setEditThumbnailIndex] = useState(0);
+  const [cropSource, setCropSource] = useState<string | null>(null);
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
 
   const [draft, setDraft] = useState({
     title: '',
@@ -85,6 +92,12 @@ export const InventoryDetailPage: React.FC = () => {
         stockQuantity: item.stockQuantity || 0,
         minimumStockQuantity: item.minimumStockQuantity || 0,
       });
+      // Sync edit images from item
+      const rawImgs = item.images?.filter(Boolean) || [];
+      const allImgs = rawImgs.length ? rawImgs : item.thumbnailUrl ? [item.thumbnailUrl] : [];
+      setEditImages(allImgs);
+      const thumbIdx = allImgs.indexOf(item.thumbnailUrl || '');
+      setEditThumbnailIndex(thumbIdx >= 0 ? thumbIdx : 0);
     }
   }, [item]);
 
@@ -144,6 +157,8 @@ export const InventoryDetailPage: React.FC = () => {
           title: draft.title.trim(),
           price: draft.price,
           description: draft.description,
+          images: editImages,
+          thumbnailUrl: editImages[editThumbnailIndex] || editImages[0] || undefined,
           ...(item.itemType === 'PRODUCT'
             ? {
                 stockQuantity: draft.stockQuantity,
@@ -156,6 +171,23 @@ export const InventoryDetailPage: React.FC = () => {
     } catch (err: any) {
       alert(err?.data?.message || 'Failed to save changes.');
     }
+  };
+
+  const handleImageFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setCropSource(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = (cropped: string) => {
+    setEditImages((prev) => {
+      const next = [...prev, cropped];
+      return next;
+    });
+    setCropSource(null);
   };
 
   const handleStockAdjust = async (delta: number) => {
@@ -306,23 +338,89 @@ export const InventoryDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Thumbnails Row */}
-              {images.length > 1 && (
-                <div className="flex gap-2.5 overflow-x-auto p-2 pt-3">
-                  {images.map((img, idx) => (
+              {/* Thumbnails Row / Image Edit Section */}
+              {isAdmin && isEditing ? (
+                <div className="p-2 pt-3 space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {editImages.map((img, idx) => (
+                      <div key={img + idx} className="group relative h-16 w-20 shrink-0">
+                        <div
+                          className={`h-full w-full overflow-hidden rounded-xl border-2 transition-all ${
+                            editThumbnailIndex === idx
+                              ? 'border-amber-400 shadow-md ring-2 ring-amber-400/30'
+                              : 'border-transparent'
+                          }`}
+                        >
+                          <img src={img} alt={`Photo ${idx + 1}`} className="h-full w-full object-cover" />
+                        </div>
+                        {/* Controls */}
+                        <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition bg-slate-950/40 rounded-xl">
+                          <button
+                            type="button"
+                            title="Set as thumbnail"
+                            onClick={() => setEditThumbnailIndex(idx)}
+                            className="h-6 w-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow"
+                          >
+                            <Star className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Remove image"
+                            onClick={() => {
+                              setEditImages((prev) => {
+                                const next = prev.filter((_, i) => i !== idx);
+                                if (editThumbnailIndex >= next.length) setEditThumbnailIndex(Math.max(0, next.length - 1));
+                                return next;
+                              });
+                            }}
+                            className="h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                        {editThumbnailIndex === idx && (
+                          <div className="absolute left-1 top-1 rounded bg-amber-400 px-1 py-0.5">
+                            <Star className="h-2.5 w-2.5 fill-slate-950 text-slate-950" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {/* Add Photo button */}
                     <button
-                      key={img + idx}
-                      onClick={() => setPage([idx, idx > imageIndex ? 1 : -1])}
-                      className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
-                        imageIndex === idx
-                          ? 'border-amber-400 shadow-md ring-2 ring-amber-400/30'
-                          : 'border-transparent opacity-60 hover:opacity-100'
-                      }`}
+                      type="button"
+                      onClick={() => imageFileInputRef.current?.click()}
+                      className="h-16 w-20 shrink-0 rounded-xl border-2 border-dashed border-amber-400/60 bg-amber-50 dark:bg-amber-400/5 flex items-center justify-center text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-400/10 transition"
                     >
-                      <img src={img} alt={`Thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
+                      <ImagePlus className="h-5 w-5" />
                     </button>
-                  ))}
+                    <input
+                      ref={imageFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileSelected}
+                      className="hidden"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400">Hover image and tap ⭐ to set thumbnail, 🗑 to remove.</p>
                 </div>
+              ) : (
+                images.length > 1 && (
+                  <div className="flex gap-2.5 overflow-x-auto p-2 pt-3">
+                    {images.map((img, idx) => (
+                      <button
+                        key={img + idx}
+                        onClick={() => setPage([idx, idx > imageIndex ? 1 : -1])}
+                        className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+                          imageIndex === idx
+                            ? 'border-amber-400 shadow-md ring-2 ring-amber-400/30'
+                            : 'border-transparent opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={img} alt={`Thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )
               )}
             </div>
           </div>
@@ -425,12 +523,12 @@ export const InventoryDetailPage: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3 border-b border-slate-100 pb-5 dark:border-slate-800">
-                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                  <div className="mt-3 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 border-b border-slate-100 pb-5 dark:border-slate-800">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                       {item.title}
                     </h1>
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    <div className="sm:text-right flex items-baseline gap-2 sm:block">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block sm:mb-0.5">
                         Selling Price
                       </span>
                       <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
@@ -474,26 +572,26 @@ export const InventoryDetailPage: React.FC = () => {
 
               {/* Quick Stock Adjuster (Admin Only) */}
               {isAdmin && item.itemType === 'PRODUCT' && !isEditing && (
-                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/30">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/30">
                   <div>
                     <b className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                       Adjust Stock
                     </b>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
                       Currently {item.stockQuantity} available
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleStockAdjust(-1)}
-                      className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                      className="inline-flex flex-1 sm:flex-none justify-center items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
                       <Minus className="h-3.5 w-3.5" />
                       1 Stock
                     </button>
                     <button
                       onClick={() => handleStockAdjust(1)}
-                      className="inline-flex items-center gap-1 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-600 active:scale-95"
+                      className="inline-flex flex-1 sm:flex-none justify-center items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-600 active:scale-95"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       1 Stock
@@ -504,19 +602,19 @@ export const InventoryDetailPage: React.FC = () => {
 
               {/* Admin Actions */}
               {isAdmin && (
-                <div className="flex gap-3 border-t border-slate-100 pt-5 dark:border-slate-800">
+                <div className="flex gap-2.5 sm:gap-3 border-t border-slate-100 pt-4 sm:pt-5 dark:border-slate-800">
                   {isEditing ? (
                     <>
                       <button
                         onClick={() => setIsEditing(false)}
-                        className="flex-1 rounded-xl border border-slate-200 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                        className="flex-1 rounded-xl border border-slate-200 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                       >
                         Cancel
                       </button>
                       <button
                         disabled={isSaving || !draft.title.trim()}
                         onClick={handleSave}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-sm font-bold text-white shadow-md hover:bg-emerald-600 disabled:opacity-50"
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-emerald-600 disabled:opacity-50"
                       >
                         <Save className="h-4 w-4" />
                         {isSaving ? 'Saving...' : 'Save Changes'}
@@ -526,7 +624,7 @@ export const InventoryDetailPage: React.FC = () => {
                     <>
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="flex-1 rounded-xl bg-slate-900 py-3 text-sm font-bold text-white shadow-md hover:bg-slate-800 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300"
+                        className="flex-1 rounded-xl bg-slate-900 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-slate-800 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300"
                       >
                         Edit Item
                       </button>
@@ -536,7 +634,7 @@ export const InventoryDetailPage: React.FC = () => {
                         className="flex items-center justify-center rounded-xl bg-red-50 px-4 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
                         title="Archive Item"
                       >
-                        <Trash2 className="h-4.5 w-4.5" />
+                        <Trash2 className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
                       </button>
                     </>
                   )}
@@ -569,6 +667,18 @@ export const InventoryDetailPage: React.FC = () => {
             />
           </div>
         </div>
+      )}
+
+      {/* Landscape Image Cropper */}
+      {cropSource && (
+        <ImageCropperModal
+          isOpen={!!cropSource}
+          imageSrc={cropSource}
+          aspectRatio={4 / 3}
+          title="Crop Inventory Photo (4:3 Landscape)"
+          onClose={() => setCropSource(null)}
+          onCropComplete={handleCropComplete}
+        />
       )}
     </div>
   );

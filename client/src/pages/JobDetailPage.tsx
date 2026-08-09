@@ -88,6 +88,7 @@ export const JobDetailPage: React.FC = () => {
   });
 
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCompletingTask, setIsCompletingTask] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editDetails, setEditDetails] = useState<Partial<JobCardData>>({});
@@ -250,7 +251,7 @@ export const JobDetailPage: React.FC = () => {
   // Open status modal
   const promptTaskStatusChange = (task: TaskItem) => {
     if (task.status === 'COMPLETED') {
-      playReopenSound();
+      // playReopenSound is called in executeReopenTask after confirmation
       setConfirmReopenModal({ isOpen: true, task });
     } else {
       setCompleteTaskModal({
@@ -270,6 +271,7 @@ export const JobDetailPage: React.FC = () => {
     setErrorMessage('');
     const taskId = task.id || task._id!;
     setUpdatingTaskId(taskId);
+    setIsCompletingTask(true);
 
     try {
       await setTaskStatus({
@@ -290,6 +292,7 @@ export const JobDetailPage: React.FC = () => {
       setErrorMessage(err?.data?.message || 'Failed to complete task.');
     } finally {
       setUpdatingTaskId(null);
+      setIsCompletingTask(false);
       setCompleteTaskModal({ isOpen: false, task: null, isShared: false, partnerIds: [] });
     }
   };
@@ -310,6 +313,7 @@ export const JobDetailPage: React.FC = () => {
         currentUserName: user?.name,
         currentUserId: user?.id,
       }).unwrap();
+      playReopenSound();
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Failed to reopen task.');
     } finally {
@@ -355,137 +359,107 @@ export const JobDetailPage: React.FC = () => {
       <Navbar />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
-        {/* ── HERO HEADING ── */}
-        <section className={`relative overflow-hidden rounded-3xl shadow-lg ${
-          isAllCompleted
-            ? 'bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950'
-            : 'bg-gradient-to-br from-slate-900 via-slate-900 to-[#1a1200]'
-        }`}>
-
-          {/* Decorative ambient glow */}
-          <div className={`pointer-events-none absolute -top-20 -right-20 h-60 w-60 rounded-full blur-3xl opacity-20 ${
-            isAllCompleted ? 'bg-emerald-400' : 'bg-amber-400'
-          }`} />
-          <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full blur-3xl opacity-10 bg-blue-400" />
-
-          {/* Top bar: back + live status */}
-          <div className="relative flex items-center justify-between gap-3 px-5 pt-5">
+        {/* ── CLEAN MODERN HERO HEADING ── */}
+        <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          {/* Top Bar: Back & Status */}
+          <div className="flex items-center justify-between gap-3 px-5 pt-5 sm:px-6 sm:pt-6">
             <button
               onClick={() => navigate('/jobs')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border border-white/10 text-xs font-bold transition active:scale-95"
+              className="group flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Back
+              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+              <span>Back</span>
             </button>
-
-            <div className="flex items-center gap-2">
-              {/* Live timer */}
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-[11px] font-mono font-bold text-white/70">
-                <Clock className="w-3 h-3 text-amber-400" />
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-500">
+                <Clock className="h-3.5 w-3.5 text-slate-400" />
                 {getGarageDuration()}
               </span>
-
-              {/* Status badge with pulse dot */}
               {isAllCompleted ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-black uppercase tracking-wide">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
-                  </span>
+                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
                   Ready
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-black uppercase tracking-wide">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400" />
-                  </span>
+                <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
                   In Work
                 </span>
               )}
             </div>
           </div>
 
-          {/* Centre hero block */}
-          <div className="relative px-5 pt-5 pb-4">
-            {/* Vehicle name */}
-            <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-none">
-              {currentJob.vehicleName}
-            </h1>
+          {/* Main Content */}
+          <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                  {currentJob.vehicleName}
+                </h1>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-bold font-mono text-slate-900 dark:text-white">
+                    {currentJob.vehicleNumber}
+                  </span>
+                  {currentJob.vehicleColor && (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                      <Palette className="h-3.5 w-3.5 text-slate-400" />
+                      {currentJob.vehicleColor}
+                    </span>
+                  )}
+                  {currentJob.verifiedAt && (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Verified
+                    </span>
+                  )}
+                </div>
+              </div>
 
-            {/* Colour tag */}
-            {currentJob.vehicleColor && (
-              <p className="mt-1 text-sm text-white/50 font-medium flex items-center gap-1.5">
-                <Palette className="w-3.5 h-3.5 text-amber-400/70" />
-                {currentJob.vehicleColor}
-              </p>
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setEditDetails({
+                      vehicleName: currentJob.vehicleName,
+                      vehicleNumber: currentJob.vehicleNumber,
+                      vehicleColor: currentJob.vehicleColor,
+                      customerName: currentJob.customerName,
+                      customerMobile: currentJob.customerMobile,
+                      customerEmail: currentJob.customerEmail,
+                    });
+                    setIsEditingDetails(true);
+                  }}
+                  className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 active:scale-95"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                  Edit Details
+                </button>
+              )}
+            </div>
+
+            {/* Customer Details */}
+            {(currentJob.customerName || currentJob.customerMobile || currentJob.customerEmail) && (
+              <div className="mt-5 border-t border-slate-100 dark:border-slate-800 pt-5">
+                <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-600 dark:text-slate-400">
+                  {currentJob.customerName && (
+                    <span className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
+                      <UserIcon className="h-4 w-4 text-slate-400" />
+                      {currentJob.customerName}
+                    </span>
+                  )}
+                  {currentJob.customerMobile && (
+                    <a href={`tel:${currentJob.customerMobile}`} className="flex items-center gap-1.5 font-medium hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                      <Phone className="h-4 w-4" />
+                      {currentJob.customerMobile}
+                    </a>
+                  )}
+                  {currentJob.customerEmail && (
+                    <a href={`mailto:${currentJob.customerEmail}`} className="flex items-center gap-1.5 font-medium hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                      <Mail className="h-4 w-4" />
+                      {currentJob.customerEmail}
+                    </a>
+                  )}
+                </div>
+              </div>
             )}
-
-            {/* Registration plate + actions row */}
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              {/* Styled number plate */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-400 shadow-lg shadow-amber-500/20">
-                <span className="text-xs font-black text-slate-900 uppercase tracking-widest font-mono">
-                  {currentJob.vehicleNumber}
-                </span>
-              </div>
-
-              {/* Verified badge */}
-              {currentJob.verifiedAt && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Verified · {currentJob.verifiedBy?.name || 'Staff'}
-                </span>
-              )}
-
-              {/* Spacer + Admin edit */}
-              <div className="ml-auto flex items-center gap-2">
-                {isAdmin && (
-                  <button
-                    onClick={() => {
-                      setEditDetails({
-                        vehicleName: currentJob.vehicleName,
-                        vehicleNumber: currentJob.vehicleNumber,
-                        vehicleColor: currentJob.vehicleColor,
-                        customerName: currentJob.customerName,
-                        customerMobile: currentJob.customerMobile,
-                        customerEmail: currentJob.customerEmail,
-                      });
-                      setIsEditingDetails(true);
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white/70 hover:text-white text-xs font-bold transition active:scale-95"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    Edit
-                  </button>
-                )}
-              </div>
-            </div>
           </div>
-
-          {/* Customer strip (conditional) */}
-          {(currentJob.customerName || currentJob.customerMobile || currentJob.customerEmail) && (
-            <div className="relative mx-5 mb-5 mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl bg-white/5 border border-white/10 px-4 py-2.5 text-xs text-white/60">
-              {currentJob.customerName && (
-                <span className="flex items-center gap-1.5 font-semibold text-white/80">
-                  <UserIcon className="w-3.5 h-3.5 text-amber-400/70" />
-                  {currentJob.customerName}
-                </span>
-              )}
-              {currentJob.customerMobile && (
-                <span className="flex items-center gap-1.5 font-mono">
-                  <Phone className="w-3 h-3" />
-                  {currentJob.customerMobile}
-                </span>
-              )}
-              {currentJob.customerEmail && (
-                <span className="flex items-center gap-1.5 font-mono">
-                  <Mail className="w-3 h-3" />
-                  {currentJob.customerEmail}
-                </span>
-              )}
-            </div>
-          )}
         </section>
 
         {/* Edit Details Drawer Form */}
@@ -944,7 +918,10 @@ export const JobDetailPage: React.FC = () => {
                         <UserPlus className="w-3.5 h-3.5" />
                         Add Co-Workers
                       </label>
-                      <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
+                      <div
+                        className="max-h-44 overflow-y-auto space-y-1 pr-1"
+                        style={{ WebkitOverflowScrolling: 'touch' }}
+                      >
                         {allTeamMembers
                           .filter((m) => !completeTaskModal.partnerIds.includes(m.id || m._id || ''))
                           .map((member) => {
@@ -995,11 +972,18 @@ export const JobDetailPage: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    disabled={completeTaskModal.isShared && completeTaskModal.partnerIds.length === 0}
+                    disabled={isCompletingTask || (completeTaskModal.isShared && completeTaskModal.partnerIds.length === 0)}
                     onClick={executeCompleteTask}
-                    className="flex-1 py-3 rounded-2xl bg-amber-400 text-slate-950 font-mono font-extrabold text-xs uppercase shadow-md hover:bg-amber-300 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 py-3 rounded-2xl bg-amber-400 text-slate-950 font-mono font-extrabold text-xs uppercase shadow-md hover:bg-amber-300 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Confirm Complete
+                    {isCompletingTask ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent" />
+                        Completing...
+                      </>
+                    ) : (
+                      'Confirm Complete'
+                    )}
                   </button>
                 </div>
               </motion.div>

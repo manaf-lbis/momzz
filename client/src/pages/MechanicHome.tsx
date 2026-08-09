@@ -13,6 +13,7 @@ import {
   ClipboardList,
   User,
   Filter,
+  Package,
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Link } from 'react-router-dom';
@@ -191,11 +192,11 @@ export const MechanicHome: React.FC = () => {
         </div>
 
         {/* SECTION 3: QUICK ACTION CARDS GRID (Worker-Only) */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {/* Card A: My Active Jobs */}
           <button
             onClick={() => setFilterMyJobs(!filterMyJobs)}
-            className={`p-4 rounded-2xl border text-left transition-all space-y-2 relative overflow-hidden ${
+            className={`p-4 rounded-2xl border text-left transition-all space-y-2 relative overflow-hidden md:col-span-1 ${
               filterMyJobs
                 ? 'bg-yellow-400/10 border-yellow-400 text-yellow-400'
                 : 'bg-zinc-900 border-zinc-800 text-zinc-100 hover:border-zinc-700'
@@ -216,12 +217,24 @@ export const MechanicHome: React.FC = () => {
           {/* Card B: My Profile */}
           <Link
             to="/profile"
-            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 text-left transition-all space-y-2 shadow-lg"
+            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 text-left transition-all space-y-2 shadow-lg md:col-span-1"
           >
             <User className="w-5 h-5 text-yellow-400" />
             <div>
               <h3 className="text-xs font-extrabold uppercase tracking-wide text-zinc-100">My Profile</h3>
               <p className="text-[11px] font-mono text-zinc-400 mt-0.5">View Lifetime Stats</p>
+            </div>
+          </Link>
+
+          {/* Card C: Inventory */}
+          <Link
+            to="/inventory"
+            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 text-left transition-all space-y-2 shadow-lg col-span-2 md:col-span-1"
+          >
+            <Package className="w-5 h-5 text-yellow-400" />
+            <div>
+              <h3 className="text-xs font-extrabold uppercase tracking-wide text-zinc-100">Inventory</h3>
+              <p className="text-[11px] font-mono text-zinc-400 mt-0.5">Browse & Search Products</p>
             </div>
           </Link>
         </div>

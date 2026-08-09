@@ -1,25 +1,33 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AuthPage } from '../pages/Auth';
-import { Dashboard } from '../pages/Dashboard';
-import { JobsListPage } from '../pages/JobsListPage';
-import { JobDetailPage } from '../pages/JobDetailPage';
-import { AdminApproval } from '../pages/AdminApproval';
-import { HomePage } from '../pages/HomePage';
-import { ProfilePage } from '../pages/ProfilePage';
-import { UserManagementPage } from '../pages/UserManagementPage';
-import { AnalyticsPage } from '../pages/AnalyticsPage';
-import { CreateJobPage } from '../pages/CreateJobPage';
-import { InventoryPage } from '../pages/InventoryPage';
-import { InventoryDetailPage } from '../pages/InventoryDetailPage';
-import { AddInventoryItemPage } from '../pages/AddInventoryItemPage';
-import { TrackServicePage } from '../pages/TrackServicePage';
-import { SalesPage } from '../pages/SalesPage';
+import { ScrollToTop } from '../components/common/ScrollToTop';
+import { lazy, Suspense } from 'react';
+import { PageShimmer } from '../components/common/PageShimmer';
 import { ProtectedRoute } from './ProtectedRoute';
+
+// Lazy load pages
+const AuthPage = lazy(() => import('../pages/Auth').then((m) => ({ default: m.AuthPage })));
+const Dashboard = lazy(() => import('../pages/Dashboard').then((m) => ({ default: m.Dashboard })));
+const JobsListPage = lazy(() => import('../pages/JobsListPage').then((m) => ({ default: m.JobsListPage })));
+const JobDetailPage = lazy(() => import('../pages/JobDetailPage').then((m) => ({ default: m.JobDetailPage })));
+const AdminApproval = lazy(() => import('../pages/AdminApproval').then((m) => ({ default: m.AdminApproval })));
+const HomePage = lazy(() => import('../pages/HomePage').then((m) => ({ default: m.HomePage })));
+const ProfilePage = lazy(() => import('../pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const UserManagementPage = lazy(() => import('../pages/UserManagementPage').then((m) => ({ default: m.UserManagementPage })));
+const AnalyticsPage = lazy(() => import('../pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
+const CreateJobPage = lazy(() => import('../pages/CreateJobPage').then((m) => ({ default: m.CreateJobPage })));
+const InventoryPage = lazy(() => import('../pages/InventoryPage').then((m) => ({ default: m.InventoryPage })));
+const InventoryDetailPage = lazy(() => import('../pages/InventoryDetailPage').then((m) => ({ default: m.InventoryDetailPage })));
+const AddInventoryItemPage = lazy(() => import('../pages/AddInventoryItemPage').then((m) => ({ default: m.AddInventoryItemPage })));
+const TrackServicePage = lazy(() => import('../pages/TrackServicePage').then((m) => ({ default: m.TrackServicePage })));
+const SalesPage = lazy(() => import('../pages/SalesPage').then((m) => ({ default: m.SalesPage })));
 
 export const AppRoutes: React.FC = () => {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Suspense fallback={<PageShimmer label="Loading..." />}>
+        <Routes>
       {/* Public Auth Routes */}
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/login" element={<AuthPage />} />
@@ -50,5 +58,7 @@ export const AppRoutes: React.FC = () => {
       {/* Catch-all redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
+    </>
   );
 };

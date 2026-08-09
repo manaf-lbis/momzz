@@ -9,7 +9,7 @@ import { isCompletionSoundEnabled, setCompletionSoundEnabled } from '../../utils
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [isSoundEnabled, setIsSoundEnabled] = useState(isCompletionSoundEnabled);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(isCompletionSoundEnabled());
 
   if (!isAuthenticated || !user) return null;
 

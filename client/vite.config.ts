@@ -13,4 +13,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          vendor: ['lucide-react', 'redux', 'react-redux', '@reduxjs/toolkit'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
 });

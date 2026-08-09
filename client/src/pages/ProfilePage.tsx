@@ -48,9 +48,15 @@ export const ProfilePage: React.FC = () => {
 
   // Leaderboard rank helpers
   const leaderboard = leaderboardData?.data || [];
+  const currentUserId = String(currentUser?.id || (currentUser as any)?._id || '');
+  const currentUserMobile = currentUser?.mobile || '';
+
   const rankIndex = leaderboard.findIndex(
-    (w: any) => w.id === currentUser?.id || (w as any)._id === currentUser?.id
+    (w: any) =>
+      (currentUserId && String(w.id || w._id) === currentUserId) ||
+      (currentUserMobile && w.mobile === currentUserMobile)
   );
+  const myEntry = rankIndex !== -1 ? leaderboard[rankIndex] : null;
   const rankNumber = rankIndex !== -1 ? rankIndex + 1 : null;
   const medalEmoji = rankNumber === 1 ? '🥇' : rankNumber === 2 ? '🥈' : rankNumber === 3 ? '🥉' : null;
   const currentRank = rankNumber ? `${medalEmoji ? medalEmoji + ' ' : ''}#${rankNumber}` : 'N/A';
@@ -182,7 +188,7 @@ export const ProfilePage: React.FC = () => {
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white pt-1">
-              {currentUser?.taskCount ?? 0}
+              {myEntry?.taskCount ?? currentUser?.taskCount ?? 0}
             </p>
             <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Tasks Completed
