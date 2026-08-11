@@ -250,8 +250,20 @@ export class JobRepository {
     const task = await Task.findById(taskId);
     if (!task) return null;
 
+    // Fix: reverse correct fractional points for all workers
     if (task.completedBy) {
-      await User.findByIdAndUpdate(task.completedBy, { $inc: { taskCount: -1 } });
+      const taskPartners: any[] = (task.partners as any) || [];
+      const wasShared = !!task.isShared && taskPartners.length > 0;
+      const totalWorkers = wasShared ? 1 + taskPartners.length : 1;
+      const deductEach = parseFloat((1 / totalWorkers).toFixed(4));
+
+      await User.findByIdAndUpdate(task.completedBy, { $inc: { taskCount: -deductEach } });
+      if (wasShared) {
+        for (const pid of taskPartners) {
+          const pidStr = pid?.toString();
+          if (pidStr) await User.findByIdAndUpdate(pidStr, { $inc: { taskCount: -deductEach } });
+        }
+      }
     }
 
     const jobCardId = task.jobCardId;

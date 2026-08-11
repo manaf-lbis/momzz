@@ -117,7 +117,7 @@ export const LeaderboardWelcomeModal: React.FC = () => {
                     ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-400/15 dark:text-yellow-400'
                     : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                 }`}>
-                  {worker.taskCount ?? 0} tasks
+                  {(() => { const n = Number(worker.taskCount ?? 0); return (Number.isInteger(n) ? n : n.toFixed(2)) + ' pts'; })()}
                 </span>
               </div>
             );

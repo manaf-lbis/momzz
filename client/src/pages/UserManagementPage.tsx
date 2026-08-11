@@ -38,12 +38,20 @@ const formatLastSeen = (dateString?: string) => {
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
+  // Exact time string: "10:32 AM, Aug 11"
+  const exactTime = new Intl.DateTimeFormat(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    day: 'numeric',
+    month: 'short',
+  }).format(date);
+
   if (diffMins < 2) return 'Just now';
-  if (diffMins < 60) return `${diffMins} mins ago`;
-  if (diffHours < 24) return `${diffHours} hrs ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return formatDate(dateString);
+  if (diffMins < 60) return `${diffMins}m ago · ${exactTime}`;
+  if (diffHours < 24) return `${diffHours}h ago · ${exactTime}`;
+  if (diffDays === 1) return `Yesterday · ${exactTime}`;
+  if (diffDays < 7) return `${diffDays}d ago · ${exactTime}`;
+  return exactTime;
 };
 
 export const UserManagementPage: React.FC = () => {

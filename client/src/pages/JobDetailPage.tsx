@@ -519,30 +519,71 @@ export const JobDetailPage: React.FC = () => {
           </div>
         )}
 
-        {/* Final Verify Banner */}
+        {/* ── FINAL VERIFICATION CARD / PENDING APPROVAL CARD ── */}
         {currentJob.verifiedAt ? (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-700 dark:text-emerald-300">
-            <b>Final verification complete.</b> Verified by {currentJob.verifiedBy?.name || 'a team member'} at{' '}
-            {new Intl.DateTimeFormat(undefined, {
-              day: 'numeric',
-              month: 'short',
-              hour: 'numeric',
-              minute: '2-digit',
-            }).format(new Date(currentJob.verifiedAt))}
-            . {isAdmin ? 'Administrators can still make changes.' : 'This job card is view-only.'}
+          <div className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent p-5 shadow-lg backdrop-blur-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 shadow-sm">
+                  <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      Final Verification Complete
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                      VERIFIED
+                    </span>
+                  </div>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-300 mt-0.5">
+                    Verified by <span className="font-bold text-slate-900 dark:text-white">{currentJob.verifiedBy?.name || 'Garage Admin'}</span> on{' '}
+                    <span className="font-mono font-bold">
+                      {new Intl.DateTimeFormat(undefined, {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      }).format(new Date(currentJob.verifiedAt))}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {isAdmin ? 'Administrators can still adjust tasks if needed.' : 'This job card is verified and locked for editing.'}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : isAllCompleted ? (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <span>
-              <b>All tasks completed!</b> Perform final quality check before marking as verified.
-            </span>
-            <button
-              disabled={isVerifying}
-              onClick={handleVerify}
-              className="px-4 py-2 rounded-xl bg-emerald-500 text-white font-bold disabled:opacity-60 shadow-xs hover:bg-emerald-600 transition"
-            >
-              {isVerifying ? 'Verifying...' : 'Final Verify Job Card'}
-            </button>
+          <div className="relative overflow-hidden rounded-3xl border border-amber-400/40 bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-slate-900/40 p-5 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-amber-400/20 text-amber-600 dark:text-amber-300 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-sm animate-bounce">
+                  <Sparkles className="w-6 h-6 stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                      Pending Approval & Final Quality Check
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-800 dark:text-amber-300 text-[10px] font-mono font-bold animate-pulse">
+                      READY FOR VERIFICATION
+                    </span>
+                  </div>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-300 mt-0.5">
+                    All sub-tasks completed! Inspect vehicle work before signing off.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                disabled={isVerifying}
+                onClick={handleVerify}
+                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition active:scale-95 disabled:opacity-60 shrink-0"
+              >
+                {isVerifying ? 'Verifying...' : '✓ Final Verify Job Card'}
+              </button>
+            </div>
           </div>
         ) : null}
 
@@ -564,8 +605,8 @@ export const JobDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Unified Task List Filter */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+        {/* Unified Task List Filter Tabs with Badges */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-1">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-amber-500" />
             <h2 className="text-xs font-mono font-bold uppercase text-slate-500 dark:text-slate-400">
@@ -573,20 +614,32 @@ export const JobDetailPage: React.FC = () => {
             </h2>
           </div>
 
-          <div className="flex items-center gap-1 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-            {(['ALL', 'PENDING', 'COMPLETED'] as TaskFilterType[]).map((ft) => (
-              <button
-                key={ft}
-                onClick={() => setStatusFilter(ft)}
-                className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold uppercase transition-all ${
-                  statusFilter === ft
-                    ? 'bg-amber-400 text-slate-950 shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                {ft}
-              </button>
-            ))}
+          <div className="w-full sm:w-auto overflow-x-auto no-scrollbar flex items-center gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+            {(
+              [
+                { id: 'ALL', label: 'ALL', count: totalTasks },
+                { id: 'PENDING', label: 'PENDING', count: totalTasks - completedCount },
+                { id: 'COMPLETED', label: 'COMPLETED', count: completedCount },
+              ] as const
+            ).map((tab) => {
+              const isActive = statusFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setStatusFilter(tab.id as TaskFilterType)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase whitespace-nowrap shrink-0 transition-all active:scale-95 ${
+                    isActive
+                      ? 'bg-amber-400 text-slate-950 shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-red-500 text-white shadow-xs">
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

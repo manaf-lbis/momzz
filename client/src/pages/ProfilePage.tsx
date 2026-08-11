@@ -188,7 +188,11 @@ export const ProfilePage: React.FC = () => {
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white pt-1">
-              {myEntry?.taskCount ?? currentUser?.taskCount ?? 0}
+              {(() => {
+                const raw = myEntry?.taskCount ?? currentUser?.taskCount ?? 0;
+                const n = Number(raw);
+                return Number.isInteger(n) ? n.toString() : n.toFixed(2);
+              })()}
             </p>
             <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Tasks Completed
@@ -271,7 +275,10 @@ export const ProfilePage: React.FC = () => {
                           : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
-                      {worker.taskCount ?? 0} tasks
+                      {(() => {
+                        const n = Number(worker.taskCount ?? 0);
+                        return (Number.isInteger(n) ? n : n.toFixed(2)) + ' pts';
+                      })()}
                     </span>
                   </div>
                 );

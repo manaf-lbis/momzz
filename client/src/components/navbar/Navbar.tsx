@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
 import { User, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
 import { InstallAppBanner } from '../common/InstallAppBanner';
-import { isCompletionSoundEnabled, setCompletionSoundEnabled } from '../../utils/completionSound';
+import { isCompletionSoundEnabled, setCompletionSoundEnabled, playWelcomeSound } from '../../utils/completionSound';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isSoundEnabled, setIsSoundEnabled] = useState(isCompletionSoundEnabled());
+  const welcomePlayed = useRef(false);
+
+  useEffect(() => {
+    if (isAuthenticated && user && !welcomePlayed.current) {
+      welcomePlayed.current = true;
+      playWelcomeSound();
+    }
+  }, [isAuthenticated, user]);
 
   if (!isAuthenticated || !user) return null;
 

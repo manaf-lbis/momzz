@@ -26,8 +26,7 @@ export class UserRepository {
   async getLeaderboard(limit?: number): Promise<IUser[]> {
     const users = await User.find({ 
       isApproved: true, 
-      status: { $ne: 'BLOCKED' },
-      role: 'WORKER'
+      status: { $ne: 'BLOCKED' }
     })
       .select('name role taskCount profileImageUrl mobile status isApproved createdAt')
       .lean();

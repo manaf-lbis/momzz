@@ -88,6 +88,10 @@ export const JobsListPage: React.FC = () => {
 
   const displayJobs = accumulatedJobs.length > 0 ? accumulatedJobs : rawJobs;
 
+  const myJobsCount = displayJobs.filter((job) => job.tasks?.some((task) => task.status === 'OPEN')).length;
+  const pendingVerificationCount = displayJobs.filter((job) => job.tasks?.length && job.tasks.every((task) => task.status === 'COMPLETED') && !job.verifiedAt).length;
+  const allVehiclesCount = displayJobs.length;
+
   const getGarageDuration = (createdAt: string) => {
     const minutes = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000));
     if (minutes < 60) return `${Math.max(1, minutes)}m in garage`;
@@ -143,10 +147,48 @@ export const JobsListPage: React.FC = () => {
 
         {/* Toolbar & Filters */}
         <div className="space-y-3">
-          <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-zinc-200/80 dark:bg-zinc-900/60">
-            <button onClick={() => setJobsView('MY_JOBS')} className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase ${jobsView === 'MY_JOBS' ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950' : 'text-zinc-600 dark:text-zinc-400'}`}>My Jobs</button>
-            <button onClick={() => setJobsView('PENDING_VERIFICATION')} className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase ${jobsView === 'PENDING_VERIFICATION' ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950' : 'text-zinc-600 dark:text-zinc-400'}`}>Pending verification</button>
-            <button onClick={() => setJobsView('ALL_VEHICLES')} className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase ${jobsView === 'ALL_VEHICLES' ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950' : 'text-zinc-600 dark:text-zinc-400'}`}>All Vehicles & History</button>
+          <div className="w-full overflow-x-auto no-scrollbar flex items-center gap-1.5 p-1 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-zinc-200/80 dark:bg-zinc-900/60">
+            <button
+              onClick={() => setJobsView('MY_JOBS')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase whitespace-nowrap shrink-0 transition-all active:scale-95 ${
+                jobsView === 'MY_JOBS'
+                  ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950 shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+              }`}
+            >
+              <span>My Jobs</span>
+              <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-red-500 text-white shadow-xs">
+                {myJobsCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setJobsView('PENDING_VERIFICATION')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase whitespace-nowrap shrink-0 transition-all active:scale-95 ${
+                jobsView === 'PENDING_VERIFICATION'
+                  ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950 shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Pending verification</span>
+              <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-red-500 text-white shadow-xs">
+                {pendingVerificationCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setJobsView('ALL_VEHICLES')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase whitespace-nowrap shrink-0 transition-all active:scale-95 ${
+                jobsView === 'ALL_VEHICLES'
+                  ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950 shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+              }`}
+            >
+              <span>All Vehicles & History</span>
+              <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-red-500 text-white shadow-xs">
+                {allVehiclesCount}
+              </span>
+            </button>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Segmented Button Group */}

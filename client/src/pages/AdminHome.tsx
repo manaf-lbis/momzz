@@ -183,7 +183,7 @@ export const AdminHome: React.FC = () => {
                       </div>
                     </div>
                     <span className="text-xs font-mono font-extrabold text-zinc-200 bg-zinc-900 px-2 py-1 rounded border border-zinc-800">
-                      {mechanic.taskCount || 0} Jobs
+                      {(() => { const n = Number(mechanic.taskCount ?? 0); return (Number.isInteger(n) ? n : n.toFixed(2)) + ' pts'; })()}
                     </span>
                   </div>
                 );

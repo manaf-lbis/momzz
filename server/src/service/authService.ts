@@ -6,6 +6,7 @@ import { ROLES } from '../constants/status';
 import { AuthRepository } from '../repository/authRepository';
 import { userRepository } from '../repository/userRepository';
 import { emitUserApproved, emitUserBlocked } from '../config/socket';
+import { getCloudinaryUrl, uploadToCloudinary } from '../utils/cloudinaryHelper';
 
 export interface RegisterDTO {
   name: string;
@@ -153,38 +154,18 @@ export class AuthService {
   }
 
   async updateProfileImage(userId: string, imageData: string) {
-    if (!ENV.CLOUDINARY_CLOUD_NAME || !ENV.CLOUDINARY_API_KEY || !ENV.CLOUDINARY_API_SECRET) {
-      throw new Error('Image uploads are not configured.');
-    }
+    const { publicId, url } = await uploadToCloudinary(imageData, 'momzz/profiles');
 
-    if (!/^data:image\/(jpeg|jpg|png|webp);base64,/.test(imageData)) {
-      throw new Error('Please upload a JPG, PNG, or WebP image.');
-    }
-
-    const timestamp = Math.floor(Date.now() / 1000);
-    const signature = createHash('sha1')
-      .update(`folder=momzz/profiles&timestamp=${timestamp}${ENV.CLOUDINARY_API_SECRET}`)
-      .digest('hex');
-    const form = new FormData();
-    form.append('file', imageData);
-    form.append('api_key', ENV.CLOUDINARY_API_KEY);
-    form.append('timestamp', String(timestamp));
-    form.append('folder', 'momzz/profiles');
-    form.append('signature', signature);
-
-    const upload = await fetch(`https://api.cloudinary.com/v1_1/${ENV.CLOUDINARY_CLOUD_NAME}/image/upload`, {
-      method: 'POST',
-      body: form,
-    });
-    const uploadData = await upload.json() as { secure_url?: string; error?: { message?: string } };
-    if (!upload.ok || !uploadData.secure_url) {
-      throw new Error(uploadData.error?.message || 'Profile image upload failed.');
-    }
-
-    const user = await this.authRepo.updateProfileImage(userId, uploadData.secure_url);
+    // Store ONLY the Cloudinary publicId in the database
+    const user = await this.authRepo.updateProfileImage(userId, publicId);
     if (!user) throw new Error('User not found.');
     const profile = user.toObject();
-    return { ...profile, id: user._id.toString(), _id: user._id.toString() };
+    return {
+      ...profile,
+      id: user._id.toString(),
+      _id: user._id.toString(),
+      profileImageUrl: getCloudinaryUrl(user.profileImageUrl),
+    };
   }
 
   async approveWorker(userId: string, isApproved: boolean) {
@@ -211,7 +192,7 @@ export class AuthService {
       totalLoginAttempts: user.totalLoginAttempts || 0,
       isOnline: !!user.isOnline,
       lastSeen: user.lastSeen,
-      profileImageUrl: user.profileImageUrl || '',
+      profileImageUrl: getCloudinaryUrl(user.profileImageUrl),
       loginAudit: user.loginAudit || [],
       createdAt: user.createdAt,
     }));
@@ -232,7 +213,7 @@ export class AuthService {
       totalLoginAttempts: user.totalLoginAttempts || 0,
       isOnline: !!user.isOnline,
       lastSeen: user.lastSeen,
-      profileImageUrl: user.profileImageUrl || '',
+      profileImageUrl: getCloudinaryUrl(user.profileImageUrl),
       loginAudit: user.loginAudit || [],
       createdAt: user.createdAt,
     }));
