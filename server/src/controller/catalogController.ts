@@ -1,10 +1,17 @@
 import { Request, Response } from 'express';
-import { createHash } from 'crypto';
-import { ENV } from '../config/env';
 import { catalogRepository } from '../repository/catalogRepository';
 import { sendError, sendSuccess } from '../utils/responseHandler';
+import { getCloudinaryUrl, extractPublicId, uploadToCloudinary } from '../utils/cloudinaryHelper';
 
-const format = (document: any) => ({ ...document.toObject(), id: document._id.toString() });
+const format = (document: any) => {
+  const obj = document.toObject ? document.toObject() : { ...document };
+  return {
+    ...obj,
+    id: (document._id || obj._id)?.toString(),
+    thumbnailUrl: getCloudinaryUrl(obj.thumbnailUrl),
+    images: (obj.images || []).map((img: string) => getCloudinaryUrl(img)),
+  };
+};
 
 export const getCategories = async (_req: Request, res: Response) => {
   try { return sendSuccess(res, 'Categories retrieved.', (await catalogRepository.getCategories()).map(format)); }
@@ -47,6 +54,19 @@ export const createCatalogItem = async (req: Request, res: Response) => {
       const categories = await catalogRepository.getCategories();
       categoryId = categories[0]?._id;
     }
+
+    const processedImages: string[] = [];
+    const incomingImages = req.body.images?.length ? req.body.images : (req.body.thumbnailUrl ? [req.body.thumbnailUrl] : []);
+    for (const img of incomingImages) {
+      if (img.startsWith('data:image')) {
+        const { publicId } = await uploadToCloudinary(img, 'momzz/catalog');
+        processedImages.push(publicId);
+      } else {
+        processedImages.push(extractPublicId(img));
+      }
+    }
+    const finalImages = Array.from(new Set(processedImages));
+    const thumbnailUrl = finalImages.length > 0 ? finalImages[0] : '';
     
     const payload = { 
       ...req.body, 
@@ -54,7 +74,8 @@ export const createCatalogItem = async (req: Request, res: Response) => {
       title: req.body.title?.trim(),
       price: Number(req.body.price),
       stockQuantity: req.body.itemType === 'PRODUCT' ? Number(req.body.stockQuantity || 0) : 0,
-      images: Array.from(new Set(req.body.images?.length ? req.body.images : (req.body.thumbnailUrl ? [req.body.thumbnailUrl] : [])))
+      images: finalImages,
+      thumbnailUrl,
     };
     delete payload.categoryId;
 
@@ -95,7 +116,31 @@ export const quickAddCatalogItem = async (req: Request, res: Response) => {
 export const updateCatalogItem = async (req: Request, res: Response) => {
   try {
     if (req.body.itemType === 'PRODUCT' && Number(req.body.stockQuantity) < 0) return sendError(res, 'Stock cannot be negative.', 400);
-    const updates = { ...req.body, ...(req.body.price !== undefined ? { price: Number(req.body.price) } : {}), ...(req.body.stockQuantity !== undefined ? { stockQuantity: Number(req.body.stockQuantity), trackStock: true } : {}) };
+    const updates: any = { ...req.body, ...(req.body.price !== undefined ? { price: Number(req.body.price) } : {}), ...(req.body.stockQuantity !== undefined ? { stockQuantity: Number(req.body.stockQuantity), trackStock: true } : {}) };
+    
+    if (updates.thumbnailUrl && updates.thumbnailUrl.startsWith('data:image')) {
+      const { publicId } = await uploadToCloudinary(updates.thumbnailUrl, 'momzz/catalog');
+      updates.thumbnailUrl = publicId;
+    } else if (updates.thumbnailUrl) {
+      updates.thumbnailUrl = extractPublicId(updates.thumbnailUrl);
+    }
+
+    if (Array.isArray(updates.images)) {
+      const processedImages: string[] = [];
+      for (const img of updates.images) {
+        if (img.startsWith('data:image')) {
+          const { publicId } = await uploadToCloudinary(img, 'momzz/catalog');
+          processedImages.push(publicId);
+        } else {
+          processedImages.push(extractPublicId(img));
+        }
+      }
+      updates.images = Array.from(new Set(processedImages));
+      if (updates.images.length > 0 && !updates.thumbnailUrl) {
+        updates.thumbnailUrl = updates.images[0];
+      }
+    }
+    
     const item = await catalogRepository.updateItem(req.params.id, updates);
     return item ? sendSuccess(res, 'Catalog item updated.', format(item)) : sendError(res, 'Item not found.', 404);
   } catch (error: any) { return sendError(res, error.message || 'Could not update item.', 400); }
@@ -109,14 +154,8 @@ export const deleteCatalogItem = async (req: Request, res: Response) => {
 export const uploadCatalogImage = async (req: Request, res: Response) => {
   try {
     const { image } = req.body;
-    if (!ENV.CLOUDINARY_CLOUD_NAME || !ENV.CLOUDINARY_API_KEY || !ENV.CLOUDINARY_API_SECRET) return sendError(res, 'Image uploads are not configured.', 503);
-    if (!image || typeof image !== 'string' || !/^data:image\/(jpeg|jpg|png|webp);base64,/.test(image)) return sendError(res, 'Use a JPG, PNG, or WebP image.', 400);
-    const timestamp = Math.floor(Date.now() / 1000); const folder = 'momzz/catalog';
-    const signature = createHash('sha1').update(`folder=${folder}&timestamp=${timestamp}${ENV.CLOUDINARY_API_SECRET}`).digest('hex');
-    const form = new FormData(); form.append('file', image); form.append('api_key', ENV.CLOUDINARY_API_KEY); form.append('timestamp', String(timestamp)); form.append('folder', folder); form.append('signature', signature);
-    const cloudinary = await fetch(`https://api.cloudinary.com/v1_1/${ENV.CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: form });
-    const data = await cloudinary.json() as { secure_url?: string; error?: { message?: string } };
-    return cloudinary.ok && data.secure_url ? sendSuccess(res, 'Image uploaded.', { url: data.secure_url }) : sendError(res, data.error?.message || 'Image upload failed.', 400);
+    const { publicId, url } = await uploadToCloudinary(image, 'momzz/catalog');
+    return sendSuccess(res, 'Image uploaded.', { url, publicId });
   } catch (error: any) { return sendError(res, error.message || 'Image upload failed.', 500); }
 };
 

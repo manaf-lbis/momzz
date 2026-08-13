@@ -8,6 +8,39 @@ import {
   emitTaskUpdated,
   emitTaskDeleted,
 } from '../config/socket';
+import { getCloudinaryUrl } from '../utils/cloudinaryHelper';
+
+/**
+ * Maps all populated image fields in a task object through getCloudinaryUrl().
+ * Handles completedBy.profileImageUrl, partners[].profileImageUrl,
+ * activityLog[].user.profileImageUrl, and inventoryItem.thumbnailUrl.
+ */
+const mapTaskImages = (taskObj: any) => {
+  if (!taskObj) return taskObj;
+  // completedBy
+  if (taskObj.completedBy?.profileImageUrl) {
+    taskObj.completedBy.profileImageUrl = getCloudinaryUrl(taskObj.completedBy.profileImageUrl);
+  }
+  // partners
+  if (Array.isArray(taskObj.partners)) {
+    taskObj.partners = taskObj.partners.map((p: any) => {
+      if (p?.profileImageUrl) p.profileImageUrl = getCloudinaryUrl(p.profileImageUrl);
+      return p;
+    });
+  }
+  // activityLog
+  if (Array.isArray(taskObj.activityLog)) {
+    taskObj.activityLog = taskObj.activityLog.map((entry: any) => {
+      if (entry?.user?.profileImageUrl) entry.user.profileImageUrl = getCloudinaryUrl(entry.user.profileImageUrl);
+      return entry;
+    });
+  }
+  // inventoryItem thumbnail
+  if (taskObj.inventoryItem?.thumbnailUrl) {
+    taskObj.inventoryItem.thumbnailUrl = getCloudinaryUrl(taskObj.inventoryItem.thumbnailUrl);
+  }
+  return taskObj;
+};
 
 export const createJobWithTasks = async (req: Request, res: Response) => {
   try {
@@ -48,7 +81,7 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
     const fullJob = {
       ...newJob.toObject(),
       id: newJob._id.toString(),
-      tasks: createdTasks.map((t) => ({ ...t.toObject(), id: t._id.toString() })),
+      tasks: createdTasks.map((t) => mapTaskImages({ ...t.toObject(), id: t._id.toString() })),
     };
 
     emitJobCreated(fullJob);
@@ -120,7 +153,7 @@ export const getJobCards = async (req: Request, res: Response) => {
           return {
             ...job.toObject(),
             id: job._id.toString(),
-            tasks: tasks.map((t) => ({
+            tasks: tasks.map((t) => mapTaskImages({
               ...t.toObject(),
               id: t._id.toString(),
             })),
@@ -160,7 +193,7 @@ export const getJobCards = async (req: Request, res: Response) => {
         return {
           ...job.toObject(),
           id: job._id.toString(),
-          tasks: tasks.map((t) => ({
+          tasks: tasks.map((t) => mapTaskImages({
             ...t.toObject(),
             id: t._id.toString(),
           })),
@@ -205,10 +238,10 @@ export const setTaskStatus = async (req: Request, res: Response) => {
       return sendError(res, 'Task not found.', 404);
     }
 
-    const formattedTask = {
+    const formattedTask = mapTaskImages({
       ...updatedTask.toObject(),
       id: updatedTask._id.toString(),
-    };
+    });
 
     // Emit with the explicit action so clients know exactly what happened
     emitTaskUpdated(updatedTask.jobCardId.toString(), taskId, formattedTask, action);

@@ -359,84 +359,84 @@ export const JobDetailPage: React.FC = () => {
       <Navbar />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
-        {/* ── CLEAN MODERN HERO HEADING ── */}
-        <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          {/* Top Bar: Back & Status */}
-          <div className="flex items-center justify-between gap-3 px-5 pt-5 sm:px-6 sm:pt-6">
-            <button
-              onClick={() => navigate('/jobs')}
-              className="group flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-              <span>Back</span>
-            </button>
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-500">
-                <Clock className="h-3.5 w-3.5 text-slate-400" />
-                {getGarageDuration()}
-              </span>
-              {isAllCompleted ? (
-                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
-                  Ready
+        {/* ── CLEAN HEADER ── */}
+        <section className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex flex-col gap-4">
+            {/* Top Row: Back & Status */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => navigate('/jobs')}
+                className="group flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                <span>Back</span>
+              </button>
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-500">
+                  <Clock className="h-3.5 w-3.5 text-slate-400" />
+                  {getGarageDuration()}
                 </span>
-              ) : (
-                <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
-                  In Work
-                </span>
-              )}
+                {isAllCompleted ? (
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+                    Ready
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
+                    In Work
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Main Content */}
-          <div className="px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-              <div>
+            {/* Title & Info */}
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                   {currentJob.vehicleName}
                 </h1>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-bold font-mono text-slate-900 dark:text-white">
-                    {currentJob.vehicleNumber}
-                  </span>
-                  {currentJob.vehicleColor && (
-                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
-                      <Palette className="h-3.5 w-3.5 text-slate-400" />
-                      {currentJob.vehicleColor}
-                    </span>
-                  )}
-                  {currentJob.verifiedAt && (
-                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Verified
-                    </span>
-                  )}
-                </div>
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      setEditDetails({
+                        vehicleName: currentJob.vehicleName,
+                        vehicleNumber: currentJob.vehicleNumber,
+                        vehicleColor: currentJob.vehicleColor,
+                        customerName: currentJob.customerName,
+                        customerMobile: currentJob.customerMobile,
+                        customerEmail: currentJob.customerEmail,
+                      });
+                      setIsEditingDetails(true);
+                    }}
+                    className="p-2 rounded-full text-slate-400 bg-slate-50 dark:bg-slate-800/50 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-500/30 transition-all"
+                    title="Edit Details"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    setEditDetails({
-                      vehicleName: currentJob.vehicleName,
-                      vehicleNumber: currentJob.vehicleNumber,
-                      vehicleColor: currentJob.vehicleColor,
-                      customerName: currentJob.customerName,
-                      customerMobile: currentJob.customerMobile,
-                      customerEmail: currentJob.customerEmail,
-                    });
-                    setIsEditingDetails(true);
-                  }}
-                  className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 active:scale-95"
-                >
-                  <Edit2 className="h-3.5 w-3.5" />
-                  Edit Details
-                </button>
-              )}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-bold font-mono text-slate-900 dark:text-white">
+                  {currentJob.vehicleNumber}
+                </span>
+                {currentJob.vehicleColor && (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                    <Palette className="h-3.5 w-3.5 text-slate-400" />
+                    {currentJob.vehicleColor}
+                  </span>
+                )}
+                {currentJob.verifiedAt && (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Verified
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Customer Details */}
+            {/* Customer Details Line */}
             {(currentJob.customerName || currentJob.customerMobile || currentJob.customerEmail) && (
-              <div className="mt-5 border-t border-slate-100 dark:border-slate-800 pt-5">
+              <div className="mt-2 border-t border-slate-100 dark:border-slate-800 pt-4">
                 <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-600 dark:text-slate-400">
                   {currentJob.customerName && (
                     <span className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
@@ -446,13 +446,13 @@ export const JobDetailPage: React.FC = () => {
                   )}
                   {currentJob.customerMobile && (
                     <a href={`tel:${currentJob.customerMobile}`} className="flex items-center gap-1.5 font-medium hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                      <Phone className="h-4 w-4" />
+                      <Phone className="h-4 w-4 text-slate-400" />
                       {currentJob.customerMobile}
                     </a>
                   )}
                   {currentJob.customerEmail && (
                     <a href={`mailto:${currentJob.customerEmail}`} className="flex items-center gap-1.5 font-medium hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                      <Mail className="h-4 w-4" />
+                      <Mail className="h-4 w-4 text-slate-400" />
                       {currentJob.customerEmail}
                     </a>
                   )}
@@ -462,56 +462,145 @@ export const JobDetailPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Edit Details Drawer Form */}
-        {isEditingDetails && (
-          <div className="industrial-card rounded-2xl p-4 space-y-4">
-            <div>
-              <h2 className="text-sm font-bold">Edit job card details</h2>
-              <p className="text-xs text-zinc-500 mt-1">Update vehicle specs or customer contact.</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(['vehicleName', 'vehicleNumber', 'vehicleColor', 'customerName', 'customerMobile', 'customerEmail'] as const).map(
-                (field) => (
-                  <input
-                    key={field}
-                    value={(editDetails[field] as string) || ''}
-                    onChange={(e) => setEditDetails((prev) => ({ ...prev, [field]: e.target.value }))}
-                    placeholder={field.replace(/([A-Z])/g, ' $1')}
-                    className="industrial-input rounded-xl p-2.5 text-sm"
-                  />
-                )
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => setIsEditingDetails(false)} className="px-3 py-2 text-xs font-bold">
-                Close
-              </button>
-              <button
-                disabled={isUpdatingDetails}
-                onClick={saveJobDetails}
-                className="px-4 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-bold hover:bg-amber-300"
-              >
-                {isUpdatingDetails ? 'Saving...' : 'Save changes'}
-              </button>
-              <button
-                onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
-                className="ml-auto px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-bold"
-              >
-                Delete job card
-              </button>
-            </div>
-            <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-2">
-              <p className="text-xs font-mono font-bold uppercase text-slate-500">Add new task</p>
-              <TaskAutoComplete
-                value={newTaskTitle}
-                onChange={setNewTaskTitle}
-                onAddTask={handleAddTask}
-                placeholder="Search or type a sub-task..."
-                disabled={false}
-              />
-            </div>
-          </div>
-        )}
+        {/* ── EDIT DETAILS MODAL / INLINE FORM ── */}
+        <AnimatePresence>
+          {isEditingDetails && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -10, height: 0 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/50">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Edit Job Details</h2>
+                <p className="text-sm text-slate-500 mt-1">Update vehicle specifications or customer contact information.</p>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Field: Vehicle Name */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Vehicle Name
+                    </label>
+                    <input
+                      value={(editDetails.vehicleName as string) || ''}
+                      onChange={(e) => setEditDetails((prev) => ({ ...prev, vehicleName: e.target.value }))}
+                      placeholder="e.g. BMW M4 Competition"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-white outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+                    />
+                  </div>
+                  
+                  {/* Field: License Plate */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      License Plate Number
+                    </label>
+                    <input
+                      value={(editDetails.vehicleNumber as string) || ''}
+                      onChange={(e) => setEditDetails((prev) => ({ ...prev, vehicleNumber: e.target.value.toUpperCase() }))}
+                      placeholder="e.g. MH 01 AB 1234"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+                    />
+                  </div>
+                  
+                  {/* Field: Vehicle Color */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Vehicle Color
+                    </label>
+                    <input
+                      value={(editDetails.vehicleColor as string) || ''}
+                      onChange={(e) => setEditDetails((prev) => ({ ...prev, vehicleColor: e.target.value }))}
+                      placeholder="e.g. Black"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-white outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+                    />
+                  </div>
+                  
+                  {/* Field: Customer Name */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Customer Name
+                    </label>
+                    <input
+                      value={(editDetails.customerName as string) || ''}
+                      onChange={(e) => setEditDetails((prev) => ({ ...prev, customerName: e.target.value }))}
+                      placeholder="e.g. John Doe"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+                    />
+                  </div>
+                  
+                  {/* Field: Customer Mobile */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Customer Mobile
+                    </label>
+                    <input
+                      value={(editDetails.customerMobile as string) || ''}
+                      onChange={(e) => setEditDetails((prev) => ({ ...prev, customerMobile: e.target.value }))}
+                      placeholder="e.g. +1 234 567 8900"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+                    />
+                  </div>
+                  
+                  {/* Field: Customer Email */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Customer Email
+                    </label>
+                    <input
+                      type="email"
+                      value={(editDetails.customerEmail as string) || ''}
+                      onChange={(e) => setEditDetails((prev) => ({ ...prev, customerEmail: e.target.value }))}
+                      placeholder="e.g. john@example.com"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800/80">
+                  <button
+                    onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Job Card
+                  </button>
+                  
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => setIsEditingDetails(false)} 
+                      className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={isUpdatingDetails}
+                      onClick={saveJobDetails}
+                      className="inline-flex items-center gap-2 rounded-lg bg-amber-500 dark:bg-amber-500 px-5 py-2 text-sm font-bold text-slate-900 hover:bg-amber-400 transition-colors shadow-sm active:scale-95 disabled:opacity-70"
+                    >
+                      {isUpdatingDetails ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Add New Task Section */}
+              <div className="px-6 py-5 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-200 dark:border-slate-800">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                  Add New Task
+                </label>
+                <TaskAutoComplete
+                  value={newTaskTitle}
+                  onChange={setNewTaskTitle}
+                  onAddTask={handleAddTask}
+                  placeholder="Search or type a new sub-task..."
+                  disabled={false}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {errorMessage && (
           <div className="p-3.5 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-xs font-bold">
@@ -579,9 +668,15 @@ export const JobDetailPage: React.FC = () => {
               <button
                 disabled={isVerifying}
                 onClick={handleVerify}
-                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition active:scale-95 disabled:opacity-60 shrink-0"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition active:scale-95 disabled:opacity-60 shrink-0"
               >
-                {isVerifying ? 'Verifying...' : '✓ Final Verify Job Card'}
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Verifying...
+                  </>
+                ) : (
+                  '✓ Final Verify Job Card'
+                )}
               </button>
             </div>
           </div>

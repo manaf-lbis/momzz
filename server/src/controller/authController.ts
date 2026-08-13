@@ -3,6 +3,7 @@ import { authService } from '../service/authService';
 import { userRepository } from '../repository/userRepository';
 import { sendSuccess, sendError } from '../utils/responseHandler';
 import { clearFailedLoginAttempts, recordFailedLogin } from '../middleware/loginRateLimitMiddleware';
+import { getCloudinaryUrl } from '../utils/cloudinaryHelper';
 
 const getRefreshCookieOptions = (req: Request) => {
   const forwardedProtocol = req.headers['x-forwarded-proto'];
@@ -49,7 +50,7 @@ export class AuthController {
             role: result.user.role,
             isApproved: result.user.isApproved,
             taskCount: result.user.taskCount,
-            profileImageUrl: result.user.profileImageUrl || '',
+            profileImageUrl: getCloudinaryUrl(result.user.profileImageUrl),
           },
         },
         201
@@ -87,7 +88,7 @@ export class AuthController {
             role: result.user.role,
             isApproved: result.user.isApproved,
             taskCount: result.user.taskCount,
-            profileImageUrl: result.user.profileImageUrl || '',
+            profileImageUrl: getCloudinaryUrl(result.user.profileImageUrl),
           },
         },
         200
@@ -122,7 +123,7 @@ export class AuthController {
             role: result.user.role,
             isApproved: result.user.isApproved,
             taskCount: result.user.taskCount,
-            profileImageUrl: result.user.profileImageUrl || '',
+            profileImageUrl: getCloudinaryUrl(result.user.profileImageUrl),
           },
         },
         200

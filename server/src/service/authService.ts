@@ -147,10 +147,21 @@ export class AuthService {
     }
   }
 
+  private formatUser(user: any) {
+    if (!user) return user;
+    const profile = user.toObject ? user.toObject() : user;
+    return {
+      ...profile,
+      id: profile._id?.toString() || profile.id,
+      _id: profile._id?.toString() || profile.id,
+      profileImageUrl: getCloudinaryUrl(profile.profileImageUrl)
+    };
+  }
+
   async getMe(userId: string) {
     const user = await this.authRepo.findById(userId);
     if (!user) throw new Error('User not found');
-    return user;
+    return this.formatUser(user);
   }
 
   async updateProfileImage(userId: string, imageData: string) {
@@ -159,13 +170,7 @@ export class AuthService {
     // Store ONLY the Cloudinary publicId in the database
     const user = await this.authRepo.updateProfileImage(userId, publicId);
     if (!user) throw new Error('User not found.');
-    const profile = user.toObject();
-    return {
-      ...profile,
-      id: user._id.toString(),
-      _id: user._id.toString(),
-      profileImageUrl: getCloudinaryUrl(user.profileImageUrl),
-    };
+    return this.formatUser(user);
   }
 
   async approveWorker(userId: string, isApproved: boolean) {
@@ -174,7 +179,7 @@ export class AuthService {
     if (isApproved) {
       emitUserApproved(userId);
     }
-    return user;
+    return this.formatUser(user);
   }
 
   async getPendingWorkers() {
@@ -225,13 +230,13 @@ export class AuthService {
     if (status === 'BLOCKED') {
       emitUserBlocked(userId);
     }
-    return user;
+    return this.formatUser(user);
   }
 
   async updateUserRole(userId: string, role: typeof ROLES[keyof typeof ROLES]) {
     const user = await userRepository.updateUserRole(userId, role);
     if (!user) throw new Error('User not found.');
-    return user;
+    return this.formatUser(user);
   }
 
   async adminResetPassword(userId: string, newPassword: string) {
@@ -274,7 +279,7 @@ export class AuthService {
   async updateUserByAdmin(userId: string, updates: { name?: string; mobile?: string; role?: any; status?: any; isApproved?: boolean }) {
     const user = await userRepository.updateUserByAdmin(userId, updates);
     if (!user) throw new Error('User not found.');
-    return user;
+    return this.formatUser(user);
   }
 }
 

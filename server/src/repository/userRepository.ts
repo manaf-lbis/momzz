@@ -1,5 +1,6 @@
 import User, { IUser } from '../model/User';
 import Task from '../model/Task';
+import { getCloudinaryUrl } from '../utils/cloudinaryHelper';
 
 export class UserRepository {
   async findByMobile(mobile: string): Promise<IUser | null> {
@@ -64,7 +65,8 @@ export class UserRepository {
       }
       return {
         ...u,
-        id: u._id.toString(), // Explicitly set id to match frontend expectation
+        id: u._id.toString(),
+        profileImageUrl: getCloudinaryUrl(u.profileImageUrl),
       } as unknown as IUser;
     });
 

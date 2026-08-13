@@ -170,7 +170,7 @@ export const JobsListPage: React.FC = () => {
                   : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
               }`}
             >
-              <span>Pending verification</span>
+              <span>Verification</span>
               <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-red-500 text-white shadow-xs">
                 {pendingVerificationCount}
               </span>
@@ -184,32 +184,14 @@ export const JobsListPage: React.FC = () => {
                   : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
               }`}
             >
-              <span>All Vehicles & History</span>
+              <span>History</span>
               <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-red-500 text-white shadow-xs">
                 {allVehiclesCount}
               </span>
             </button>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            {/* Segmented Button Group */}
-            <div className="flex flex-wrap gap-1 bg-zinc-200/80 dark:bg-zinc-900/60 p-1 rounded-xl border border-zinc-300 dark:border-zinc-800 no-scrollbar">
-              <span className="text-xs font-mono px-2 py-1 text-zinc-500 flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-              </span>
-              {(['DAY', 'WEEK', 'MONTH', 'YEAR', 'ALL'] as TimeFilter[]).map((tf) => (
-                <button
-                  key={tf}
-                  onClick={() => setTimeFilter(tf)}
-                  className={`px-3 py-1 rounded-lg font-mono text-[11px] font-bold uppercase transition-all active:scale-95 ${
-                    timeFilter === tf
-                      ? 'bg-amber-400 dark:bg-yellow-400 text-zinc-950 shadow-sm'
-                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white dark:hover:bg-zinc-800/80'
-                  }`}
-                >
-                  {tf}
-                </button>
-              ))}
-            </div>
+
 
             {/* Search Box */}
             <div className="relative flex-1 max-w-xs min-w-[200px]">
@@ -243,7 +225,7 @@ export const JobsListPage: React.FC = () => {
             <Car className="w-8 h-8 text-zinc-400 dark:text-zinc-600 mx-auto" />
             <h3 className="text-xs font-bold uppercase text-zinc-500 dark:text-zinc-400">No Vehicles Found</h3>
             <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono">
-              {jobsView === 'MY_JOBS' ? 'No vehicles with pending tasks.' : (timeFilter !== 'ALL' ? `No job cards for [ ${timeFilter} ]. Select [ ALL ].` : 'No vehicle job cards present.')}
+              {jobsView === 'MY_JOBS' ? 'No vehicles with pending tasks.' : 'No vehicle job cards present.'}
             </p>
           </div>
         ) : (
