@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
@@ -10,11 +10,9 @@ export const Navbar: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isSoundEnabled, setIsSoundEnabled] = useState(isCompletionSoundEnabled());
-  const welcomePlayed = useRef(false);
-
   useEffect(() => {
-    if (isAuthenticated && user && !welcomePlayed.current) {
-      welcomePlayed.current = true;
+    if (isAuthenticated && user && !sessionStorage.getItem('welcomePlayed')) {
+      sessionStorage.setItem('welcomePlayed', '1');
       playWelcomeSound();
     }
   }, [isAuthenticated, user]);
