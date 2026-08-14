@@ -9,7 +9,6 @@ import {
   Award,
   Zap,
   Flame,
-  PartyPopper,
   ChevronRight,
   TrendingUp,
 } from 'lucide-react';
@@ -32,14 +31,17 @@ interface LeaderboardUser {
   points: number;
 }
 
-// Trigger celebratory gold confetti
-const fireGoldConfetti = () => {
+// Small subtle popper for podium celebration
+const triggerPodiumPopper = () => {
   try {
     confetti({
-      particleCount: 50,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#f59e0b', '#fbbf24', '#fef3c7', '#10b981'],
+      particleCount: 28,
+      spread: 55,
+      origin: { y: 0.55 },
+      colors: ['#f59e0b', '#fbbf24', '#e2e8f0', '#ffffff'],
+      ticks: 150,
+      gravity: 1.2,
+      scalar: 0.85,
       disableForReducedMotion: true,
     });
   } catch (e) {}
@@ -202,6 +204,16 @@ export const LeaderboardPage: React.FC = () => {
   const currentUserPoints = currentUserIndex !== -1 ? rankedUsers[currentUserIndex].points : 0;
   const totalUsersCount = rankedUsers.length || 1;
 
+  // Trigger small popper automatically when page opens or data loads
+  useEffect(() => {
+    if (!isLeaderboardLoading && rankedUsers.length > 0) {
+      const timer = setTimeout(() => {
+        triggerPodiumPopper();
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isLeaderboardLoading]);
+
   const dynamicInsight = useMemo(() => {
     if (!currentUserRank) {
       return {
@@ -276,7 +288,7 @@ export const LeaderboardPage: React.FC = () => {
       <Navbar />
 
       <main className="flex-1 max-w-xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
-        {/* ── Top Bar with Confetti Action ── */}
+        {/* ── Top Bar ── */}
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate('/dashboard')}
@@ -293,13 +305,9 @@ export const LeaderboardPage: React.FC = () => {
             </h1>
           </div>
 
-          <button
-            onClick={fireGoldConfetti}
-            className="p-2 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:scale-105 active:scale-95 transition shadow-xs flex items-center gap-1 text-xs font-black"
-            title="Celebrate Podium!"
-          >
-            <PartyPopper className="w-4 h-4 text-amber-500 animate-bounce" />
-          </button>
+          <span className="text-[11px] font-mono font-semibold text-zinc-400 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 px-2.5 py-1 rounded-lg shadow-xs">
+            {timeRemainingText}
+          </span>
         </div>
 
         {/* ── Minimalist Segmented Timeframe Switcher ── */}
@@ -311,7 +319,7 @@ export const LeaderboardPage: React.FC = () => {
                 key={key}
                 onClick={() => {
                   setTimeframe(key);
-                  if (key === 'month' || key === 'all') fireGoldConfetti();
+                  triggerPodiumPopper();
                 }}
                 className={`relative py-1.5 text-xs font-bold rounded-lg transition-colors capitalize ${
                   isActive
@@ -332,37 +340,26 @@ export const LeaderboardPage: React.FC = () => {
           })}
         </div>
 
-        {/* ── Season Countdown Pill ── */}
-        <div className="flex items-center justify-between px-1">
-          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
-            <Flame className="w-3.5 h-3.5 text-amber-500" />
-            Active Standings
-          </span>
-          <span className="text-[11px] font-mono font-bold text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 px-2.5 py-0.5 rounded-full shadow-xs">
-            {timeRemainingText}
-          </span>
-        </div>
-
-        {/* ── Dynamic Performance Insight Card with Animated Progress ── */}
+        {/* ── Modern Dynamic Performance Card ── */}
         <motion.div
           key={`${timeframe}-${currentUserRank}`}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
+          initial={{ opacity: 0, y: 8, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 border border-amber-500/30 dark:border-amber-500/20 p-3.5 shadow-sm"
         >
           <div className="flex items-center gap-3">
             <motion.div
-              whileHover={{ scale: 1.05, rotate: 5 }}
+              whileHover={{ scale: 1.08, rotate: 4 }}
               whileTap={{ scale: 0.95 }}
               className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-zinc-950 font-black text-sm flex items-center justify-center shadow-sm shrink-0 cursor-pointer"
-              onClick={fireGoldConfetti}
+              onClick={triggerPodiumPopper}
             >
               {currentUserRank ? `#${currentUserRank}` : '—'}
             </motion.div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                <Sparkles className="w-3 h-3" />
+                <Sparkles className="w-3 h-3 animate-pulse" />
                 <span>{dynamicInsight.badge}</span>
               </div>
               <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5 truncate">
@@ -378,28 +375,31 @@ export const LeaderboardPage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* ── Sleek Modern Top 3 Showcase with Animated Rising Pillars ── */}
+        {/* ── Sleek Modern Top 3 Showcase ── */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl p-5 shadow-sm">
-          <div className="text-center mb-2">
+          <div className="text-center mb-3">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 flex items-center justify-center gap-1">
               <Award className="w-3.5 h-3.5 text-amber-500" />
               Podium Leaders
             </span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-4 items-end pt-3 pb-1">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4 items-end pt-2 pb-1">
             {/* ── #2 Silver (Left) ── */}
             <motion.div
               key={`showcase-2-${timeframe}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.08, type: 'spring', stiffness: 280, damping: 24 }}
-              whileHover={{ y: -4 }}
+              initial={{ opacity: 0, y: 30, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.08, type: 'spring', stiffness: 260, damping: 22 }}
+              whileHover={{ y: -5 }}
               className="flex flex-col items-center cursor-pointer"
-              onClick={() => rank2 && setSelectedUserModal(rank2)}
+              onClick={() => {
+                triggerPodiumPopper();
+                if (rank2) setSelectedUserModal(rank2);
+              }}
             >
               <div className="relative mb-2">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl p-0.5 bg-gradient-to-b from-slate-200 to-slate-400 dark:from-zinc-600 dark:to-zinc-800 shadow-sm transition-transform group-hover:scale-105">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl p-0.5 bg-gradient-to-b from-slate-200 to-slate-400 dark:from-zinc-600 dark:to-zinc-800 shadow-sm transition-transform">
                   <div className="w-full h-full rounded-[14px] overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-200 font-black text-sm">
                     {rank2?.profileImageUrl ? (
                       <img src={rank2.profileImageUrl} alt={rank2.name} className="w-full h-full object-cover" />
@@ -424,9 +424,9 @@ export const LeaderboardPage: React.FC = () => {
 
               {/* Minimal Elevation Pillar */}
               <motion.div
-                initial={{ height: 0 }}
-                animate={{ height: 56 }}
-                transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 56, opacity: 1 }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
                 className="w-full mt-3 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/50 flex items-center justify-center shadow-xs"
               >
                 <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">2nd</span>
@@ -436,21 +436,21 @@ export const LeaderboardPage: React.FC = () => {
             {/* ── #1 Gold (Center) ── */}
             <motion.div
               key={`showcase-1-${timeframe}`}
-              initial={{ opacity: 0, y: 28 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.02, type: 'spring', stiffness: 280, damping: 24 }}
-              whileHover={{ y: -6 }}
+              initial={{ opacity: 0, y: 40, scale: 0.88 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.02, type: 'spring', stiffness: 260, damping: 20 }}
+              whileHover={{ y: -7 }}
               className="flex flex-col items-center z-10 cursor-pointer"
               onClick={() => {
-                fireGoldConfetti();
+                triggerPodiumPopper();
                 if (rank1) setSelectedUserModal(rank1);
               }}
             >
               <div className="relative mb-2">
                 {/* Floating Gold Crown Badge */}
                 <motion.div
-                  animate={{ y: [0, -4, 0], rotate: [-2, 2, -2] }}
-                  transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+                  animate={{ y: [0, -5, 0], rotate: [-3, 3, -3] }}
+                  transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
                   className="absolute -top-4 left-1/2 -translate-x-1/2 z-20"
                 >
                   <div className="w-6 h-6 rounded-full bg-amber-400 text-zinc-950 flex items-center justify-center shadow-md">
@@ -483,9 +483,9 @@ export const LeaderboardPage: React.FC = () => {
 
               {/* Minimal Elevation Pillar (Tallest) */}
               <motion.div
-                initial={{ height: 0 }}
-                animate={{ height: 88 }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 88, opacity: 1 }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
                 className="w-full mt-3 rounded-2xl bg-gradient-to-b from-amber-500/15 to-amber-500/5 dark:from-amber-500/20 dark:to-zinc-800/80 border border-amber-500/30 dark:border-amber-500/30 flex items-center justify-center shadow-xs"
               >
                 <span className="text-sm font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">1st</span>
@@ -495,12 +495,15 @@ export const LeaderboardPage: React.FC = () => {
             {/* ── #3 Bronze (Right) ── */}
             <motion.div
               key={`showcase-3-${timeframe}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.12, type: 'spring', stiffness: 280, damping: 24 }}
-              whileHover={{ y: -4 }}
+              initial={{ opacity: 0, y: 30, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.12, type: 'spring', stiffness: 260, damping: 22 }}
+              whileHover={{ y: -5 }}
               className="flex flex-col items-center cursor-pointer"
-              onClick={() => rank3 && setSelectedUserModal(rank3)}
+              onClick={() => {
+                triggerPodiumPopper();
+                if (rank3) setSelectedUserModal(rank3)}
+              }
             >
               <div className="relative mb-2">
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl p-0.5 bg-gradient-to-b from-amber-600 to-orange-400 dark:from-amber-700 dark:to-zinc-800 shadow-sm">
@@ -528,9 +531,9 @@ export const LeaderboardPage: React.FC = () => {
 
               {/* Minimal Elevation Pillar */}
               <motion.div
-                initial={{ height: 0 }}
-                animate={{ height: 44 }}
-                transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 }}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 44, opacity: 1 }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
                 className="w-full mt-3 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/50 flex items-center justify-center shadow-xs"
               >
                 <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">3rd</span>
@@ -569,16 +572,19 @@ export const LeaderboardPage: React.FC = () => {
                 return (
                   <motion.div
                     key={`${u.id}-${timeframe}`}
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.02 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.025, type: 'spring', stiffness: 300, damping: 24 }}
                     whileHover={{ scale: 1.01 }}
                     className={`flex items-center gap-3 px-2 py-3 rounded-2xl transition-colors cursor-pointer ${
                       isMe
                         ? 'bg-amber-500/10 dark:bg-amber-400/10'
                         : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/40'
                     }`}
-                    onClick={() => setSelectedUserModal(u)}
+                    onClick={() => {
+                      triggerPodiumPopper();
+                      setSelectedUserModal(u);
+                    }}
                   >
                     {/* Rank Circle */}
                     <div className="w-6 text-center text-xs font-black text-zinc-400 dark:text-zinc-500 shrink-0">
@@ -633,9 +639,9 @@ export const LeaderboardPage: React.FC = () => {
         {selectedUserModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
               className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 max-w-xs w-full text-center space-y-4 shadow-2xl"
             >
               <div className="w-20 h-20 mx-auto rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border-2 border-amber-400 shadow-md flex items-center justify-center text-zinc-800 dark:text-zinc-100 text-xl font-black">
