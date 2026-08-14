@@ -10,15 +10,13 @@ import {
   UserCheck,
   Search,
   Zap,
-  Calendar,
-  Filter,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useGetJobCardsQuery, JobCardData } from '../api/jobApi';
 import { Navbar } from '../components/navbar/Navbar';
 
-type Timeframe = 'today' | 'week' | 'month' | 'year' | 'all';
+type Timeframe = 'day' | 'week' | 'month' | 'year' | 'all';
 
 const formatCompletedAt = (isoString?: string) => {
   if (!isoString) return 'Recently';
@@ -34,12 +32,12 @@ const formatCompletedAt = (isoString?: string) => {
 };
 
 const item = {
-  hidden: { opacity: 0, y: 12 },
+  hidden: { opacity: 0, y: 10 },
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 280, damping: 22 } },
 };
 const container = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.05 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.04 } },
 };
 
 export const WorkLogsPage: React.FC = () => {
@@ -57,13 +55,37 @@ export const WorkLogsPage: React.FC = () => {
     return [];
   }, [jobsResponse]);
 
-  const filterDate = useMemo(() => {
+  // Precise timeframe boundaries matching Leaderboard
+  const { startTimestamp, endTimestamp } = useMemo(() => {
     const now = new Date();
-    if (timeframe === 'today') return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    if (timeframe === 'week') { const d = new Date(); d.setDate(now.getDate() - 7); return d.getTime(); }
-    if (timeframe === 'month') { const d = new Date(); d.setMonth(now.getMonth() - 1); return d.getTime(); }
-    if (timeframe === 'year') { const d = new Date(); d.setFullYear(now.getFullYear() - 1); return d.getTime(); }
-    return 0;
+
+    if (timeframe === 'day') {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+      return { startTimestamp: start, endTimestamp: end };
+    }
+
+    if (timeframe === 'week') {
+      const dayOfWeek = now.getDay();
+      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday, 0, 0, 0, 0);
+      const saturday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 5, 23, 59, 59, 999);
+      return { startTimestamp: monday.getTime(), endTimestamp: saturday.getTime() };
+    }
+
+    if (timeframe === 'month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).getTime();
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      return { startTimestamp: start, endTimestamp: end };
+    }
+
+    if (timeframe === 'year') {
+      const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0).getTime();
+      const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
+      return { startTimestamp: start, endTimestamp: end };
+    }
+
+    return { startTimestamp: 0, endTimestamp: Infinity };
   }, [timeframe]);
 
   const allCompletedTasks = useMemo(() => {
@@ -84,7 +106,7 @@ export const WorkLogsPage: React.FC = () => {
       (job.tasks || []).forEach((t) => {
         if (t.status === 'COMPLETED' && t.completedAt) {
           const compTime = new Date(t.completedAt).getTime();
-          if (compTime >= filterDate) {
+          if (compTime >= startTimestamp && compTime <= endTimestamp) {
             const elapsedMins = Math.max(1, Math.round((compTime - jobCreatedTime) / 60000));
             const hours = Math.floor(elapsedMins / 60);
             const mins = elapsedMins % 60;
@@ -105,7 +127,7 @@ export const WorkLogsPage: React.FC = () => {
     });
 
     return list.sort((a, b) => new Date(b.completedAtIso).getTime() - new Date(a.completedAtIso).getTime());
-  }, [jobs, filterDate]);
+  }, [jobs, startTimestamp, endTimestamp]);
 
   const filteredTasks = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -129,7 +151,7 @@ export const WorkLogsPage: React.FC = () => {
     return Math.round(allCompletedTasks.reduce((acc, t) => acc + (t.elapsedMins || 0), 0) / allCompletedTasks.length);
   }, [allCompletedTasks]);
 
-  const TIMEFRAMES: Timeframe[] = ['today', 'week', 'month', 'year', 'all'];
+  const TIMEFRAMES: Timeframe[] = ['day', 'week', 'month', 'year', 'all'];
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors">
@@ -158,15 +180,15 @@ export const WorkLogsPage: React.FC = () => {
           </div>
 
           {/* Timeframe Selector */}
-          <div className="flex items-center gap-1 p-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm self-start sm:self-auto">
+          <div className="flex items-center gap-1 p-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xs self-start sm:self-auto">
             {TIMEFRAMES.map((tf) => {
-              const label = tf === 'today' ? 'Day' : tf === 'week' ? 'Week' : tf === 'month' ? 'Month' : tf === 'year' ? 'Year' : 'All';
+              const label = tf === 'day' ? 'Daily' : tf === 'week' ? 'Weekly' : tf === 'month' ? 'Monthly' : tf === 'year' ? 'Yearly' : 'All Time';
               const isActive = timeframe === tf;
               return (
                 <button
                   key={tf}
                   onClick={() => setTimeframe(tf)}
-                  className={`relative px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
+                  className={`relative px-3.5 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
                     isActive
                       ? 'text-zinc-900 dark:text-white shadow-xs'
                       : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
@@ -175,7 +197,7 @@ export const WorkLogsPage: React.FC = () => {
                   {isActive && (
                     <motion.div
                       layoutId="worklogs-tf-pill"
-                      className="absolute inset-0 bg-amber-400/20 dark:bg-amber-500/20 border border-amber-400/40 dark:border-amber-500/30 rounded-xl"
+                      className="absolute inset-0 bg-amber-400/20 dark:bg-amber-500/20 border border-amber-400/40 dark:border-amber-500/30 rounded-lg"
                       transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
                     />
                   )}
