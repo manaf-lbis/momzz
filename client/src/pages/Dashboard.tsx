@@ -19,6 +19,7 @@ import {
   Wrench,
   Package,
   ShoppingCart,
+  Flame,
 } from 'lucide-react';
 import { PageShimmer } from '../components/common/PageShimmer';
 
@@ -206,21 +207,32 @@ export const Dashboard: React.FC = () => {
         <section className="space-y-3">
           <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             <Trophy className="w-4 h-4 text-yellow-400" />
-            <span>Analytics &amp; Master Inventory</span>
+            <span>Performance &amp; Inventory</span>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <DashCard
               icon={<Trophy className="w-6 h-6 text-yellow-400" />}
-              title="📊 Top Performers & Work Log"
-              subtitle="Time Filters & Leaderboard"
-              onClick={() => navigate('/analytics')}
+              title="🏆 Top Performers"
+              subtitle="Mechanic Podium & Ranks"
+              onClick={() => navigate('/leaderboard')}
               badge={
                 <span className="px-2 py-0.5 bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 rounded text-[10px] font-mono font-bold">
-                  ANALYTICS
+                  PODIUM
                 </span>
               }
-              wide
+            />
+
+            <DashCard
+              icon={<Flame className="w-6 h-6 text-orange-500" />}
+              title="📜 Work Logs"
+              subtitle="Completed Tasks & Timeline"
+              onClick={() => navigate('/work-logs')}
+              badge={
+                <span className="px-2 py-0.5 bg-orange-500/10 text-orange-500 border border-orange-500/20 rounded text-[10px] font-mono font-bold">
+                  LOGS
+                </span>
+              }
             />
 
             {/* Task Inventory Master — Admin only */}

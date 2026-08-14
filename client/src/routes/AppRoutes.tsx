@@ -15,6 +15,8 @@ const HomePage = lazy(() => import('../pages/HomePage').then((m) => ({ default: 
 const ProfilePage = lazy(() => import('../pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const UserManagementPage = lazy(() => import('../pages/UserManagementPage').then((m) => ({ default: m.UserManagementPage })));
 const AnalyticsPage = lazy(() => import('../pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
+const LeaderboardPage = lazy(() => import('../pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
+const WorkLogsPage = lazy(() => import('../pages/WorkLogsPage').then((m) => ({ default: m.WorkLogsPage })));
 const CreateJobPage = lazy(() => import('../pages/CreateJobPage').then((m) => ({ default: m.CreateJobPage })));
 const InventoryPage = lazy(() => import('../pages/InventoryPage').then((m) => ({ default: m.InventoryPage })));
 const InventoryDetailPage = lazy(() => import('../pages/InventoryDetailPage').then((m) => ({ default: m.InventoryDetailPage })));
@@ -48,7 +50,10 @@ export const AppRoutes: React.FC = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/jobs" element={<JobsListPage />} />
         <Route path="/jobs/:id" element={<JobDetailPage />} />
-        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/analytics" element={<LeaderboardPage />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/top-performers" element={<LeaderboardPage />} />
+        <Route path="/work-logs" element={<WorkLogsPage />} />
         <Route path="/sales" element={<SalesPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/inventory" element={<InventoryPage />} />

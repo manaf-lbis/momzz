@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
 import { Button } from '../components/common/Button';
@@ -15,6 +16,8 @@ import {
   X,
   UserCheck,
   Building2,
+  Trophy,
+  ChevronRight,
 } from 'lucide-react';
 import { useAppDispatch } from '../hooks/useAppDispatch';
 import { logout, updateUser } from '../slice/authSlice';
@@ -28,6 +31,7 @@ import {
 import { ImageCropperModal } from '../components/common/ImageCropperModal';
 
 export const ProfilePage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const dispatch = useAppDispatch();
   const [logoutApi] = useLogoutApiMutation();
@@ -212,77 +216,91 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Leaderboard Table */}
+        {/* Leaderboard Card with Progress Bars */}
         {leaderboard.length > 0 && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-500" />
-              Leaderboard — Top Workers
-            </h2>
-            <div className="space-y-1">
-              {leaderboard.slice(0, 10).map((worker: any, idx: number) => {
-                const isMe = worker.id === currentUser?.id || worker._id === currentUser?.id;
-                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
-                return (
-                  <div
-                    key={worker.id || worker._id}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${
-                      isMe
-                        ? 'bg-amber-50 border border-amber-200/80 dark:bg-amber-400/10 dark:border-amber-400/20'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                    }`}
-                  >
-                    {/* Rank Number */}
-                    <span
-                      className={`w-6 text-center text-sm font-black ${
-                        idx < 3 ? 'text-lg' : 'text-slate-400 dark:text-slate-500'
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-500" />
+                <h2 className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
+                  Garage Leaderboard
+                </h2>
+              </div>
+              <button
+                onClick={() => navigate('/leaderboard')}
+                className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5"
+              >
+                <span>View Podium</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
+              {(() => {
+                const maxPts = Number(leaderboard[0]?.taskCount || 1);
+                return leaderboard.slice(0, 7).map((worker: any, idx: number) => {
+                  const isMe = (currentUserId && String(worker.id || worker._id) === currentUserId) || (currentUserMobile && worker.mobile === currentUserMobile);
+                  const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
+                  const pts = Number(worker.taskCount ?? 0);
+                  const pct = maxPts > 0 ? (pts / maxPts) * 100 : 0;
+                  const initials = (worker.name || '?')
+                    .split(' ')
+                    .map((n: string) => n[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase();
+
+                  return (
+                    <div
+                      key={worker.id || worker._id}
+                      className={`flex items-center gap-3 py-3 px-2 rounded-xl transition ${
+                        isMe
+                          ? 'bg-amber-500/10 dark:bg-amber-500/10'
+                          : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/40'
                       }`}
                     >
-                      {medal ?? `#${idx + 1}`}
-                    </span>
+                      {/* Rank Number */}
+                      <span className="w-6 text-center text-xs font-black text-zinc-400 dark:text-zinc-500 shrink-0">
+                        {medal ?? `#${idx + 1}`}
+                      </span>
 
-                    {/* Avatar */}
-                    <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                      {worker.profileImageUrl ? (
-                        <img src={worker.profileImageUrl} alt={worker.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <UserIcon className="w-4 h-4 text-slate-400" />
+                      {/* Avatar */}
+                      <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-xs font-black text-zinc-600 dark:text-zinc-300">
+                        {worker.profileImageUrl ? (
+                          <img src={worker.profileImageUrl} alt={worker.name} className="h-full w-full object-cover" />
+                        ) : (
+                          initials
+                        )}
+                      </div>
+
+                      {/* Name + Progress Bar */}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs sm:text-sm font-bold truncate ${isMe ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                          {worker.name} {isMe && <span className="text-[11px] font-normal text-amber-500">(You)</span>}
+                        </p>
+                        <div className="mt-1 h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              idx === 0 ? 'bg-amber-400' : idx === 1 ? 'bg-zinc-400' : idx === 2 ? 'bg-orange-400' : 'bg-zinc-300 dark:bg-zinc-600'
+                            }`}
+                            style={{ width: `${Math.max(4, pct)}%` }}
+                          />
                         </div>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Name */}
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-sm font-bold truncate ${
-                          isMe
-                            ? 'text-amber-700 dark:text-amber-400'
-                            : 'text-slate-900 dark:text-white'
-                        }`}
-                      >
-                        {worker.name}{isMe ? ' (You)' : ''}
-                      </p>
+                      {/* Task Count / Points */}
+                      <div className="shrink-0 text-right">
+                        <span className={`text-xs sm:text-sm font-black ${idx === 0 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-700 dark:text-zinc-200'}`}>
+                          {Number.isInteger(pts) ? pts : pts.toFixed(1)}
+                        </span>
+                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-none">
+                          pts
+                        </p>
+                      </div>
                     </div>
-
-                    {/* Task Count */}
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-black ${
-                        idx === 0
-                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-400/15 dark:text-yellow-400'
-                          : isMe
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-400'
-                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                      }`}
-                    >
-                      {(() => {
-                        const n = Number(worker.taskCount ?? 0);
-                        return (Number.isInteger(n) ? n : n.toFixed(2)) + ' pts';
-                      })()}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           </div>
         )}
