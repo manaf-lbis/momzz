@@ -6,7 +6,7 @@ import { User, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
 import { InstallAppBanner } from '../common/InstallAppBanner';
 import { isCompletionSoundEnabled, setCompletionSoundEnabled, playWelcomeSound } from '../../utils/completionSound';
 
-export const Navbar: React.FC = () => {
+export const Navbar: React.FC<{ glass?: boolean }> = ({ glass = false }) => {
   const { user, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isSoundEnabled, setIsSoundEnabled] = useState(isCompletionSoundEnabled());
@@ -22,7 +22,7 @@ export const Navbar: React.FC = () => {
   return (
     <>
       <InstallAppBanner />
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 transition-colors">
+      <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-colors ${glass ? 'glass-navbar' : 'bg-white/95 dark:bg-zinc-950/95 border-zinc-200 dark:border-zinc-800'}`}>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
@@ -49,7 +49,7 @@ export const Navbar: React.FC = () => {
                 setIsSoundEnabled(nextValue);
                 setCompletionSoundEnabled(nextValue);
               }}
-              className="p-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all active:scale-95"
+              className="p-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 glass-btn transition-all active:scale-95"
               title={isSoundEnabled ? 'Turn completion sound off' : 'Turn completion sound on'}
               aria-label={isSoundEnabled ? 'Turn completion sound off' : 'Turn completion sound on'}
             >
@@ -59,7 +59,7 @@ export const Navbar: React.FC = () => {
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
-              className="p-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-mono"
+              className={`p-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-mono ${glass ? 'glass-btn' : 'bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800'}`}
               title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
               aria-label="Toggle Theme"
             >
@@ -78,7 +78,7 @@ export const Navbar: React.FC = () => {
 
             <Link
               to="/profile"
-              className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all active:scale-95"
+              className={`w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 transition-all active:scale-95 ${glass ? 'glass-btn' : 'bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800'}`}
               title="My profile"
               aria-label="My profile"
             >
