@@ -33,7 +33,8 @@ const money = (value: number) =>
   }).format(value);
 
 const inputStyle =
-  'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 sm:px-3.5 sm:py-3 text-xs sm:text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/15 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:border-slate-600 dark:focus:border-amber-400';
+  'w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 sm:px-3.5 sm:py-3 text-xs sm:text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 hover:border-zinc-300 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/15 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:border-zinc-600 dark:focus:border-amber-400';
+
 
 export const CreateJobPage: React.FC = () => {
   const navigate = useNavigate();
@@ -154,10 +155,10 @@ export const CreateJobPage: React.FC = () => {
     !results.some((item) => item.title.toLowerCase() === query.trim().toLowerCase());
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0F172A] dark:text-slate-100 transition-colors duration-200">
+    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
       <Navbar />
 
-      <main className="mx-auto max-w-[1140px] px-3 py-4 sm:px-6 sm:py-8">
+      <main className="w-full max-w-[1140px] mx-auto px-3 py-4 sm:px-6 sm:py-8 overflow-x-hidden">
         {/* Page Top Controls */}
         <header className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
           <button
@@ -367,9 +368,9 @@ export const CreateJobPage: React.FC = () => {
           </>
         ) : (
           /* STEP 2: Service & Product Checklist */
-          <section className="grid gap-4 sm:gap-6 lg:grid-cols-12">
+          <section className="flex flex-col gap-4 sm:gap-6 lg:grid lg:grid-cols-12">
             {/* Catalog Search & Filter Left Column */}
-            <div className="lg:col-span-7 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4 sm:space-y-5">
+            <div className="w-full lg:col-span-7 rounded-2xl sm:rounded-3xl border border-zinc-200 bg-white p-4 sm:p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 space-y-4 sm:space-y-5">
               <div>
                 <h2 className="flex items-center gap-2 text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                   <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
@@ -424,7 +425,7 @@ export const CreateJobPage: React.FC = () => {
               </div>
 
               {/* Results List */}
-              <div className="space-y-2 max-h-[380px] sm:max-h-[440px] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[320px] sm:max-h-[440px] overflow-y-auto pr-1 -mr-1">
                 {isFetching && !results.length && (
                   <div className="space-y-2">
                     {[...Array(4)].map((_, i) => (
@@ -503,7 +504,7 @@ export const CreateJobPage: React.FC = () => {
             </div>
 
             {/* Selected Checklist Summary Right Column */}
-            <aside className="lg:col-span-5 flex flex-col rounded-2xl sm:rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+            <aside className="w-full lg:col-span-5 flex flex-col rounded-2xl sm:rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
               <div className="flex items-center justify-between border-b border-slate-100 p-4 sm:p-5 dark:border-slate-800">
                 <div>
                   <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
@@ -519,7 +520,7 @@ export const CreateJobPage: React.FC = () => {
               </div>
 
               {/* Selected Items List */}
-              <div className="min-h-[180px] max-h-[320px] flex-1 space-y-2 overflow-y-auto p-3 sm:p-4">
+              <div className="flex-1 space-y-2 overflow-y-auto p-3 sm:p-4 max-h-[280px] sm:max-h-[360px]">
                 {selected.length ? (
                   selected.map((line, index) => (
                     <article
