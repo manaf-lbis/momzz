@@ -8,7 +8,7 @@ export const NeonSpinner: React.FC<{ size?: 'sm' | 'md' }> = ({ size = 'md' }) =
 export const PageShimmer: React.FC<{ label?: string; cards?: number }> = ({ label = 'Loading workspace', cards = 4 }) => (
   <div className="py-8 space-y-3" aria-label={label} role="status">
     {Array.from({ length: cards }, (_, index) => (
-      <motion.div key={index} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.06 }} className="relative overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 p-4 h-20">
+      <motion.div key={index} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.06 }} className="relative overflow-hidden rounded-2xl glass-card p-4 h-20">
         <div className="h-3 w-2/5 rounded bg-zinc-200 dark:bg-zinc-800" />
         <div className="mt-3 h-2 w-3/5 rounded bg-zinc-200/70 dark:bg-zinc-800/70" />
         <motion.div className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/80 dark:via-zinc-700/50 to-transparent" animate={{ x: ['-120%', '260%'] }} transition={{ duration: 1.2, repeat: Infinity, delay: index * 0.1, ease: 'linear' }} />

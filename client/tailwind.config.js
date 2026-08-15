@@ -26,6 +26,15 @@ export default {
       boxShadow: {
         'yellow-glow': '0 0 20px -5px rgba(250, 204, 21, 0.3)',
         'yellow-card': '0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(250, 204, 21, 0.15)',
+        'glass': '0 8px 32px -8px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+        'glass-dark': '0 8px 32px -8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+        'glass-hover': '0 16px 48px -12px rgba(250, 204, 21, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.7)',
+        'glass-hover-dark': '0 16px 48px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(250, 204, 21, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+      },
+      backdropBlur: {
+        xs: '2px',
+        glass: '20px',
+        'glass-lg': '32px',
       }
     },
   },
