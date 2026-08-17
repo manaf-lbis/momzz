@@ -112,11 +112,11 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="glass-page text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors">
-      {/* Ambient background orbs */}
-      <div className="glass-orb w-80 h-80 -top-24 -left-24 bg-indigo-400/30 dark:bg-indigo-500/20" aria-hidden />
-      <div className="glass-orb w-[28rem] h-[28rem] top-1/4 -right-40 bg-sky-400/25 dark:bg-sky-500/15" aria-hidden />
-      <div className="glass-orb w-64 h-64 bottom-20 left-1/3 bg-amber-300/20 dark:bg-yellow-500/10" aria-hidden />
+    <div className="glass-page text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors min-h-screen">
+      {/* Ambient background light orbs */}
+      <div className="glass-orb w-96 h-96 -top-24 -left-24 bg-indigo-500/25 dark:bg-indigo-600/20" aria-hidden />
+      <div className="glass-orb w-[32rem] h-[32rem] top-1/4 -right-40 bg-sky-400/30 dark:bg-sky-500/20" aria-hidden />
+      <div className="glass-orb w-80 h-80 bottom-10 left-1/4 bg-amber-400/20 dark:bg-amber-500/15" aria-hidden />
 
       <Navbar glass />
 
@@ -126,10 +126,10 @@ export const Dashboard: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-banner p-4 sm:p-5 rounded-2xl flex items-center justify-between gap-3"
+            className="glass-banner p-4 sm:p-5 rounded-2xl flex items-center justify-between gap-3 shadow-md"
           >
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl glass-icon-wrap">
+              <div className="p-2.5 rounded-xl glass-icon-wrap">
                 <Clock className="w-5 h-5 text-amber-600 dark:text-yellow-400 animate-pulse flex-shrink-0" />
               </div>
               <div>
@@ -141,41 +141,32 @@ export const Dashboard: React.FC = () => {
                 </p>
               </div>
             </div>
-            <span className="px-3 py-1.5 bg-amber-500/15 dark:bg-yellow-400/10 text-amber-600 dark:text-yellow-400 rounded-full text-[10px] font-mono font-bold uppercase shrink-0 border border-amber-500/25 dark:border-yellow-400/20">
+            <span className="px-3 py-1.5 bg-amber-500/15 dark:bg-yellow-400/10 text-amber-600 dark:text-yellow-400 rounded-full text-[10px] font-mono font-bold uppercase shrink-0 border border-amber-500/25 dark:border-yellow-400/20 shadow-xs">
               Pending
             </span>
           </motion.div>
         )}
 
-        {/* Welcome Header */}
+        {/* Pure Clean White Greeting Card */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="glass-panel rounded-2xl p-5 sm:p-6"
+          transition={{ duration: 0.3 }}
+          className="bg-white/95 dark:bg-slate-900/90 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between gap-4"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-lg sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-white">
-                  Welcome back, {user?.name}
-                </h1>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 font-mono text-[10px] font-bold uppercase backdrop-blur-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Online
-                </span>
-              </div>
-              <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-1.5">
-                {user?.role} workspace · {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-              </p>
-            </div>
-            <div className="hidden sm:flex items-center gap-3 text-right">
-              <div className="glass-section-label px-4 py-2 rounded-xl">
-                <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Active Jobs</p>
-                <p className="text-2xl font-black text-amber-600 dark:text-yellow-400 tabular-nums">{activeCount}</p>
-              </div>
-            </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Welcome back, <span className="font-extrabold">{user?.name}</span>
+            </h1>
+            <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wide">
+              <span className="font-bold text-amber-600 dark:text-amber-400">{user?.role}</span> workspace · {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }).toLowerCase()}
+            </p>
           </div>
+
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-500/20 font-mono text-[10px] font-bold uppercase shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Online
+          </span>
         </motion.div>
 
         {/* Job Management */}

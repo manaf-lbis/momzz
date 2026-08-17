@@ -18,6 +18,7 @@ const AnalyticsPage = lazy(() => import('../pages/AnalyticsPage').then((m) => ({
 const LeaderboardPage = lazy(() => import('../pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const WorkLogsPage = lazy(() => import('../pages/WorkLogsPage').then((m) => ({ default: m.WorkLogsPage })));
 const CreateJobPage = lazy(() => import('../pages/CreateJobPage').then((m) => ({ default: m.CreateJobPage })));
+const EditJobPage = lazy(() => import('../pages/EditJobPage').then((m) => ({ default: m.EditJobPage })));
 const InventoryPage = lazy(() => import('../pages/InventoryPage').then((m) => ({ default: m.InventoryPage })));
 const InventoryDetailPage = lazy(() => import('../pages/InventoryDetailPage').then((m) => ({ default: m.InventoryDetailPage })));
 const AddInventoryItemPage = lazy(() => import('../pages/AddInventoryItemPage').then((m) => ({ default: m.AddInventoryItemPage })));
@@ -41,6 +42,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/admin/approvals" element={<AdminApproval />} />
         <Route path="/admin/users" element={<UserManagementPage />} />
         <Route path="/jobs/create" element={<CreateJobPage />} />
+        <Route path="/jobs/edit/:id" element={<EditJobPage />} />
         <Route path="/inventory/new" element={<AddInventoryItemPage />} />
       </Route>
 
