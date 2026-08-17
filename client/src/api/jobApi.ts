@@ -178,6 +178,7 @@ export const jobApi = apiSlice.injectEndpoints({
     }),
     toggleTaskPin: builder.mutation<{ success: boolean; data: TaskItem }, { taskId: string }>({
       query: ({ taskId }) => ({ url: `/jobs/tasks/${taskId}/pin`, method: 'PATCH' }),
+      invalidatesTags: ['JobCard'],
     }),
     verifyJobCard: builder.mutation<{ success: boolean; data: JobCardData }, { jobCardId: string }>({
       query: ({ jobCardId }) => ({ url: `/jobs/${jobCardId}/verify`, method: 'PATCH' }),

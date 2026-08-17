@@ -20,10 +20,10 @@ router.use(authMiddleware);
 
 router.get('/', getJobCards);
 router.post('/create', adminMiddleware, createJobWithTasks);
-router.patch('/:jobCardId', adminMiddleware, updateJobCard);
-router.patch('/:jobCardId/verify', verifyJobCard);
 router.patch('/tasks/:taskId/status', setTaskStatus);
 router.patch('/tasks/:taskId/pin', toggleTaskPin);
+router.patch('/:jobCardId', adminMiddleware, updateJobCard);
+router.patch('/:jobCardId/verify', verifyJobCard);
 router.post('/:jobCardId/tasks', adminMiddleware, addTaskToJob);
 router.post('/:jobCardId/inventory-tasks', adminMiddleware, addInventoryTaskToJob);
 router.delete('/tasks/:taskId', adminMiddleware, deleteTask);

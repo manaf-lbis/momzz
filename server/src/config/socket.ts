@@ -88,7 +88,7 @@ export const emitTaskUpdated = (
   jobCardId: string,
   taskId: string,
   task: any,
-  action: 'COMPLETE' | 'REOPEN'
+  action: 'COMPLETE' | 'REOPEN' | 'PIN_TOGGLED'
 ) => {
   if (io) {
     console.log('[SOCKET] Emitting task:updated', taskId, '-> action:', action, 'status:', task?.status);
