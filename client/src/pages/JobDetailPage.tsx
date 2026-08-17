@@ -8,6 +8,7 @@ import {
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
   useUpdateJobMutation,
+  useToggleTaskPinMutation,
   useVerifyJobCardMutation,
   JobCardData,
   TaskItem,
@@ -41,6 +42,8 @@ import {
   Phone,
   Mail,
   User as UserIcon,
+  Pin,
+  ChevronDown,
 } from 'lucide-react';
 
 type TaskFilterType = 'ALL' | 'PENDING' | 'COMPLETED';
@@ -91,6 +94,8 @@ export const JobDetailPage: React.FC = () => {
   const [isCompletingTask, setIsCompletingTask] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [isExpandedHeader, setIsExpandedHeader] = useState(false);
   const [editDetails, setEditDetails] = useState<Partial<JobCardData>>({});
   const [now, setNow] = useState(Date.now());
 
@@ -110,6 +115,7 @@ export const JobDetailPage: React.FC = () => {
   const [deleteTask] = useDeleteTaskMutation();
   const [deleteJobCard] = useDeleteJobCardMutation();
   const [updateJob, { isLoading: isUpdatingDetails }] = useUpdateJobMutation();
+  const [toggleTaskPin] = useToggleTaskPinMutation();
   const [verifyJobCard, { isLoading: isVerifying }] = useVerifyJobCardMutation();
 
   // Handle flat vs paginated response shape
@@ -206,6 +212,10 @@ export const JobDetailPage: React.FC = () => {
   });
 
   const sortedTasks = [...filteredTasks].sort((a: TaskItem, b: TaskItem) => {
+    // 1. Pinned tasks first
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    // 2. Alphabetical
     return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
   });
 
@@ -359,99 +369,168 @@ export const JobDetailPage: React.FC = () => {
       <Navbar />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
-        {/* ── CLEAN HEADER ── */}
-        <section className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex flex-col gap-4">
-            {/* Top Row: Back & Status */}
-            <div className="flex items-center justify-between">
+        {/* ── COMPACT EXPANDABLE VEHICLE HEADER ── */}
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden transition-all"
+        >
+          {/* Main Compact Summary Row */}
+          <div
+            onClick={() => setIsExpandedHeader((prev) => !prev)}
+            className="p-4 sm:p-5 flex items-center justify-between gap-3.5 cursor-pointer select-none hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+          >
+            {/* Left: Vehicle Title, Registration Plate, Color Pill */}
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
               <button
-                onClick={() => navigate('/jobs')}
-                className="group flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/jobs');
+                }}
+                className="p-1.5 -ml-1 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0"
+                title="Back to Jobs"
               >
-                <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-                <span>Back</span>
+                <ArrowLeft className="w-4 h-4" />
               </button>
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-500">
-                  <Clock className="h-3.5 w-3.5 text-slate-400" />
-                  {getGarageDuration()}
-                </span>
-                {isAllCompleted ? (
-                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
-                    Ready
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
-                    In Work
-                  </span>
-                )}
-              </div>
-            </div>
 
-            {/* Title & Info */}
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
+                <h1 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight truncate">
                   {currentJob.vehicleName}
                 </h1>
-                {isAdmin && (
-                  <button
-                    onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-700 bg-amber-500/10 hover:bg-amber-500/20 dark:text-amber-300 dark:bg-amber-400/15 dark:hover:bg-amber-400/25 border border-amber-500/30 transition-all shadow-xs"
-                    title="Edit Job Card"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                    <span>Edit Card</span>
-                  </button>
-                )}
-              </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-bold font-mono text-slate-900 dark:text-white">
+                {/* Registration Number */}
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-slate-900 text-amber-400 dark:bg-white dark:text-slate-950 font-mono font-black text-xs uppercase tracking-wider shrink-0 shadow-2xs">
                   {currentJob.vehicleNumber}
                 </span>
+
+                {/* Color Pill */}
                 {currentJob.vehicleColor && (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
-                    <Palette className="h-3.5 w-3.5 text-slate-400" />
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 shrink-0">
+                    <Palette className="w-3 h-3 text-amber-500" />
                     {currentJob.vehicleColor}
                   </span>
                 )}
-                {currentJob.verifiedAt && (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Verified
-                  </span>
-                )}
               </div>
             </div>
 
-            {/* Customer Details Line */}
-            {(currentJob.customerName || currentJob.customerMobile || currentJob.customerEmail) && (
-              <div className="mt-2 border-t border-slate-100 dark:border-slate-800 pt-4">
-                <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-600 dark:text-slate-400">
-                  {currentJob.customerName && (
-                    <span className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
-                      <UserIcon className="h-4 w-4 text-slate-400" />
-                      {currentJob.customerName}
-                    </span>
-                  )}
-                  {currentJob.customerMobile && (
-                    <a href={`tel:${currentJob.customerMobile}`} className="flex items-center gap-1.5 font-medium hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                      <Phone className="h-4 w-4 text-slate-400" />
-                      {currentJob.customerMobile}
-                    </a>
-                  )}
-                  {currentJob.customerEmail && (
-                    <a href={`mailto:${currentJob.customerEmail}`} className="flex items-center gap-1.5 font-medium hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                      <Mail className="h-4 w-4 text-slate-400" />
-                      {currentJob.customerEmail}
-                    </a>
-                  )}
-                </div>
+            {/* Right: Pencil Edit Icon & Expand Down Arrow */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/jobs/edit/${currentJob.id || currentJob._id}`);
+                  }}
+                  className="p-2 rounded-xl text-amber-700 bg-amber-500/10 hover:bg-amber-500/20 dark:text-amber-300 dark:bg-amber-400/15 dark:hover:bg-amber-400/25 border border-amber-500/30 transition active:scale-95 shadow-2xs"
+                  title="Edit Job Card"
+                >
+                  <Edit2 className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              )}
+
+              <div className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">
+                <ChevronDown
+                  className={`w-5 h-5 transition-transform duration-200 ${
+                    isExpandedHeader ? 'rotate-180 text-amber-500' : ''
+                  }`}
+                />
               </div>
-            )}
+            </div>
           </div>
-        </section>
+
+          {/* Expanded Drawer: Vehicle Details, Customer Info, Time & Date */}
+          <AnimatePresence>
+            {isExpandedHeader && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.22 }}
+                className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 px-4 sm:px-5 py-4 space-y-3.5"
+              >
+                {/* Meta details strip */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                  {/* Status */}
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Status</span>
+                    <span className="font-bold text-slate-900 dark:text-white mt-0.5 block">
+                      {isAllCompleted ? 'Ready for Delivery' : 'In Work'}
+                    </span>
+                  </div>
+
+                  {/* Duration */}
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Garage Time</span>
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400 mt-0.5 block">
+                      {getGarageDuration()}
+                    </span>
+                  </div>
+
+                  {/* Created Date */}
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Check-in Date</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300 mt-0.5 block">
+                      {new Date(currentJob.createdAt).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+
+                  {/* Check-in Time */}
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Check-in Time</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300 mt-0.5 block">
+                      {new Date(currentJob.createdAt).toLocaleTimeString(undefined, {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Customer Details Ribbon */}
+                {(currentJob.customerName || currentJob.customerMobile || currentJob.customerEmail) && (
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80">
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                      Customer Contact
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
+                      {currentJob.customerName && (
+                        <span className="inline-flex items-center gap-1.5 font-bold text-slate-900 dark:text-white px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                          <UserIcon className="w-3.5 h-3.5 text-amber-500" />
+                          {currentJob.customerName}
+                        </span>
+                      )}
+                      {currentJob.customerMobile && (
+                        <a
+                          href={`tel:${currentJob.customerMobile}`}
+                          className="inline-flex items-center gap-1.5 font-medium px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-emerald-500" />
+                          {currentJob.customerMobile}
+                        </a>
+                      )}
+                      {currentJob.customerEmail && (
+                        <a
+                          href={`mailto:${currentJob.customerEmail}`}
+                          className="inline-flex items-center gap-1.5 font-medium px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                        >
+                          <Mail className="w-3.5 h-3.5 text-sky-500" />
+                          {currentJob.customerEmail}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.section>
 
         {/* ── EDIT DETAILS MODAL / INLINE FORM ── */}
         <AnimatePresence>
@@ -691,16 +770,16 @@ export const JobDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Unified Task List Filter Tabs with Badges */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-1">
+        {/* Unified Task List Filter Tabs with Badges (Sticky Header) */}
+        <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2.5 bg-slate-50/90 dark:bg-[#0F172A]/90 backdrop-blur-md border-y border-slate-200/60 dark:border-slate-800/60 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-amber-500" />
-            <h2 className="text-xs font-mono font-bold uppercase text-slate-500 dark:text-slate-400">
+            <h2 className="text-xs font-mono font-bold uppercase text-slate-600 dark:text-slate-300">
               Task Status Filter
             </h2>
           </div>
 
-          <div className="w-full sm:w-auto overflow-x-auto no-scrollbar flex items-center gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="w-full sm:w-auto overflow-x-auto no-scrollbar flex items-center gap-1.5 p-1 bg-white/80 dark:bg-slate-900/80 rounded-xl border border-slate-200/80 dark:border-slate-800 backdrop-blur-sm">
             {(
               [
                 { id: 'ALL', label: 'ALL', count: totalTasks },
@@ -737,35 +816,40 @@ export const JobDetailPage: React.FC = () => {
               <p className="text-[11px] text-slate-400">Select 'ALL' to view all job card sub-tasks.</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {sortedTasks.map((task: TaskItem) => {
                 const taskId = task.id || task._id!;
                 const isCompleted = task.status === 'COMPLETED';
                 const isTaskUpdating = updatingTaskId === taskId;
+                const isExpanded = expandedTaskId === taskId;
                 const auditText = getAuditText(task);
 
                 return (
                   <motion.div
                     key={taskId}
+                    layout
                     initial={{ scale: 0.98, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.18 }}
-                    onPointerDown={() => startLongPress(task)}
-                    onPointerUp={cancelLongPress}
-                    onPointerLeave={cancelLongPress}
-                    onPointerCancel={cancelLongPress}
-                    className={`bg-white/95 dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all shadow-xs ${
-                      isCompleted
-                        ? 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-300/60 dark:border-emerald-500/20'
-                        : ''
+                    transition={{ duration: 0.2 }}
+                    className={`bg-white dark:bg-slate-900 border rounded-2xl transition-all shadow-xs cursor-pointer select-none overflow-hidden ${
+                      task.isPinned
+                        ? 'border-amber-400/60 dark:border-amber-500/50 ring-2 ring-amber-400/15'
+                        : isCompleted
+                        ? 'border-emerald-200/80 dark:border-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/15'
+                        : 'border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
+                    onClick={() => setExpandedTaskId((prev) => (prev === taskId ? null : taskId))}
                   >
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                    {/* Top Row: Checkbox, Title, Badges, Pin & Expand Indicator */}
+                    <div className="p-4 flex items-start gap-3.5">
                       {/* Checkbox Button */}
                       <button
                         type="button"
                         disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
-                        onClick={() => promptTaskStatusChange(task)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          promptTaskStatusChange(task);
+                        }}
                         className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 active:scale-90 ${
                           isCompleted
                             ? 'bg-emerald-500 text-white shadow-xs'
@@ -782,30 +866,38 @@ export const JobDetailPage: React.FC = () => {
                       <div className="space-y-1.5 min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p
-                            className={`text-xs sm:text-sm font-bold leading-snug break-words ${
+                            className={`text-sm font-bold leading-snug break-words ${
                               isCompleted
-                                ? 'text-slate-700 dark:text-slate-200'
+                                ? 'text-slate-600 dark:text-slate-300 line-through opacity-80'
                                 : 'text-slate-900 dark:text-white'
                             }`}
                           >
                             {task.title}
                           </p>
 
+                          {/* Pinned Badge */}
+                          {task.isPinned && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-bold shrink-0">
+                              <Pin className="w-3 h-3 fill-amber-500 stroke-amber-600" />
+                              Pinned
+                            </span>
+                          )}
+
                           {/* Shared Work Badge */}
                           {task.isShared && task.partners && task.partners.length > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-bold shrink-0">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/10 border border-sky-500/30 text-sky-700 dark:text-sky-300 text-[10px] font-bold shrink-0">
                               🤝 Shared ({(1 / (1 + task.partners.length)).toFixed(2)} pt)
                             </span>
                           )}
                         </div>
 
-                        {/* Audit Info & Multi-worker Avatars */}
+                        {/* Audit Info & Prominent Worker Avatars */}
                         {isCompleted && auditText && (
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-emerald-800 dark:text-emerald-300 leading-normal">
-                            {/* Stacked Avatars for all workers */}
-                            <div className="flex -space-x-1.5 overflow-visible shrink-0">
+                          <div className="mt-2 flex flex-wrap items-center gap-2.5 text-xs text-emerald-800 dark:text-emerald-300 leading-normal">
+                            {/* Stacked Larger Avatars (w-7 h-7) */}
+                            <div className="flex -space-x-2 overflow-visible shrink-0">
                               {/* Primary worker */}
-                              <div className="flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-emerald-100 font-bold text-emerald-700 dark:border-slate-900 dark:bg-emerald-500/20 dark:text-emerald-300 text-[9px] sm:text-[10px] z-10">
+                              <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-emerald-100 font-black text-emerald-700 dark:border-slate-900 dark:bg-emerald-500/20 dark:text-emerald-300 text-xs z-10 shadow-xs">
                                 {task.completedBy?.profileImageUrl ? (
                                   <img src={task.completedBy.profileImageUrl} alt="" className="h-full w-full object-cover" />
                                 ) : (
@@ -816,7 +908,7 @@ export const JobDetailPage: React.FC = () => {
                               {(task.partners || []).map((partner, pi) => (
                                 <div
                                   key={partner.id || partner._id || pi}
-                                  className="flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-amber-100 font-bold text-amber-700 dark:border-slate-900 dark:bg-amber-500/20 dark:text-amber-300 text-[9px] sm:text-[10px]"
+                                  className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-amber-100 font-black text-amber-700 dark:border-slate-900 dark:bg-amber-500/20 dark:text-amber-300 text-xs shadow-xs"
                                   style={{ zIndex: 9 - pi }}
                                   title={partner.name}
                                 >
@@ -828,62 +920,117 @@ export const JobDetailPage: React.FC = () => {
                                 </div>
                               ))}
                             </div>
-                            <span className="font-medium">{auditText}</span>
+                            <span className="font-medium text-[11px] sm:text-xs">{auditText}</span>
                           </div>
                         )}
                       </div>
+
+                      {/* Expand Chevron Icon */}
+                      <div className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-transform p-1">
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-amber-500' : ''}`} />
+                      </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/80">
-                      {!isCompleted ? (
-                        <button
-                          disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
-                          onClick={() => promptTaskStatusChange(task)}
-                          className="w-full sm:w-auto px-4 py-2 bg-amber-400 text-slate-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-60"
+                    {/* Expandable Action Panel (Visible below separator on click) */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 px-4 py-3"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          {isTaskUpdating ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              <span>Saving...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-3.5 h-3.5" />
-                              <span>Complete</span>
-                            </>
-                          )}
-                        </button>
-                      ) : (
-                        <button
-                          disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
-                          onClick={() => promptTaskStatusChange(task)}
-                          className="px-3 py-1.5 bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 text-[11px] font-mono font-bold rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-60"
-                        >
-                          {isTaskUpdating ? (
-                            <>
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              <span>Reopening...</span>
-                            </>
-                          ) : (
-                            <>
-                              <RotateCcw className="w-3 h-3" />
-                              <span>Reopen</span>
-                            </>
-                          )}
-                        </button>
-                      )}
+                          <div className="flex flex-wrap items-center justify-between gap-2.5">
+                            {/* Left Side: Pin / Unpin Task & Activity Log */}
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    await toggleTaskPin({ taskId }).unwrap();
+                                  } catch (err: any) {
+                                    setErrorMessage(err?.data?.message || 'Failed to toggle pin.');
+                                  }
+                                }}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold font-mono transition-all ${
+                                  task.isPinned
+                                    ? 'bg-amber-400 text-slate-950 shadow-xs'
+                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-400'
+                                }`}
+                              >
+                                <Pin className={`w-3.5 h-3.5 ${task.isPinned ? 'fill-slate-950' : ''}`} />
+                                <span>{task.isPinned ? 'Pinned' : 'Pin Task'}</span>
+                              </button>
 
-                      {isAdmin && isEditingDetails && (
-                        <button
-                          onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'TASK', taskId })}
-                          className="p-2 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                          title="Delete Sub-task"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                              <button
+                                type="button"
+                                onClick={() => setActivityTask(task)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold font-mono text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:text-slate-900 dark:hover:text-white transition"
+                              >
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>Activity</span>
+                              </button>
+                            </div>
+
+                            {/* Right Side: Primary Status Action & Delete */}
+                            <div className="flex items-center gap-2">
+                              {!isCompleted ? (
+                                <button
+                                  type="button"
+                                  disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
+                                  onClick={() => promptTaskStatusChange(task)}
+                                  className="px-4 py-2 bg-amber-400 text-slate-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 transition-all active:scale-95 flex items-center gap-1.5 shadow-sm disabled:opacity-60"
+                                >
+                                  {isTaskUpdating ? (
+                                    <>
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      <span>Saving...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Sparkles className="w-3.5 h-3.5" />
+                                      <span>Complete Task</span>
+                                    </>
+                                  )}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
+                                  onClick={() => promptTaskStatusChange(task)}
+                                  className="px-3.5 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 text-xs font-mono font-bold rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                                >
+                                  {isTaskUpdating ? (
+                                    <>
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      <span>Reopening...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                      <span>Reopen Task</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'TASK', taskId })}
+                                  className="p-2 text-slate-400 hover:text-red-500 transition-colors rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10"
+                                  title="Delete Sub-task"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
                       )}
-                    </div>
+                    </AnimatePresence>
                   </motion.div>
                 );
               })}

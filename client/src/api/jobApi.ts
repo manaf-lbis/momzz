@@ -38,6 +38,7 @@ export interface TaskItem {
     profileImageUrl?: string;
   }[];
   isShared?: boolean;
+  isPinned?: boolean;
   completedAt?: string;
   createdAt: string;
   activityLog?: { action: 'COMPLETED' | 'REOPENED'; at: string; user?: { name: string; profileImageUrl?: string } }[];
@@ -175,6 +176,9 @@ export const jobApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['JobCard', 'User'],
     }),
+    toggleTaskPin: builder.mutation<{ success: boolean; data: TaskItem }, { taskId: string }>({
+      query: ({ taskId }) => ({ url: `/jobs/tasks/${taskId}/pin`, method: 'PATCH' }),
+    }),
     verifyJobCard: builder.mutation<{ success: boolean; data: JobCardData }, { jobCardId: string }>({
       query: ({ jobCardId }) => ({ url: `/jobs/${jobCardId}/verify`, method: 'PATCH' }),
       invalidatesTags: ['JobCard'],
@@ -191,5 +195,6 @@ export const {
   useAddInventoryTaskMutation,
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
+  useToggleTaskPinMutation,
   useVerifyJobCardMutation,
 } = jobApi;
