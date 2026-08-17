@@ -257,6 +257,30 @@ export const setTaskStatus = async (req: Request, res: Response) => {
   }
 };
 
+export const toggleTaskPin = async (req: Request, res: Response) => {
+  try {
+    const { taskId } = req.params;
+    const updatedTask = await jobRepository.togglePinTask(taskId);
+    if (!updatedTask) return sendError(res, 'Task not found.', 404);
+
+    const formattedTask = mapTaskImages({
+      ...updatedTask.toObject(),
+      id: updatedTask._id.toString(),
+    });
+
+    emitTaskUpdated(updatedTask.jobCardId.toString(), taskId, formattedTask, 'PIN_TOGGLED');
+
+    return sendSuccess(
+      res,
+      `Task ${formattedTask.isPinned ? 'pinned' : 'unpinned'} successfully.`,
+      formattedTask,
+      200
+    );
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to toggle pin.', 500);
+  }
+};
+
 export const verifyJobCard = async (req: Request, res: Response) => {
   try {
     const { jobCardId } = req.params;

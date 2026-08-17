@@ -223,6 +223,18 @@ export class JobRepository {
       .populate('activityLog.user', 'name mobile role profileImageUrl');
   }
 
+  async togglePinTask(taskId: string): Promise<ITask | null> {
+    const task = await Task.findById(taskId);
+    if (!task) return null;
+    task.isPinned = !task.isPinned;
+    await task.save();
+    return await Task.findById(taskId)
+      .populate('completedBy', 'name mobile role profileImageUrl')
+      .populate('partners', 'name mobile role profileImageUrl')
+      .populate('activityLog.user', 'name mobile role profileImageUrl')
+      .populate('inventoryItem', 'title thumbnailUrl itemType stockQuantity');
+  }
+
   async addTaskToJob(jobCardId: string, title: string): Promise<ITask> {
     const newTask = await Task.create({
       jobCardId,

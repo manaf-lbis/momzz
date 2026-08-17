@@ -16,6 +16,7 @@ export interface ITask extends Document {
   /** Array of co-worker IDs when task is shared among multiple workers */
   partners?: mongoose.Types.ObjectId[];
   isShared?: boolean;
+  isPinned?: boolean;
   completedAt?: Date;
   activityLog: { action: 'COMPLETED' | 'REOPENED'; user: mongoose.Types.ObjectId; at: Date }[];
   createdAt: Date;
@@ -39,6 +40,7 @@ const TaskSchema: Schema = new Schema(
     /** Co-workers who shared this task */
     partners: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     isShared: { type: Boolean, default: false },
+    isPinned: { type: Boolean, default: false },
     completedAt: { type: Date, default: null },
     activityLog: [
       {

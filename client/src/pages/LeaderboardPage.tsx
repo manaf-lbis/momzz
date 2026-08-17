@@ -661,20 +661,23 @@ export const LeaderboardPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl border border-zinc-200/60 dark:border-zinc-700/60">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
-                  {timeframe.toUpperCase()} PERFORMANCE
+              <div className="p-3.5 bg-amber-500/10 dark:bg-amber-500/15 rounded-2xl border border-amber-500/30">
+                <span className="text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider block">
+                  {new Date().toLocaleDateString(undefined, { month: 'long' }).toUpperCase()} MONTHLY POINTS
                 </span>
-                <span className="text-2xl font-black text-amber-500 mt-1 block">
-                  {selectedUserModal.points} <span className="text-xs font-bold text-zinc-400">QP</span>
+                <span className="text-3xl font-black text-amber-500 mt-1 block tracking-tight">
+                  {selectedUserModal.points} <span className="text-xs font-bold text-zinc-400 font-sans">QP</span>
                 </span>
+                <p className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 mt-1">
+                  Resets 1st of every month
+                </p>
               </div>
 
               <button
                 onClick={() => setSelectedUserModal(null)}
-                className="w-full py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold text-xs active:scale-95 transition"
+                className="w-full py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold text-xs active:scale-95 transition shadow-sm"
               >
-                Close
+                Close Podium Detail
               </button>
             </motion.div>
           </div>
