@@ -396,21 +396,12 @@ export const JobDetailPage: React.FC = () => {
                 </h1>
                 {isAdmin && (
                   <button
-                    onClick={() => {
-                      setEditDetails({
-                        vehicleName: currentJob.vehicleName,
-                        vehicleNumber: currentJob.vehicleNumber,
-                        vehicleColor: currentJob.vehicleColor,
-                        customerName: currentJob.customerName,
-                        customerMobile: currentJob.customerMobile,
-                        customerEmail: currentJob.customerEmail,
-                      });
-                      setIsEditingDetails(true);
-                    }}
-                    className="p-2 rounded-full text-slate-400 bg-slate-50 dark:bg-slate-800/50 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-500/30 transition-all"
-                    title="Edit Details"
+                    onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-700 bg-amber-500/10 hover:bg-amber-500/20 dark:text-amber-300 dark:bg-amber-400/15 dark:hover:bg-amber-400/25 border border-amber-500/30 transition-all shadow-xs"
+                    title="Edit Job Card"
                   >
-                    <Edit2 className="h-4 w-4" />
+                    <Edit2 className="h-3.5 w-3.5" />
+                    <span>Edit Card</span>
                   </button>
                 )}
               </div>
@@ -763,19 +754,19 @@ export const JobDetailPage: React.FC = () => {
                     onPointerUp={cancelLongPress}
                     onPointerLeave={cancelLongPress}
                     onPointerCancel={cancelLongPress}
-                    className={`bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl flex items-center justify-between gap-3 transition-all shadow-xs ${
+                    className={`bg-white/95 dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all shadow-xs ${
                       isCompleted
-                        ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-500/20'
+                        ? 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-300/60 dark:border-emerald-500/20'
                         : ''
                     }`}
                   >
-                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
                       {/* Checkbox Button */}
                       <button
                         type="button"
                         disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
                         onClick={() => promptTaskStatusChange(task)}
-                        className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 active:scale-90 ${
+                        className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 active:scale-90 ${
                           isCompleted
                             ? 'bg-emerald-500 text-white shadow-xs'
                             : 'border-2 border-slate-300 dark:border-slate-700 hover:border-amber-400 bg-white dark:bg-slate-900'
@@ -788,10 +779,10 @@ export const JobDetailPage: React.FC = () => {
                         )}
                       </button>
 
-                      <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                      <div className="space-y-1.5 min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
                           <p
-                            className={`text-xs sm:text-sm font-bold transition-all ${
+                            className={`text-xs sm:text-sm font-bold leading-snug break-words ${
                               isCompleted
                                 ? 'text-slate-700 dark:text-slate-200'
                                 : 'text-slate-900 dark:text-white'
@@ -802,19 +793,19 @@ export const JobDetailPage: React.FC = () => {
 
                           {/* Shared Work Badge */}
                           {task.isShared && task.partners && task.partners.length > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-bold shrink-0">
                               🤝 Shared ({(1 / (1 + task.partners.length)).toFixed(2)} pt)
                             </span>
                           )}
                         </div>
 
-                        {/* Audit Info */}
+                        {/* Audit Info & Multi-worker Avatars */}
                         {isCompleted && auditText && (
-                          <div className="mt-1.5 flex items-center gap-2 text-[11px] text-emerald-700 dark:text-emerald-300">
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-emerald-800 dark:text-emerald-300 leading-normal">
                             {/* Stacked Avatars for all workers */}
                             <div className="flex -space-x-1.5 overflow-visible shrink-0">
                               {/* Primary worker */}
-                              <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white bg-emerald-100 font-bold text-emerald-700 dark:border-slate-900 dark:bg-emerald-500/20 dark:text-emerald-300 text-[10px] z-10">
+                              <div className="flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-emerald-100 font-bold text-emerald-700 dark:border-slate-900 dark:bg-emerald-500/20 dark:text-emerald-300 text-[9px] sm:text-[10px] z-10">
                                 {task.completedBy?.profileImageUrl ? (
                                   <img src={task.completedBy.profileImageUrl} alt="" className="h-full w-full object-cover" />
                                 ) : (
@@ -825,7 +816,7 @@ export const JobDetailPage: React.FC = () => {
                               {(task.partners || []).map((partner, pi) => (
                                 <div
                                   key={partner.id || partner._id || pi}
-                                  className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white bg-amber-100 font-bold text-amber-700 dark:border-slate-900 dark:bg-amber-500/20 dark:text-amber-300 text-[10px]"
+                                  className="flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-amber-100 font-bold text-amber-700 dark:border-slate-900 dark:bg-amber-500/20 dark:text-amber-300 text-[9px] sm:text-[10px]"
                                   style={{ zIndex: 9 - pi }}
                                   title={partner.name}
                                 >
@@ -837,19 +828,19 @@ export const JobDetailPage: React.FC = () => {
                                 </div>
                               ))}
                             </div>
-                            <span className="truncate">{auditText}</span>
+                            <span className="font-medium">{auditText}</span>
                           </div>
                         )}
                       </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/80">
                       {!isCompleted ? (
                         <button
                           disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
                           onClick={() => promptTaskStatusChange(task)}
-                          className="px-3 py-1.5 bg-amber-400 text-slate-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 transition-all active:scale-95 flex items-center gap-1.5 whitespace-nowrap shadow-xs disabled:opacity-60"
+                          className="w-full sm:w-auto px-4 py-2 bg-amber-400 text-slate-950 font-mono font-bold text-xs uppercase rounded-xl hover:bg-amber-300 transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-60"
                         >
                           {isTaskUpdating ? (
                             <>
@@ -867,7 +858,7 @@ export const JobDetailPage: React.FC = () => {
                         <button
                           disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
                           onClick={() => promptTaskStatusChange(task)}
-                          className="px-2.5 py-1 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 text-[10px] font-mono font-bold rounded-lg transition-colors flex items-center gap-1 disabled:opacity-60"
+                          className="px-3 py-1.5 bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 text-[11px] font-mono font-bold rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-60"
                         >
                           {isTaskUpdating ? (
                             <>
@@ -886,7 +877,7 @@ export const JobDetailPage: React.FC = () => {
                       {isAdmin && isEditingDetails && (
                         <button
                           onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'TASK', taskId })}
-                          className="p-1.5 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                          className="p-2 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                           title="Delete Sub-task"
                         >
                           <Trash2 className="w-4 h-4" />
