@@ -9,6 +9,7 @@ import {
   useDeleteJobCardMutation,
   useUpdateJobMutation,
   useToggleTaskPinMutation,
+  useToggleJobPinMutation,
   useVerifyJobCardMutation,
   JobCardData,
   TaskItem,
@@ -17,6 +18,7 @@ import { useGetAllUsersQuery } from '../api/authApi';
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
 import { ConfirmationModal } from '../components/common/ConfirmationModal';
+import { PinJobModal } from '../components/jobCard/PinJobModal';
 import { TaskAutoComplete } from '../components/common/TaskAutoComplete';
 import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../utils/confetti';
 import { playCompletionSound, playReopenSound } from '../utils/completionSound';
@@ -96,6 +98,10 @@ export const JobDetailPage: React.FC = () => {
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [isExpandedHeader, setIsExpandedHeader] = useState(false);
+  const [isPinJobModalOpen, setIsPinJobModalOpen] = useState(false);
+  const [pinningJobMode, setPinningJobMode] = useState<'ALL' | 'ME' | null>(null);
+  const [optimisticPins, setOptimisticPins] = useState<Record<string, boolean>>({});
+  const [pinningTaskIds, setPinningTaskIds] = useState<Record<string, boolean>>({});
   const [editDetails, setEditDetails] = useState<Partial<JobCardData>>({});
   const [now, setNow] = useState(Date.now());
 
@@ -116,6 +122,7 @@ export const JobDetailPage: React.FC = () => {
   const [deleteJobCard] = useDeleteJobCardMutation();
   const [updateJob, { isLoading: isUpdatingDetails }] = useUpdateJobMutation();
   const [toggleTaskPin] = useToggleTaskPinMutation();
+  const [toggleJobPin] = useToggleJobPinMutation();
   const [verifyJobCard, { isLoading: isVerifying }] = useVerifyJobCardMutation();
 
   // Handle flat vs paginated response shape
@@ -212,12 +219,28 @@ export const JobDetailPage: React.FC = () => {
   });
 
   const sortedTasks = [...filteredTasks].sort((a: TaskItem, b: TaskItem) => {
-    // 1. Pinned tasks first
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
+    const aId = a.id || a._id!;
+    const bId = b.id || b._id!;
+    const aPinned = optimisticPins[aId] !== undefined ? optimisticPins[aId] : !!a.isPinned;
+    const bPinned = optimisticPins[bId] !== undefined ? optimisticPins[bId] : !!b.isPinned;
+
+    // 1. Pinned tasks first (with optimistic support)
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
     // 2. Alphabetical
     return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
   });
+
+  const handleToggleJobPin = async (jobCardId: string, mode: 'ALL' | 'ME') => {
+    try {
+      setPinningJobMode(mode);
+      await toggleJobPin({ jobCardId, mode }).unwrap();
+    } catch (err: any) {
+      setErrorMessage(err?.data?.message || 'Failed to update job card pin.');
+    } finally {
+      setPinningJobMode(null);
+    }
+  };
 
   const getAuditText = (task: TaskItem) => {
     if (!task.completedAt) return null;
@@ -381,7 +404,7 @@ export const JobDetailPage: React.FC = () => {
             onClick={() => setIsExpandedHeader((prev) => !prev)}
             className="p-4 sm:p-5 flex items-center justify-between gap-3.5 cursor-pointer select-none hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
           >
-            {/* Left: Vehicle Title, Registration Plate, Color Pill */}
+            {/* Left: Vehicle Title, Registration Plate, Color Pill & Pin Badges */}
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
               <button
                 type="button"
@@ -412,11 +435,52 @@ export const JobDetailPage: React.FC = () => {
                     {currentJob.vehicleColor}
                   </span>
                 )}
+
+                {/* Pin Badges */}
+                {currentJob.isPinnedForAll && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-400 text-slate-950 font-mono font-black text-[10px] uppercase tracking-wider shrink-0 shadow-2xs">
+                    <Pin className="w-3 h-3 fill-slate-950" />
+                    Pinned for All
+                  </span>
+                )}
+                {!currentJob.isPinnedForAll &&
+                  Array.isArray(currentJob.pinnedBy) &&
+                  currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-500 text-white font-mono font-black text-[10px] uppercase tracking-wider shrink-0 shadow-2xs">
+                      <Pin className="w-3 h-3 fill-white" />
+                      Pinned for You
+                    </span>
+                  )}
               </div>
             </div>
 
-            {/* Right: Pencil Edit Icon & Expand Down Arrow */}
+            {/* Right: Pin Job Button, Pencil Edit Icon & Expand Down Arrow */}
             <div className="flex items-center gap-1.5 shrink-0">
+              {/* Pin Job Card Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsPinJobModalOpen(true);
+                }}
+                className={`p-2 rounded-xl transition-all active:scale-95 shadow-2xs border ${
+                  currentJob.isPinnedForAll ||
+                  (Array.isArray(currentJob.pinnedBy) &&
+                    currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
+                    ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-amber-400/20'
+                    : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:text-amber-500'
+                }`}
+                title="Pin Job Card (Workshop or Personal)"
+              >
+                <Pin className={`w-4 h-4 ${
+                  currentJob.isPinnedForAll ||
+                  (Array.isArray(currentJob.pinnedBy) &&
+                    currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
+                    ? 'fill-slate-950'
+                    : ''
+                }`} />
+              </button>
+
               {isAdmin && (
                 <button
                   type="button"
@@ -441,7 +505,7 @@ export const JobDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Expanded Drawer: Vehicle Details, Customer Info, Time & Date */}
+          {/* Expanded Drawer: Vehicle Details, Created By, Customer Info, Time & Date */}
           <AnimatePresence>
             {isExpandedHeader && (
               <motion.div
@@ -485,6 +549,50 @@ export const JobDetailPage: React.FC = () => {
                   <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
                     <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Check-in Time</span>
                     <span className="font-mono text-slate-700 dark:text-slate-300 mt-0.5 block">
+                      {new Date(currentJob.createdAt).toLocaleTimeString(undefined, {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Who Created the Job Card */}
+                <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-full overflow-hidden bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-xs font-black text-amber-700 dark:text-amber-300 shrink-0 shadow-2xs">
+                      {currentJob.createdBy?.profileImageUrl ? (
+                        <img src={currentJob.createdBy.profileImageUrl} alt={currentJob.createdBy.name} className="w-full h-full object-cover" />
+                      ) : (
+                        currentJob.createdBy?.name?.charAt(0).toUpperCase() || 'SA'
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">
+                        Job Card Created By
+                      </span>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                          {currentJob.createdBy?.name || 'Service Advisor'}
+                        </span>
+                        {currentJob.createdBy?.role && (
+                          <span className="text-[9px] font-mono font-black uppercase px-1.5 py-0.2 bg-amber-500/15 text-amber-800 dark:text-amber-300 rounded border border-amber-500/20">
+                            {currentJob.createdBy.role}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right text-xs font-mono text-slate-500 dark:text-slate-400 shrink-0">
+                    <span className="block font-bold">
+                      {new Date(currentJob.createdAt).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
                       {new Date(currentJob.createdAt).toLocaleTimeString(undefined, {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -837,6 +945,8 @@ export const JobDetailPage: React.FC = () => {
                 const isCompleted = task.status === 'COMPLETED';
                 const isTaskUpdating = updatingTaskId === taskId;
                 const isExpanded = expandedTaskId === taskId;
+                const effectiveIsPinned = optimisticPins[taskId] !== undefined ? optimisticPins[taskId] : !!task.isPinned;
+                const isTaskPinning = !!pinningTaskIds[taskId];
                 const ptsText = task.isShared && task.partners && task.partners.length > 0
                   ? `${(1 / (1 + task.partners.length)).toFixed(2)} pt`
                   : '1 pt';
@@ -849,7 +959,7 @@ export const JobDetailPage: React.FC = () => {
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.18 }}
                     className={`bg-white dark:bg-slate-900 border rounded-2xl transition-all shadow-xs cursor-pointer select-none overflow-hidden ${
-                      task.isPinned
+                      effectiveIsPinned
                         ? 'border-amber-400/80 dark:border-amber-500/70 ring-1.5 ring-amber-400/20'
                         : isCompleted
                         ? 'border-emerald-200/80 dark:border-emerald-500/20 bg-emerald-50/30 dark:bg-emerald-950/10'
@@ -895,7 +1005,7 @@ export const JobDetailPage: React.FC = () => {
                           </p>
 
                           {/* Pinned Icon Tag */}
-                          {task.isPinned && (
+                          {effectiveIsPinned && (
                             <span title="Pinned Task">
                               <Pin className="w-3 h-3 text-amber-500 fill-amber-400 shrink-0" />
                             </span>
@@ -998,24 +1108,44 @@ export const JobDetailPage: React.FC = () => {
                           <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
                             {/* Single Line: Pin Icon, Activity, Complete/Reopen, Delete */}
                             <div className="flex items-center gap-1.5 shrink-0">
-                              {/* Icon-Only Pin Button */}
+                              {/* Icon-Only Pin Button with Optimistic State and Loading Animation */}
                               <button
                                 type="button"
-                                title={task.isPinned ? 'Unpin Task' : 'Pin Task'}
-                                onClick={async () => {
+                                title={effectiveIsPinned ? 'Unpin Task' : 'Pin Task'}
+                                disabled={isTaskPinning}
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  const nextPinned = !effectiveIsPinned;
+                                  // Immediate optimistic state update
+                                  setOptimisticPins((prev) => ({ ...prev, [taskId]: nextPinned }));
+                                  setPinningTaskIds((prev) => ({ ...prev, [taskId]: true }));
                                   try {
                                     await toggleTaskPin({ taskId }).unwrap();
                                   } catch (err: any) {
+                                    // Rollback on error
+                                    setOptimisticPins((prev) => ({ ...prev, [taskId]: !nextPinned }));
                                     setErrorMessage(err?.data?.message || 'Failed to toggle pin.');
+                                  } finally {
+                                    setPinningTaskIds((prev) => ({ ...prev, [taskId]: false }));
                                   }
                                 }}
-                                className={`p-2 rounded-xl transition-all ${
-                                  task.isPinned
+                                className={`p-2 rounded-xl transition-all active:scale-90 ${
+                                  effectiveIsPinned
                                     ? 'bg-amber-400 text-slate-950 shadow-xs'
-                                    : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-amber-400'
+                                    : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:text-amber-500'
                                 }`}
                               >
-                                <Pin className={`w-3.5 h-3.5 ${task.isPinned ? 'fill-slate-950' : ''}`} />
+                                {isTaskPinning ? (
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ repeat: Infinity, duration: 0.7, ease: 'linear' }}
+                                    className="flex items-center justify-center"
+                                  >
+                                    <Pin className="w-3.5 h-3.5 fill-amber-600 text-amber-600" />
+                                  </motion.div>
+                                ) : (
+                                  <Pin className={`w-3.5 h-3.5 ${effectiveIsPinned ? 'fill-slate-950' : ''}`} />
+                                )}
                               </button>
 
                               {/* Activity Logs Button */}
@@ -1408,6 +1538,17 @@ export const JobDetailPage: React.FC = () => {
           }
           confirmText="Delete Permanently"
           variant="danger"
+        />
+
+        {/* Pin Job Card Modal */}
+        <PinJobModal
+          isOpen={isPinJobModalOpen}
+          onClose={() => setIsPinJobModalOpen(false)}
+          job={currentJob || null}
+          currentUserId={user?.id || (user as any)?._id}
+          isAdmin={isAdmin}
+          onTogglePin={handleToggleJobPin}
+          isPinningMode={pinningJobMode}
         />
       </main>
     </div>

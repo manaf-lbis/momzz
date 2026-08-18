@@ -14,6 +14,7 @@ export interface User {
   totalLoginAttempts?: number;
   isOnline?: boolean;
   lastSeen?: string;
+  updatedAt?: string;
   createdAt?: string;
   profileImageUrl?: string;
   loginAudit?: Array<{ timestamp: string; status: 'SUCCESS' | 'FAILED'; ipAddress: string }>;

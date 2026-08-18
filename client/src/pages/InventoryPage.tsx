@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Eye, Package, Plus, Search, Tag, Wrench, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/navbar/Navbar';
-import { useGetCatalogQuery, useGetCategoriesQuery } from '../api/catalogApi';
+import { CatalogItem, useGetCatalogQuery, useGetCategoriesQuery } from '../api/catalogApi';
 import { useAuth } from '../hooks/useAuth';
+import { advancedSearch } from '../utils/searchAlgorithm';
 
 const money = (value: number) =>
   new Intl.NumberFormat('en-IN', {
@@ -28,8 +29,23 @@ export const InventoryPage: React.FC = () => {
   });
   const { data: categoryData } = useGetCategoriesQuery();
 
-  const items = data?.data || [];
+  const rawItems = data?.data || [];
   const categories = categoryData?.data || [];
+
+  const items = useMemo(() => {
+    if (!search.trim()) return rawItems;
+    return advancedSearch<CatalogItem>(
+      rawItems,
+      search,
+      {
+        getTitle: (item) => item.title,
+        getSku: (item) => item.sku,
+        getCategory: (item) => item.category?.name,
+        getDescription: (item) => item.description,
+      },
+      140
+    );
+  }, [rawItems, search]);
 
   const lowStockItems = items.filter(
     (item) =>

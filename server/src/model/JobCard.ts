@@ -9,6 +9,8 @@ export interface IJobCard extends Document {
   customerEmail?: string;
   status: 'IN_PROGRESS' | 'READY' | 'COMPLETED';
   createdBy?: mongoose.Types.ObjectId;
+  isPinnedForAll?: boolean;
+  pinnedBy?: mongoose.Types.ObjectId[];
   isDeleted: boolean;
   deletedAt?: Date;
   deletedBy?: mongoose.Types.ObjectId;
@@ -28,6 +30,8 @@ const JobCardSchema: Schema = new Schema(
     customerEmail: { type: String, trim: true, lowercase: true },
     status: { type: String, enum: ['IN_PROGRESS', 'READY', 'COMPLETED'], default: 'IN_PROGRESS' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    isPinnedForAll: { type: Boolean, default: false },
+    pinnedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },

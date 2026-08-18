@@ -95,6 +95,18 @@ export const quickAddCatalogItem = async (req: Request, res: Response) => {
   try {
     const title = req.body.title?.trim();
     if (!title) return sendError(res, 'An item name is required.', 400);
+
+    // Check if an identical or near-duplicate item already exists to prevent duplicates
+    const existingDuplicate = await catalogRepository.findNearDuplicate(title);
+    if (existingDuplicate) {
+      return sendSuccess(
+        res,
+        'Found existing catalog item.',
+        format(await existingDuplicate.populate('category', 'name type')),
+        200
+      );
+    }
+
     const category = (await catalogRepository.getCategories())[0];
     const item = await catalogRepository.createItem({
       title,

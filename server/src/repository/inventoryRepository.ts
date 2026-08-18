@@ -1,12 +1,24 @@
 import { TaskInventory, ITaskInventory } from '../model/TaskInventory';
+import { advancedSearch, findDuplicateCandidates } from '../utils/searchAlgorithm';
 
 export class InventoryRepository {
-  async search(query: string, limit = 10): Promise<ITaskInventory[]> {
-    return await TaskInventory.find({
-      name: { $regex: query, $options: 'i' },
-    })
-      .sort({ name: 1 })
-      .limit(limit);
+  async search(query: string, limit = 20): Promise<ITaskInventory[]> {
+    if (!query || !query.trim()) {
+      return await TaskInventory.find().sort({ name: 1 }).limit(limit);
+    }
+
+    const allItems = await TaskInventory.find().sort({ name: 1 });
+    const ranked = advancedSearch<ITaskInventory>(
+      allItems,
+      query,
+      {
+        getTitle: (item) => item.name,
+        getCategory: (item) => item.category,
+      },
+      180
+    );
+
+    return ranked.slice(0, limit);
   }
 
   async findAll(limit = 100): Promise<ITaskInventory[]> {
@@ -14,9 +26,25 @@ export class InventoryRepository {
   }
 
   async upsertByName(name: string, category?: string): Promise<ITaskInventory> {
-    const existing = await TaskInventory.findOne({ name: { $regex: `^${name.trim()}$`, $options: 'i' } });
-    if (existing) return existing;
-    return await TaskInventory.create({ name: name.trim(), category: category || 'General' });
+    const trimmed = name.trim();
+    // Direct exact match check
+    const existingExact = await TaskInventory.findOne({ name: { $regex: `^${trimmed}$`, $options: 'i' } });
+    if (existingExact) return existingExact;
+
+    // Check near duplicates to avoid small spelling/spacing duplicates
+    const all = await TaskInventory.find();
+    const duplicates = findDuplicateCandidates<ITaskInventory>(
+      trimmed,
+      all,
+      (item) => item.name,
+      0.90 // 90% match for automatic duplicate reuse
+    );
+
+    if (duplicates.length > 0) {
+      return duplicates[0].item;
+    }
+
+    return await TaskInventory.create({ name: trimmed, category: category || 'General' });
   }
 
   async deleteById(id: string): Promise<boolean> {

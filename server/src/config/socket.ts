@@ -68,6 +68,13 @@ export const emitJobCreated = (jobCard: any) => {
   }
 };
 
+export const emitJobUpdated = (jobCard: any) => {
+  if (io) {
+    console.log('[SOCKET] Emitting jobCard:updated for', jobCard?.vehicleNumber || jobCard?.id);
+    io.emit('jobCard:updated', jobCard);
+  }
+};
+
 export const emitJobDeleted = (jobCardId: string) => {
   if (io) {
     console.log('[SOCKET] Emitting jobCard:deleted for', jobCardId);

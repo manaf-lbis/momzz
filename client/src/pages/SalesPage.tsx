@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Minus, Plus, Receipt, Search, ShoppingBag, Trash2, X } from 'lucide-react';
 import { Navbar } from '../components/navbar/Navbar';
 import { CatalogItem, useCreateSaleMutation, useGetCatalogQuery } from '../api/catalogApi';
+import { advancedSearch } from '../utils/searchAlgorithm';
 
 type CartLine = { item: CatalogItem; quantity: number };
 type Filter = 'ALL' | 'SERVICE' | 'PRODUCT' | 'FAST';
@@ -46,7 +47,7 @@ export const SalesPage: React.FC = () => {
   }, []);
 
   const products = useMemo(() => {
-    return (data?.data || []).filter((item) => {
+    const raw = (data?.data || []).filter((item) => {
       const available =
         item.isAvailable &&
         (item.itemType === 'SERVICE' || item.trackStock === false || item.stockQuantity > 0);
@@ -58,7 +59,19 @@ export const SalesPage: React.FC = () => {
             item.stockQuantity <= Math.max(5, item.minimumStockQuantity || 0)))
       );
     });
-  }, [data, filter]);
+    if (!search.trim()) return raw;
+    return advancedSearch<CatalogItem>(
+      raw,
+      search,
+      {
+        getTitle: (item) => item.title,
+        getSku: (item) => item.sku,
+        getCategory: (item) => item.category?.name,
+        getDescription: (item) => item.description,
+      },
+      140
+    );
+  }, [data, filter, search]);
 
   const subtotal = useMemo(
     () => cart.reduce((total, line) => total + line.item.price * line.quantity, 0),

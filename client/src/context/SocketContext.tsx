@@ -110,6 +110,22 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setTimeout(() => dispatch(apiSlice.util.invalidateTags(['JobCard'])), 300);
     });
 
+    // ───── Job Card Updated ─────────────────────────────────────────────
+    socket.on('jobCard:updated', (jobCard: any) => {
+      console.log('[SOCKET] 📥 jobCard:updated', jobCard?.vehicleNumber || jobCard?.id);
+
+      patchAllJobCardCaches(dispatch, (jobsList) => {
+        const idx = jobsList.findIndex(
+          (j: any) => (j.id || j._id) === (jobCard.id || jobCard._id)
+        );
+        if (idx !== -1) {
+          jobsList[idx] = { ...jobsList[idx], ...jobCard };
+        }
+      });
+
+      setTimeout(() => dispatch(apiSlice.util.invalidateTags(['JobCard'])), 300);
+    });
+
     // ───── Job Card Deleted ─────────────────────────────────────────────
     socket.on('jobCard:deleted', (data: { jobCardId: string }) => {
       console.log('[SOCKET] 📥 jobCard:deleted', data?.jobCardId);
