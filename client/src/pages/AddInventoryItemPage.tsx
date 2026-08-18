@@ -1,5 +1,6 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
+  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   FolderPlus,
@@ -18,8 +19,10 @@ import {
   useCreateCatalogItemMutation,
   useCreateCategoryMutation,
   useGetCategoriesQuery,
+  useGetCatalogQuery,
 } from '../api/catalogApi';
 import { ImageCropperModal } from '../components/common/ImageCropperModal';
+import { findDuplicateCandidates } from '../utils/searchAlgorithm';
 
 const money = (value: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
@@ -34,10 +37,12 @@ export const AddInventoryItemPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: categoryData, refetch: refetchCategories } = useGetCategoriesQuery();
+  const { data: catalogData } = useGetCatalogQuery();
   const [createCatalogItem, { isLoading: isCreating }] = useCreateCatalogItemMutation();
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
 
   const categories = categoryData?.data || [];
+  const existingItems = catalogData?.data || [];
 
   // Form State
   const [form, setForm] = useState({
@@ -49,6 +54,17 @@ export const AddInventoryItemPage: React.FC = () => {
     minimumStockQuantity: '2',
     description: '',
   });
+
+  // Duplicate candidates check
+  const duplicateCandidates = useMemo(() => {
+    if (!form.title.trim() || form.title.trim().length < 2) return [];
+    return findDuplicateCandidates(
+      form.title,
+      existingItems,
+      (item) => item.title,
+      0.82
+    );
+  }, [form.title, existingItems]);
 
   // Multi-image state
   const [images, setImages] = useState<string[]>([]);
@@ -203,6 +219,19 @@ export const AddInventoryItemPage: React.FC = () => {
                 placeholder="e.g. Engine Oil 10W-40, Wheel Alignment"
                 className={inputStyle}
               />
+              {duplicateCandidates.length > 0 && (
+                <div className="mt-2 rounded-xl bg-amber-500/10 border border-amber-500/30 p-2.5 flex items-start gap-2 text-xs">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-amber-700 dark:text-amber-300">
+                      Similar item found: "{duplicateCandidates[0].item.title}"
+                    </span>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      An item with a very similar name or spelling already exists in your inventory.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">

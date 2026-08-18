@@ -40,7 +40,10 @@ export class JobRepository {
   }
 
   async findAllJobs(): Promise<IJobCard[]> {
-    return await JobCard.find({ isDeleted: { $ne: true } }).populate('verifiedBy', 'name mobile role').sort({ status: -1, createdAt: -1 });
+    return await JobCard.find({ isDeleted: { $ne: true } })
+      .populate('verifiedBy', 'name mobile role')
+      .populate('createdBy', 'name mobile role profileImageUrl')
+      .sort({ isPinnedForAll: -1, status: -1, createdAt: -1 });
   }
 
   async findPaginatedJobs(options: {
@@ -78,7 +81,12 @@ export class JobRepository {
     }
 
     const [jobs, total] = await Promise.all([
-      JobCard.find(query).populate('verifiedBy', 'name mobile role').sort({ status: -1, createdAt: -1 }).skip(skip).limit(limit),
+      JobCard.find(query)
+        .populate('verifiedBy', 'name mobile role')
+        .populate('createdBy', 'name mobile role profileImageUrl')
+        .sort({ isPinnedForAll: -1, status: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
       JobCard.countDocuments(query),
     ]);
 
@@ -96,7 +104,33 @@ export class JobRepository {
   }
 
   async findJobById(jobCardId: string): Promise<IJobCard | null> {
-    return await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
+    return await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } })
+      .populate('verifiedBy', 'name mobile role')
+      .populate('createdBy', 'name mobile role profileImageUrl');
+  }
+
+  async togglePinJobCard(jobCardId: string, userId: string, mode: 'ALL' | 'ME'): Promise<IJobCard | null> {
+    const job = await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
+    if (!job) return null;
+
+    if (mode === 'ALL') {
+      job.isPinnedForAll = !job.isPinnedForAll;
+    } else if (mode === 'ME') {
+      const pinnedArray = (job.pinnedBy || []).map((id: any) => id.toString());
+      const userIdx = pinnedArray.indexOf(userId.toString());
+      if (userIdx > -1) {
+        pinnedArray.splice(userIdx, 1);
+      } else {
+        pinnedArray.push(userId.toString());
+      }
+      job.pinnedBy = pinnedArray as any;
+    }
+
+    await job.save();
+
+    return await JobCard.findById(jobCardId)
+      .populate('verifiedBy', 'name mobile role')
+      .populate('createdBy', 'name mobile role profileImageUrl');
   }
 
   async updateJobCard(jobCardId: string, data: Partial<Pick<IJobCard, 'vehicleName' | 'vehicleNumber' | 'vehicleColor' | 'customerName' | 'customerMobile' | 'customerEmail'>>) {

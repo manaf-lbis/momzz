@@ -54,6 +54,16 @@ export interface JobCardData {
   customerMobile?: string;
   customerEmail?: string;
   status: 'IN_PROGRESS' | 'COMPLETED';
+  createdBy?: {
+    id?: string;
+    _id?: string;
+    name: string;
+    mobile?: string;
+    role?: string;
+    profileImageUrl?: string;
+  };
+  isPinnedForAll?: boolean;
+  pinnedBy?: string[] | { id?: string; _id?: string; name?: string }[];
   createdAt: string;
   updatedAt: string;
   verifiedBy?: { name: string };
@@ -180,6 +190,17 @@ export const jobApi = apiSlice.injectEndpoints({
       query: ({ taskId }) => ({ url: `/jobs/tasks/${taskId}/pin`, method: 'PATCH' }),
       invalidatesTags: ['JobCard'],
     }),
+    toggleJobPin: builder.mutation<
+      { success: boolean; data: JobCardData },
+      { jobCardId: string; mode: 'ALL' | 'ME' }
+    >({
+      query: ({ jobCardId, mode }) => ({
+        url: `/jobs/${jobCardId}/pin`,
+        method: 'PATCH',
+        body: { mode },
+      }),
+      invalidatesTags: ['JobCard'],
+    }),
     verifyJobCard: builder.mutation<{ success: boolean; data: JobCardData }, { jobCardId: string }>({
       query: ({ jobCardId }) => ({ url: `/jobs/${jobCardId}/verify`, method: 'PATCH' }),
       invalidatesTags: ['JobCard'],
@@ -197,5 +218,6 @@ export const {
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
   useToggleTaskPinMutation,
+  useToggleJobPinMutation,
   useVerifyJobCardMutation,
 } = jobApi;

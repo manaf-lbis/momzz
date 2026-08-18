@@ -220,6 +220,7 @@ export class AuthService {
       lastSeen: user.lastSeen,
       profileImageUrl: getCloudinaryUrl(user.profileImageUrl),
       loginAudit: user.loginAudit || [],
+      updatedAt: user.updatedAt,
       createdAt: user.createdAt,
     }));
   }

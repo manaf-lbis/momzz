@@ -85,7 +85,7 @@ export class UserRepository {
   }
 
   async findAllUsers(): Promise<IUser[]> {
-    return await User.find({}).select('-password').sort({ createdAt: -1 });
+    return await User.find({}).select('-password').sort({ isOnline: -1, lastSeen: -1, updatedAt: -1, createdAt: -1 });
   }
 
   async updateUserStatus(id: string, status: 'ACTIVE' | 'BLOCKED'): Promise<IUser | null> {

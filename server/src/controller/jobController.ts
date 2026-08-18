@@ -3,12 +3,24 @@ import { jobRepository } from '../repository/jobRepository';
 import { sendSuccess, sendError } from '../utils/responseHandler';
 import {
   emitJobCreated,
+  emitJobUpdated,
   emitJobDeleted,
   emitTaskAdded,
   emitTaskUpdated,
   emitTaskDeleted,
 } from '../config/socket';
 import { getCloudinaryUrl } from '../utils/cloudinaryHelper';
+
+/**
+ * Maps all populated image fields in a job card object through getCloudinaryUrl().
+ */
+const mapJobCardImages = (jobObj: any) => {
+  if (!jobObj) return jobObj;
+  if (jobObj.createdBy?.profileImageUrl) {
+    jobObj.createdBy.profileImageUrl = getCloudinaryUrl(jobObj.createdBy.profileImageUrl);
+  }
+  return jobObj;
+};
 
 /**
  * Maps all populated image fields in a task object through getCloudinaryUrl().
@@ -78,11 +90,12 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
       ));
     }
 
-    const fullJob = {
-      ...newJob.toObject(),
+    const populatedNewJob = await jobRepository.findJobById(newJob._id.toString());
+    const fullJob = mapJobCardImages({
+      ...(populatedNewJob ? populatedNewJob.toObject() : newJob.toObject()),
       id: newJob._id.toString(),
       tasks: createdTasks.map((t) => mapTaskImages({ ...t.toObject(), id: t._id.toString() })),
-    };
+    });
 
     emitJobCreated(fullJob);
 
@@ -104,7 +117,13 @@ export const updateJobCard = async (req: Request, res: Response) => {
     if (updates.vehicleNumber) updates.vehicleNumber = updates.vehicleNumber.toUpperCase();
     const updatedJob = await jobRepository.updateJobCard(jobCardId, updates);
     if (!updatedJob) return sendError(res, 'Job card not found.', 404);
-    return sendSuccess(res, 'Job card updated successfully.', { ...updatedJob.toObject(), id: updatedJob._id.toString() });
+    const populated = await jobRepository.findJobById(jobCardId);
+    const formatted = mapJobCardImages({
+      ...(populated ? populated.toObject() : updatedJob.toObject()),
+      id: updatedJob._id.toString(),
+    });
+    emitJobUpdated(formatted);
+    return sendSuccess(res, 'Job card updated successfully.', formatted);
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to update job card.', 500);
   }
@@ -150,14 +169,14 @@ export const getJobCards = async (req: Request, res: Response) => {
             job.status = targetStatus;
           }
 
-          return {
+          return mapJobCardImages({
             ...job.toObject(),
             id: job._id.toString(),
             tasks: tasks.map((t) => mapTaskImages({
               ...t.toObject(),
               id: t._id.toString(),
             })),
-          };
+          });
         })
       );
 
@@ -190,20 +209,78 @@ export const getJobCards = async (req: Request, res: Response) => {
           job.status = targetStatus;
         }
 
-        return {
+        return mapJobCardImages({
           ...job.toObject(),
           id: job._id.toString(),
           tasks: tasks.map((t) => mapTaskImages({
             ...t.toObject(),
             id: t._id.toString(),
           })),
-        };
+        });
       })
     );
 
     return sendSuccess(res, 'Job cards retrieved successfully.', jobsWithTasks, 200);
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to fetch job cards.', 500);
+  }
+};
+
+export const toggleTaskPin = async (req: Request, res: Response) => {
+  try {
+    const { taskId } = req.params;
+    const updatedTask = await jobRepository.togglePinTask(taskId);
+    if (!updatedTask) return sendError(res, 'Task not found.', 404);
+
+    const formattedTask = mapTaskImages({
+      ...updatedTask.toObject(),
+      id: updatedTask._id.toString(),
+    });
+
+    emitTaskUpdated(updatedTask.jobCardId.toString(), taskId, formattedTask, 'PIN_TOGGLED');
+
+    return sendSuccess(
+      res,
+      `Task ${formattedTask.isPinned ? 'pinned' : 'unpinned'} successfully.`,
+      formattedTask,
+      200
+    );
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to toggle pin.', 500);
+  }
+};
+
+export const toggleJobPin = async (req: Request, res: Response) => {
+  try {
+    const { jobCardId } = req.params;
+    const { mode } = req.body; // 'ALL' | 'ME'
+    if (!['ALL', 'ME'].includes(mode)) {
+      return sendError(res, 'Invalid pin mode. Must be "ALL" or "ME".', 400);
+    }
+
+    const userId = req.user?.id;
+    if (!userId) return sendError(res, 'Unauthorized', 401);
+
+    const updatedJob = await jobRepository.togglePinJobCard(jobCardId, userId, mode);
+    if (!updatedJob) return sendError(res, 'Job card not found.', 404);
+
+    const tasks = await jobRepository.findTasksByJobCardId(jobCardId);
+    const formattedJob = mapJobCardImages({
+      ...updatedJob.toObject(),
+      id: updatedJob._id.toString(),
+      tasks: tasks.map((t) => mapTaskImages({ ...t.toObject(), id: t._id.toString() })),
+    });
+
+    emitJobUpdated(formattedJob);
+
+    return sendSuccess(
+      res,
+      `Job card pin updated successfully.`,
+      formattedJob,
+      200
+    );
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to toggle job card pin.', 500);
   }
 };
 
@@ -254,30 +331,6 @@ export const setTaskStatus = async (req: Request, res: Response) => {
     );
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to update task status.', 500);
-  }
-};
-
-export const toggleTaskPin = async (req: Request, res: Response) => {
-  try {
-    const { taskId } = req.params;
-    const updatedTask = await jobRepository.togglePinTask(taskId);
-    if (!updatedTask) return sendError(res, 'Task not found.', 404);
-
-    const formattedTask = mapTaskImages({
-      ...updatedTask.toObject(),
-      id: updatedTask._id.toString(),
-    });
-
-    emitTaskUpdated(updatedTask.jobCardId.toString(), taskId, formattedTask, 'PIN_TOGGLED');
-
-    return sendSuccess(
-      res,
-      `Task ${formattedTask.isPinned ? 'pinned' : 'unpinned'} successfully.`,
-      formattedTask,
-      200
-    );
-  } catch (error: any) {
-    return sendError(res, error.message || 'Failed to toggle pin.', 500);
   }
 };
 

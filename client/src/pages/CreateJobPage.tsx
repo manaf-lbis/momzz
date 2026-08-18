@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   ArrowLeft,
   Car,
   Check,
@@ -18,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/navbar/Navbar';
 import { useCreateJobMutation } from '../api/jobApi';
 import { CatalogItem, useGetCatalogQuery, useQuickAddCatalogItemMutation } from '../api/catalogApi';
+import { advancedSearch, findDuplicateCandidates, normalizeSearchText } from '../utils/searchAlgorithm';
 
 type SelectedLine = {
   item: CatalogItem;
@@ -65,15 +67,35 @@ export const CreateJobPage: React.FC = () => {
     ...(itemFilter === 'ALL' ? {} : { itemType: itemFilter }),
   });
 
-  const results = useMemo(
-    () =>
-      (data?.data || []).filter(
-        (item) =>
-          item.isAvailable &&
-          (item.itemType === 'SERVICE' || item.trackStock === false || item.stockQuantity > 0)
-      ),
-    [data]
-  );
+  const results = useMemo(() => {
+    const raw = (data?.data || []).filter(
+      (item) =>
+        item.isAvailable &&
+        (item.itemType === 'SERVICE' || item.trackStock === false || item.stockQuantity > 0)
+    );
+    if (!query.trim()) return raw;
+    return advancedSearch<CatalogItem>(
+      raw,
+      query,
+      {
+        getTitle: (item) => item.title,
+        getSku: (item) => item.sku,
+        getCategory: (item) => item.category?.name,
+        getDescription: (item) => item.description,
+      },
+      140 // Tolerant threshold for instant fuzzy matching
+    );
+  }, [data, query]);
+
+  const nearDuplicates = useMemo(() => {
+    if (!query.trim() || query.trim().length < 2) return [];
+    return findDuplicateCandidates<CatalogItem>(
+      query,
+      data?.data || [],
+      (item) => item.title,
+      0.82
+    );
+  }, [query, data]);
 
   const subtotal = selected.reduce((sum, line) => sum + line.item.price * line.quantityUsed, 0);
   const totalDiscount = selected.reduce((sum, line) => sum + line.discountAmount, 0);
@@ -152,7 +174,7 @@ export const CreateJobPage: React.FC = () => {
 
   const noExactMatch =
     query.trim() &&
-    !results.some((item) => item.title.toLowerCase() === query.trim().toLowerCase());
+    !results.some((item) => normalizeSearchText(item.title) === normalizeSearchText(query));
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
@@ -474,30 +496,71 @@ export const CreateJobPage: React.FC = () => {
                   </button>
                 ))}
 
-                {/* Custom Item Quick Add */}
+                {/* Custom Item Quick Add & Duplicate Guard */}
                 {noExactMatch && (
                   <div className="rounded-xl sm:rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 p-3 sm:p-4 dark:border-amber-500/30 dark:bg-amber-400/5">
-                    <b className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                      Can’t find “{query.trim()}”?
-                    </b>
-                    <p className="mt-0.5 text-[11px] sm:text-xs text-slate-600 dark:text-slate-400">
-                      Add a custom service on the fly; details can be refined later.
-                    </p>
-                    <button
-                      disabled={isQuickAdding}
-                      onClick={async () => {
-                        try {
-                          const response = await quickAdd({ title: query.trim() }).unwrap();
-                          openAddItemModal(response.data);
-                        } catch (err: any) {
-                          setError(err?.data?.message || 'Could not add custom service.');
-                        }
-                      }}
-                      className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg sm:rounded-xl bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-50"
-                    >
-                      <PackagePlus className="h-3.5 w-3.5" />
-                      {isQuickAdding ? 'Adding...' : 'Add Custom Service'}
-                    </button>
+                    {nearDuplicates.length > 0 ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-300">
+                          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+                          <b className="text-xs sm:text-sm font-bold">
+                            Similar item found: “{nearDuplicates[0].item.title}”
+                          </b>
+                        </div>
+                        <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-400">
+                          An item with a very similar name already exists. Avoid creating duplicate items!
+                        </p>
+                        <div className="pt-1 flex items-center gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => openAddItemModal(nearDuplicates[0].item)}
+                            className="inline-flex items-center gap-1.5 rounded-lg sm:rounded-xl bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition active:scale-95"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Select Existing “{nearDuplicates[0].item.title}”
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isQuickAdding}
+                            onClick={async () => {
+                              try {
+                                const response = await quickAdd({ title: query.trim() }).unwrap();
+                                openAddItemModal(response.data);
+                              } catch (err: any) {
+                                setError(err?.data?.message || 'Could not add custom service.');
+                              }
+                            }}
+                            className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline"
+                          >
+                            {isQuickAdding ? 'Adding...' : 'Add as new item anyway'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <b className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                          Can’t find “{query.trim()}”?
+                        </b>
+                        <p className="mt-0.5 text-[11px] sm:text-xs text-slate-600 dark:text-slate-400">
+                          Add a custom service on the fly; details can be refined later.
+                        </p>
+                        <button
+                          disabled={isQuickAdding}
+                          onClick={async () => {
+                            try {
+                              const response = await quickAdd({ title: query.trim() }).unwrap();
+                              openAddItemModal(response.data);
+                            } catch (err: any) {
+                              setError(err?.data?.message || 'Could not add custom service.');
+                            }
+                          }}
+                          className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg sm:rounded-xl bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-50"
+                        >
+                          <PackagePlus className="h-3.5 w-3.5" />
+                          {isQuickAdding ? 'Adding...' : 'Add Custom Service'}
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

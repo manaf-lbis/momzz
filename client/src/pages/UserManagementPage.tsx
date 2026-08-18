@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Navbar } from '../components/navbar/Navbar';
 import { PageShimmer } from '../components/common/PageShimmer';
@@ -8,6 +8,7 @@ import {
   useUpdateUserByAdminMutation,
 } from '../api/authApi';
 import { User } from '../slice/authSlice';
+import { advancedSearch } from '../utils/searchAlgorithm';
 import {
   Circle,
   Clock3,
@@ -69,14 +70,62 @@ export const UserManagementPage: React.FC = () => {
   const [resetSuccess, setResetSuccess] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const users = (data?.data || [])
-    .filter(
-      (user) =>
-        user.name.toLowerCase().includes(search.toLowerCase()) ||
-        user.mobile.includes(search) ||
-        user.role.toLowerCase().includes(search.toLowerCase())
-    )
-    .sort((a, b) => Number(!!b.isOnline) - Number(!!a.isOnline) || a.name.localeCompare(b.name));
+  const getUserLastActiveTimestamp = (u: User): number => {
+    if (u.isOnline) {
+      const seenTime = u.lastSeen ? new Date(u.lastSeen).getTime() : Date.now();
+      return Number.MAX_SAFE_INTEGER - (Date.now() - (isNaN(seenTime) ? Date.now() : seenTime));
+    }
+    if (u.lastSeen) {
+      const t = new Date(u.lastSeen).getTime();
+      if (!isNaN(t)) return t;
+    }
+    if (u.lastLoginAttempt) {
+      const t = new Date(u.lastLoginAttempt).getTime();
+      if (!isNaN(t)) return t;
+    }
+    if (u.updatedAt) {
+      const t = new Date(u.updatedAt).getTime();
+      if (!isNaN(t)) return t;
+    }
+    if (u.createdAt) {
+      const t = new Date(u.createdAt).getTime();
+      if (!isNaN(t)) return t;
+    }
+    return 0;
+  };
+
+  const rawUsers = data?.data || [];
+
+  const filteredUsers = useMemo(() => {
+    if (!search.trim()) return rawUsers;
+    return advancedSearch<User>(
+      rawUsers,
+      search,
+      {
+        getTitle: (u) => u.name,
+        getSku: (u) => u.mobile,
+        getCategory: (u) => u.role,
+      },
+      120
+    );
+  }, [rawUsers, search]);
+
+  const users = useMemo(() => {
+    return [...filteredUsers].sort((a, b) => {
+      // 1. Online users first
+      if (!!b.isOnline !== !!a.isOnline) {
+        return Number(!!b.isOnline) - Number(!!a.isOnline);
+      }
+      // 2. Sort by most recent activity / last online descending
+      const timeA = getUserLastActiveTimestamp(a);
+      const timeB = getUserLastActiveTimestamp(b);
+      if (timeB !== timeA) {
+        return timeB - timeA;
+      }
+      // 3. Alphabetical tie-breaker
+      return a.name.localeCompare(b.name);
+    });
+  }, [filteredUsers]);
 
   const handleSelectUser = (user: User) => {
     setErrorMsg('');

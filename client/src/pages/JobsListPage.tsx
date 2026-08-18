@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useGetJobCardsQuery, JobCardData } from '../api/jobApi';
+import { useGetJobCardsQuery, useToggleJobPinMutation, JobCardData } from '../api/jobApi';
 import { Navbar } from '../components/navbar/Navbar';
+import { PinJobModal } from '../components/jobCard/PinJobModal';
 import {
   ArrowLeft,
   Calendar,
@@ -15,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  Pin,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { PageShimmer } from '../components/common/PageShimmer';
@@ -40,8 +42,92 @@ export const JobsListPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [accumulatedJobs, setAccumulatedJobs] = useState<JobCardData[]>([]);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [selectedPinJob, setSelectedPinJob] = useState<JobCardData | null>(null);
+  const [pinningJobMode, setPinningJobMode] = useState<'ALL' | 'ME' | null>(null);
+  // Optimistic pin overrides: map of jobId -> { isPinnedForAll?, pinnedByMe? }
+  const [optimisticPins, setOptimisticPins] = useState<Record<string, { isPinnedForAll: boolean; pinnedByMe: boolean }>>({});
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const { user } = useAuth();
+  const currentUserId = user?.id || (user as any)?._id;
+  const [toggleJobPin] = useToggleJobPinMutation();
+
+  const isJobPinnedForMe = (job: JobCardData) => {
+    if (!currentUserId) return false;
+    const opt = optimisticPins[job.id || job._id!];
+    if (opt !== undefined) return opt.pinnedByMe;
+    return (
+      Array.isArray(job.pinnedBy) &&
+      job.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === currentUserId)
+    );
+  };
+
+  const isJobPinnedForAll = (job: JobCardData) => {
+    const opt = optimisticPins[job.id || job._id!];
+    if (opt !== undefined) return opt.isPinnedForAll;
+    return !!job.isPinnedForAll;
+  };
+
+  const isJobPinned = (job: JobCardData) => isJobPinnedForAll(job) || isJobPinnedForMe(job);
+
+  // Optimistic-first toggle — used for both modal pin and direct unpin
+  const handleToggleJobPin = async (jobCardId: string, mode: 'ALL' | 'ME', closeModal?: () => void) => {
+    const job = [...accumulatedJobs, ...rawJobs].find(j => (j.id || j._id) === jobCardId);
+    if (!job) return;
+
+    const curPinnedForAll = isJobPinnedForAll(job);
+    const curPinnedForMe = isJobPinnedForMe(job);
+
+    // Apply optimistic state immediately
+    setOptimisticPins(prev => ({
+      ...prev,
+      [jobCardId]: {
+        isPinnedForAll: mode === 'ALL' ? !curPinnedForAll : curPinnedForAll,
+        pinnedByMe: mode === 'ME' ? !curPinnedForMe : curPinnedForMe,
+      },
+    }));
+
+    setPinningJobMode(mode);
+    if (closeModal) closeModal();
+
+    try {
+      await toggleJobPin({ jobCardId, mode }).unwrap();
+    } catch (err: any) {
+      // Roll back optimistic state on error
+      setOptimisticPins(prev => {
+        const next = { ...prev };
+        delete next[jobCardId];
+        return next;
+      });
+      console.error('Failed to toggle pin:', err);
+    } finally {
+      setPinningJobMode(null);
+      // Clear optimistic override once server responds (RTK Query cache updates)
+      setTimeout(() => {
+        setOptimisticPins(prev => {
+          const next = { ...prev };
+          delete next[jobCardId];
+          return next;
+        });
+      }, 1500);
+    }
+  };
+
+  // Smart pin button handler:
+  // - If already pinned → directly unpin (no modal)
+  // - If not pinned → open modal to choose pin mode
+  const handlePinButtonClick = (e: React.MouseEvent, job: JobCardData) => {
+    e.stopPropagation();
+    const jobId = job.id || job._id!;
+    if (isJobPinned(job)) {
+      // Determine which mode to unpin
+      const mode: 'ALL' | 'ME' = isJobPinnedForAll(job) ? 'ALL' : 'ME';
+      handleToggleJobPin(jobId, mode);
+    } else {
+      setSelectedPinJob(job);
+    }
+  };
 
   const { data: jobsResponse, isLoading, isError, refetch } = useGetJobCardsQuery({
     page,
@@ -128,11 +214,16 @@ export const JobsListPage: React.FC = () => {
         job.vehicleNumber.toLowerCase().includes(q)
       );
     })
-    .sort((a, b) =>
-      jobsView === 'MY_JOBS'
+    .sort((a, b) => {
+      const aPinned = isJobPinned(a);
+      const bPinned = isJobPinned(b);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+
+      return jobsView === 'MY_JOBS'
         ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+        : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
   const myJobsCount = displayJobs.filter((j) => j.tasks?.some((t) => t.status === 'OPEN')).length;
   const pendingCount = displayJobs.filter(
@@ -269,6 +360,9 @@ export const JobsListPage: React.FC = () => {
                 const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
                 const isReady = totalTasks > 0 && completedTasks === totalTasks;
                 const durationStr = getGarageDuration(job.createdAt);
+                const pinnedForAll = isJobPinnedForAll(job);
+                const pinnedForMe = isJobPinnedForMe(job);
+                const isPinned = pinnedForAll || pinnedForMe;
 
                 return (
                   <motion.div
@@ -280,45 +374,82 @@ export const JobsListPage: React.FC = () => {
                     whileHover={{ y: -2, scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate(`/jobs/${job.id || job._id}`)}
-                    className={`bg-white dark:bg-zinc-900 border rounded-2xl p-4 cursor-pointer flex flex-col gap-3 shadow-sm transition-colors ${
-                      isReady
+                    className={`bg-white dark:bg-zinc-900 border rounded-2xl p-4 cursor-pointer flex flex-col gap-3 shadow-sm transition-all ${
+                      pinnedForAll
+                        ? 'border-amber-400/90 dark:border-amber-500/80 ring-1.5 ring-amber-400/30 bg-amber-50/20 dark:bg-amber-950/10'
+                        : pinnedForMe
+                        ? 'border-blue-400/90 dark:border-blue-500/80 ring-1.5 ring-blue-400/30 bg-blue-50/20 dark:bg-blue-950/10'
+                        : isReady
                         ? 'border-emerald-400/50 dark:border-emerald-500/40'
                         : 'border-zinc-200 dark:border-zinc-800 hover:border-amber-400/50 dark:hover:border-amber-500/40'
                     }`}
                   >
-                    {/* Card Top: Vehicle & Status */}
+                    {/* Card Top: Vehicle, Badges, Status & Pin */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1.5">
-                          <Car className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                          <span className="truncate">{job.vehicleName}</span>
-                          {job.vehicleColor && (
-                            <span className="text-amber-600 dark:text-amber-400 font-bold text-[11px] shrink-0">
-                              · {job.vehicleColor}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1.5">
+                            <Car className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span className="truncate">{job.vehicleName}</span>
+                            {job.vehicleColor && (
+                              <span className="text-amber-600 dark:text-amber-400 font-bold text-[11px] shrink-0">
+                                · {job.vehicleColor}
+                              </span>
+                            )}
+                          </h3>
+
+                          {/* Pin Status Badges */}
+                          {pinnedForAll && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-400 text-zinc-950 font-mono font-black text-[9px] uppercase tracking-wider shrink-0 shadow-2xs">
+                              <Pin className="w-2.5 h-2.5 fill-zinc-950" />
+                              Pinned for All
                             </span>
                           )}
-                        </h3>
+                          {!pinnedForAll && pinnedForMe && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-500 text-white font-mono font-black text-[9px] uppercase tracking-wider shrink-0 shadow-2xs">
+                              <Pin className="w-2.5 h-2.5 fill-white" />
+                              Pinned for You
+                            </span>
+                          )}
+                        </div>
+
                         <span className="mt-1 inline-block text-[11px] font-mono font-bold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded-lg">
                           {job.vehicleNumber}
                         </span>
                       </div>
 
-                      {isReady ? (
-                        <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-full text-[10px] font-black uppercase">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Ready
-                        </span>
-                      ) : (
-                        <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-full text-[10px] font-black uppercase">
-                          <motion.div
-                            animate={{ scale: [1, 1.2, 1] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
-                          >
-                            <Clock className="w-3 h-3" />
-                          </motion.div>
-                          Active
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Pin Button on Card */}
+                        <button
+                          type="button"
+                          onClick={(e) => handlePinButtonClick(e, job)}
+                          className={`p-1.5 rounded-lg border transition-all active:scale-95 ${
+                            isPinned
+                              ? 'bg-amber-400 text-zinc-950 border-amber-400 shadow-xs'
+                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-amber-500 hover:border-amber-400/50 border-zinc-200 dark:border-zinc-700'
+                          }`}
+                          title={isPinned ? 'Tap to unpin' : 'Pin Job Card'}
+                        >
+                          <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-zinc-950' : ''}`} />
+                        </button>
+
+                        {isReady ? (
+                          <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-full text-[10px] font-black uppercase">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Ready
+                          </span>
+                        ) : (
+                          <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-full text-[10px] font-black uppercase">
+                            <motion.div
+                              animate={{ scale: [1, 1.2, 1] }}
+                              transition={{ repeat: Infinity, duration: 2 }}
+                            >
+                              <Clock className="w-3 h-3" />
+                            </motion.div>
+                            Active
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Progress bar */}
@@ -404,6 +535,19 @@ export const JobsListPage: React.FC = () => {
             )}
           </>
         )}
+
+        {/* Pin Job Card Modal — auto-closes after pinning via closeModal callback */}
+        <PinJobModal
+          isOpen={selectedPinJob !== null}
+          onClose={() => setSelectedPinJob(null)}
+          job={selectedPinJob}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          onTogglePin={(jobCardId, mode) =>
+            handleToggleJobPin(jobCardId, mode, () => setSelectedPinJob(null))
+          }
+          isPinningMode={pinningJobMode}
+        />
       </main>
     </div>
   );
