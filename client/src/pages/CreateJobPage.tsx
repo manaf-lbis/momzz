@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -14,12 +14,16 @@ import {
   UserRound,
   Wrench,
   X,
+  Camera,
+  ImagePlus,
+  Upload,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/navbar/Navbar';
 import { useCreateJobMutation } from '../api/jobApi';
 import { CatalogItem, useGetCatalogQuery, useQuickAddCatalogItemMutation } from '../api/catalogApi';
 import { advancedSearch, findDuplicateCandidates, normalizeSearchText } from '../utils/searchAlgorithm';
+import { ImageCropperModal } from '../components/common/ImageCropperModal';
 
 type SelectedLine = {
   item: CatalogItem;
@@ -49,6 +53,24 @@ export const CreateJobPage: React.FC = () => {
   const [vehicleName, setVehicleName] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [vehicleColor, setVehicleColor] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const camInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSelectPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result as string);
+      setIsCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -160,6 +182,7 @@ export const CreateJobPage: React.FC = () => {
         customerName: customerName.trim() || undefined,
         customerMobile: customerMobile.trim() || undefined,
         customerEmail: customerEmail.trim() || undefined,
+        thumbnailUrl: thumbnailUrl || undefined,
         tasks: selected.map((line) => ({
           itemId: line.item.id,
           quantityUsed: line.quantityUsed,
@@ -306,6 +329,76 @@ export const CreateJobPage: React.FC = () => {
                       onChange={(e) => setVehicleColor(e.target.value)}
                       placeholder="e.g. Pearl White, BS6 Diesel"
                     />
+                  </div>
+
+                  {/* Optional Vehicle Photo */}
+                  <div className="pt-1">
+                    <label className="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
+                      Vehicle Photo <span className="font-normal text-slate-400">(optional)</span>
+                    </label>
+
+                    {/* Hidden inputs */}
+                    <input
+                      ref={camInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={handleSelectPhoto}
+                    />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={handleSelectPhoto}
+                    />
+
+                    {thumbnailUrl ? (
+                      <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 aspect-[21/9] bg-slate-950 group">
+                        <img
+                          src={thumbnailUrl}
+                          alt="Vehicle preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="px-3 py-1.5 rounded-xl bg-amber-400 text-slate-950 font-bold text-xs uppercase shadow-sm"
+                          >
+                            Change
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setThumbnailUrl(null)}
+                            className="p-1.5 rounded-xl bg-red-500 text-white font-bold text-xs shadow-sm hover:bg-red-600"
+                            title="Remove photo"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => camInputRef.current?.click()}
+                          className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:border-amber-400 text-slate-700 dark:text-slate-200 font-bold text-xs transition active:scale-95"
+                        >
+                          <Camera className="w-4 h-4 text-amber-500" />
+                          <span>Take Photo</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:border-amber-400 text-slate-700 dark:text-slate-200 font-bold text-xs transition active:scale-95"
+                        >
+                          <Upload className="w-4 h-4 text-amber-500" />
+                          <span>Upload File</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -781,6 +874,25 @@ export const CreateJobPage: React.FC = () => {
             </button>
           </section>
         </div>
+      )}
+
+      {/* Vehicle Photo Cropper Modal */}
+      {cropImageSrc && (
+        <ImageCropperModal
+          isOpen={isCropperOpen}
+          imageSrc={cropImageSrc}
+          aspectRatio={21 / 9}
+          title="Crop Vehicle Photo (16:9 / 21:9)"
+          onClose={() => {
+            setIsCropperOpen(false);
+            setCropImageSrc(null);
+          }}
+          onCropComplete={(croppedBase64) => {
+            setThumbnailUrl(croppedBase64);
+            setIsCropperOpen(false);
+            setCropImageSrc(null);
+          }}
+        />
       )}
     </div>
   );

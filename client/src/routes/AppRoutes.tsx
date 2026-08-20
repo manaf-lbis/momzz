@@ -22,6 +22,7 @@ const EditJobPage = lazy(() => import('../pages/EditJobPage').then((m) => ({ def
 const InventoryPage = lazy(() => import('../pages/InventoryPage').then((m) => ({ default: m.InventoryPage })));
 const InventoryDetailPage = lazy(() => import('../pages/InventoryDetailPage').then((m) => ({ default: m.InventoryDetailPage })));
 const AddInventoryItemPage = lazy(() => import('../pages/AddInventoryItemPage').then((m) => ({ default: m.AddInventoryItemPage })));
+const VehiclePhotoPage = lazy(() => import('../pages/VehiclePhotoPage').then((m) => ({ default: m.VehiclePhotoPage })));
 const TrackServicePage = lazy(() => import('../pages/TrackServicePage').then((m) => ({ default: m.TrackServicePage })));
 const SalesPage = lazy(() => import('../pages/SalesPage').then((m) => ({ default: m.SalesPage })));
 
@@ -52,6 +53,8 @@ export const AppRoutes: React.FC = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/jobs" element={<JobsListPage />} />
         <Route path="/jobs/:id" element={<JobDetailPage />} />
+        <Route path="/jobs/:id/photo" element={<VehiclePhotoPage />} />
+        <Route path="/jobs/:id/capture" element={<VehiclePhotoPage />} />
         <Route path="/analytics" element={<LeaderboardPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/top-performers" element={<LeaderboardPage />} />

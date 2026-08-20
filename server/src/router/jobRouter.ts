@@ -9,6 +9,7 @@ import {
   deleteJobCard,
   updateJobCard,
   verifyJobCard,
+  uploadJobImage,
   toggleTaskPin,
   toggleJobPin,
 } from '../controller/jobController';
@@ -25,6 +26,7 @@ router.patch('/tasks/:taskId/status', setTaskStatus);
 router.patch('/tasks/:taskId/pin', toggleTaskPin);
 router.patch('/:jobCardId/pin', toggleJobPin);
 router.patch('/:jobCardId/verify', verifyJobCard);
+router.patch('/:jobCardId/image', uploadJobImage);
 router.patch('/:jobCardId', adminMiddleware, updateJobCard);
 router.post('/:jobCardId/tasks', adminMiddleware, addTaskToJob);
 router.post('/:jobCardId/inventory-tasks', adminMiddleware, addInventoryTaskToJob);

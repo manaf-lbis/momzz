@@ -11,6 +11,7 @@ export class JobRepository {
     customerName?: string;
     customerMobile?: string;
     customerEmail?: string;
+    thumbnailUrl?: string;
     createdBy: string;
   }): Promise<IJobCard> {
     return await JobCard.create(data);
@@ -105,6 +106,16 @@ export class JobRepository {
 
   async findJobById(jobCardId: string): Promise<IJobCard | null> {
     return await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } })
+      .populate('verifiedBy', 'name mobile role')
+      .populate('createdBy', 'name mobile role profileImageUrl');
+  }
+
+  async updateJobThumbnail(jobCardId: string, publicId: string): Promise<IJobCard | null> {
+    return await JobCard.findByIdAndUpdate(
+      jobCardId,
+      { thumbnailUrl: publicId },
+      { new: true }
+    )
       .populate('verifiedBy', 'name mobile role')
       .populate('createdBy', 'name mobile role profileImageUrl');
   }

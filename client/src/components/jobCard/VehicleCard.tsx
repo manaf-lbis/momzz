@@ -110,24 +110,45 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
   };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 sm:p-5 shadow-2xl transition-all space-y-4 relative overflow-hidden">
-      {/* Visual Accent Top Bar */}
-      <div className={`absolute top-0 left-0 right-0 h-1.5 ${isReady ? 'bg-emerald-500' : 'bg-yellow-400'}`}></div>
+    <div className="relative bg-[#0b132b] border border-zinc-800 hover:border-zinc-700 rounded-2xl p-4 sm:p-5 shadow-2xl transition-all space-y-4 overflow-hidden">
+      {/* Background Image with Dark Smooth Gradient Overlay */}
+      {job.thumbnailUrl ? (
+        <>
+          <img
+            src={job.thumbnailUrl}
+            alt={job.vehicleName}
+            className="absolute inset-0 w-full h-full object-cover object-center z-0"
+          />
+          {/* Horizontal Dark Gradient Overlay on Left for 100% Text Readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#070d1e]/95 via-[#070d1e]/85 to-[#070d1e]/20 z-0" />
+          {/* Subtle Vertical Vignette Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#070d1e]/95 via-transparent to-black/40 z-0" />
+        </>
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-br from-[#121c33] via-[#0d1629] to-[#070d1e] z-0" />
+        </>
+      )}
 
-      {/* Header: Vehicle Name & Status Tag */}
-      <div className="flex items-start justify-between gap-3 pt-1">
-        <div className="space-y-1 min-w-0 flex-1 cursor-pointer" onClick={() => compact && setIsExpanded(!isExpanded)}>
-          <div className="flex items-center gap-2">
-            <Car className="w-5 h-5 text-yellow-400 shrink-0" />
-            <h3 className="text-lg sm:text-xl font-extrabold tracking-tight text-zinc-100 uppercase truncate">
-              {job.vehicleName}{!isAdmin && job.vehicleColor ? ` ${job.vehicleColor}` : ''}
-            </h3>
-            {compact && (
-              <span className="text-zinc-400 hover:text-yellow-400">
-                {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-              </span>
-            )}
-          </div>
+      {/* Visual Accent Top Bar */}
+      <div className={`absolute top-0 left-0 right-0 h-1.5 z-10 ${isReady ? 'bg-emerald-500' : 'bg-yellow-400'}`}></div>
+
+      {/* Content wrapper */}
+      <div className="relative z-10 space-y-4">
+        {/* Header: Vehicle Name & Status Tag */}
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="space-y-1 min-w-0 flex-1 cursor-pointer" onClick={() => compact && setIsExpanded(!isExpanded)}>
+            <div className="flex items-center gap-2">
+              <Car className="w-5 h-5 text-yellow-400 shrink-0" />
+              <h3 className="text-lg sm:text-xl font-extrabold tracking-tight text-white uppercase truncate">
+                {job.vehicleName}{!isAdmin && job.vehicleColor ? ` ${job.vehicleColor}` : ''}
+              </h3>
+              {compact && (
+                <span className="text-zinc-400 hover:text-yellow-400">
+                  {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                </span>
+              )}
+            </div>
           <p className="text-xs font-mono text-zinc-400 font-bold bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800 inline-block">
             {job.vehicleNumber}{!isAdmin && job.customerMobile ? ` • ${job.customerMobile}` : ''}
           </p>
@@ -296,6 +317,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
           </div>
         </div>
       )}
+    </div>
 
       {/* Reopen Confirmation Modal */}
       <ConfirmationModal

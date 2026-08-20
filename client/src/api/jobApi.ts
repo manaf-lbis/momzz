@@ -53,6 +53,7 @@ export interface JobCardData {
   customerName?: string;
   customerMobile?: string;
   customerEmail?: string;
+  thumbnailUrl?: string;
   status: 'IN_PROGRESS' | 'COMPLETED';
   createdBy?: {
     id?: string;
@@ -78,6 +79,7 @@ export interface CreateJobRequest {
   customerName?: string;
   customerMobile?: string;
   customerEmail?: string;
+  thumbnailUrl?: string;
   tasks: Array<string | { itemId: string; quantityUsed: number; discountAmount?: number }>;
 }
 
@@ -205,6 +207,17 @@ export const jobApi = apiSlice.injectEndpoints({
       query: ({ jobCardId }) => ({ url: `/jobs/${jobCardId}/verify`, method: 'PATCH' }),
       invalidatesTags: ['JobCard'],
     }),
+    uploadJobImage: builder.mutation<
+      { success: boolean; data: JobCardData },
+      { jobCardId: string; image: string }
+    >({
+      query: ({ jobCardId, image }) => ({
+        url: `/jobs/${jobCardId}/image`,
+        method: 'PATCH',
+        body: { image },
+      }),
+      invalidatesTags: ['JobCard'],
+    }),
   }),
 });
 
@@ -220,4 +233,6 @@ export const {
   useToggleTaskPinMutation,
   useToggleJobPinMutation,
   useVerifyJobCardMutation,
+  useUploadJobImageMutation,
 } = jobApi;
+
