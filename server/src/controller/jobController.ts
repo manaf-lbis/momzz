@@ -9,13 +9,16 @@ import {
   emitTaskUpdated,
   emitTaskDeleted,
 } from '../config/socket';
-import { getCloudinaryUrl } from '../utils/cloudinaryHelper';
+import { getCloudinaryUrl, uploadToCloudinary, extractPublicId } from '../utils/cloudinaryHelper';
 
 /**
  * Maps all populated image fields in a job card object through getCloudinaryUrl().
  */
 const mapJobCardImages = (jobObj: any) => {
   if (!jobObj) return jobObj;
+  if (jobObj.thumbnailUrl) {
+    jobObj.thumbnailUrl = getCloudinaryUrl(jobObj.thumbnailUrl);
+  }
   if (jobObj.createdBy?.profileImageUrl) {
     jobObj.createdBy.profileImageUrl = getCloudinaryUrl(jobObj.createdBy.profileImageUrl);
   }
@@ -56,10 +59,20 @@ const mapTaskImages = (taskObj: any) => {
 
 export const createJobWithTasks = async (req: Request, res: Response) => {
   try {
-    const { vehicleName, vehicleNumber, vehicleColor, customerName, customerMobile, customerEmail, tasks } = req.body;
+    const { vehicleName, vehicleNumber, vehicleColor, customerName, customerMobile, customerEmail, thumbnailUrl, tasks } = req.body;
 
     if (!vehicleName || !vehicleNumber || !Array.isArray(tasks) || tasks.length === 0) {
       return sendError(res, 'Vehicle Name, Vehicle Number, and at least one Task are required.', 400);
+    }
+
+    let photoPublicId = undefined;
+    if (thumbnailUrl && typeof thumbnailUrl === 'string' && thumbnailUrl.trim()) {
+      if (thumbnailUrl.startsWith('data:image')) {
+        const { publicId } = await uploadToCloudinary(thumbnailUrl, 'momzz/vehicles');
+        photoPublicId = publicId;
+      } else {
+        photoPublicId = extractPublicId(thumbnailUrl);
+      }
     }
 
     const newJob = await jobRepository.createJobCard({
@@ -69,6 +82,7 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
       customerName: customerName?.trim() || undefined,
       customerMobile: customerMobile?.trim() || undefined,
       customerEmail: customerEmail?.trim() || undefined,
+      thumbnailUrl: photoPublicId,
       createdBy: req.user?.id!,
     });
 
@@ -126,6 +140,35 @@ export const updateJobCard = async (req: Request, res: Response) => {
     return sendSuccess(res, 'Job card updated successfully.', formatted);
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to update job card.', 500);
+  }
+};
+
+export const uploadJobImage = async (req: Request, res: Response) => {
+  try {
+    const { jobCardId } = req.params;
+    const { image } = req.body;
+
+    if (!jobCardId || !image) {
+      return sendError(res, 'Job card ID and image data are required.', 400);
+    }
+
+    const { publicId } = await uploadToCloudinary(image, 'momzz/vehicles');
+    const updatedJob = await jobRepository.updateJobThumbnail(jobCardId, publicId);
+    if (!updatedJob) {
+      return sendError(res, 'Job card not found.', 404);
+    }
+
+    const tasks = await jobRepository.findTasksByJobCardId(jobCardId);
+    const formatted = mapJobCardImages({
+      ...updatedJob.toObject(),
+      id: updatedJob._id.toString(),
+      tasks: tasks.map(mapTaskImages),
+    });
+
+    emitJobUpdated(formatted);
+    return sendSuccess(res, 'Vehicle photo updated successfully.', formatted);
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to upload vehicle photo.', 500);
   }
 };
 

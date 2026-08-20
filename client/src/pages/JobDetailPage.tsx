@@ -19,6 +19,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
 import { ConfirmationModal } from '../components/common/ConfirmationModal';
 import { PinJobModal } from '../components/jobCard/PinJobModal';
+import { VehiclePhotoModal } from '../components/jobCard/VehiclePhotoModal';
 import { TaskAutoComplete } from '../components/common/TaskAutoComplete';
 import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../utils/confetti';
 import { playCompletionSound, playReopenSound } from '../utils/completionSound';
@@ -46,6 +47,7 @@ import {
   User as UserIcon,
   Pin,
   ChevronDown,
+  Camera,
 } from 'lucide-react';
 
 type TaskFilterType = 'ALL' | 'PENDING' | 'COMPLETED';
@@ -99,6 +101,7 @@ export const JobDetailPage: React.FC = () => {
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [isExpandedHeader, setIsExpandedHeader] = useState(false);
   const [isPinJobModalOpen, setIsPinJobModalOpen] = useState(false);
+  const [isVehiclePhotoModalOpen, setIsVehiclePhotoModalOpen] = useState(false);
   const [pinningJobMode, setPinningJobMode] = useState<'ALL' | 'ME' | null>(null);
   const [optimisticPins, setOptimisticPins] = useState<Record<string, boolean>>({});
   const [pinningTaskIds, setPinningTaskIds] = useState<Record<string, boolean>>({});
@@ -122,7 +125,7 @@ export const JobDetailPage: React.FC = () => {
   const [deleteJobCard] = useDeleteJobCardMutation();
   const [updateJob, { isLoading: isUpdatingDetails }] = useUpdateJobMutation();
   const [toggleTaskPin] = useToggleTaskPinMutation();
-  const [toggleJobPin] = useToggleJobPinMutation();
+  const [toggleJobPin, { isLoading: isTogglingJobPin }] = useToggleJobPinMutation();
   const [verifyJobCard, { isLoading: isVerifying }] = useVerifyJobCardMutation();
 
   // Handle flat vs paginated response shape
@@ -232,9 +235,11 @@ export const JobDetailPage: React.FC = () => {
   });
 
   const handleToggleJobPin = async (jobCardId: string, mode: 'ALL' | 'ME') => {
+    // Optimistic: immediately show loading mode & close modal after small delay
+    setPinningJobMode(mode);
     try {
-      setPinningJobMode(mode);
       await toggleJobPin({ jobCardId, mode }).unwrap();
+      setIsPinJobModalOpen(false); // auto-close on success
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Failed to update job card pin.');
     } finally {
@@ -392,252 +397,259 @@ export const JobDetailPage: React.FC = () => {
       <Navbar />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
-        {/* ── COMPACT EXPANDABLE VEHICLE HEADER ── */}
+        {/* ── ULTRA-MODERN VEHICLE HERO HEADER ── */}
         <motion.section
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden transition-all"
+          className="relative overflow-hidden rounded-3xl border border-zinc-800/80 shadow-2xl bg-[#060b17] min-h-[220px] sm:min-h-[250px] flex flex-col justify-between p-4 sm:p-5 select-none"
         >
-          {/* Main Compact Summary Row */}
-          <div
-            onClick={() => setIsExpandedHeader((prev) => !prev)}
-            className="p-4 sm:p-5 flex items-center justify-between gap-3.5 cursor-pointer select-none hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
-          >
-            {/* Left: Vehicle Title, Registration Plate, Color Pill & Pin Badges */}
-            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          {/* Background Vehicle Image with Clean Left-to-Right Medium Gradient Overlay (Matching Screenshot) */}
+          {currentJob.thumbnailUrl ? (
+            <>
+              <img
+                src={currentJob.thumbnailUrl}
+                alt={currentJob.vehicleName}
+                className="absolute inset-0 w-full h-full object-cover object-center z-0 scale-[1.01]"
+              />
+              {/* Clean left-to-right medium gradient tone */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0b1328] via-[#0b1328]/80 via-42% to-transparent z-0" />
+              {/* Subtle top/bottom soft vignette to ground buttons & corners */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1328]/60 via-transparent to-black/25 z-0" />
+            </>
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-br from-[#101b33] via-[#0b1324] to-[#060b17] z-0" />
+              <div className="absolute right-4 bottom-2 opacity-5 pointer-events-none z-0">
+                <Car className="w-52 h-52 text-white" />
+              </div>
+            </>
+          )}
+
+          {/* Top Row: Back Arrow Button (Left) + Pinned / Edit Photo / In Work Badges (Right) */}
+          <div className="relative z-10 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/jobs')}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-black/70 hover:bg-black/90 border border-white/15 text-white flex items-center justify-center backdrop-blur-md transition active:scale-95 shadow-md shrink-0"
+              title="Back to Jobs List"
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+
+            {/* Right Action Badges & Buttons */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
+              {/* Pinned Pill Button */}
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate('/jobs');
-                }}
-                className="p-1.5 -ml-1 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0"
-                title="Back to Jobs"
+                onClick={() => setIsPinJobModalOpen(true)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md transition active:scale-95 border ${
+                  currentJob.isPinnedForAll ||
+                  (Array.isArray(currentJob.pinnedBy) &&
+                    currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
+                    ? 'bg-amber-400 text-zinc-950 border-amber-400 shadow-md shadow-amber-400/25 ring-1 ring-amber-400'
+                    : 'bg-black/60 text-amber-300 border-amber-400/40 hover:bg-black/80'
+                }`}
+                title="Pin Job Card (Workshop or Personal)"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <Pin className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${
+                  currentJob.isPinnedForAll ||
+                  (Array.isArray(currentJob.pinnedBy) &&
+                    currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
+                    ? 'fill-zinc-950 stroke-[2.5]'
+                    : 'fill-amber-300 stroke-[2.5]'
+                }`} />
+                <span>
+                  {currentJob.isPinnedForAll
+                    ? 'PINNED'
+                    : Array.isArray(currentJob.pinnedBy) &&
+                      currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id))
+                    ? 'PINNED'
+                    : 'PIN'}
+                </span>
               </button>
 
-              <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
-                <h1 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight truncate">
-                  {currentJob.vehicleName}
-                </h1>
+              {/* EDIT PHOTO Glowing Amber Button */}
+              <button
+                type="button"
+                onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
+                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-[11px] sm:text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition active:scale-95 shrink-0"
+                title="Edit Vehicle Photo in Studio"
+              >
+                <Camera className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
+                <span>EDIT PHOTO</span>
+              </button>
 
-                {/* Registration Number */}
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-slate-900 text-amber-400 dark:bg-white dark:text-slate-950 font-mono font-black text-xs uppercase tracking-wider shrink-0 shadow-2xs">
+              {/* IN WORK / READY Status Badge */}
+              {isAllCompleted ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md shadow-xs shrink-0">
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
+                  READY
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/50 font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md shadow-xs shrink-0">
+                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
+                  IN WORK
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom Info: Vehicle Name, Plate, Color, Garage Duration & Icon-only Expand Toggle */}
+          <div className="relative z-10 space-y-2.5 pt-4">
+            {/* Title Row: SWIFT + Edit Pencil */}
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                {currentJob.vehicleName}
+              </h1>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
+                  className="p-1.5 rounded-xl bg-black/60 hover:bg-black/80 border border-white/15 text-zinc-300 hover:text-white transition active:scale-95 backdrop-blur-md shadow-sm"
+                  title="Edit Job Card"
+                >
+                  <Edit2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+              )}
+            </div>
+
+            {/* Sub Row: Plate Pill, Color Pill, Garage Time & Icon-only Expand/Collapse Button */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Plate Badge */}
+                <span className="inline-block text-xs font-mono font-black text-white bg-black/90 border border-white/15 px-2.5 py-1 rounded-xl backdrop-blur-md shadow-md">
                   {currentJob.vehicleNumber}
                 </span>
 
-                {/* Color Pill */}
+                {/* Color Badge */}
                 {currentJob.vehicleColor && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 shrink-0">
-                    <Palette className="w-3 h-3 text-amber-500" />
+                  <span className="inline-flex items-center gap-1.5 bg-black/70 border border-white/15 text-zinc-200 font-mono text-xs px-2.5 py-1 rounded-xl backdrop-blur-md shadow-sm">
+                    <Palette className="w-3.5 h-3.5 text-amber-400" />
                     {currentJob.vehicleColor}
                   </span>
                 )}
 
-                {/* Pin Badges */}
-                {currentJob.isPinnedForAll && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-400 text-slate-950 font-mono font-black text-[10px] uppercase tracking-wider shrink-0 shadow-2xs">
-                    <Pin className="w-3 h-3 fill-slate-950" />
-                    Pinned for All
-                  </span>
-                )}
-                {!currentJob.isPinnedForAll &&
-                  Array.isArray(currentJob.pinnedBy) &&
-                  currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)) && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-500 text-white font-mono font-black text-[10px] uppercase tracking-wider shrink-0 shadow-2xs">
-                      <Pin className="w-3 h-3 fill-white" />
-                      Pinned for You
-                    </span>
-                  )}
+                {/* Garage Time */}
+                <span className="text-xs font-mono text-zinc-200 font-bold flex items-center gap-1 pl-0.5 drop-shadow-sm">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  {getGarageDuration()}
+                </span>
               </div>
-            </div>
 
-            {/* Right: Pin Job Button, Pencil Edit Icon & Expand Down Arrow */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* Pin Job Card Button */}
+              {/* Icon-Only Expand/Collapse Toggle Button */}
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsPinJobModalOpen(true);
-                }}
-                className={`p-2 rounded-xl transition-all active:scale-95 shadow-2xs border ${
-                  currentJob.isPinnedForAll ||
-                  (Array.isArray(currentJob.pinnedBy) &&
-                    currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
-                    ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-amber-400/20'
-                    : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:text-amber-500'
+                onClick={() => setIsExpandedHeader((prev) => !prev)}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 border shadow-md backdrop-blur-md ${
+                  isExpandedHeader
+                    ? 'bg-amber-400 text-zinc-950 border-amber-400'
+                    : 'bg-black/70 hover:bg-black/90 text-zinc-200 hover:text-white border-white/15'
                 }`}
-                title="Pin Job Card (Workshop or Personal)"
+                title={isExpandedHeader ? 'Collapse Creator & Customer Details' : 'Expand Creator & Customer Details'}
               >
-                <Pin className={`w-4 h-4 ${
-                  currentJob.isPinnedForAll ||
-                  (Array.isArray(currentJob.pinnedBy) &&
-                    currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
-                    ? 'fill-slate-950'
-                    : ''
-                }`} />
-              </button>
-
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/jobs/edit/${currentJob.id || currentJob._id}`);
-                  }}
-                  className="p-2 rounded-xl text-amber-700 bg-amber-500/10 hover:bg-amber-500/20 dark:text-amber-300 dark:bg-amber-400/15 dark:hover:bg-amber-400/25 border border-amber-500/30 transition active:scale-95 shadow-2xs"
-                  title="Edit Job Card"
-                >
-                  <Edit2 className="w-4 h-4 stroke-[2.5]" />
-                </button>
-              )}
-
-              <div className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">
                 <ChevronDown
-                  className={`w-5 h-5 transition-transform duration-200 ${
-                    isExpandedHeader ? 'rotate-180 text-amber-500' : ''
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    isExpandedHeader ? 'rotate-180 text-zinc-950' : 'text-zinc-200'
                   }`}
                 />
-              </div>
+              </button>
             </div>
-          </div>
 
-          {/* Expanded Drawer: Vehicle Details, Created By, Customer Info, Time & Date */}
-          <AnimatePresence>
-            {isExpandedHeader && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.22 }}
-                className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 px-4 sm:px-5 py-4 space-y-3.5"
-              >
-                {/* Meta details strip */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                  {/* Status */}
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Status</span>
-                    <span className="font-bold text-slate-900 dark:text-white mt-0.5 block">
-                      {isAllCompleted ? 'Ready for Delivery' : 'In Work'}
-                    </span>
-                  </div>
-
-                  {/* Duration */}
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Garage Time</span>
-                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400 mt-0.5 block">
-                      {getGarageDuration()}
-                    </span>
-                  </div>
-
-                  {/* Created Date */}
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Check-in Date</span>
-                    <span className="font-mono text-slate-700 dark:text-slate-300 mt-0.5 block">
-                      {new Date(currentJob.createdAt).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </span>
-                  </div>
-
-                  {/* Check-in Time */}
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Check-in Time</span>
-                    <span className="font-mono text-slate-700 dark:text-slate-300 mt-0.5 block">
-                      {new Date(currentJob.createdAt).toLocaleTimeString(undefined, {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Who Created the Job Card */}
-                <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 shadow-2xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-9 h-9 rounded-full overflow-hidden bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-xs font-black text-amber-700 dark:text-amber-300 shrink-0 shadow-2xs">
-                      {currentJob.createdBy?.profileImageUrl ? (
-                        <img src={currentJob.createdBy.profileImageUrl} alt={currentJob.createdBy.name} className="w-full h-full object-cover" />
-                      ) : (
-                        currentJob.createdBy?.name?.charAt(0).toUpperCase() || 'SA'
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">
-                        Job Card Created By
-                      </span>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                          {currentJob.createdBy?.name || 'Service Advisor'}
-                        </span>
-                        {currentJob.createdBy?.role && (
-                          <span className="text-[9px] font-mono font-black uppercase px-1.5 py-0.2 bg-amber-500/15 text-amber-800 dark:text-amber-300 rounded border border-amber-500/20">
-                            {currentJob.createdBy.role}
+            {/* Expandable Collapsible Drawer: Shows Creator Info & Customer Contact Info */}
+            <AnimatePresence>
+              {isExpandedHeader && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="border-t border-white/15 pt-3 mt-2 space-y-2.5"
+                >
+                  {/* Creator Info & Date Strip */}
+                  <div className="p-3 rounded-2xl bg-black/75 border border-white/15 flex items-center justify-between gap-3 shadow-lg backdrop-blur-md">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-xs font-black text-amber-300 shrink-0">
+                        {currentJob.createdBy?.profileImageUrl ? (
+                          <img
+                            src={currentJob.createdBy.profileImageUrl}
+                            alt={currentJob.createdBy.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          currentJob.createdBy?.name?.charAt(0).toUpperCase() || 'SA'
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-mono text-zinc-400">Created by</span>
+                          <span className="font-bold text-xs text-white truncate">
+                            {currentJob.createdBy?.name || 'Service Advisor'}
                           </span>
+                          {currentJob.createdBy?.role && (
+                            <span className="text-[9px] font-mono font-black uppercase px-1.5 py-0.2 bg-amber-500/20 text-amber-300 rounded border border-amber-500/30">
+                              {currentJob.createdBy.role}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right text-[11px] font-mono text-zinc-300 shrink-0">
+                      <span className="font-semibold text-white">
+                        {new Date(currentJob.createdAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </span>
+                      <span className="text-zinc-400 ml-1.5">
+                        {new Date(currentJob.createdAt).toLocaleTimeString(undefined, {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Customer Contact Strip */}
+                  {(currentJob.customerName || currentJob.customerMobile || currentJob.customerEmail) && (
+                    <div className="p-2.5 rounded-2xl bg-black/75 border border-white/15 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-200 backdrop-blur-md shadow-lg">
+                      <div className="flex items-center gap-1.5">
+                        <UserIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span className="font-bold text-white">
+                          {currentJob.customerName || 'Customer'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {currentJob.customerMobile && (
+                          <a
+                            href={`tel:${currentJob.customerMobile}`}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-semibold transition active:scale-95"
+                            title="Call Customer"
+                          >
+                            <Phone className="w-3 h-3 text-emerald-400" />
+                            <span>{currentJob.customerMobile}</span>
+                          </a>
+                        )}
+                        {currentJob.customerEmail && (
+                          <a
+                            href={`mailto:${currentJob.customerEmail}`}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 font-mono text-xs font-semibold transition active:scale-95"
+                            title="Email Customer"
+                          >
+                            <Mail className="w-3 h-3 text-sky-400" />
+                            <span>{currentJob.customerEmail}</span>
+                          </a>
                         )}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="text-right text-xs font-mono text-slate-500 dark:text-slate-400 shrink-0">
-                    <span className="block font-bold">
-                      {new Date(currentJob.createdAt).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      {new Date(currentJob.createdAt).toLocaleTimeString(undefined, {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Customer Details Ribbon */}
-                {(currentJob.customerName || currentJob.customerMobile || currentJob.customerEmail) && (
-                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80">
-                    <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                      Customer Contact
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
-                      {currentJob.customerName && (
-                        <span className="inline-flex items-center gap-1.5 font-bold text-slate-900 dark:text-white px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                          <UserIcon className="w-3.5 h-3.5 text-amber-500" />
-                          {currentJob.customerName}
-                        </span>
-                      )}
-                      {currentJob.customerMobile && (
-                        <a
-                          href={`tel:${currentJob.customerMobile}`}
-                          className="inline-flex items-center gap-1.5 font-medium px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                        >
-                          <Phone className="w-3.5 h-3.5 text-emerald-500" />
-                          {currentJob.customerMobile}
-                        </a>
-                      )}
-                      {currentJob.customerEmail && (
-                        <a
-                          href={`mailto:${currentJob.customerEmail}`}
-                          className="inline-flex items-center gap-1.5 font-medium px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                        >
-                          <Mail className="w-3.5 h-3.5 text-sky-500" />
-                          {currentJob.customerEmail}
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </motion.section>
 
         {/* ── EDIT DETAILS MODAL / INLINE FORM ── */}
@@ -1004,12 +1016,37 @@ export const JobDetailPage: React.FC = () => {
                             {task.title}
                           </p>
 
-                          {/* Pinned Icon Tag */}
-                          {effectiveIsPinned && (
-                            <span title="Pinned Task">
-                              <Pin className="w-3 h-3 text-amber-500 fill-amber-400 shrink-0" />
-                            </span>
-                          )}
+                          {/* Interactive Pin Toggle Button on Top Line */}
+                          <button
+                            type="button"
+                            disabled={isTaskPinning}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const nextPinned = !effectiveIsPinned;
+                              setOptimisticPins((prev) => ({ ...prev, [taskId]: nextPinned }));
+                              setPinningTaskIds((prev) => ({ ...prev, [taskId]: true }));
+                              try {
+                                await toggleTaskPin({ taskId }).unwrap();
+                              } catch (err: any) {
+                                setOptimisticPins((prev) => ({ ...prev, [taskId]: !nextPinned }));
+                                setErrorMessage(err?.data?.message || 'Failed to toggle pin.');
+                              } finally {
+                                setPinningTaskIds((prev) => ({ ...prev, [taskId]: false }));
+                              }
+                            }}
+                            className={`p-1 rounded-md transition-all active:scale-90 ${
+                              effectiveIsPinned
+                                ? 'bg-amber-400 text-slate-950 shadow-2xs'
+                                : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                            }`}
+                            title={effectiveIsPinned ? 'Pinned task (tap to unpin)' : 'Pin task to top'}
+                          >
+                            {isTaskPinning ? (
+                              <Loader2 className="w-3 h-3 text-amber-500 animate-spin" />
+                            ) : (
+                              <Pin className={`w-3 h-3 ${effectiveIsPinned ? 'fill-slate-950 stroke-[2.5]' : ''}`} />
+                            )}
+                          </button>
 
                           {/* Point distribution badge with handshake icon */}
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:border-slate-400 text-[10px] font-mono font-bold shrink-0">
@@ -1548,9 +1585,19 @@ export const JobDetailPage: React.FC = () => {
           currentUserId={user?.id || (user as any)?._id}
           isAdmin={isAdmin}
           onTogglePin={handleToggleJobPin}
-          isPinningMode={pinningJobMode}
+          isPinningMode={isTogglingJobPin ? pinningJobMode : null}
         />
+
+        {/* Vehicle Photo Upload & Crop Modal */}
+        {isVehiclePhotoModalOpen && currentJob && (
+          <VehiclePhotoModal
+            isOpen={isVehiclePhotoModalOpen}
+            job={currentJob}
+            onClose={() => setIsVehiclePhotoModalOpen(false)}
+          />
+        )}
       </main>
     </div>
   );
 };
+

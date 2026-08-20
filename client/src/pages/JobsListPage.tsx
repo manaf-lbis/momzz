@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useGetJobCardsQuery, useToggleJobPinMutation, JobCardData } from '../api/jobApi';
 import { Navbar } from '../components/navbar/Navbar';
 import { PinJobModal } from '../components/jobCard/PinJobModal';
+import { VehiclePhotoModal } from '../components/jobCard/VehiclePhotoModal';
 import {
   ArrowLeft,
   Calendar,
@@ -17,6 +18,7 @@ import {
   ChevronRight,
   Loader2,
   Pin,
+  Camera,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { PageShimmer } from '../components/common/PageShimmer';
@@ -43,6 +45,7 @@ export const JobsListPage: React.FC = () => {
   const [accumulatedJobs, setAccumulatedJobs] = useState<JobCardData[]>([]);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [selectedPinJob, setSelectedPinJob] = useState<JobCardData | null>(null);
+  const [photoModalJob, setPhotoModalJob] = useState<JobCardData | null>(null);
   const [pinningJobMode, setPinningJobMode] = useState<'ALL' | 'ME' | null>(null);
   // Optimistic pin overrides: map of jobId -> { isPinnedForAll?, pinnedByMe? }
   const [optimisticPins, setOptimisticPins] = useState<Record<string, { isPinnedForAll: boolean; pinnedByMe: boolean }>>({});
@@ -371,114 +374,142 @@ export const JobsListPage: React.FC = () => {
                       hidden: { opacity: 0, y: 12, scale: 0.97 },
                       show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 300, damping: 24 } },
                     }}
-                    whileHover={{ y: -2, scale: 1.01 }}
+                    whileHover={{ y: -3, scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate(`/jobs/${job.id || job._id}`)}
-                    className={`bg-white dark:bg-zinc-900 border rounded-2xl p-4 cursor-pointer flex flex-col gap-3 shadow-sm transition-all ${
+                    className={`group relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between min-h-[175px] transition-all border ${
                       pinnedForAll
-                        ? 'border-amber-400/90 dark:border-amber-500/80 ring-1.5 ring-amber-400/30 bg-amber-50/20 dark:bg-amber-950/10'
+                        ? 'border-amber-400/90 ring-2 ring-amber-400/30 shadow-lg shadow-amber-500/10'
                         : pinnedForMe
-                        ? 'border-blue-400/90 dark:border-blue-500/80 ring-1.5 ring-blue-400/30 bg-blue-50/20 dark:bg-blue-950/10'
+                        ? 'border-blue-400/90 ring-2 ring-blue-400/30 shadow-lg shadow-blue-500/10'
                         : isReady
-                        ? 'border-emerald-400/50 dark:border-emerald-500/40'
-                        : 'border-zinc-200 dark:border-zinc-800 hover:border-amber-400/50 dark:hover:border-amber-500/40'
-                    }`}
+                        ? 'border-emerald-500/50 shadow-md shadow-emerald-500/10'
+                        : 'border-zinc-800/90 hover:border-zinc-700/90 shadow-lg shadow-black/40'
+                    } bg-[#0b132b]`}
                   >
-                    {/* Card Top: Vehicle, Badges, Status & Pin */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1.5">
-                            <Car className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            <span className="truncate">{job.vehicleName}</span>
-                            {job.vehicleColor && (
-                              <span className="text-amber-600 dark:text-amber-400 font-bold text-[11px] shrink-0">
-                                · {job.vehicleColor}
+                    {/* Background Image with Clean Left-to-Right Medium Gradient Overlay (Matching Screenshot!) */}
+                    {job.thumbnailUrl ? (
+                      <>
+                        <img
+                          src={job.thumbnailUrl}
+                          alt={job.vehicleName}
+                          className="absolute inset-0 w-full h-full object-cover object-center z-0 transition-transform duration-500 group-hover:scale-105"
+                        />
+                        {/* Clean left-to-right medium gradient tone */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#0b1328] via-[#0b1328]/80 via-42% to-transparent z-0" />
+                        {/* Subtle soft vignette */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0b1328]/60 via-transparent to-black/25 z-0" />
+                      </>
+                    ) : (
+                      <>
+                        {/* Elegant Dark Backdrop when no vehicle image */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#121c33] via-[#0d1629] to-[#070d1e] z-0" />
+                        <div className="absolute right-2 -bottom-2 opacity-5 pointer-events-none z-0">
+                          <Car className="w-36 h-36 text-white" />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Content Container (Layered on top of gradient) */}
+                    <div className="relative z-10 flex flex-col justify-between flex-1 gap-3.5">
+                      {/* ── Top Row: Vehicle Name & Color, Pinned Badges, Pin Button, Status Pill ── */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-tight truncate flex items-center gap-1.5 drop-shadow-xs">
+                              <Car className="w-4 h-4 text-amber-400 shrink-0" />
+                              <span className="truncate">{job.vehicleName}</span>
+                              {job.vehicleColor && (
+                                <span className="text-amber-400 font-bold text-xs shrink-0">
+                                  · {job.vehicleColor}
+                                </span>
+                              )}
+                            </h3>
+
+                            {/* Pin Badges (Matching Screenshot Pill Style) */}
+                            {pinnedForMe && !pinnedForAll && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-600 text-white font-mono font-black text-[9px] uppercase tracking-wider shadow-sm shadow-blue-500/20 shrink-0">
+                                <Pin className="w-2.5 h-2.5 fill-white" />
+                                Pinned for You
                               </span>
                             )}
-                          </h3>
+                            {pinnedForAll && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400 text-zinc-950 font-mono font-black text-[9px] uppercase tracking-wider shadow-sm shadow-amber-400/20 shrink-0">
+                                <Pin className="w-2.5 h-2.5 fill-zinc-950" />
+                                Pinned for All
+                              </span>
+                            )}
+                          </div>
 
-                          {/* Pin Status Badges */}
-                          {pinnedForAll && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-400 text-zinc-950 font-mono font-black text-[9px] uppercase tracking-wider shrink-0 shadow-2xs">
-                              <Pin className="w-2.5 h-2.5 fill-zinc-950" />
-                              Pinned for All
+                          {/* Registration Plate Badge */}
+                          <div>
+                            <span className="inline-block text-[11px] font-mono font-black text-slate-200 bg-slate-950/85 border border-slate-700/80 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                              {job.vehicleNumber}
                             </span>
-                          )}
-                          {!pinnedForAll && pinnedForMe && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-500 text-white font-mono font-black text-[9px] uppercase tracking-wider shrink-0 shadow-2xs">
-                              <Pin className="w-2.5 h-2.5 fill-white" />
-                              Pinned for You
+                          </div>
+                        </div>
+
+                        {/* Right Action: Yellow Pin Button & Status Badge */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {/* Yellow Pin Button (Square with rounded corners) */}
+                          <button
+                            type="button"
+                            onClick={(e) => handlePinButtonClick(e, job)}
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 shadow-md ${
+                              isPinned
+                                ? 'bg-amber-400 text-zinc-950 shadow-amber-400/25 ring-1 ring-amber-400'
+                                : 'bg-black/40 text-slate-400 hover:text-amber-400 border border-white/10 hover:border-amber-400/40 backdrop-blur-xs'
+                            }`}
+                            title={isPinned ? 'Tap to unpin' : 'Pin Job Card'}
+                          >
+                            <Pin className={`w-4 h-4 ${isPinned ? 'fill-zinc-950 stroke-[2.5]' : ''}`} />
+                          </button>
+
+                          {/* Status Badge (Pill with icon matching screenshot) */}
+                          {isReady ? (
+                            <span className="shrink-0 flex items-center gap-1 px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-xs shadow-xs">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                              Ready
+                            </span>
+                          ) : (
+                            <span className="shrink-0 flex items-center gap-1 px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-xs shadow-xs">
+                              <Clock className="w-3.5 h-3.5 text-amber-400" />
+                              Active
                             </span>
                           )}
                         </div>
+                      </div>
 
-                        <span className="mt-1 inline-block text-[11px] font-mono font-bold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded-lg">
-                          {job.vehicleNumber}
+                      {/* ── Middle: Tasks Progress Row ── */}
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-between text-[11px] font-mono">
+                          <span className="text-slate-300 uppercase tracking-wider font-bold text-[10px]">
+                            TASKS
+                          </span>
+                          <span className="font-black text-amber-400">
+                            {completedTasks}/{totalTasks}
+                          </span>
+                        </div>
+                        <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/10 p-0.5">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progressPct}%` }}
+                            transition={{ duration: 0.6, ease: 'easeOut' }}
+                            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400"
+                          />
+                        </div>
+                      </div>
+
+                      {/* ── Bottom Row: Garage Duration & Date ── */}
+                      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-0.5">
+                        <span className="flex items-center gap-1 text-slate-300">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          {durationStr}
+                        </span>
+                        <span className="font-bold text-slate-300">
+                          {new Date(job.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                         </span>
                       </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {/* Pin Button on Card */}
-                        <button
-                          type="button"
-                          onClick={(e) => handlePinButtonClick(e, job)}
-                          className={`p-1.5 rounded-lg border transition-all active:scale-95 ${
-                            isPinned
-                              ? 'bg-amber-400 text-zinc-950 border-amber-400 shadow-xs'
-                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-amber-500 hover:border-amber-400/50 border-zinc-200 dark:border-zinc-700'
-                          }`}
-                          title={isPinned ? 'Tap to unpin' : 'Pin Job Card'}
-                        >
-                          <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-zinc-950' : ''}`} />
-                        </button>
-
-                        {isReady ? (
-                          <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-full text-[10px] font-black uppercase">
-                            <CheckCircle2 className="w-3 h-3" />
-                            Ready
-                          </span>
-                        ) : (
-                          <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-full text-[10px] font-black uppercase">
-                            <motion.div
-                              animate={{ scale: [1, 1.2, 1] }}
-                              transition={{ repeat: Infinity, duration: 2 }}
-                            >
-                              <Clock className="w-3 h-3" />
-                            </motion.div>
-                            Active
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Progress bar */}
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                      <div className="flex items-center justify-between text-[11px] font-mono">
-                        <span className="text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-bold">Tasks</span>
-                        <span className={`font-black ${isReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                          {completedTasks}/{totalTasks}
-                        </span>
-                      </div>
-                      <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${progressPct}%` }}
-                          transition={{ duration: 0.6, ease: 'easeOut' }}
-                          className={`h-full rounded-full ${isReady ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Footer: time in garage */}
-                    <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-zinc-300 dark:text-zinc-600" />
-                        {durationStr} in garage
-                      </span>
-                      <span className="text-zinc-300 dark:text-zinc-600 text-[10px]">
-                        {new Date(job.createdAt).toLocaleDateString([], { day: '2-digit', month: 'short' })}
-                      </span>
                     </div>
                   </motion.div>
                 );
@@ -536,7 +567,7 @@ export const JobsListPage: React.FC = () => {
           </>
         )}
 
-        {/* Pin Job Card Modal — auto-closes after pinning via closeModal callback */}
+        {/* Pin Job Card Modal */}
         <PinJobModal
           isOpen={selectedPinJob !== null}
           onClose={() => setSelectedPinJob(null)}
@@ -548,7 +579,18 @@ export const JobsListPage: React.FC = () => {
           }
           isPinningMode={pinningJobMode}
         />
+
+        {/* Vehicle Photo Upload & Crop Modal */}
+        {photoModalJob && (
+          <VehiclePhotoModal
+            isOpen={photoModalJob !== null}
+            job={photoModalJob}
+            onClose={() => setPhotoModalJob(null)}
+            onSuccess={() => refetch()}
+          />
+        )}
       </main>
     </div>
   );
 };
+
