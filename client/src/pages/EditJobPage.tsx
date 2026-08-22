@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowLeft,
+  Calendar,
   Car,
   Check,
   ChevronRight,
+  Clock,
   Mail,
   Minus,
   PackagePlus,
@@ -20,6 +22,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '../components/navbar/Navbar';
 import {
   useGetJobCardsQuery,
+  useGetJobCardByIdQuery,
   useUpdateJobMutation,
   useAddTaskMutation,
   useAddInventoryTaskMutation,
@@ -30,6 +33,8 @@ import {
 import { CatalogItem, useGetCatalogQuery, useQuickAddCatalogItemMutation } from '../api/catalogApi';
 import { PageShimmer } from '../components/common/PageShimmer';
 import { advancedSearch, findDuplicateCandidates, normalizeSearchText } from '../utils/searchAlgorithm';
+import { toDateTimeLocal, getDeliveryPreset } from '../utils/dateUtils';
+import { ModernDateTimePicker } from '../components/common/ModernDateTimePicker';
 
 type SelectedLine = {
   id?: string;
@@ -52,7 +57,16 @@ export const EditJobPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data: jobsResponse, isLoading: isJobsLoading } = useGetJobCardsQuery();
+  const { data: jobResponse, isLoading: isSingleLoading } = useGetJobCardByIdQuery(id!, { skip: !id });
+  const { data: listResponse, isLoading: isListLoading } = useGetJobCardsQuery(undefined, { skip: !!jobResponse?.data });
+
+  const rawList = listResponse?.data;
+  const jobsList: JobCardData[] = Array.isArray(rawList) ? rawList : rawList?.jobs || [];
+  const fallbackJob = jobsList.find((j: JobCardData) => j.id === id || j._id === id);
+
+  const currentJob: JobCardData | undefined = jobResponse?.data || fallbackJob;
+  const isJobsLoading = (isSingleLoading && !currentJob) || (isListLoading && !currentJob);
+
   const [updateJob, { isLoading: isUpdatingJob }] = useUpdateJobMutation();
   const [addTask] = useAddTaskMutation();
   const [addInventoryTask] = useAddInventoryTaskMutation();
@@ -66,6 +80,7 @@ export const EditJobPage: React.FC = () => {
   const [vehicleName, setVehicleName] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [vehicleColor, setVehicleColor] = useState('');
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -80,11 +95,6 @@ export const EditJobPage: React.FC = () => {
   const [discount, setDiscount] = useState(0);
   const [error, setError] = useState('');
 
-  // Find job from cache
-  const rawJobs = jobsResponse?.data;
-  const jobsList: JobCardData[] = Array.isArray(rawJobs) ? rawJobs : rawJobs?.jobs || [];
-  const currentJob = jobsList.find((j) => j.id === id || j._id === id);
-
   // Prepopulate form when job is loaded
   useEffect(() => {
     if (!currentJob) return;
@@ -92,6 +102,7 @@ export const EditJobPage: React.FC = () => {
     setVehicleName(currentJob.vehicleName || '');
     setVehicleNumber(currentJob.vehicleNumber || '');
     setVehicleColor(currentJob.vehicleColor || '');
+    setExpectedDeliveryDate(toDateTimeLocal(currentJob.expectedDeliveryDate));
     setCustomerName(currentJob.customerName || '');
     setCustomerMobile(currentJob.customerMobile || '');
     setCustomerEmail(currentJob.customerEmail || '');
@@ -242,6 +253,7 @@ export const EditJobPage: React.FC = () => {
         customerName: customerName.trim() || undefined,
         customerMobile: customerMobile.trim() || undefined,
         customerEmail: customerEmail.trim() || undefined,
+        expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : null,
       }).unwrap();
 
       // 2. Diff and synchronize tasks
@@ -448,6 +460,14 @@ export const EditJobPage: React.FC = () => {
                       placeholder="e.g. Pearl White, BS6 Diesel"
                     />
                   </div>
+
+                  {/* Modern Expected Delivery Date & Time Calendar */}
+                  <ModernDateTimePicker
+                    value={expectedDeliveryDate}
+                    onChange={setExpectedDeliveryDate}
+                    label="Expected Delivery Date & Time"
+                    placeholder="Click to pick delivery date & time"
+                  />
                 </div>
               </div>
 

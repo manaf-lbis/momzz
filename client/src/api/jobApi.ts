@@ -54,6 +54,7 @@ export interface JobCardData {
   customerMobile?: string;
   customerEmail?: string;
   thumbnailUrl?: string;
+  expectedDeliveryDate?: string | null;
   status: 'IN_PROGRESS' | 'COMPLETED';
   createdBy?: {
     id?: string;
@@ -80,6 +81,7 @@ export interface CreateJobRequest {
   customerMobile?: string;
   customerEmail?: string;
   thumbnailUrl?: string;
+  expectedDeliveryDate?: string | null;
   tasks: Array<string | { itemId: string; quantityUsed: number; discountAmount?: number }>;
 }
 
@@ -100,7 +102,7 @@ export const jobApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getJobCards: builder.query<
       { success: boolean; data: any },
-      { page?: number; limit?: number; timeframe?: string } | void
+      { page?: number; limit?: number; timeframe?: string; tab?: string; search?: string; sortBy?: string; sortOrder?: 'asc' | 'desc' } | void
     >({
       query: (params) => {
         if (!params) return '/jobs';
@@ -108,10 +110,19 @@ export const jobApi = apiSlice.injectEndpoints({
         if (params.page) queryParams.append('page', params.page.toString());
         if (params.limit) queryParams.append('limit', params.limit.toString());
         if (params.timeframe) queryParams.append('timeframe', params.timeframe);
+        if (params.tab) queryParams.append('tab', params.tab);
+        if (params.search) queryParams.append('search', params.search);
+        if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
         const qs = queryParams.toString();
         return qs ? `/jobs?${qs}` : '/jobs';
       },
       providesTags: ['JobCard'],
+    }),
+
+    getJobCardById: builder.query<{ success: boolean; data: JobCardData }, string>({
+      query: (jobCardId) => `/jobs/${jobCardId}`,
+      providesTags: (_result, _error, id) => [{ type: 'JobCard', id }],
     }),
 
     createJob: builder.mutation<
@@ -128,7 +139,7 @@ export const jobApi = apiSlice.injectEndpoints({
 
     updateJob: builder.mutation<
       { success: boolean; data: JobCardData },
-      { jobCardId: string } & Partial<Pick<CreateJobRequest, 'vehicleName' | 'vehicleNumber' | 'vehicleColor' | 'customerName' | 'customerMobile' | 'customerEmail'>>
+      { jobCardId: string } & Partial<Pick<CreateJobRequest, 'vehicleName' | 'vehicleNumber' | 'vehicleColor' | 'customerName' | 'customerMobile' | 'customerEmail' | 'expectedDeliveryDate'>>
     >({
       query: ({ jobCardId, ...body }) => ({ url: `/jobs/${jobCardId}`, method: 'PATCH', body }),
       invalidatesTags: ['JobCard'],
@@ -223,6 +234,7 @@ export const jobApi = apiSlice.injectEndpoints({
 
 export const {
   useGetJobCardsQuery,
+  useGetJobCardByIdQuery,
   useCreateJobMutation,
   useUpdateJobMutation,
   useSetTaskStatusMutation,

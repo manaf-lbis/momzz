@@ -2,9 +2,11 @@ import React, { useMemo, useState, useRef } from 'react';
 import {
   AlertTriangle,
   ArrowLeft,
+  Calendar,
   Car,
   Check,
   ChevronRight,
+  Clock,
   Mail,
   Minus,
   PackagePlus,
@@ -24,6 +26,8 @@ import { useCreateJobMutation } from '../api/jobApi';
 import { CatalogItem, useGetCatalogQuery, useQuickAddCatalogItemMutation } from '../api/catalogApi';
 import { advancedSearch, findDuplicateCandidates, normalizeSearchText } from '../utils/searchAlgorithm';
 import { ImageCropperModal } from '../components/common/ImageCropperModal';
+import { getDeliveryPreset } from '../utils/dateUtils';
+import { ModernDateTimePicker } from '../components/common/ModernDateTimePicker';
 
 type SelectedLine = {
   item: CatalogItem;
@@ -53,6 +57,7 @@ export const CreateJobPage: React.FC = () => {
   const [vehicleName, setVehicleName] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [vehicleColor, setVehicleColor] = useState('');
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
@@ -183,6 +188,7 @@ export const CreateJobPage: React.FC = () => {
         customerMobile: customerMobile.trim() || undefined,
         customerEmail: customerEmail.trim() || undefined,
         thumbnailUrl: thumbnailUrl || undefined,
+        expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : undefined,
         tasks: selected.map((line) => ({
           itemId: line.item.id,
           quantityUsed: line.quantityUsed,
@@ -330,6 +336,14 @@ export const CreateJobPage: React.FC = () => {
                       placeholder="e.g. Pearl White, BS6 Diesel"
                     />
                   </div>
+
+                  {/* Modern Expected Delivery Date & Time Calendar */}
+                  <ModernDateTimePicker
+                    value={expectedDeliveryDate}
+                    onChange={setExpectedDeliveryDate}
+                    label="Expected Delivery Date & Time"
+                    placeholder="Click to pick delivery date & time"
+                  />
 
                   {/* Optional Vehicle Photo */}
                   <div className="pt-1">

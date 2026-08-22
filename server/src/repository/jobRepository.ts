@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { JobCard, IJobCard } from '../model/JobCard';
 import { Task, ITask } from '../model/Task';
 import User from '../model/User';
@@ -12,6 +13,7 @@ export class JobRepository {
     customerMobile?: string;
     customerEmail?: string;
     thumbnailUrl?: string;
+    expectedDeliveryDate?: Date | string | null;
     createdBy: string;
   }): Promise<IJobCard> {
     return await JobCard.create(data);
@@ -51,12 +53,38 @@ export class JobRepository {
     page?: number;
     limit?: number;
     timeframe?: string;
+    tab?: string;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }): Promise<{ jobs: IJobCard[]; total: number; page: number; totalPages: number }> {
     const page = Math.max(1, options.page || 1);
-    const limit = Math.max(1, options.limit || 10);
+    const limit = Math.max(1, options.limit || 12);
     const skip = (page - 1) * limit;
 
     const query: any = { isDeleted: { $ne: true } };
+
+    if (options.tab) {
+      const tabUpper = options.tab.toUpperCase();
+      if (tabUpper === 'PENDING_VERIFICATION' || tabUpper === 'VERIFY') {
+        query.verifiedAt = null;
+        query.status = 'COMPLETED';
+      } else if (tabUpper === 'MY_JOBS') {
+        query.status = 'IN_PROGRESS';
+      }
+    }
+
+    if (options.search && options.search.trim()) {
+      const s = options.search.trim();
+      const cleanPlate = s.replace(/[\s-]+/g, '');
+      query.$or = [
+        { vehicleName: { $regex: s, $options: 'i' } },
+        { vehicleNumber: { $regex: s, $options: 'i' } },
+        { vehicleNumber: { $regex: cleanPlate, $options: 'i' } },
+        { customerName: { $regex: s, $options: 'i' } },
+        { customerMobile: { $regex: s, $options: 'i' } },
+      ];
+    }
 
     if (options.timeframe && options.timeframe !== 'all') {
       const now = new Date();
@@ -81,11 +109,24 @@ export class JobRepository {
       query.createdAt = { $gte: startDate };
     }
 
+    const sortConfig: any = { isPinnedForAll: -1 };
+    const direction = options.sortOrder === 'asc' ? 1 : -1;
+    if (options.sortBy === 'expectedDeliveryDate') {
+      sortConfig.expectedDeliveryDate = direction;
+    } else if (options.sortBy === 'vehicleName') {
+      sortConfig.vehicleName = direction;
+    } else if (options.sortBy === 'createdAt') {
+      sortConfig.createdAt = direction;
+    } else {
+      sortConfig.status = -1;
+      sortConfig.createdAt = -1;
+    }
+
     const [jobs, total] = await Promise.all([
       JobCard.find(query)
         .populate('verifiedBy', 'name mobile role')
         .populate('createdBy', 'name mobile role profileImageUrl')
-        .sort({ isPinnedForAll: -1, status: -1, createdAt: -1 })
+        .sort(sortConfig)
         .skip(skip)
         .limit(limit),
       JobCard.countDocuments(query),
@@ -105,6 +146,9 @@ export class JobRepository {
   }
 
   async findJobById(jobCardId: string): Promise<IJobCard | null> {
+    if (!jobCardId || !mongoose.Types.ObjectId.isValid(jobCardId)) {
+      return null;
+    }
     return await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } })
       .populate('verifiedBy', 'name mobile role')
       .populate('createdBy', 'name mobile role profileImageUrl');
@@ -144,7 +188,7 @@ export class JobRepository {
       .populate('createdBy', 'name mobile role profileImageUrl');
   }
 
-  async updateJobCard(jobCardId: string, data: Partial<Pick<IJobCard, 'vehicleName' | 'vehicleNumber' | 'vehicleColor' | 'customerName' | 'customerMobile' | 'customerEmail'>>) {
+  async updateJobCard(jobCardId: string, data: Partial<Pick<IJobCard, 'vehicleName' | 'vehicleNumber' | 'vehicleColor' | 'customerName' | 'customerMobile' | 'customerEmail' | 'expectedDeliveryDate'>>) {
     return await JobCard.findOneAndUpdate(
       { _id: jobCardId, isDeleted: { $ne: true } },
       { $set: { ...data, verifiedBy: null, verifiedAt: null } },

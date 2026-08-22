@@ -59,7 +59,7 @@ const mapTaskImages = (taskObj: any) => {
 
 export const createJobWithTasks = async (req: Request, res: Response) => {
   try {
-    const { vehicleName, vehicleNumber, vehicleColor, customerName, customerMobile, customerEmail, thumbnailUrl, tasks } = req.body;
+    const { vehicleName, vehicleNumber, vehicleColor, customerName, customerMobile, customerEmail, thumbnailUrl, expectedDeliveryDate, tasks } = req.body;
 
     if (!vehicleName || !vehicleNumber || !Array.isArray(tasks) || tasks.length === 0) {
       return sendError(res, 'Vehicle Name, Vehicle Number, and at least one Task are required.', 400);
@@ -83,6 +83,7 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
       customerMobile: customerMobile?.trim() || undefined,
       customerEmail: customerEmail?.trim() || undefined,
       thumbnailUrl: photoPublicId,
+      expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate) : undefined,
       createdBy: req.user?.id!,
     });
 
@@ -122,11 +123,16 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
 export const updateJobCard = async (req: Request, res: Response) => {
   try {
     const { jobCardId } = req.params;
-    const allowedFields = ['vehicleName', 'vehicleNumber', 'vehicleColor', 'customerName', 'customerMobile', 'customerEmail'];
+    const allowedFields = ['vehicleName', 'vehicleNumber', 'vehicleColor', 'customerName', 'customerMobile', 'customerEmail', 'expectedDeliveryDate'];
     const updates = Object.fromEntries(
       allowedFields
         .filter((field) => field in req.body)
-        .map((field) => [field, typeof req.body[field] === 'string' ? req.body[field].trim() : req.body[field]])
+        .map((field) => {
+          if (field === 'expectedDeliveryDate') {
+            return [field, req.body[field] ? new Date(req.body[field]) : null];
+          }
+          return [field, typeof req.body[field] === 'string' ? req.body[field].trim() : req.body[field]];
+        })
     );
     if (updates.vehicleNumber) updates.vehicleNumber = updates.vehicleNumber.toUpperCase();
     const updatedJob = await jobRepository.updateJobCard(jobCardId, updates);
@@ -183,7 +189,7 @@ export const trackPublicJobs = async (req: Request, res: Response) => {
       const tasks = await jobRepository.findTasksByJobCardId(job._id.toString());
       return {
         id: job._id.toString(), vehicleName: job.vehicleName, vehicleNumber: job.vehicleNumber,
-        vehicleColor: job.vehicleColor, status: job.status, createdAt: job.createdAt, updatedAt: job.updatedAt,
+        vehicleColor: job.vehicleColor, expectedDeliveryDate: job.expectedDeliveryDate, status: job.status, createdAt: job.createdAt, updatedAt: job.updatedAt,
         tasks: tasks.map((task) => ({ id: task._id.toString(), title: task.title, status: task.status, completedAt: task.completedAt })),
       };
     }));
@@ -193,14 +199,48 @@ export const trackPublicJobs = async (req: Request, res: Response) => {
   }
 };
 
+export const getJobCardById = async (req: Request, res: Response) => {
+  try {
+    const { jobCardId } = req.params;
+    const job = await jobRepository.findJobById(jobCardId);
+    if (!job) return sendError(res, 'Job card not found.', 404);
+
+    const tasks = await jobRepository.findTasksByJobCardId(jobCardId);
+    const allCompleted = tasks.length > 0 && tasks.every((t) => t.status === 'COMPLETED');
+    const targetStatus = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
+
+    if (job.status !== targetStatus) {
+      await jobRepository.updateJobStatus(job._id.toString(), targetStatus);
+      job.status = targetStatus;
+    }
+
+    const formatted = mapJobCardImages({
+      ...job.toObject(),
+      id: job._id.toString(),
+      tasks: tasks.map((t) => mapTaskImages({
+        ...t.toObject(),
+        id: t._id.toString(),
+      })),
+    });
+
+    return sendSuccess(res, 'Job card retrieved successfully.', formatted, 200);
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to fetch job card.', 500);
+  }
+};
+
 export const getJobCards = async (req: Request, res: Response) => {
   try {
     const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
     const timeframe = req.query.timeframe as string | undefined;
+    const tab = req.query.tab as string | undefined;
+    const search = req.query.search as string | undefined;
+    const sortBy = req.query.sortBy as string | undefined;
+    const sortOrder = req.query.sortOrder as 'asc' | 'desc' | undefined;
 
-    if (page || limit || timeframe) {
-      const paginatedResult = await jobRepository.findPaginatedJobs({ page, limit, timeframe });
+    if (page || limit || timeframe || tab || search || sortBy) {
+      const paginatedResult = await jobRepository.findPaginatedJobs({ page, limit, timeframe, tab, search, sortBy, sortOrder });
       const jobsWithTasks = await Promise.all(
         paginatedResult.jobs.map(async (job) => {
           const tasks = await jobRepository.findTasksByJobCardId(job._id.toString());

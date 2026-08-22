@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   useGetJobCardsQuery,
+  useGetJobCardByIdQuery,
   useSetTaskStatusMutation,
   useAddTaskMutation,
   useDeleteTaskMutation,
@@ -21,6 +22,9 @@ import { ConfirmationModal } from '../components/common/ConfirmationModal';
 import { PinJobModal } from '../components/jobCard/PinJobModal';
 import { VehiclePhotoModal } from '../components/jobCard/VehiclePhotoModal';
 import { TaskAutoComplete } from '../components/common/TaskAutoComplete';
+import { BorderBeam } from '../components/magicui/BorderBeam';
+import { Meteors } from '../components/magicui/Meteors';
+import { BlurFade } from '../components/magicui/BlurFade';
 import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../utils/confetti';
 import { playCompletionSound, playReopenSound } from '../utils/completionSound';
 import {
@@ -47,8 +51,15 @@ import {
   User as UserIcon,
   Pin,
   ChevronDown,
+  Calendar,
   Camera,
+  ClipboardList,
+  Plus,
 } from 'lucide-react';
+import { getDeliveryStatusInfo, formatDeliveryDate, toDateTimeLocal, getDeliveryPreset } from '../utils/dateUtils';
+import { NumberTicker } from '../components/magicui/NumberTicker';
+import { ProgressBarBeam } from '../components/magicui/AnimatedBeam';
+import { ModernDateTimePicker } from '../components/common/ModernDateTimePicker';
 
 type TaskFilterType = 'ALL' | 'PENDING' | 'COMPLETED';
 
@@ -106,6 +117,7 @@ export const JobDetailPage: React.FC = () => {
   const [optimisticPins, setOptimisticPins] = useState<Record<string, boolean>>({});
   const [pinningTaskIds, setPinningTaskIds] = useState<Record<string, boolean>>({});
   const [editDetails, setEditDetails] = useState<Partial<JobCardData>>({});
+  const [isAddingQuickTask, setIsAddingQuickTask] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -113,7 +125,31 @@ export const JobDetailPage: React.FC = () => {
     return () => window.clearInterval(timer);
   }, []);
 
-  const { data: jobsResponse, isLoading, isError } = useGetJobCardsQuery();
+  const { data: jobResponse, isLoading: isSingleLoading, isError: isSingleError } = useGetJobCardByIdQuery(id!, { skip: !id });
+  const { data: listResponse, isLoading: isListLoading } = useGetJobCardsQuery(undefined, { skip: !!jobResponse?.data });
+
+  const rawList = listResponse?.data;
+  const jobsList: JobCardData[] = Array.isArray(rawList) ? rawList : rawList?.jobs || [];
+  const fallbackJob = jobsList.find((j: JobCardData) => j.id === id || j._id === id);
+
+  const currentJob: JobCardData | undefined = jobResponse?.data || fallbackJob;
+  const isLoading = (isSingleLoading && !currentJob) || (isListLoading && !currentJob);
+  const isError = isSingleError && !currentJob;
+
+  useEffect(() => {
+    if (currentJob) {
+      setEditDetails({
+        vehicleName: currentJob.vehicleName || '',
+        vehicleNumber: currentJob.vehicleNumber || '',
+        vehicleColor: currentJob.vehicleColor || '',
+        customerName: currentJob.customerName || '',
+        customerMobile: currentJob.customerMobile || '',
+        customerEmail: currentJob.customerEmail || '',
+        expectedDeliveryDate: toDateTimeLocal(currentJob.expectedDeliveryDate),
+      });
+    }
+  }, [currentJob]);
+
   const { data: usersData } = useGetAllUsersQuery();
   const allTeamMembers = (usersData?.data || []).filter(
     (u) => (u.id || u._id) !== (user?.id || user?._id)
@@ -127,16 +163,6 @@ export const JobDetailPage: React.FC = () => {
   const [toggleTaskPin] = useToggleTaskPinMutation();
   const [toggleJobPin, { isLoading: isTogglingJobPin }] = useToggleJobPinMutation();
   const [verifyJobCard, { isLoading: isVerifying }] = useVerifyJobCardMutation();
-
-  // Handle flat vs paginated response shape
-  const rawData = jobsResponse?.data;
-  const jobsList: JobCardData[] = Array.isArray(rawData)
-    ? rawData
-    : rawData?.jobs || [];
-
-  const currentJob = jobsList.find(
-    (j: JobCardData) => j.id === id || j._id === id
-  );
 
   if (isLoading) {
     return (
@@ -170,9 +196,12 @@ export const JobDetailPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A] text-slate-900 dark:text-white flex flex-col transition-colors">
         <Navbar />
-        <div className="max-w-md mx-auto my-16 p-6 industrial-card rounded-2xl text-center space-y-3">
-          <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto" />
-          <h2 className="text-sm font-bold uppercase">Job Card Not Found</h2>
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4">
+          <div className="p-4 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold font-mono">Job Card Not Found</h2>
+          <p className="text-sm text-slate-400 max-w-sm">The job card you are looking for does not exist or has been deleted.</p>
           <button
             onClick={() => navigate('/jobs')}
             className="px-4 py-2 bg-amber-400 text-slate-950 font-mono font-bold text-xs rounded-xl hover:bg-amber-300 transition"
@@ -207,7 +236,16 @@ export const JobDetailPage: React.FC = () => {
 
   const saveJobDetails = async () => {
     try {
-      await updateJob({ jobCardId: currentJob.id || currentJob._id!, ...editDetails }).unwrap();
+      await updateJob({
+        jobCardId: currentJob.id || currentJob._id!,
+        vehicleName: editDetails.vehicleName,
+        vehicleNumber: editDetails.vehicleNumber,
+        vehicleColor: editDetails.vehicleColor,
+        customerName: editDetails.customerName,
+        customerMobile: editDetails.customerMobile,
+        customerEmail: editDetails.customerEmail,
+        expectedDeliveryDate: editDetails.expectedDeliveryDate ? new Date(editDetails.expectedDeliveryDate).toISOString() : null,
+      }).unwrap();
       setIsEditingDetails(false);
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Failed to update job details.');
@@ -402,36 +440,51 @@ export const JobDetailPage: React.FC = () => {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="relative overflow-hidden rounded-3xl border border-zinc-800/80 shadow-2xl bg-[#060b17] min-h-[220px] sm:min-h-[250px] flex flex-col justify-between p-4 sm:p-5 select-none"
+          className="relative overflow-hidden rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xl bg-white dark:bg-[#0b1328] min-h-[200px] sm:min-h-[230px] flex flex-col justify-between p-4 sm:p-5 select-none transition-colors"
         >
-          {/* Background Vehicle Image with Clean Left-to-Right Medium Gradient Overlay (Matching Screenshot) */}
+          {/* BorderBeam for Pinned / Ready Jobs */}
+          {currentJob.isPinnedForAll && (
+            <BorderBeam size={220} duration={6} colorFrom="#facc15" colorTo="#fbbf24" borderWidth={2} />
+          )}
+          {!currentJob.isPinnedForAll && (Array.isArray(currentJob.pinnedBy) && currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id))) && (
+            <BorderBeam size={220} duration={6} colorFrom="#38bdf8" colorTo="#60a5fa" borderWidth={2} />
+          )}
+          {!currentJob.isPinnedForAll && isAllCompleted && (
+            <BorderBeam size={220} duration={10} colorFrom="#10b981" colorTo="#34d399" borderWidth={1.5} />
+          )}
+
+          {/* Background Vehicle Image with Clean Left-to-Right Medium Gradient Overlay */}
           {currentJob.thumbnailUrl ? (
             <>
               <img
                 src={currentJob.thumbnailUrl}
-                alt={currentJob.vehicleName}
+                alt={currentJob.vehicleName || 'Vehicle'}
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                }}
                 className="absolute inset-0 w-full h-full object-cover object-center z-0 scale-[1.01]"
               />
               {/* Clean left-to-right medium gradient tone */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0b1328] via-[#0b1328]/80 via-42% to-transparent z-0" />
-              {/* Subtle top/bottom soft vignette to ground buttons & corners */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1328]/60 via-transparent to-black/25 z-0" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0b1328] via-[#0b1328]/85 via-42% to-transparent z-0" />
+              {/* Subtle top/bottom soft vignette */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1328]/60 via-transparent to-black/30 z-0" />
             </>
           ) : (
-            <>
-              <div className="absolute inset-0 bg-gradient-to-br from-[#101b33] via-[#0b1324] to-[#060b17] z-0" />
-              <div className="absolute right-4 bottom-2 opacity-5 pointer-events-none z-0">
-                <Car className="w-52 h-52 text-white" />
-              </div>
-            </>
+            <div className="absolute right-4 bottom-2 opacity-5 dark:opacity-10 pointer-events-none z-0">
+              <Car className="w-52 h-52 text-slate-400 dark:text-white" />
+            </div>
           )}
 
-          {/* Top Row: Back Arrow Button (Left) + Pinned / Edit Photo / In Work Badges (Right) */}
+          {/* Top Row: Back Arrow Button (Left) + Pinned / Edit Photo / Status Badges (Right) */}
           <div className="relative z-10 flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => navigate('/jobs')}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-black/70 hover:bg-black/90 border border-white/15 text-white flex items-center justify-center backdrop-blur-md transition active:scale-95 shadow-md shrink-0"
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center backdrop-blur-md transition active:scale-95 shadow-md shrink-0 cursor-pointer ${
+                currentJob.thumbnailUrl
+                  ? 'bg-black/60 hover:bg-black/80 border border-white/20 text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white'
+              }`}
               title="Back to Jobs List"
             >
               <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -443,21 +496,23 @@ export const JobDetailPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsPinJobModalOpen(true)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md transition active:scale-95 border ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md transition active:scale-95 border cursor-pointer ${
                   currentJob.isPinnedForAll ||
                   (Array.isArray(currentJob.pinnedBy) &&
                     currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
                     ? 'bg-amber-400 text-zinc-950 border-amber-400 shadow-md shadow-amber-400/25 ring-1 ring-amber-400'
-                    : 'bg-black/60 text-amber-300 border-amber-400/40 hover:bg-black/80'
+                    : currentJob.thumbnailUrl
+                    ? 'bg-black/60 text-amber-300 border-white/20 hover:bg-black/80'
+                    : 'bg-slate-100 dark:bg-slate-800 text-amber-600 dark:text-amber-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
                 }`}
-                title="Pin Job Card (Workshop or Personal)"
+                title="Pin Job Card"
               >
                 <Pin className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${
                   currentJob.isPinnedForAll ||
                   (Array.isArray(currentJob.pinnedBy) &&
                     currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
                     ? 'fill-zinc-950 stroke-[2.5]'
-                    : 'fill-amber-300 stroke-[2.5]'
+                    : 'fill-amber-400 stroke-[2.5]'
                 }`} />
                 <span>
                   {currentJob.isPinnedForAll
@@ -469,44 +524,50 @@ export const JobDetailPage: React.FC = () => {
                 </span>
               </button>
 
-              {/* EDIT PHOTO Glowing Amber Button */}
+              {/* EDIT PHOTO Glowing Button */}
               <button
                 type="button"
                 onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
-                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-[11px] sm:text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition active:scale-95 shrink-0"
+                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-[11px] sm:text-xs uppercase tracking-wider shadow-md shadow-amber-500/20 transition active:scale-95 shrink-0 cursor-pointer"
                 title="Edit Vehicle Photo in Studio"
               >
                 <Camera className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
-                <span>EDIT PHOTO</span>
+                <span>PHOTO</span>
               </button>
 
               {/* IN WORK / READY Status Badge */}
               {isAllCompleted ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md shadow-xs shrink-0">
-                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md shadow-xs shrink-0">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                   READY
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/50 font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md shadow-xs shrink-0">
-                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md shadow-xs shrink-0">
+                  <Clock className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
                   IN WORK
                 </span>
               )}
             </div>
           </div>
 
-          {/* Bottom Info: Vehicle Name, Plate, Color, Garage Duration & Icon-only Expand Toggle */}
+          {/* Bottom Info: Vehicle Name, Plate, Color, Garage Duration & Expand Toggle */}
           <div className="relative z-10 space-y-2.5 pt-4">
-            {/* Title Row: SWIFT + Edit Pencil */}
+            {/* Title Row: Vehicle Model + Edit Pencil */}
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+              <h1 className={`text-2xl sm:text-3xl font-black uppercase tracking-tight ${
+                currentJob.thumbnailUrl ? 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]' : 'text-slate-900 dark:text-white'
+              }`}>
                 {currentJob.vehicleName}
               </h1>
               {isAdmin && (
                 <button
                   type="button"
                   onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
-                  className="p-1.5 rounded-xl bg-black/60 hover:bg-black/80 border border-white/15 text-zinc-300 hover:text-white transition active:scale-95 backdrop-blur-md shadow-sm"
+                  className={`p-1.5 rounded-xl border transition active:scale-95 backdrop-blur-md shadow-xs cursor-pointer ${
+                    currentJob.thumbnailUrl
+                      ? 'bg-black/60 hover:bg-black/80 border-white/20 text-zinc-200 hover:text-white'
+                      : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-zinc-200'
+                  }`}
                   title="Edit Job Card"
                 >
                   <Edit2 className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -514,47 +575,82 @@ export const JobDetailPage: React.FC = () => {
               )}
             </div>
 
-            {/* Sub Row: Plate Pill, Color Pill, Garage Time & Icon-only Expand/Collapse Button */}
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Plate Badge */}
-                <span className="inline-block text-xs font-mono font-black text-white bg-black/90 border border-white/15 px-2.5 py-1 rounded-xl backdrop-blur-md shadow-md">
-                  {currentJob.vehicleNumber}
-                </span>
+            {/* Sub Row: Plate Pill, Color Pill, Garage Time, Delivery Badge & Expand Button */}
+            {(() => {
+              const deliveryInfo = getDeliveryStatusInfo(currentJob.expectedDeliveryDate, isAllCompleted);
+              return (
+                <>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Plate Badge */}
+                      <span className={`inline-block text-xs font-mono font-black px-2.5 py-1 rounded-xl shadow-xs border ${
+                        currentJob.thumbnailUrl
+                          ? 'text-white bg-black/90 border-white/15 backdrop-blur-md'
+                          : 'text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                      }`}>
+                        {currentJob.vehicleNumber}
+                      </span>
 
-                {/* Color Badge */}
-                {currentJob.vehicleColor && (
-                  <span className="inline-flex items-center gap-1.5 bg-black/70 border border-white/15 text-zinc-200 font-mono text-xs px-2.5 py-1 rounded-xl backdrop-blur-md shadow-sm">
-                    <Palette className="w-3.5 h-3.5 text-amber-400" />
-                    {currentJob.vehicleColor}
-                  </span>
-                )}
+                      {/* Color Badge */}
+                      {currentJob.vehicleColor && (
+                        <span className={`inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-xl shadow-2xs border ${
+                          currentJob.thumbnailUrl
+                            ? 'bg-black/70 border-white/15 text-zinc-200 backdrop-blur-md'
+                            : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-zinc-200'
+                        }`}>
+                          <Palette className="w-3.5 h-3.5 text-amber-500" />
+                          {currentJob.vehicleColor}
+                        </span>
+                      )}
 
-                {/* Garage Time */}
-                <span className="text-xs font-mono text-zinc-200 font-bold flex items-center gap-1 pl-0.5 drop-shadow-sm">
-                  <Clock className="w-3.5 h-3.5 text-amber-400" />
-                  {getGarageDuration()}
-                </span>
-              </div>
+                      {/* Expected Delivery Badge */}
+                      {currentJob.expectedDeliveryDate && (
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl font-mono text-xs font-bold border backdrop-blur-md shadow-xs ${deliveryInfo.badgeClass}`}>
+                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                          <span>{deliveryInfo.label}</span>
+                        </span>
+                      )}
 
-              {/* Icon-Only Expand/Collapse Toggle Button */}
-              <button
-                type="button"
-                onClick={() => setIsExpandedHeader((prev) => !prev)}
-                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 border shadow-md backdrop-blur-md ${
-                  isExpandedHeader
-                    ? 'bg-amber-400 text-zinc-950 border-amber-400'
-                    : 'bg-black/70 hover:bg-black/90 text-zinc-200 hover:text-white border-white/15'
-                }`}
-                title={isExpandedHeader ? 'Collapse Creator & Customer Details' : 'Expand Creator & Customer Details'}
-              >
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    isExpandedHeader ? 'rotate-180 text-zinc-950' : 'text-zinc-200'
-                  }`}
-                />
-              </button>
-            </div>
+                      {/* Garage Time */}
+                      <span className={`text-xs font-mono font-bold flex items-center gap-1 pl-0.5 ${
+                        currentJob.thumbnailUrl ? 'text-zinc-200' : 'text-slate-600 dark:text-slate-300'
+                      }`}>
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                        {getGarageDuration()}
+                      </span>
+                    </div>
+
+                    {/* Icon-Only Expand/Collapse Toggle Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsExpandedHeader((prev) => !prev)}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 border shadow-xs backdrop-blur-md cursor-pointer ${
+                        isExpandedHeader
+                          ? 'bg-amber-400 text-zinc-950 border-amber-400'
+                          : currentJob.thumbnailUrl
+                          ? 'bg-black/70 hover:bg-black/90 text-zinc-200 border-white/15'
+                          : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-slate-700'
+                      }`}
+                      title={isExpandedHeader ? 'Collapse Creator & Customer Details' : 'Expand Creator & Customer Details'}
+                    >
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          isExpandedHeader ? 'rotate-180 text-zinc-950' : 'text-current'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Overdue Delivery Alert Banner */}
+                  {deliveryInfo.isOverdue && !isAllCompleted && (
+                    <div className="p-3 rounded-2xl bg-rose-500/15 dark:bg-rose-950/80 border border-rose-500/50 text-rose-700 dark:text-rose-200 text-xs font-mono font-bold flex items-center gap-2.5 backdrop-blur-md shadow-lg shadow-rose-950/20 animate-pulse">
+                      <AlertTriangle className="w-4 h-4 text-rose-500 dark:text-rose-400 shrink-0" />
+                      <span>Delivery is overdue! Customer delivery was scheduled for {formatDeliveryDate(currentJob.expectedDeliveryDate)}.</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {/* Expandable Collapsible Drawer: Shows Creator Info & Customer Contact Info */}
             <AnimatePresence>
@@ -746,6 +842,16 @@ export const JobDetailPage: React.FC = () => {
                       className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
                     />
                   </div>
+
+                  {/* Field: Modern Expected Delivery Date & Time Calendar */}
+                  <div className="md:col-span-2">
+                    <ModernDateTimePicker
+                      value={(editDetails.expectedDeliveryDate as string) || ''}
+                      onChange={(val) => setEditDetails((prev) => ({ ...prev, expectedDeliveryDate: val }))}
+                      label="Expected Date & Time of Delivery"
+                      placeholder="Click to pick delivery date & time"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800/80">
@@ -882,21 +988,78 @@ export const JobDetailPage: React.FC = () => {
           </div>
         ) : null}
 
-        {/* Progress Bar & Counter */}
-        <div className="industrial-card p-4 rounded-2xl space-y-2">
-          <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-500 dark:text-slate-400 font-bold uppercase flex items-center gap-1.5">
-              Service Progress Checklist
-            </span>
-            <span className="text-amber-600 dark:text-amber-400 font-extrabold">
-              {completedCount} / {totalTasks} Completed ({progressPercent}%)
-            </span>
+        {/* ── MODERN CHECKLIST HEADER & PROGRESS CARD ── */}
+        <div className="rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-5 shadow-xs backdrop-blur-md space-y-3.5 transition-colors">
+          {/* Top Row: Title + Live Ratio Pill + Add Task Action */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-amber-500/10 dark:bg-amber-400/10 text-amber-500 dark:text-amber-400">
+                <ClipboardList className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>Service Checklist</span>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    <NumberTicker value={completedCount} />/{totalTasks} Done
+                  </span>
+                </h2>
+                <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                  Track, claim, and complete garage work
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Add Task Button */}
+            <button
+              type="button"
+              onClick={() => setIsAddingQuickTask((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
+            >
+              <Plus className={`w-3.5 h-3.5 stroke-[3] transition-transform ${isAddingQuickTask ? 'rotate-45' : ''}`} />
+              <span>{isAddingQuickTask ? 'Close' : 'Add Task'}</span>
+            </button>
           </div>
-          <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
+
+          {/* Quick Add Task Input Panel (Animated) */}
+          <AnimatePresence>
+            {isAddingQuickTask && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="pt-1 pb-1"
+              >
+                <div className="p-3 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                    Add Sub-Task to Checklist
+                  </label>
+                  <TaskAutoComplete
+                    value={newTaskTitle}
+                    onChange={setNewTaskTitle}
+                    onAddTask={(title) => {
+                      handleAddTask(title);
+                      setIsAddingQuickTask(false);
+                    }}
+                    placeholder="Search catalog service or enter custom task..."
+                    disabled={false}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Laser Progress Beam */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-[10px] uppercase font-bold text-slate-400">
+                Progress Status
+              </span>
+              <span className="font-extrabold text-amber-600 dark:text-amber-400 text-xs">
+                {progressPercent}% Completed
+              </span>
+            </div>
+            <ProgressBarBeam progress={progressPercent} />
           </div>
         </div>
 
@@ -922,20 +1085,20 @@ export const JobDetailPage: React.FC = () => {
                 {statusFilter === key && (
                   <motion.div
                     layoutId="task-filter-pill"
-                    className="absolute inset-0 bg-amber-400/20 dark:bg-amber-500/20 border border-amber-400/40 dark:border-amber-500/30 rounded-lg"
+                    className="absolute inset-0 bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 rounded-lg shadow-xs"
                     transition={{ type: 'spring', bounce: 0.15, duration: 0.35 }}
                   />
                 )}
                 <span className="relative z-10 font-black">{label}</span>
                 {count > 0 && (
                   <span
-                    className={`relative z-10 text-[9px] font-black rounded-full px-1.5 py-0.5 min-w-[18px] text-center ${
+                    className={`relative z-10 text-[9px] font-black rounded-full px-1.5 py-0.5 min-w-[18px] text-center shadow-2xs ${
                       statusFilter === key
-                        ? 'bg-amber-500 text-slate-950'
+                        ? 'bg-amber-400 text-slate-950'
                         : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                     }`}
                   >
-                    {count}
+                    <NumberTicker value={count} />
                   </span>
                 )}
               </button>
@@ -970,7 +1133,7 @@ export const JobDetailPage: React.FC = () => {
                     initial={{ scale: 0.98, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.18 }}
-                    className={`bg-white dark:bg-slate-900 border rounded-2xl transition-all shadow-xs cursor-pointer select-none overflow-hidden ${
+                    className={`relative bg-white dark:bg-slate-900 border rounded-2xl transition-all shadow-xs cursor-pointer select-none overflow-hidden ${
                       effectiveIsPinned
                         ? 'border-amber-400/80 dark:border-amber-500/70 ring-1.5 ring-amber-400/20'
                         : isCompleted
@@ -979,6 +1142,11 @@ export const JobDetailPage: React.FC = () => {
                     }`}
                     onClick={() => setExpandedTaskId((prev) => (prev === taskId ? null : taskId))}
                   >
+                    {/* Animated BorderBeam for Pinned Tasks */}
+                    {effectiveIsPinned && (
+                      <BorderBeam size={90} duration={6} colorFrom="#f59e0b" colorTo="#fbbf24" borderWidth={1.5} />
+                    )}
+
                     {/* Top Row: Checkbox, Title & Points (Line 1), Avatars & Time (Line 2) */}
                     <div className="p-3.5 sm:p-4 flex items-start gap-3">
                       {/* Checkbox Button with Yellow Ring for non-completed */}

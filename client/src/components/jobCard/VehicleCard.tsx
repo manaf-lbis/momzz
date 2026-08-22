@@ -15,10 +15,12 @@ import {
   AlertTriangle,
   RotateCcw,
   Loader2,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { ConfirmationModal } from '../common/ConfirmationModal';
 import { playReopenSound } from '../../utils/completionSound';
+import { getDeliveryStatusInfo, formatDeliveryDate } from '../../utils/dateUtils';
 
 interface VehicleCardProps {
   job: JobCardData;
@@ -35,14 +37,15 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
 
   const [setTaskStatus] = useSetTaskStatusMutation();
 
-  const totalTasks = job.tasks.length;
-  const completedTasks = job.tasks.filter((t) => t.status === 'COMPLETED').length;
+  const tasksList = job.tasks || [];
+  const totalTasks = tasksList.length;
+  const completedTasks = tasksList.filter((t) => t.status === 'COMPLETED').length;
   const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   const isReady = totalTasks > 0 && completedTasks === totalTasks;
 
   // Extract unique active mechanics working/completed tasks on this car
   const assignedWorkersMap = new Map<string, string>();
-  job.tasks.forEach((t) => {
+  tasksList.forEach((t) => {
     if (t.completedBy && t.completedBy.name) {
       assignedWorkersMap.set(t.completedBy.name, t.completedBy.name);
     }
@@ -116,7 +119,10 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
         <>
           <img
             src={job.thumbnailUrl}
-            alt={job.vehicleName}
+            alt={job.vehicleName || 'Vehicle'}
+            onError={(e) => {
+              (e.currentTarget as HTMLElement).style.display = 'none';
+            }}
             className="absolute inset-0 w-full h-full object-cover object-center z-0"
           />
           {/* Horizontal Dark Gradient Overlay on Left for 100% Text Readability */}
@@ -149,26 +155,36 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
                 </span>
               )}
             </div>
-          <p className="text-xs font-mono text-zinc-400 font-bold bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800 inline-block">
-            {job.vehicleNumber}{!isAdmin && job.customerMobile ? ` • ${job.customerMobile}` : ''}
-          </p>
-          <p className="text-[11px] font-mono text-zinc-500">⏱ {getElapsedTime(job.createdAt)} in garage</p>
-        </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-xs font-mono text-zinc-400 font-bold bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800 inline-block">
+                {job.vehicleNumber}{!isAdmin && job.customerMobile ? ` • ${job.customerMobile}` : ''}
+              </p>
+              {job.expectedDeliveryDate && (() => {
+                const deliveryInfo = getDeliveryStatusInfo(job.expectedDeliveryDate, isReady);
+                return (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border backdrop-blur-xs ${deliveryInfo.badgeClass}`}>
+                    <Clock className="w-3 h-3 shrink-0" />
+                    <span>{deliveryInfo.label}</span>
+                  </span>
+                );
+              })()}
+            </div>
+            <p className="text-[11px] font-mono text-zinc-500">⏱ {getElapsedTime(job.createdAt)} in garage</p>
+          </div>
 
-        {/* Visual Status Headers */}
-        <div className="flex items-center gap-2">
-          {isReady ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold tracking-wider uppercase">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Ready
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-mono font-bold tracking-wider uppercase">
-              <Clock className="w-3.5 h-3.5 animate-pulse" /> In Progress
-            </span>
-          )}
-
+          {/* Visual Status Headers */}
+          <div className="flex items-center gap-2">
+            {isReady ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold tracking-wider uppercase">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Ready
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-mono font-bold tracking-wider uppercase">
+                <Clock className="w-3.5 h-3.5 animate-pulse" /> In Progress
+              </span>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Task Error Banner */}
       {taskError && (
