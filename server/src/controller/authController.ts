@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { authService } from '../service/authService';
 import { userRepository } from '../repository/userRepository';
 import { sendSuccess, sendError } from '../utils/responseHandler';
-import { clearFailedLoginAttempts, recordFailedLogin } from '../middleware/loginRateLimitMiddleware';
+import { clearFailedLoginAttempts, recordFailedLogin } from '../middleware/rateLimitMiddleware';
 import { getCloudinaryUrl } from '../utils/cloudinaryHelper';
 
 const getRefreshCookieOptions = (req: Request) => {
@@ -71,7 +71,7 @@ export class AuthController {
       const ipAddress = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor?.split(',')[0])?.trim() || req.ip || 'Unknown';
       const result = await authService.login(mobile, password, ipAddress);
 
-      clearFailedLoginAttempts(req);
+      await clearFailedLoginAttempts(req);
 
       res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions(req));
 
@@ -94,10 +94,11 @@ export class AuthController {
         200
       );
     } catch (error: any) {
-      recordFailedLogin(req);
+      await recordFailedLogin(req);
       return sendError(res, error.message || 'Authentication failed.', 401);
     }
   }
+
 
   async refreshToken(req: Request, res: Response) {
     try {
@@ -137,9 +138,10 @@ export class AuthController {
   async logout(req: Request, res: Response) {
     try {
       const refreshToken = req.cookies?.refreshToken;
-      if (refreshToken) {
-        await authService.logout(refreshToken);
-      }
+      const authHeader = req.headers.authorization;
+      const accessToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
+
+      await authService.logout(refreshToken, accessToken);
       res.clearCookie('refreshToken', getRefreshCookieOptions(req));
       return sendSuccess(res, 'Logout successful.', null, 200);
     } catch (error: any) {
@@ -147,6 +149,7 @@ export class AuthController {
       return sendSuccess(res, 'Logout completed.', null, 200);
     }
   }
+
 
   async getMe(req: Request, res: Response) {
     try {

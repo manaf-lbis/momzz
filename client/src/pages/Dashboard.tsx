@@ -254,33 +254,28 @@ export const Dashboard: React.FC = () => {
           <FadeUp delay={0.1} className="col-span-2 sm:col-span-3 lg:col-span-5 row-span-1">
             {isAdmin ? (
               <div
-                className="group relative overflow-hidden rounded-2xl sm:rounded-3xl cursor-pointer flex flex-col min-h-[230px] sm:min-h-[250px] bg-gradient-to-br from-amber-500 via-amber-400 to-yellow-400 shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 active:scale-[0.98] transition-all duration-300"
+                className="group relative overflow-hidden rounded-2xl sm:rounded-3xl cursor-pointer flex flex-col min-h-[230px] sm:min-h-[250px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400/40 dark:hover:border-amber-400/30 shadow-sm hover:shadow-lg transition-all duration-300 p-4 sm:p-5"
                 onClick={() => navigate('/jobs/create')}
               >
-                <BorderBeam size={220} duration={5} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={2} />
-                <div className="pointer-events-none absolute bottom-0 right-0 opacity-[0.12]">
-                  <Car className="w-36 h-36 text-slate-950" />
-                </div>
-                <div className="relative z-10 p-4 sm:p-5 flex flex-col h-full">
-                  <div className="flex items-start justify-between">
-                    <div className="w-10 h-10 rounded-2xl bg-white/25 text-slate-950 flex items-center justify-center">
-                      <PlusCircle className="w-5 h-5 stroke-[2.5]" />
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full bg-white/25 text-slate-950 text-[9px] font-mono font-black uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles className="w-2.5 h-2.5" />Quick Action
-                    </span>
+                <div className="flex items-start justify-between">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/10 dark:bg-amber-400/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:bg-amber-400 group-hover:text-slate-950 transition-all duration-300">
+                    <PlusCircle className="w-5 h-5 stroke-[2.5]" />
                   </div>
-                  <div className="mt-auto">
-                    <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-950/55 mb-1">Vehicle Intake</p>
-                    <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight leading-none">New Job</h2>
-                    <p className="text-xs text-slate-950/65 mt-1.5 leading-snug">Register vehicle, assign mechanics & build checklist</p>
-                    <div className="mt-3.5 flex items-center gap-1 text-xs font-black text-slate-950">
-                      Create intake <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1.5 transition-transform" />
-                    </div>
+                  <span className="px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-700 dark:text-amber-300 text-[9px] font-mono font-black uppercase tracking-wider flex items-center gap-1 border border-amber-400/20">
+                    <Sparkles className="w-2.5 h-2.5" />Quick Action
+                  </span>
+                </div>
+                <div className="mt-auto">
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400 mb-1">Vehicle Intake</p>
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">New Job</h2>
+                  <p className="text-xs text-slate-400 mt-1.5 leading-snug">Register vehicle, assign mechanics & build checklist</p>
+                  <div className="mt-3.5 flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                    Create intake <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1.5 transition-transform" />
                   </div>
                 </div>
               </div>
             ) : (
+
               <div
                 className="group relative overflow-hidden rounded-2xl sm:rounded-3xl cursor-pointer flex flex-col min-h-[230px] sm:min-h-[250px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400/40 shadow-sm hover:shadow-lg transition-all duration-300 p-4 sm:p-5"
                 onClick={() => navigate('/jobs')}

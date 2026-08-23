@@ -51,6 +51,12 @@ export const uploadToCloudinary = async (
     throw new Error('Please provide a valid JPG, PNG, or WebP base64 image string.');
   }
 
+  // Enforce max 5MB base64 payload size (~6.7MB string length)
+  if (imageData.length > 7 * 1024 * 1024) {
+    throw new Error('Image size exceeds the maximum limit of 5MB.');
+  }
+
+
   const timestamp = Math.floor(Date.now() / 1000);
   const signature = createHash('sha1')
     .update(`folder=${folder}&timestamp=${timestamp}${ENV.CLOUDINARY_API_SECRET}`)

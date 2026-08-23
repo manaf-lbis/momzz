@@ -1,6 +1,7 @@
 import User, { IUser } from '../model/User';
 import Task from '../model/Task';
 import { getCloudinaryUrl } from '../utils/cloudinaryHelper';
+import { cacheService } from '../service/cacheService';
 
 export class UserRepository {
   async findByMobile(mobile: string): Promise<IUser | null> {
@@ -25,10 +26,17 @@ export class UserRepository {
   }
 
   async getLeaderboard(limit?: number): Promise<IUser[]> {
+    const cacheKey = `cache:leaderboard:${limit || 'all'}`;
+    const cached = await cacheService.get<IUser[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const users = await User.find({ 
       isApproved: true, 
       status: { $ne: 'BLOCKED' }
     })
+
       .select('name role taskCount profileImageUrl mobile status isApproved createdAt')
       .lean();
 
@@ -77,8 +85,11 @@ export class UserRepository {
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
 
-    return limit ? userObjects.slice(0, limit) : userObjects;
+    const result = limit ? userObjects.slice(0, limit) : userObjects;
+    await cacheService.set(cacheKey, result, 60);
+    return result;
   }
+
 
   async incrementTaskCount(userId: string): Promise<IUser | null> {
     return await User.findByIdAndUpdate(userId, { $inc: { taskCount: 1 } }, { new: true });

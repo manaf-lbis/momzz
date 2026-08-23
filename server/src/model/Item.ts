@@ -32,6 +32,9 @@ const ItemSchema = new Schema<IItem>({
   isDeleted: { type: Boolean, default: false },
 }, { timestamps: true });
 
+ItemSchema.index({ isDeleted: 1, category: 1, itemType: 1 });
+
+
 ItemSchema.pre('validate', function (next) {
   if (this.itemType === 'PRODUCT' && (this.stockQuantity === undefined || this.stockQuantity === null)) {
     this.invalidate('stockQuantity', 'Stock quantity is required for products.');
