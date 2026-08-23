@@ -285,99 +285,109 @@ export const LeaderboardPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors">
+    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors duration-200">
       <Navbar />
 
-      <main className="flex-1 max-w-xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
-        {/* ── Top Bar ── */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 shadow-xs transition active:scale-95"
-            aria-label="Back to dashboard"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-
-          <div className="text-center">
-            <h1 className="text-base font-black tracking-tight text-zinc-900 dark:text-white uppercase flex items-center justify-center gap-1.5">
-              <Trophy className="w-4 h-4 text-amber-500" />
-              Leaderboard
-            </h1>
+      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-5 pb-24 sm:pb-28">
+        {/* ── Page Header ── */}
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-zinc-800">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 transition active:scale-95 shadow-xs cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <h1 className="text-base sm:text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-amber-500/15 dark:bg-amber-400/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-2xs">
+                  <Trophy className="w-4 h-4" />
+                </div>
+                Technician Standings
+              </h1>
+              <p className="text-[11px] text-zinc-400 font-mono mt-0.5">
+                Garage task points & technician rankings
+              </p>
+            </div>
           </div>
 
-          <span className="text-[11px] font-mono font-semibold text-zinc-400 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 px-2.5 py-1 rounded-lg shadow-xs">
+          <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <Clock className="w-3.5 h-3.5" />
             {timeRemainingText}
           </span>
         </div>
 
-        {/* ── Minimalist Segmented Timeframe Switcher ── */}
-        <div className="grid grid-cols-5 p-1 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-xl shadow-xs">
-          {TIMEFRAMES.map(({ key, label }) => {
-            const isActive = timeframe === key;
-            return (
-              <button
-                key={key}
-                onClick={() => {
-                  setTimeframe(key);
-                  triggerPodiumPopper();
-                }}
-                className={`relative py-1.5 text-xs font-bold rounded-lg transition-colors capitalize ${
-                  isActive
-                    ? 'text-zinc-950 dark:text-white font-black'
-                    : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
-                }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="modern-tf-pill"
-                    className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 rounded-lg shadow-xs border border-zinc-200/60 dark:border-zinc-700/60"
-                    transition={{ type: 'spring', bounce: 0.15, duration: 0.4 }}
-                  />
-                )}
-                <span className="relative z-10">{label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ── Modern Dynamic Performance Card ── */}
-        <motion.div
-          key={`${timeframe}-${currentUserRank}`}
-          initial={{ opacity: 0, y: 8, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-          className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 border border-amber-500/30 dark:border-amber-500/20 p-3.5 shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <motion.div
-              whileHover={{ scale: 1.08, rotate: 4 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-zinc-950 font-black text-sm flex items-center justify-center shadow-sm shrink-0 cursor-pointer"
-              onClick={triggerPodiumPopper}
-            >
-              {currentUserRank ? `#${currentUserRank}` : '—'}
-            </motion.div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                <Sparkles className="w-3 h-3 animate-pulse" />
-                <span>{dynamicInsight.badge}</span>
-              </div>
-              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5 truncate">
-                {dynamicInsight.text}
-              </p>
+        {/* ── Responsive Multi-Column Layout for Desktop ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* ── LEFT COLUMN: Timeframe & Podium Showcase ── */}
+          <div className="lg:col-span-5 space-y-4">
+            {/* Minimalist Segmented Timeframe Switcher */}
+            <div className="grid grid-cols-5 p-1 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-xl shadow-xs">
+              {TIMEFRAMES.map(({ key, label }) => {
+                const isActive = timeframe === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setTimeframe(key);
+                      triggerPodiumPopper();
+                    }}
+                    className={`relative py-1.5 text-xs font-bold rounded-lg transition-colors capitalize ${
+                      isActive
+                        ? 'text-zinc-950 dark:text-white font-black'
+                        : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="modern-tf-pill"
+                        className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 rounded-lg shadow-xs border border-zinc-200/60 dark:border-zinc-700/60"
+                        transition={{ type: 'spring', bounce: 0.15, duration: 0.4 }}
+                      />
+                    )}
+                    <span className="relative z-10">{label}</span>
+                  </button>
+                );
+              })}
             </div>
-            {currentUserPoints > 0 && (
-              <div className="text-right shrink-0">
-                <span className="text-sm font-black text-zinc-900 dark:text-white">{currentUserPoints}</span>
-                <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-none">pts</p>
-              </div>
-            )}
-          </div>
-        </motion.div>
 
-        {/* ── Sleek Modern Top 3 Showcase ── */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl p-5 shadow-sm">
+            {/* Modern Dynamic Performance Card */}
+            <motion.div
+              key={`${timeframe}-${currentUserRank}`}
+              initial={{ opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 border border-amber-500/30 dark:border-amber-500/20 p-4 shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <motion.div
+                  whileHover={{ scale: 1.08, rotate: 4 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-zinc-950 font-black text-sm flex items-center justify-center shadow-sm shrink-0 cursor-pointer"
+                  onClick={triggerPodiumPopper}
+                >
+                  {currentUserRank ? `#${currentUserRank}` : '—'}
+                </motion.div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                    <Sparkles className="w-3 h-3 animate-pulse" />
+                    <span>{dynamicInsight.badge}</span>
+                  </div>
+                  <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200 mt-0.5 truncate">
+                    {dynamicInsight.text}
+                  </p>
+                </div>
+                {currentUserPoints > 0 && (
+                  <div className="text-right shrink-0">
+                    <span className="text-sm font-black text-zinc-900 dark:text-white">{currentUserPoints}</span>
+                    <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-none">pts</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Sleek Modern Top 3 Showcase */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl p-5 shadow-sm">
           <div className="text-center mb-3">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 flex items-center justify-center gap-1">
               <Award className="w-3.5 h-3.5 text-amber-500" />
@@ -542,17 +552,22 @@ export const LeaderboardPage: React.FC = () => {
             </motion.div>
           </div>
         </div>
+      </div>
 
+
+      {/* ── RIGHT COLUMN: Full Standings Ranking List ── */}
+      <div className="lg:col-span-7 space-y-4">
         {/* ── Modern Standings List (Rank #4+) ── */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl p-4 shadow-sm overflow-hidden space-y-2">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl p-4 sm:p-5 shadow-sm overflow-hidden space-y-3">
           <div className="flex items-center justify-between px-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-400">
-              Other Standings
+            <span className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white">
+              All Technician Rankings
             </span>
-            <span className="text-[10px] font-bold text-zinc-400 font-mono">
-              {remainingUsers.length} Mechanics
+            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 font-mono px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+              {rankedUsers.length} Active Technicians
             </span>
           </div>
+
 
           {isLeaderboardLoading || isJobsLoading ? (
             <div className="py-12 flex flex-col items-center gap-2">
@@ -633,7 +648,10 @@ export const LeaderboardPage: React.FC = () => {
             </div>
           )}
         </div>
-      </main>
+      </div>
+    </div>
+  </main>
+
 
       {/* ── User Quick Profile Modal ── */}
       <AnimatePresence>

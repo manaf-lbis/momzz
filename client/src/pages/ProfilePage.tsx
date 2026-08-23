@@ -28,8 +28,11 @@ import {
   MoreHorizontal,
   Lock,
   Loader2,
-  ArrowLeft,
+  ArrowRight,
   Sparkles,
+  Shield,
+  Clock,
+  Calendar,
 } from 'lucide-react';
 import { useAppDispatch } from '../hooks/useAppDispatch';
 import { logout, updateUser } from '../slice/authSlice';
@@ -152,404 +155,359 @@ export const ProfilePage: React.FC = () => {
 
   const initialLetter = currentUser?.name ? currentUser.name.trim().charAt(0).toUpperCase() : 'U';
 
+  const memberSince = currentUser?.createdAt
+    ? new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' }).format(
+        new Date(currentUser.createdAt)
+      )
+    : 'Recent';
+
   return (
     <div className="min-h-screen bg-slate-100/70 dark:bg-[#070c18] text-slate-900 dark:text-slate-100 transition-colors duration-200 pb-28 sm:pb-32">
       <Navbar />
 
-      <main className="mx-auto max-w-lg px-4 pt-4 sm:pt-8 space-y-4">
-        {/* Top Mobile Bar */}
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 space-y-6">
+        {/* Page Top Header */}
         <div className="flex items-center justify-between py-1">
-          <div className="flex items-center gap-2">
+          <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-              Profile
+              User Profile & Settings
             </h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              Manage your workshop credentials, operational tools and system preferences
+            </p>
           </div>
           <button
             onClick={() => profileImageInputRef.current?.click()}
-            className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-amber-500 shadow-xs active:scale-95 transition"
+            className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-amber-500 shadow-xs active:scale-95 transition cursor-pointer"
             title="Change photo"
           >
             <MoreHorizontal className="w-5 h-5" />
           </button>
         </div>
 
-        {/* User Card */}
-        <section className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-sm dark:shadow-xl flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3.5 min-w-0">
-            {/* Avatar with Camera Trigger */}
-            <div className="relative shrink-0">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-amber-100 dark:bg-slate-800 border-2 border-amber-400/60 dark:border-amber-400/40 flex items-center justify-center font-black text-lg text-amber-700 dark:text-amber-300 shadow-sm">
-                {currentUser?.profileImageUrl ? (
-                  <img
-                    src={currentUser.profileImageUrl}
-                    alt={currentUser.name}
-                    className="w-full h-full object-cover"
+        {/* Responsive Grid: 2 Columns on Tablets/Desktops (col-span-4 & col-span-8) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* ── LEFT COLUMN (Profile Summary & Quick Preferences) ── */}
+          <div className="lg:col-span-5 space-y-5">
+            {/* User Identity Card */}
+            <section className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 shadow-sm dark:shadow-xl space-y-5">
+              <div className="flex flex-col items-center text-center space-y-3">
+                {/* Avatar with Camera Trigger */}
+                <div className="relative group">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-amber-100 dark:bg-slate-800 border-4 border-white dark:border-slate-800 flex items-center justify-center font-black text-2xl text-amber-700 dark:text-amber-300 shadow-lg ring-2 ring-amber-400/50">
+                    {currentUser?.profileImageUrl ? (
+                      <img
+                        src={currentUser.profileImageUrl}
+                        alt={currentUser.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <span>{initialLetter}</span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => profileImageInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 flex items-center justify-center shadow-lg active:scale-90 transition cursor-pointer"
+                    title="Update photo"
+                  >
+                    <Camera className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+                </div>
+
+                {/* Name, Role & Mobile */}
+                <div>
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                    {currentUser?.name || 'Technician'}
+                  </h2>
+                  <div className="flex items-center justify-center gap-2 mt-1">
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-700 dark:text-amber-300 font-mono font-black text-[10px] uppercase tracking-wider border border-amber-400/30">
+                      {currentUser?.role || 'WORKER'}
+                    </span>
+                    <span className="text-xs text-slate-400 font-mono font-medium">
+                      {currentUser?.mobile || 'No Mobile'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-mono text-slate-400 mt-2 flex items-center justify-center gap-1">
+                    <Calendar className="w-3 h-3 text-slate-400" />
+                    <span>Member since {memberSince}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Actions inside Left Card */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2.5">
+                <button
+                  onClick={() => setIsPasswordModalOpen(true)}
+                  className="py-2.5 px-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 border border-slate-200/60 dark:border-slate-700/60 cursor-pointer"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Security</span>
+                </button>
+                <button
+                  onClick={() => setIsLogoutModalOpen(true)}
+                  className="py-2.5 px-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 border border-rose-500/20 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Logout</span>
+                </button>
+              </div>
+
+              <input
+                ref={profileImageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageSelection}
+              />
+            </section>
+
+            {/* Section 2: Preferences & Controls */}
+            <section className="rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 shadow-sm dark:shadow-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/60">
+              <div className="px-5 py-3 bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Preferences & Hardware
+              </div>
+
+              {/* Theme Switcher Row */}
+              <div className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-9 h-9 rounded-2xl bg-slate-500/10 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+                    {theme === 'dark' ? <Moon className="w-4.5 h-4.5 text-amber-400" /> : <Sun className="w-4.5 h-4.5 text-amber-500" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                      Appearance
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                      {theme === 'dark' ? 'Dark Mode Active' : 'Light Mode Active'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Toggle Switch */}
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className={`w-12 h-6.5 rounded-full p-1 transition-colors flex items-center cursor-pointer ${
+                    theme === 'dark' ? 'bg-amber-400 justify-end' : 'bg-slate-300 justify-start'
+                  }`}
+                >
+                  <motion.div
+                    layout
+                    className="w-4.5 h-4.5 rounded-full bg-white dark:bg-slate-950 shadow-md"
                   />
-                ) : (
-                  <span>{initialLetter}</span>
+                </button>
+              </div>
+
+              {/* Sound FX Toggle Row */}
+              <div className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-9 h-9 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    {isSoundEnabled ? <Volume2 className="w-4.5 h-4.5" /> : <VolumeX className="w-4.5 h-4.5" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                      Audio Feedback
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                      Completion chimes & haptic sounds
+                    </p>
+                  </div>
+                </div>
+
+                {/* Toggle Switch */}
+                <button
+                  type="button"
+                  onClick={handleSoundToggle}
+                  className={`w-12 h-6.5 rounded-full p-1 transition-colors flex items-center cursor-pointer ${
+                    isSoundEnabled ? 'bg-amber-400 justify-end' : 'bg-slate-300 justify-start'
+                  }`}
+                >
+                  <motion.div
+                    layout
+                    className="w-4.5 h-4.5 rounded-full bg-white dark:bg-slate-950 shadow-md"
+                  />
+                </button>
+              </div>
+
+              {/* Install App / PWA */}
+              <button
+                onClick={handleInstallClick}
+                className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition active:bg-slate-100 dark:active:bg-slate-800 cursor-pointer"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-9 h-9 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
+                    <Smartphone className="w-4.5 h-4.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                      Install PWA App
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                      {isInstalled ? 'App installed on device' : 'Add to home screen for 1-tap launch'}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+              </button>
+            </section>
+          </div>
+
+          {/* ── RIGHT COLUMN (Workshop Operations & Tools Bento Grid) ── */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* Section 1: Workshop & Operations Bento Grid */}
+            <section className="rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 shadow-sm dark:shadow-xl overflow-hidden p-4 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    Workshop Operations & Modules
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    Direct access to garage workflows, logs and administration
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 1. Vehicle Service History */}
+                <button
+                  onClick={() => navigate('/jobs', { state: { view: 'all' } })}
+                  className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-amber-500/10 dark:hover:bg-amber-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <Car className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      Vehicle Archives
+                    </h4>
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                      Complete lifetime service records & vehicle jobs
+                    </p>
+                  </div>
+                </button>
+
+                {/* 2. Leaderboard & Work Logs */}
+                <button
+                  onClick={() => navigate('/leaderboard')}
+                  className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-amber-500/10 dark:hover:bg-amber-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <Trophy className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      Technician Standings
+                    </h4>
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                      Completed tasks, mechanic points & leaderboard
+                    </p>
+                  </div>
+                </button>
+
+                {/* Admin Exclusive Modules */}
+                {isAdmin && (
+                  <>
+                    {/* Analytics */}
+                    <button
+                      onClick={() => navigate('/analytics')}
+                      className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-500/10 dark:hover:bg-indigo-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-indigo-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <BarChart3 className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          Workshop Analytics
+                        </h4>
+                        <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                          Revenue trends, turnaround time & KPI stats
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Inventory */}
+                    <button
+                      onClick={() => navigate('/inventory')}
+                      className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-emerald-500/10 dark:hover:bg-emerald-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-emerald-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Package className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                          Inventory & Parts
+                        </h4>
+                        <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                          Manage garage stock, spare parts & pricing
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Sales / POS */}
+                    <button
+                      onClick={() => navigate('/sales')}
+                      className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-rose-500/10 dark:hover:bg-rose-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-rose-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <ShoppingCart className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                          Sales & POS Billing
+                        </h4>
+                        <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                          Customer invoices, payment receipts & bills
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Team Approvals */}
+                    <button
+                      onClick={() => navigate('/users')}
+                      className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-purple-500/10 dark:hover:bg-purple-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-purple-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                          Team & Approvals
+                        </h4>
+                        <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                          Worker onboarding, roles & garage access
+                        </p>
+                      </div>
+                    </button>
+                  </>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => profileImageInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow-md active:scale-90 transition cursor-pointer"
-                title="Update photo"
-              >
-                <Camera className="w-3 h-3 stroke-[2.5]" />
-              </button>
-            </div>
+            </section>
 
-            {/* Name and Mobile / Role */}
-            <div className="min-w-0 flex-1">
-              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
-                {currentUser?.name || 'Technician'}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1.5 mt-0.5 truncate">
-                <span className="font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider text-[10px]">
-                  {currentUser?.role || 'WORKER'}
-                </span>
-                <span>•</span>
-                <span>{currentUser?.mobile || 'No Mobile'}</span>
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => profileImageInputRef.current?.click()}
-            className="w-9 h-9 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-amber-500 active:scale-90 transition shrink-0 cursor-pointer"
-            title="Edit photo"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-
-          <input
-            ref={profileImageInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleImageSelection}
-          />
-        </section>
-
-        {/* Section 1: Workshop & Operations */}
-        <section className="rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 shadow-sm dark:shadow-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/60">
-          <div className="px-5 py-3 bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-            Workshop & Operations
-          </div>
-
-          {/* 1. Vehicle Service History */}
-          <button
-            onClick={() => navigate('/jobs', { state: { view: 'all' } })}
-            className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition active:bg-slate-100 dark:active:bg-slate-800 cursor-pointer"
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-                <Car className="w-4.5 h-4.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                  Vehicle History Archives
-                </p>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                  Complete past customer records & jobs
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-          </button>
-
-          {/* 2. Leaderboard & Work Logs */}
-          <button
-            onClick={() => navigate('/leaderboard')}
-            className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition active:bg-slate-100 dark:active:bg-slate-800 cursor-pointer"
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                <Trophy className="w-4.5 h-4.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                  Technician Leaderboard
-                </p>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                  Points, completed tasks & mechanic ranking
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-          </button>
-
-          {/* Admin Tools */}
-          {isAdmin && (
-            <>
-              {/* Analytics */}
-              <button
-                onClick={() => navigate('/analytics')}
-                className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition active:bg-slate-100 dark:active:bg-slate-800 cursor-pointer"
-              >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-9 h-9 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                    <BarChart3 className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                      Workshop Analytics
-                    </p>
-                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                      Turnarounds, revenue & metrics
-                    </p>
-                  </div>
+            {/* Support & System Status Banner */}
+            <section className="rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm dark:shadow-xl flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <Phone className="w-5 h-5" />
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-              </button>
-
-              {/* Inventory */}
-              <button
-                onClick={() => navigate('/inventory')}
-                className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition active:bg-slate-100 dark:active:bg-slate-800 cursor-pointer"
-              >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                    <Package className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                      Spare Parts & Inventory
-                    </p>
-                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                      Catalog items, stock quantities & prices
-                    </p>
-                  </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    Need Help or Service Support?
+                  </h4>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                    MOMZ'Z Workshop Hotline • +91 7994414155
+                  </p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-              </button>
-
-              {/* Sales / Billing */}
-              <button
-                onClick={() => navigate('/sales')}
-                className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition active:bg-slate-100 dark:active:bg-slate-800 cursor-pointer"
+              </div>
+              <a
+                href="tel:+917994414155"
+                className="px-4 py-2 rounded-xl bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shrink-0 hover:bg-emerald-400 transition active:scale-95 shadow-md shadow-emerald-500/20"
               >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-9 h-9 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                    <ShoppingCart className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                      Sales & Billing POS
-                    </p>
-                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                      Invoices, estimates & payments
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-              </button>
-
-              {/* Team Management */}
-              <button
-                onClick={() => navigate('/users')}
-                className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition active:bg-slate-100 dark:active:bg-slate-800 cursor-pointer"
-              >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-9 h-9 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                    <Users className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                      Team & Approvals
-                    </p>
-                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                      Approve workers & assign roles
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-              </button>
-            </>
-          )}
-        </section>
-
-        {/* Section 2: Preferences & App Controls */}
-        <section className="rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 shadow-sm dark:shadow-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/60">
-          <div className="px-5 py-3 bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-            Preferences & Controls
+                Call Hotline
+              </a>
+            </section>
           </div>
-
-          {/* Theme Switcher Row */}
-          <div className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-slate-500/10 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
-                {theme === 'dark' ? <Moon className="w-4.5 h-4.5 text-amber-400" /> : <Sun className="w-4.5 h-4.5 text-amber-500" />}
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                  Appearance
-                </p>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                  {theme === 'dark' ? 'Dark Mode Active' : 'Light Mode Active'}
-                </p>
-              </div>
-            </div>
-
-            {/* Toggle Switch */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className={`w-12 h-6.5 rounded-full p-1 transition-colors flex items-center cursor-pointer ${
-                theme === 'dark' ? 'bg-amber-400 justify-end' : 'bg-slate-300 justify-start'
-              }`}
-            >
-              <motion.div
-                layout
-                className="w-4.5 h-4.5 rounded-full bg-white dark:bg-slate-950 shadow-md"
-              />
-            </button>
-          </div>
-
-          {/* Sound FX Toggle Row */}
-          <div className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                {isSoundEnabled ? <Volume2 className="w-4.5 h-4.5" /> : <VolumeX className="w-4.5 h-4.5" />}
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                  Completion Sounds
-                </p>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                  Audio chime on task completion
-                </p>
-              </div>
-            </div>
-
-            {/* Toggle Switch */}
-            <button
-              type="button"
-              onClick={handleSoundToggle}
-              className={`w-12 h-6.5 rounded-full p-1 transition-colors flex items-center cursor-pointer ${
-                isSoundEnabled ? 'bg-amber-400 justify-end' : 'bg-slate-300 justify-start'
-              }`}
-            >
-              <motion.div
-                layout
-                className="w-4.5 h-4.5 rounded-full bg-white dark:bg-slate-950 shadow-md"
-              />
-            </button>
-          </div>
-
-          {/* Install App / PWA */}
-          <button
-            onClick={handleInstallClick}
-            className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition active:bg-slate-100 dark:active:bg-slate-800 cursor-pointer"
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
-                <Smartphone className="w-4.5 h-4.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                  Install Momzz App
-                </p>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                  {isInstalled ? 'App installed on device' : 'Add to home screen for 1-tap access'}
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-          </button>
-
-          {/* Security / Password */}
-          <button
-            onClick={() => setIsPasswordModalOpen(true)}
-            className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition active:bg-slate-100 dark:active:bg-slate-800 cursor-pointer"
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-slate-500/10 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
-                <KeyRound className="w-4.5 h-4.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                  Account Security
-                </p>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                  Change login password
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-          </button>
-        </section>
-
-        {/* Section 3: Support & Session */}
-        <section className="rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 shadow-sm dark:shadow-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/60">
-          <div className="px-5 py-3 bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-            Support & Session
-          </div>
-
-          {/* Contact Support */}
-          <a
-            href="tel:+917994414155"
-            className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition active:bg-slate-100 dark:active:bg-slate-800"
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <Phone className="w-4.5 h-4.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                  Contact Garage Helpline
-                </p>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                  Call workshop advisor
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-          </a>
-
-          {/* About */}
-          <div className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-slate-500/10 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
-                <Info className="w-4.5 h-4.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                  MOMZ'Z Workshop OS
-                </p>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                  Version 2.4.0 • Zero-TTL Edition
-                </p>
-              </div>
-            </div>
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              Active
-            </span>
-          </div>
-
-          {/* Log Out Button */}
-          <button
-            type="button"
-            onClick={() => setIsLogoutModalOpen(true)}
-            className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-rose-500/5 dark:hover:bg-rose-500/10 transition active:bg-rose-500/15 cursor-pointer group"
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <LogOut className="w-4.5 h-4.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400 truncate">
-                  Log Out
-                </p>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                  Sign out of this device
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-rose-400 shrink-0" />
-          </button>
-        </section>
+        </div>
       </main>
 
       {/* Modern iOS Bottom Sheet Logout Modal (Matching Reference Image) */}
@@ -713,7 +671,6 @@ export const ProfilePage: React.FC = () => {
           }}
         />
       )}
-
     </div>
   );
 };
