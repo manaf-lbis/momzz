@@ -435,305 +435,339 @@ export const JobDetailPage: React.FC = () => {
       <Navbar />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
-        {/* ── ULTRA-MODERN VEHICLE HERO HEADER ── */}
+        {/* ── VEHICLE HERO HEADER ── */}
         <motion.section
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="relative overflow-hidden rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xl bg-white dark:bg-[#0b1328] min-h-[200px] sm:min-h-[230px] flex flex-col justify-between p-4 sm:p-5 select-none transition-colors"
+          transition={{ duration: 0.28 }}
+          className={`relative overflow-hidden rounded-3xl border select-none transition-colors ${
+            currentJob.isPinnedForAll
+              ? 'border-amber-400/60 shadow-lg shadow-amber-500/10'
+              : (Array.isArray(currentJob.pinnedBy) && currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
+              ? 'border-indigo-400/60 shadow-lg shadow-indigo-500/10'
+              : isAllCompleted
+              ? 'border-emerald-500/40 shadow-lg shadow-emerald-500/10'
+              : 'border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-black/30'
+          } ${currentJob.thumbnailUrl ? 'bg-slate-950' : 'bg-white dark:bg-[#0c1525]'}`}
         >
-          {/* BorderBeam for Pinned / Ready Jobs */}
+          {/* BorderBeam */}
           {currentJob.isPinnedForAll && (
-            <BorderBeam size={220} duration={6} colorFrom="#facc15" colorTo="#fbbf24" borderWidth={2} />
+            <BorderBeam size={300} duration={5} colorFrom="#facc15" colorTo="#f59e0b" borderWidth={1.5} />
           )}
           {!currentJob.isPinnedForAll && (Array.isArray(currentJob.pinnedBy) && currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id))) && (
-            <BorderBeam size={220} duration={6} colorFrom="#38bdf8" colorTo="#60a5fa" borderWidth={2} />
+            <BorderBeam size={300} duration={5} colorFrom="#818cf8" colorTo="#6366f1" borderWidth={1.5} />
           )}
           {!currentJob.isPinnedForAll && isAllCompleted && (
-            <BorderBeam size={220} duration={10} colorFrom="#10b981" colorTo="#34d399" borderWidth={1.5} />
+            <BorderBeam size={300} duration={8} colorFrom="#10b981" colorTo="#34d399" borderWidth={1.5} />
           )}
 
-          {/* Background Vehicle Image with Clean Left-to-Right Medium Gradient Overlay */}
+          {/* Background Image */}
           {currentJob.thumbnailUrl ? (
             <>
               <img
                 src={currentJob.thumbnailUrl}
                 alt={currentJob.vehicleName || 'Vehicle'}
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = 'none';
-                }}
-                className="absolute inset-0 w-full h-full object-cover object-center z-0 scale-[1.01]"
+                onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                className="absolute inset-0 w-full h-full object-cover object-center z-0"
               />
-              {/* Clean left-to-right medium gradient tone */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0b1328] via-[#0b1328]/85 via-42% to-transparent z-0" />
-              {/* Subtle top/bottom soft vignette */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1328]/60 via-transparent to-black/30 z-0" />
+              <div className="absolute inset-0 z-0 bg-gradient-to-b from-slate-950/50 via-slate-950/80 to-slate-950" />
+              <div className="absolute inset-0 z-0 bg-gradient-to-r from-slate-950/80 via-slate-950/40 to-transparent" />
             </>
           ) : (
-            <div className="absolute right-4 bottom-2 opacity-5 dark:opacity-10 pointer-events-none z-0">
-              <Car className="w-52 h-52 text-slate-400 dark:text-white" />
+            <div className="absolute right-0 bottom-0 opacity-[0.035] dark:opacity-[0.06] pointer-events-none z-0">
+              <Car className="w-56 h-56" />
             </div>
           )}
 
-          {/* Top Row: Back Arrow Button (Left) + Pinned / Edit Photo / Status Badges (Right) */}
-          <div className="relative z-10 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => navigate('/jobs')}
-              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center backdrop-blur-md transition active:scale-95 shadow-md shrink-0 cursor-pointer ${
-                currentJob.thumbnailUrl
-                  ? 'bg-black/60 hover:bg-black/80 border border-white/20 text-white'
-                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white'
-              }`}
-              title="Back to Jobs List"
-            >
-              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
+          {/* ── CONTENT ── */}
+          <div className="relative z-10">
 
-            {/* Right Action Badges & Buttons (Icon-Only, No Text Clutter) */}
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Pinned Icon Button */}
+            {/* ── TOP NAV BAR ── */}
+            <div className={`flex items-center justify-between px-3 pt-3 pb-0 sm:px-4 sm:pt-4`}>
+              {/* Back */}
               <button
                 type="button"
-                onClick={() => setIsPinJobModalOpen(true)}
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center backdrop-blur-md transition active:scale-95 border cursor-pointer ${
-                  currentJob.isPinnedForAll ||
-                  (Array.isArray(currentJob.pinnedBy) &&
-                    currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
-                    ? 'bg-amber-400 text-zinc-950 border-amber-400 shadow-md shadow-amber-400/25 ring-1 ring-amber-400'
-                    : currentJob.thumbnailUrl
-                    ? 'bg-black/60 text-amber-300 border-white/20 hover:bg-black/80'
-                    : 'bg-slate-100 dark:bg-slate-800 text-amber-600 dark:text-amber-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                onClick={() => navigate('/jobs')}
+                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer border ${
+                  currentJob.thumbnailUrl
+                    ? 'bg-black/50 hover:bg-black/70 border-white/15 text-zinc-300 backdrop-blur-sm'
+                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
                 }`}
-                title="Pin Job Card"
               >
-                <Pin className={`w-4 h-4 ${
-                  currentJob.isPinnedForAll ||
-                  (Array.isArray(currentJob.pinnedBy) &&
-                    currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
-                    ? 'fill-zinc-950 stroke-[2.5]'
-                    : 'fill-amber-400 stroke-[2.5]'
-                }`} />
+                <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden xs:inline">Jobs</span>
               </button>
 
-              {/* Camera Photo Studio Button */}
-              <button
-                type="button"
-                onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 shadow-md shadow-amber-500/20 transition active:scale-95 shrink-0 cursor-pointer"
-                title="Vehicle Photo Studio"
-              >
-                <Camera className="w-4 h-4 stroke-[2.5]" />
-              </button>
-
-              {/* Status Icon */}
-              {isAllCompleted ? (
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 backdrop-blur-md shadow-xs shrink-0" title="Ready for Delivery">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                </div>
-              ) : (
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 backdrop-blur-md shadow-xs shrink-0" title="In Work">
-                  <Clock className="w-4 h-4 text-amber-500 dark:text-amber-400 animate-pulse" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Bottom Info: Vehicle Name, Plate, Color, Garage Duration & Expand Toggle */}
-          <div className="relative z-10 space-y-2.5 pt-4">
-            {/* Title Row: Vehicle Model + Edit Pencil */}
-            <div className="flex items-center gap-2">
-              <h1 className={`text-2xl sm:text-3xl font-black uppercase tracking-tight ${
-                currentJob.thumbnailUrl ? 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]' : 'text-slate-900 dark:text-white'
+              {/* Label */}
+              <span className={`text-[10px] font-mono font-black uppercase tracking-[0.2em] ${
+                currentJob.thumbnailUrl ? 'text-zinc-400' : 'text-slate-400 dark:text-slate-500'
               }`}>
-                {currentJob.vehicleName}
-              </h1>
-              {isAdmin && (
+                Job Card
+              </span>
+
+              {/* Action cluster */}
+              <div className="flex items-center gap-1.5">
+                {/* Pin */}
                 <button
                   type="button"
-                  onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
-                  className={`p-1.5 rounded-xl border transition active:scale-95 backdrop-blur-md shadow-xs cursor-pointer ${
-                    currentJob.thumbnailUrl
-                      ? 'bg-black/60 hover:bg-black/80 border-white/20 text-zinc-200 hover:text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-zinc-200'
+                  onClick={() => setIsPinJobModalOpen(true)}
+                  title="Pin / Unpin"
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center border transition active:scale-90 cursor-pointer ${
+                    currentJob.isPinnedForAll
+                      ? 'bg-amber-400 border-amber-400 text-zinc-950 shadow-sm shadow-amber-400/30'
+                      : (Array.isArray(currentJob.pinnedBy) && currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
+                      ? 'bg-indigo-500 border-indigo-400 text-white shadow-sm shadow-indigo-500/30'
+                      : currentJob.thumbnailUrl
+                      ? 'bg-black/50 border-white/15 text-zinc-400 hover:text-amber-400 backdrop-blur-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-amber-500'
                   }`}
-                  title="Edit Job Card"
                 >
-                  <Edit2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <Pin className={`w-3.5 h-3.5 ${
+                    currentJob.isPinnedForAll || (Array.isArray(currentJob.pinnedBy) && currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
+                      ? 'fill-current' : ''
+                  }`} />
                 </button>
-              )}
+
+                {/* Camera */}
+                <button
+                  type="button"
+                  onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
+                  title="Vehicle Photo"
+                  className="w-8 h-8 rounded-xl flex items-center justify-center bg-amber-400 hover:bg-amber-300 text-zinc-950 border border-amber-400 shadow-sm shadow-amber-400/20 transition active:scale-90 cursor-pointer"
+                >
+                  <Camera className="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+
+                {/* Status dot */}
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${
+                  isAllCompleted
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-500'
+                    : 'bg-amber-400/10 border-amber-400/30 text-amber-500'
+                }`} title={isAllCompleted ? 'Ready for delivery' : 'In progress'}>
+                  {isAllCompleted
+                    ? <CheckCircle2 className="w-3.5 h-3.5" />
+                    : <Clock className="w-3.5 h-3.5 animate-pulse" />
+                  }
+                </div>
+              </div>
             </div>
 
-            {/* Sub Row: Plate Pill, Color Pill, Garage Time, Delivery Badge & Expand Button */}
-            {(() => {
-              const deliveryInfo = getDeliveryStatusInfo(currentJob.expectedDeliveryDate, isAllCompleted);
-              return (
-                <>
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Plate Badge */}
-                      <span className={`inline-block text-xs font-mono font-black px-2.5 py-1 rounded-xl shadow-xs border ${
-                        currentJob.thumbnailUrl
-                          ? 'text-white bg-black/90 border-white/15 backdrop-blur-md'
-                          : 'text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                      }`}>
-                        {currentJob.vehicleNumber}
-                      </span>
+            {/* ── MAIN HERO CONTENT ── */}
+            <div className="px-4 pt-4 pb-4 sm:px-5 sm:pt-5 sm:pb-5 space-y-3">
 
-                      {/* Color Badge */}
-                      {currentJob.vehicleColor && (
-                        <span className={`inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-xl shadow-2xs border ${
-                          currentJob.thumbnailUrl
-                            ? 'bg-black/70 border-white/15 text-zinc-200 backdrop-blur-md'
-                            : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-zinc-200'
-                        }`}>
-                          <Palette className="w-3.5 h-3.5 text-amber-500" />
-                          {currentJob.vehicleColor}
-                        </span>
-                      )}
-
-                      {/* Expected Delivery Badge */}
-                      {currentJob.expectedDeliveryDate && (
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl font-mono text-xs font-bold border backdrop-blur-md shadow-xs ${deliveryInfo.badgeClass}`}>
-                          <Clock className="w-3.5 h-3.5 shrink-0" />
-                          <span>{deliveryInfo.label}</span>
-                        </span>
-                      )}
-
-                      {/* Garage Time */}
-                      <span className={`text-xs font-mono font-bold flex items-center gap-1 pl-0.5 ${
-                        currentJob.thumbnailUrl ? 'text-zinc-200' : 'text-slate-600 dark:text-slate-300'
-                      }`}>
-                        <Clock className="w-3.5 h-3.5 text-amber-500" />
-                        {getGarageDuration()}
-                      </span>
-                    </div>
-
-                    {/* Icon-Only Expand/Collapse Toggle Button */}
+              {/* ── VEHICLE NAME — big, dominant ── */}
+              <div>
+                <h1 className={`text-2xl sm:text-3xl font-black tracking-tight leading-none uppercase ${
+                  currentJob.thumbnailUrl ? 'text-white' : 'text-slate-900 dark:text-white'
+                }`}>
+                  {currentJob.vehicleName}
+                </h1>
+                {/* Sub-label: Plate · Color · Time */}
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  {/* Plate */}
+                  <span className="font-mono text-[12px] font-black px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-950 tracking-widest">
+                    {currentJob.vehicleNumber}
+                  </span>
+                  {/* Color */}
+                  {currentJob.vehicleColor && (
+                    <span className={`inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-lg border ${
+                      currentJob.thumbnailUrl
+                        ? 'bg-white/10 border-white/15 text-zinc-300 backdrop-blur-sm'
+                        : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                    }`}>
+                      <Palette className="w-3 h-3 text-amber-400 shrink-0" />
+                      {currentJob.vehicleColor}
+                    </span>
+                  )}
+                  {/* Garage time */}
+                  <span className={`inline-flex items-center gap-1 text-[11px] font-mono ${
+                    currentJob.thumbnailUrl ? 'text-zinc-400' : 'text-slate-500 dark:text-slate-400'
+                  }`}>
+                    <Clock className="w-3 h-3 text-amber-400 shrink-0" />
+                    {getGarageDuration()}
+                  </span>
+                  {/* Edit pencil (admin only) */}
+                  {isAdmin && (
                     <button
                       type="button"
-                      onClick={() => setIsExpandedHeader((prev) => !prev)}
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 border shadow-xs backdrop-blur-md cursor-pointer ${
-                        isExpandedHeader
-                          ? 'bg-amber-400 text-zinc-950 border-amber-400'
-                          : currentJob.thumbnailUrl
-                          ? 'bg-black/70 hover:bg-black/90 text-zinc-200 border-white/15'
-                          : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-slate-700'
+                      onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
+                      title="Edit Job"
+                      className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition active:scale-90 cursor-pointer ${
+                        currentJob.thumbnailUrl
+                          ? 'bg-white/10 border-white/15 text-zinc-400 hover:text-white backdrop-blur-sm'
+                          : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                       }`}
-                      title={isExpandedHeader ? 'Collapse Creator & Customer Details' : 'Expand Creator & Customer Details'}
                     >
-                      <ChevronDown
-                        className={`w-4 h-4 transition-transform duration-200 ${
-                          isExpandedHeader ? 'rotate-180 text-zinc-950' : 'text-current'
-                        }`}
-                      />
+                      <Edit2 className="w-3 h-3" />
+                      Edit
                     </button>
-                  </div>
-
-                  {/* Overdue Delivery Alert Banner */}
-                  {deliveryInfo.isOverdue && !isAllCompleted && (
-                    <div className="p-3 rounded-2xl bg-rose-500/15 dark:bg-rose-950/80 border border-rose-500/50 text-rose-700 dark:text-rose-200 text-xs font-mono font-bold flex items-center gap-2.5 backdrop-blur-md shadow-lg shadow-rose-950/20 animate-pulse">
-                      <AlertTriangle className="w-4 h-4 text-rose-500 dark:text-rose-400 shrink-0" />
-                      <span>Delivery is overdue! Customer delivery was scheduled for {formatDeliveryDate(currentJob.expectedDeliveryDate)}.</span>
-                    </div>
                   )}
-                </>
-              );
-            })()}
+                </div>
+              </div>
 
-            {/* Expandable Collapsible Drawer: Shows Creator Info & Customer Contact Info */}
-            <AnimatePresence>
-              {isExpandedHeader && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="border-t border-white/15 pt-3 mt-2 space-y-2.5"
-                >
-                  {/* Creator Info & Date Strip */}
-                  <div className="p-3 rounded-2xl bg-black/75 border border-white/15 flex items-center justify-between gap-3 shadow-lg backdrop-blur-md">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-full overflow-hidden bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-xs font-black text-amber-300 shrink-0">
-                        {currentJob.createdBy?.profileImageUrl ? (
-                          <img
-                            src={currentJob.createdBy.profileImageUrl}
-                            alt={currentJob.createdBy.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          currentJob.createdBy?.name?.charAt(0).toUpperCase() || 'SA'
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[11px] font-mono text-zinc-400">Created by</span>
-                          <span className="font-bold text-xs text-white truncate">
-                            {currentJob.createdBy?.name || 'Service Advisor'}
-                          </span>
-                          {currentJob.createdBy?.role && (
-                            <span className="text-[9px] font-mono font-black uppercase px-1.5 py-0.2 bg-amber-500/20 text-amber-300 rounded border border-amber-500/30">
-                              {currentJob.createdBy.role}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+              {/* ── PROGRESS ── */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] font-mono font-bold uppercase tracking-widest ${
+                    currentJob.thumbnailUrl ? 'text-zinc-500' : 'text-slate-400 dark:text-slate-500'
+                  }`}>
+                    Service Progress
+                  </span>
+                  <span className={`text-xs font-black font-mono tabular-nums ${
+                    isAllCompleted ? 'text-emerald-400' : 'text-amber-500 dark:text-amber-400'
+                  }`}>
+                    {progressPercent}%
+                  </span>
+                </div>
+                <ProgressBarBeam progress={progressPercent} />
+              </div>
 
-                    <div className="text-right text-[11px] font-mono text-zinc-300 shrink-0">
-                      <span className="font-semibold text-white">
-                        {new Date(currentJob.createdAt).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </span>
-                      <span className="text-zinc-400 ml-1.5">
-                        {new Date(currentJob.createdAt).toLocaleTimeString(undefined, {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Customer Contact Strip */}
-                  {(currentJob.customerName || currentJob.customerMobile || currentJob.customerEmail) && (
-                    <div className="p-2.5 rounded-2xl bg-black/75 border border-white/15 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-200 backdrop-blur-md shadow-lg">
-                      <div className="flex items-center gap-1.5">
-                        <UserIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span className="font-bold text-white">
-                          {currentJob.customerName || 'Customer'}
+              {/* ── DELIVERY + OVERDUE ── */}
+              {(() => {
+                const deliveryInfo = getDeliveryStatusInfo(currentJob.expectedDeliveryDate, isAllCompleted);
+                return (
+                  <>
+                    {currentJob.expectedDeliveryDate && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold border ${deliveryInfo.badgeClass}`}>
+                          <Calendar className="w-3 h-3 shrink-0" />
+                          {deliveryInfo.label}
                         </span>
+                        {currentJob.isPinnedForAll && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-400/15 border border-amber-400/40 text-amber-600 dark:text-amber-300 text-[10px] font-mono font-bold">
+                            <Pin className="w-2.5 h-2.5 fill-current shrink-0" /> All
+                          </span>
+                        )}
+                        {Array.isArray(currentJob.pinnedBy) && currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)) && !currentJob.isPinnedForAll && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-400/30 text-indigo-600 dark:text-indigo-300 text-[10px] font-mono font-bold">
+                            <Pin className="w-2.5 h-2.5 fill-current shrink-0" /> Me
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {deliveryInfo.isOverdue && !isAllCompleted && (
+                      <div className={`flex items-center gap-2 p-2.5 rounded-xl text-[11px] font-mono font-bold border ${
+                        currentJob.thumbnailUrl
+                          ? 'bg-rose-950/60 border-rose-500/40 text-rose-300 backdrop-blur-sm'
+                          : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-500/40 text-rose-700 dark:text-rose-300'
+                      }`}>
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 animate-pulse" />
+                        <span>Overdue · {formatDeliveryDate(currentJob.expectedDeliveryDate)}</span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* ── MORE / LESS toggle ── */}
+              <button
+                type="button"
+                onClick={() => setIsExpandedHeader((prev) => !prev)}
+                className={`w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl border text-[10px] font-mono font-bold uppercase tracking-widest transition active:scale-[0.98] cursor-pointer ${
+                  isExpandedHeader
+                    ? 'bg-amber-400 text-zinc-950 border-amber-400'
+                    : currentJob.thumbnailUrl
+                    ? 'bg-white/5 border-white/10 text-zinc-400 hover:bg-white/10 backdrop-blur-sm'
+                    : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                {isExpandedHeader ? 'Hide details' : 'Show creator & customer'}
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpandedHeader ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* ── EXPANDABLE DRAWER ── */}
+              <AnimatePresence>
+                {isExpandedHeader && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-2 pt-0.5">
+                      {/* Creator row */}
+                      <div className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl border ${
+                        currentJob.thumbnailUrl
+                          ? 'bg-black/60 border-white/10 backdrop-blur-sm'
+                          : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+                      }`}>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-xs font-black text-amber-600 dark:text-amber-300 shrink-0">
+                            {currentJob.createdBy?.profileImageUrl
+                              ? <img src={currentJob.createdBy.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                              : currentJob.createdBy?.name?.charAt(0).toUpperCase() || 'SA'
+                            }
+                          </div>
+                          <div className="min-w-0">
+                            <p className={`text-[10px] font-mono uppercase tracking-wider ${currentJob.thumbnailUrl ? 'text-zinc-500' : 'text-slate-400'}`}>
+                              Created by
+                            </p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`text-xs font-bold truncate max-w-[120px] sm:max-w-none ${currentJob.thumbnailUrl ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+                                {currentJob.createdBy?.name || 'Service Advisor'}
+                              </span>
+                              {currentJob.createdBy?.role && (
+                                <span className="text-[9px] font-mono font-black uppercase px-1.5 py-0.5 bg-amber-400/15 border border-amber-400/30 text-amber-600 dark:text-amber-400 rounded-md">
+                                  {currentJob.createdBy.role}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <p className={`text-[10px] font-mono text-right shrink-0 ${currentJob.thumbnailUrl ? 'text-zinc-500' : 'text-slate-400'}`}>
+                          {new Date(currentJob.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          {' · '}
+                          {new Date(currentJob.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                        </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {currentJob.customerMobile && (
-                          <a
-                            href={`tel:${currentJob.customerMobile}`}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-semibold transition active:scale-95"
-                            title="Call Customer"
-                          >
-                            <Phone className="w-3 h-3 text-emerald-400" />
-                            <span>{currentJob.customerMobile}</span>
-                          </a>
-                        )}
-                        {currentJob.customerEmail && (
-                          <a
-                            href={`mailto:${currentJob.customerEmail}`}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 font-mono text-xs font-semibold transition active:scale-95"
-                            title="Email Customer"
-                          >
-                            <Mail className="w-3 h-3 text-sky-400" />
-                            <span>{currentJob.customerEmail}</span>
-                          </a>
-                        )}
-                      </div>
+                      {/* Customer row */}
+                      {(currentJob.customerName || currentJob.customerMobile || currentJob.customerEmail) && (
+                        <div className={`px-3 py-2.5 rounded-2xl border ${
+                          currentJob.thumbnailUrl
+                            ? 'bg-black/60 border-white/10 backdrop-blur-sm'
+                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+                        }`}>
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <UserIcon className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              <div>
+                                <p className={`text-[10px] font-mono uppercase tracking-wider ${currentJob.thumbnailUrl ? 'text-zinc-500' : 'text-slate-400'}`}>
+                                  Customer
+                                </p>
+                                <p className={`text-xs font-bold truncate max-w-[130px] sm:max-w-none ${currentJob.thumbnailUrl ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+                                  {currentJob.customerName || '—'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {currentJob.customerMobile && (
+                                <a href={`tel:${currentJob.customerMobile}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 font-mono text-[11px] font-bold transition active:scale-95">
+                                  <Phone className="w-3 h-3 text-emerald-500" />
+                                  <span className="hidden sm:inline">{currentJob.customerMobile}</span>
+                                  <span className="sm:hidden">Call</span>
+                                </a>
+                              )}
+                              {currentJob.customerEmail && (
+                                <a href={`mailto:${currentJob.customerEmail}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-600 dark:text-sky-300 font-mono text-[11px] font-bold transition active:scale-95">
+                                  <Mail className="w-3 h-3 text-sky-500" />
+                                  <span className="hidden sm:inline">{currentJob.customerEmail}</span>
+                                  <span className="sm:hidden">Mail</span>
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+            </div>
           </div>
         </motion.section>
 
@@ -893,65 +927,61 @@ export const JobDetailPage: React.FC = () => {
           </div>
         )}
 
-        {/* ── FINAL VERIFICATION CARD / STATUS BANNER ── */}
+        {/* ── STATUS BANNERS ── */}
         {currentJob.verifiedAt ? (
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/30 p-4 sm:p-5 shadow-xs backdrop-blur-md">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/30">
-                  <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 font-mono">
-                      Quality Verified & Passed
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold">
-                      DELIVERY READY
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                    Verified on{' '}
-                    <span className="font-mono font-bold text-slate-900 dark:text-white">
-                      {new Intl.DateTimeFormat(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      }).format(new Date(currentJob.verifiedAt))}
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="text-left sm:text-right">
-                <span className="text-[11px] font-mono text-slate-400 block">
-                  {isAdmin ? 'Admin task adjustments enabled' : 'Job card is locked'}
-                </span>
-              </div>
+          /* Verified / Signed-off banner */
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-emerald-400/5 to-transparent p-4 flex items-center gap-3"
+          >
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-emerald-400/15 blur-2xl" />
             </div>
-          </div>
+            <div className="w-9 h-9 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25 relative z-10">
+              <CheckCircle2 className="w-4.5 h-4.5 stroke-[2.5]" />
+            </div>
+            <div className="relative z-10 min-w-0">
+              <p className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 font-mono">
+                Quality Verified ✓
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                Signed off on{' '}
+                <span className="font-bold text-slate-700 dark:text-slate-200">
+                  {new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(currentJob.verifiedAt))}
+                </span>
+              </p>
+            </div>
+          </motion.div>
         ) : isAllCompleted ? (
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-emerald-500/10 border-2 border-amber-400/50 dark:border-amber-400/40 p-4 sm:p-5 shadow-lg shadow-amber-500/10 backdrop-blur-md">
-            {/* Ambient background glow */}
-            <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl pointer-events-none" />
+          /* All tasks done — ready for QA banner */
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative overflow-hidden rounded-2xl border-2 border-amber-400/50 dark:border-amber-400/40 bg-gradient-to-br from-amber-500/12 via-amber-400/6 to-emerald-500/8 p-4"
+          >
+            {/* Glow blobs */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-amber-400/20 blur-2xl" />
+              <div className="absolute -bottom-6 left-4 w-20 h-20 rounded-full bg-emerald-400/15 blur-xl" />
+            </div>
 
-            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-md shadow-amber-400/30">
-                  <Sparkles className="w-6 h-6 stroke-[2.5]" />
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-md shadow-amber-400/30">
+                  <Sparkles className="w-5 h-5 stroke-[2.5]" />
                 </div>
                 <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 font-mono">
-                      All Tasks Completed
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-black text-amber-800 dark:text-amber-300">
+                      All Done! 🎉
                     </span>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-400/30 text-amber-900 dark:text-amber-200 text-[10px] font-mono font-bold animate-pulse">
-                      READY FOR FINAL QA
+                    <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-lg bg-amber-400/25 border border-amber-400/40 text-amber-800 dark:text-amber-200 animate-pulse">
+                      QA READY
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                    Vehicle service is 100% complete. Perform final quality check to sign off.
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Every task is complete — sign off when ready
                   </p>
                 </div>
               </div>
@@ -959,68 +989,29 @@ export const JobDetailPage: React.FC = () => {
               <button
                 disabled={isVerifying}
                 onClick={handleVerify}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60 shrink-0 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-500/25 transition-all disabled:opacity-60 shrink-0 cursor-pointer"
               >
                 {isVerifying ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Verifying...</span>
-                  </>
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Verifying...</span></>
                 ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                    <span>Final Verify Job Card</span>
-                  </>
+                  <><CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" /><span>Sign Off</span></>
                 )}
               </button>
             </div>
-          </div>
+          </motion.div>
         ) : null}
 
-        {/* ── MODERN CHECKLIST HEADER & PROGRESS CARD ── */}
-        <div className="rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-4 sm:p-5 shadow-xs backdrop-blur-md space-y-3.5 transition-colors">
-          {/* Top Row: Title + Live Ratio Pill + Add Task Action */}
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-amber-500/10 dark:bg-amber-400/10 text-amber-500 dark:text-amber-400">
-                <ClipboardList className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>Service Checklist</span>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                    <NumberTicker value={completedCount} />/{totalTasks} Done
-                  </span>
-                </h2>
-                <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                  Track, claim, and complete garage work
-                </p>
-              </div>
-            </div>
-          </div>
 
-          {/* Laser Progress Beam */}
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-[10px] uppercase font-bold text-slate-400">
-                Progress Status
-              </span>
-              <span className="font-extrabold text-amber-600 dark:text-amber-400 text-xs">
-                {progressPercent}% Completed
-              </span>
-            </div>
-            <ProgressBarBeam progress={progressPercent} />
-          </div>
-        </div>
 
-        {/* Unified Task List Filter Tabs with Badges (Matching Active Jobs Page) */}
+
+        {/* Unified Task List Filter Tabs with Badges */}
         <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2.5 bg-slate-50/90 dark:bg-[#0F172A]/90 backdrop-blur-md border-y border-slate-200/60 dark:border-slate-800/60 shadow-xs">
-          <div className="flex gap-1.5 p-1 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-xs backdrop-blur-sm">
+          <div className="flex gap-1 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
             {(
               [
                 { key: 'ALL', label: 'All Tasks', count: totalTasks },
                 { key: 'PENDING', label: 'In Work', count: totalTasks - completedCount },
-                { key: 'COMPLETED', label: 'Completed', count: completedCount },
+                { key: 'COMPLETED', label: 'Done', count: completedCount },
               ] as const
             ).map(({ key, label, count }) => (
               <button
@@ -1035,22 +1026,22 @@ export const JobDetailPage: React.FC = () => {
                 {statusFilter === key && (
                   <motion.div
                     layoutId="task-filter-pill"
-                    className="absolute inset-0 bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 rounded-lg shadow-xs"
+                    className="absolute inset-0 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm"
                     transition={{ type: 'spring', bounce: 0.15, duration: 0.35 }}
                   />
                 )}
-                <span className="relative z-10 font-black">{label}</span>
-                {count > 0 && (
-                  <span
-                    className={`relative z-10 text-[9px] font-black rounded-full px-1.5 py-0.5 min-w-[18px] text-center shadow-2xs ${
-                      statusFilter === key
-                        ? 'bg-amber-400 text-slate-950'
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                    }`}
-                  >
-                    <NumberTicker value={count} />
-                  </span>
-                )}
+                <span className="relative z-10 font-extrabold tracking-tight">{label}</span>
+                <span
+                  className={`relative z-10 text-[10px] font-black rounded-md px-1.5 py-0.5 min-w-[20px] text-center tabular-nums leading-none ${
+                    statusFilter === key
+                      ? 'bg-amber-400 text-zinc-950 shadow-sm'
+                      : count > 0
+                        ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900'
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
+                  }`}
+                >
+                  {count}
+                </span>
               </button>
             ))}
           </div>
