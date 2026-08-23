@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
 import { useGetJobCardsQuery, useGetJobStatsQuery, JobCardData } from '../api/jobApi';
@@ -23,11 +24,14 @@ import {
   DollarSign,
   Users,
   ArrowRight,
+  Search,
 } from 'lucide-react';
 import { PageShimmer } from '../components/common/PageShimmer';
 import { NumberTicker } from '../components/magicui/NumberTicker';
 import { BorderBeam } from '../components/magicui/BorderBeam';
 import { IosNotificationStack, StackJobCardItem } from '../components/magicui/IosNotificationStack';
+import { GlobalSearchModal } from '../components/common/GlobalSearchModal';
+
 
 /* ─── Fade-up entry animation wrapper ─── */
 const FadeUp: React.FC<{ delay?: number; children: React.ReactNode; className?: string }> = ({
@@ -48,6 +52,8 @@ const FadeUp: React.FC<{ delay?: number; children: React.ReactNode; className?: 
 export const Dashboard: React.FC = () => {
   const { user, isAdmin, isApproved } = useAuth();
   const navigate = useNavigate();
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+
 
   const { data: jobsResponse, isLoading: isJobsLoading } = useGetJobCardsQuery();
   const { data: statsResponse } = useGetJobStatsQuery();
@@ -153,8 +159,19 @@ export const Dashboard: React.FC = () => {
                 </p>
               </div>
 
+              {/* Mobile Search Button */}
+              <button
+                type="button"
+                onClick={() => setIsSearchModalOpen(true)}
+                className="sm:hidden p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-amber-500 active:scale-90 transition shrink-0 cursor-pointer"
+                title="Search garage"
+              >
+                <Search className="w-4.5 h-4.5" />
+              </button>
+
               {/* Stat cluster — desktop */}
               <div className="hidden sm:flex items-center gap-5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-3 shrink-0">
+
                 <div className="text-center">
                   <p className="text-2xl font-black text-amber-600 dark:text-amber-400 tabular-nums leading-none">
                     <NumberTicker value={activeCount} />
@@ -461,9 +478,13 @@ export const Dashboard: React.FC = () => {
 
         </div>
       </main>
+
+      {/* Global Search Modal Trigger */}
+      <GlobalSearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} />
     </div>
   );
 };
+
 
 /* ─── Reusable compact bento card ─── */
 interface CompactCardProps {
