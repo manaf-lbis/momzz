@@ -363,12 +363,12 @@ export const JobsListPage: React.FC = () => {
         {/* ── Sticky Filter & Search Control Tray ── */}
         <div className="sticky top-0 z-30 -mx-3.5 sm:-mx-6 px-3.5 sm:px-6 py-2 bg-zinc-100/90 dark:bg-zinc-950/90 backdrop-blur-md border-y border-zinc-200/60 dark:border-zinc-800/60 shadow-xs space-y-2">
           {/* ── Accurate Global View Tabs ── */}
-          <div className="flex gap-1.5 p-1 bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 rounded-xl shadow-xs backdrop-blur-sm">
+          <div className="flex gap-1 p-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
             {VIEWS.map(({ key, label, count }) => (
               <button
                 key={key}
                 onClick={() => setJobsView(key)}
-                className={`relative flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer ${
+                className={`relative flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer ${
                   jobsView === key
                     ? 'text-zinc-900 dark:text-white'
                     : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
@@ -377,19 +377,21 @@ export const JobsListPage: React.FC = () => {
                 {jobsView === key && (
                   <motion.div
                     layoutId="jobs-view-pill"
-                    className="absolute inset-0 bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 rounded-lg shadow-xs"
+                    className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-sm"
                     transition={{ type: 'spring', bounce: 0.15, duration: 0.35 }}
                   />
                 )}
-                <span className="relative z-10 font-black">{label}</span>
+                <span className="relative z-10 font-extrabold tracking-tight">{label}</span>
                 <span
-                  className={`relative z-10 text-[9px] font-black rounded-full px-1.5 py-0.2 min-w-[18px] text-center shadow-2xs ${
+                  className={`relative z-10 text-[10px] font-black rounded-md px-1.5 py-0.5 min-w-[20px] text-center tabular-nums leading-none ${
                     jobsView === key
-                      ? 'bg-amber-400 text-slate-950'
-                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                      ? 'bg-amber-400 text-zinc-950 shadow-sm'
+                      : count > 0
+                        ? 'bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900'
+                        : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400'
                   }`}
                 >
-                  <NumberTicker value={count} />
+                  {count}
                 </span>
               </button>
             ))}
@@ -495,8 +497,8 @@ export const JobsListPage: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* ── Vehicle Cards Grid (With Thumbnail and Pin Icon restored) ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {/* ── Vehicle Cards Grid ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
               {filteredJobs.map((job, idx) => {
                 const totalTasks = job.tasks?.length || 0;
                 const completedTasks = (job.tasks || []).filter((t) => t.status === 'COMPLETED').length;
@@ -509,147 +511,131 @@ export const JobsListPage: React.FC = () => {
                 const deliveryInfo = getDeliveryStatusInfo(job.expectedDeliveryDate, isReady);
 
                 return (
-                  <BlurFade key={job.id || job._id} delay={0.02 * Math.min(idx, 10)} duration={0.25}>
+                  <BlurFade key={job.id || job._id} delay={0.02 * Math.min(idx, 10)} duration={0.22}>
                     <motion.div
-                      whileHover={{ y: -3, scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
+                      whileHover={{ y: -2, scale: 1.005 }}
+                      whileTap={{ scale: 0.985 }}
                       onClick={() => navigate(`/jobs/${job.id || job._id}`)}
-                      className={`group relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between min-h-[175px] sm:min-h-[190px] transition-all border ${
+                      className={`group relative overflow-hidden rounded-2xl cursor-pointer flex flex-col justify-between transition-all border ${
                         pinnedForAll
-                          ? 'border-amber-400 ring-2 ring-amber-400/40 shadow-xl shadow-amber-500/15'
+                          ? 'border-amber-400 ring-2 ring-amber-400/30 shadow-lg shadow-amber-500/10'
                           : pinnedForMe
-                          ? 'border-blue-400 ring-2 ring-blue-400/40 shadow-xl shadow-blue-500/15'
+                          ? 'border-indigo-400 ring-2 ring-indigo-400/30 shadow-lg shadow-indigo-500/10'
                           : deliveryInfo.isOverdue && !isReady
-                          ? 'border-rose-500/70 shadow-lg shadow-rose-500/15'
+                          ? 'border-rose-500/60 shadow-md shadow-rose-500/10'
                           : isReady
-                          ? 'border-emerald-500/60 shadow-lg shadow-emerald-500/15'
-                          : 'border-slate-200/90 dark:border-zinc-800 hover:border-amber-400/50 shadow-xs dark:shadow-xl dark:shadow-black/50'
-                      } ${job.thumbnailUrl ? 'bg-slate-900' : 'bg-white dark:bg-[#0b132b]'}`}
+                          ? 'border-emerald-500/50 shadow-md shadow-emerald-500/10'
+                          : 'border-slate-200/90 dark:border-zinc-800 hover:border-amber-400/40 shadow-xs dark:shadow-black/30'
+                      } ${job.thumbnailUrl ? 'bg-slate-900 min-h-[155px]' : 'bg-white dark:bg-[#0b132b] min-h-[150px]'}`}
                     >
-                      {/* BorderBeam for Pinned Cards */}
+                      {/* BorderBeam only when pinned */}
                       {pinnedForAll && (
-                        <BorderBeam size={200} duration={6} colorFrom="#facc15" colorTo="#fbbf24" borderWidth={2} />
+                        <BorderBeam size={180} duration={5} colorFrom="#facc15" colorTo="#f59e0b" borderWidth={1.5} />
                       )}
                       {pinnedForMe && !pinnedForAll && (
-                        <BorderBeam size={200} duration={6} colorFrom="#38bdf8" colorTo="#60a5fa" borderWidth={2} />
+                        <BorderBeam size={180} duration={5} colorFrom="#818cf8" colorTo="#6366f1" borderWidth={1.5} />
                       )}
 
-                      {/* Thumbnail Background Image with Clean Gradient Overlay */}
+                      {/* Thumbnail Background */}
                       {job.thumbnailUrl ? (
                         <>
                           <img
                             src={job.thumbnailUrl}
                             alt={job.vehicleName || 'Vehicle'}
-                            onError={(e) => {
-                              (e.currentTarget as HTMLElement).style.display = 'none';
-                            }}
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
                             className="absolute inset-0 w-full h-full object-cover object-center z-0 transition-transform duration-500 group-hover:scale-105"
                           />
                           <div className="absolute inset-0 bg-gradient-to-r from-[#0b1328] via-[#0b1328]/85 via-45% to-transparent z-0" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#0b1328]/70 via-transparent to-black/30 z-0" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#0b1328]/60 via-transparent to-black/20 z-0" />
                         </>
                       ) : (
-                        <div className="absolute right-2 -bottom-2 opacity-5 dark:opacity-10 pointer-events-none z-0">
-                          <Car className="w-36 h-36 text-slate-400 dark:text-white" />
+                        <div className="absolute right-2 -bottom-2 opacity-[0.04] dark:opacity-[0.07] pointer-events-none z-0">
+                          <Car className="w-28 h-28 text-slate-400 dark:text-white" />
                         </div>
                       )}
 
-                      {/* Content Container */}
-                      <div className="relative z-10 flex flex-col justify-between flex-1 gap-3">
-                        {/* Top Row: Vehicle Info & Pin Button */}
+                      {/* Content */}
+                      <div className="relative z-10 flex flex-col justify-between flex-1 gap-2 p-3.5">
+                        {/* Top Row: Vehicle info + Pin button */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1 space-y-1">
+                            {/* Model name */}
+                            <h3
+                              className={`text-[13px] font-black uppercase tracking-tight truncate flex items-center gap-1.5 ${
+                                job.thumbnailUrl ? 'text-white' : 'text-slate-900 dark:text-white'
+                              } group-hover:text-amber-400 transition-colors`}
+                            >
+                              <Car className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              <span className="truncate">{job.vehicleName || 'Vehicle'}</span>
+                            </h3>
+
+                            {/* Plate + delivery badge row */}
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <h3
-                                className={`text-sm sm:text-base font-black uppercase tracking-tight truncate flex items-center gap-1.5 ${
-                                  job.thumbnailUrl ? 'text-white' : 'text-slate-900 dark:text-white'
-                                } group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors`}
-                              >
-                                <Car className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
-                                <span className="truncate">{job.vehicleName || 'Vehicle'}</span>
-                              </h3>
+                              <span className="inline-block text-[11px] font-mono font-black px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 tracking-wider">
+                                {job.vehicleNumber || '---'}
+                              </span>
+                              {job.expectedDeliveryDate && (
+                                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border ${deliveryInfo.badgeClass}`}>
+                                  {deliveryInfo.shortLabel}
+                                </span>
+                              )}
                               {job.vehicleColor && (
-                                <span className="text-amber-600 dark:text-amber-400 font-bold text-xs shrink-0">
+                                <span className={`text-[10px] font-mono truncate max-w-[80px] ${job.thumbnailUrl ? 'text-slate-300' : 'text-slate-500 dark:text-slate-400'}`}>
                                   · {job.vehicleColor}
                                 </span>
                               )}
                             </div>
-
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {/* High-Contrast Crisp Vehicle License Plate */}
-                              <span
-                                className="inline-block text-xs font-mono font-black px-2.5 py-0.5 rounded-md bg-amber-400 text-slate-950 border border-amber-500/50 shadow-xs tracking-wider"
-                              >
-                                {job.vehicleNumber || '---'}
-                              </span>
-
-                              {job.expectedDeliveryDate && (
-                                <span className={`text-[9px] sm:text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${deliveryInfo.badgeClass}`}>
-                                  {deliveryInfo.shortLabel}
-                                </span>
-                              )}
-                            </div>
                           </div>
 
-                          {/* Right Action: Pin Icon Button */}
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <button
-                              type="button"
-                              onClick={(e) => handlePinButtonClick(e, job)}
-                              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 shadow-xs cursor-pointer ${
-                                isPinned
-                                  ? 'bg-amber-400 text-zinc-950 shadow-amber-400/25 ring-1 ring-amber-400'
-                                  : job.thumbnailUrl
-                                  ? 'bg-black/60 text-slate-200 hover:text-amber-400 border border-white/20 hover:border-amber-400/40 backdrop-blur-xs'
-                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-amber-600 border border-slate-200 dark:border-slate-700'
-                              }`}
-                              title={isPinned ? 'Tap to unpin' : 'Pin Vehicle'}
-                            >
-                              <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-zinc-950 stroke-[2.5]' : ''}`} />
-                            </button>
-                          </div>
+                          {/* Pin Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => handlePinButtonClick(e, job)}
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90 cursor-pointer shrink-0 ${
+                              pinnedForAll
+                                ? 'bg-amber-400 text-zinc-950 ring-1 ring-amber-400 shadow-sm shadow-amber-400/25'
+                                : pinnedForMe
+                                ? 'bg-indigo-500 text-white ring-1 ring-indigo-400 shadow-sm shadow-indigo-400/25'
+                                : job.thumbnailUrl
+                                ? 'bg-black/50 text-slate-300 hover:text-amber-400 border border-white/15 hover:border-amber-400/40 backdrop-blur-xs'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-amber-500 border border-slate-200 dark:border-slate-700'
+                            }`}
+                            title={isPinned ? 'Tap to unpin' : 'Pin Vehicle'}
+                          >
+                            <Pin className={`w-3 h-3 ${isPinned ? 'fill-current stroke-[2.5]' : ''}`} />
+                          </button>
                         </div>
 
-                        {/* Middle: Progress Bar with High-Contrast Numbers */}
-                        <div className="space-y-1.5 py-1">
-                          <div className="flex items-center justify-between text-xs font-mono">
-                            <span
-                              className={`uppercase tracking-wider text-[10px] font-bold ${
-                                job.thumbnailUrl ? 'text-slate-300' : 'text-slate-600 dark:text-slate-400'
-                              }`}
-                            >
-                              Tasks Progress
+                        {/* Progress */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[9px] uppercase font-bold tracking-wider ${job.thumbnailUrl ? 'text-slate-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                              Tasks
                             </span>
-                            <span
-                              className={`font-black text-xs px-2 py-0.5 rounded-md border ${
-                                job.thumbnailUrl
-                                  ? 'bg-black/60 text-amber-300 border-amber-400/30'
-                                  : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/25'
-                              }`}
-                            >
-                              {completedTasks}/{totalTasks} ({progressPct}%)
+                            <span className={`text-[10px] font-black font-mono px-1.5 py-0.5 rounded border ${
+                              job.thumbnailUrl
+                                ? 'bg-black/50 text-amber-300 border-amber-400/25'
+                                : 'bg-amber-400/10 text-amber-800 dark:text-amber-300 border-amber-400/20'
+                            }`}>
+                              {completedTasks}/{totalTasks} · {progressPct}%
                             </span>
                           </div>
                           <ProgressBarBeam progress={progressPct} />
                         </div>
 
-                        {/* Bottom Row: Garage Duration & Delivery Deadline */}
-                        <div
-                          className={`flex items-center justify-between text-xs font-mono pt-1.5 border-t ${
-                            job.thumbnailUrl
-                              ? 'border-white/15 text-slate-200 font-bold'
-                              : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium'
-                          }`}
-                        >
+                        {/* Bottom: Garage time + delivery */}
+                        <div className={`flex items-center justify-between text-[10px] font-mono pt-1.5 border-t ${
+                          job.thumbnailUrl
+                            ? 'border-white/10 text-slate-300'
+                            : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400'
+                        }`}>
                           <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            <span>Garage: {durationStr}</span>
+                            <Clock className="w-3 h-3 text-amber-400 shrink-0" />
+                            {durationStr}
                           </span>
                           <span>
                             {job.expectedDeliveryDate ? (
-                              <span className={deliveryInfo.textClass}>
-                                {deliveryInfo.label}
-                              </span>
+                              <span className={deliveryInfo.textClass}>{deliveryInfo.label}</span>
                             ) : (
                               new Date(job.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })
                             )}

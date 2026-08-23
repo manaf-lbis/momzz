@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pin, Users, User, X, Check, Loader2 } from 'lucide-react';
+import { Pin, Users, User, X, Check, Loader2, Globe, Lock } from 'lucide-react';
 import { JobCardData } from '../../api/jobApi';
 
 interface PinJobModalProps {
@@ -18,6 +18,7 @@ export const PinJobModal: React.FC<PinJobModalProps> = ({
   onClose,
   job,
   currentUserId,
+  isAdmin,
   onTogglePin,
   isPinningMode = null,
 }) => {
@@ -32,32 +33,32 @@ export const PinJobModal: React.FC<PinJobModalProps> = ({
   return (
     <AnimatePresence>
       <div
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
         onClick={onClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, scale: 0.93, y: 30 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-          className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden"
+          exit={{ opacity: 0, scale: 0.93, y: 30 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+          className="w-full max-w-sm bg-white dark:bg-zinc-950 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="p-4 sm:p-5 border-b border-zinc-100 dark:border-zinc-800 flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 shadow-2xs">
-                <Pin className="w-5 h-5 fill-amber-500" />
+          <div className="px-4 pt-4 pb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+                <Pin className="w-4 h-4 text-amber-500 fill-amber-500" />
               </div>
               <div>
-                <h3 className="text-base font-black text-zinc-900 dark:text-white uppercase tracking-tight flex items-center gap-1.5">
-                  Pin Job Card
+                <h3 className="text-sm font-black text-zinc-900 dark:text-white tracking-tight">
+                  Pin Vehicle
                 </h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
+                  <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 truncate max-w-[150px]">
                     {job.vehicleName}
                   </span>
-                  <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                  <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-400 text-slate-950">
                     {job.vehicleNumber}
                   </span>
                 </div>
@@ -66,149 +67,185 @@ export const PinJobModal: React.FC<PinJobModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+              className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Options: Full Cards are Clickable (No small separate buttons) */}
-          <div className="p-4 sm:p-5 space-y-3">
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-              Tap a card below to pin or unpin this vehicle:
-            </p>
+          {/* Divider */}
+          <div className="mx-4 border-t border-zinc-100 dark:border-zinc-800" />
 
-            {/* Option 1: Complete Pin for All (Entire Card Clickable) */}
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (isPinningMode === null) {
-                  onTogglePin(jobId, 'ALL');
-                }
-              }}
-              className={`p-4 rounded-2xl border cursor-pointer select-none transition-all ${
-                isPinnedForAll
-                  ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-500/50 ring-2 ring-amber-400/40 shadow-sm'
-                  : 'bg-zinc-50/70 dark:bg-zinc-800/40 border-zinc-200/80 dark:border-zinc-800 hover:border-amber-400/50 dark:hover:border-amber-500/50'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-3.5">
-                <div className="flex items-start gap-3 min-w-0 flex-1">
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                      isPinnedForAll
-                        ? 'bg-amber-500 text-zinc-950 shadow-sm'
-                        : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
-                    }`}
-                  >
-                    <Users className="w-4.5 h-4.5" />
+          {/* Options */}
+          <div className="p-3 space-y-2.5">
+            {/* ── PIN FOR ALL (Admin-Only or shown always) ── */}
+            {isAdmin && (
+              <motion.button
+                type="button"
+                whileHover={{ scale: isPinningMode !== null ? 1 : 1.01 }}
+                whileTap={{ scale: isPinningMode !== null ? 1 : 0.97 }}
+                disabled={isPinningMode !== null}
+                onClick={() => onTogglePin(jobId, 'ALL')}
+                className={`w-full text-left p-3.5 rounded-2xl border-2 transition-all cursor-pointer relative overflow-hidden ${
+                  isPinnedForAll
+                    ? 'border-amber-400 bg-amber-500/10 dark:bg-amber-500/15'
+                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 hover:border-amber-400/60'
+                }`}
+              >
+                {/* Active glow */}
+                {isPinnedForAll && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-400/10 via-transparent to-transparent pointer-events-none" />
+                )}
+                <div className="relative flex items-center gap-3">
+                  {/* Icon */}
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                    isPinnedForAll
+                      ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30'
+                      : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                  }`}>
+                    <Globe className="w-5 h-5" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-sm font-black text-zinc-900 dark:text-white">
-                        Complete pin for all
+
+                  {/* Text */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-sm font-black ${isPinnedForAll ? 'text-amber-700 dark:text-amber-300' : 'text-zinc-900 dark:text-white'}`}>
+                        Pin for everyone
                       </span>
                       {isPinnedForAll && (
-                        <span className="px-2 py-0.5 rounded-md bg-amber-500 text-zinc-950 text-[9px] font-mono font-black uppercase shadow-2xs">
-                          Pinned for All
+                        <span className="px-1.5 py-0.5 rounded-md bg-amber-400 text-slate-950 text-[9px] font-mono font-black uppercase">
+                          Active
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">
-                      Keeps this vehicle at the top of the job cards list for every mechanic and advisor.
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-tight">
+                      Stays at top for all mechanics & advisors
                     </p>
                   </div>
-                </div>
 
-                {/* Right Status Indicator */}
-                <div className="shrink-0 flex items-center justify-center">
-                  {isPinningMode === 'ALL' ? (
-                    <div className="w-7 h-7 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    </div>
-                  ) : isPinnedForAll ? (
-                    <div className="w-7 h-7 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center shadow-xs">
-                      <Check className="w-4 h-4 stroke-[3]" />
-                    </div>
-                  ) : (
-                    <div className="w-7 h-7 rounded-full border-2 border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 flex items-center justify-center text-transparent hover:border-amber-400 transition-colors">
-                      <Pin className="w-3.5 h-3.5 text-zinc-400" />
-                    </div>
-                  )}
+                  {/* State Indicator */}
+                  <div className="shrink-0">
+                    {isPinningMode === 'ALL' ? (
+                      <div className="w-8 h-8 rounded-full bg-amber-400/20 flex items-center justify-center">
+                        <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
+                      </div>
+                    ) : isPinnedForAll ? (
+                      <motion.div
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow-sm"
+                      >
+                        <Check className="w-4 h-4 stroke-[3]" />
+                      </motion.div>
+                    ) : (
+                      <div className="w-8 h-8 rounded-full border-2 border-zinc-300 dark:border-zinc-700 flex items-center justify-center">
+                        <Pin className="w-3.5 h-3.5 text-zinc-400" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.button>
+            )}
 
-            {/* Option 2: Pin for Me (Entire Card Clickable) */}
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (isPinningMode === null) {
-                  onTogglePin(jobId, 'ME');
-                }
-              }}
-              className={`p-4 rounded-2xl border cursor-pointer select-none transition-all ${
+            {/* ── PIN FOR ME ── */}
+            <motion.button
+              type="button"
+              whileHover={{ scale: isPinningMode !== null ? 1 : 1.01 }}
+              whileTap={{ scale: isPinningMode !== null ? 1 : 0.97 }}
+              disabled={isPinningMode !== null}
+              onClick={() => onTogglePin(jobId, 'ME')}
+              className={`w-full text-left p-3.5 rounded-2xl border-2 transition-all cursor-pointer relative overflow-hidden ${
                 isPinnedForMe
-                  ? 'bg-blue-500/10 dark:bg-blue-500/15 border-blue-500/50 ring-2 ring-blue-400/40 shadow-sm'
-                  : 'bg-zinc-50/70 dark:bg-zinc-800/40 border-zinc-200/80 dark:border-zinc-800 hover:border-blue-400/50 dark:hover:border-blue-500/50'
+                  ? 'border-indigo-400 bg-indigo-500/10 dark:bg-indigo-500/15'
+                  : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 hover:border-indigo-400/60'
               }`}
             >
-              <div className="flex items-center justify-between gap-3.5">
-                <div className="flex items-start gap-3 min-w-0 flex-1">
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                      isPinnedForMe
-                        ? 'bg-blue-500 text-white shadow-sm'
-                        : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
-                    }`}
-                  >
-                    <User className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-sm font-black text-zinc-900 dark:text-white">
-                        Pin for me
-                      </span>
-                      {isPinnedForMe && (
-                        <span className="px-2 py-0.5 rounded-md bg-blue-500 text-white text-[9px] font-mono font-black uppercase shadow-2xs">
-                          Pinned for You
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">
-                      Pins this vehicle at the top only for your personal view and logged-in account.
-                    </p>
-                  </div>
+              {isPinnedForMe && (
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-400/10 via-transparent to-transparent pointer-events-none" />
+              )}
+              <div className="relative flex items-center gap-3">
+                {/* Icon */}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                  isPinnedForMe
+                    ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30'
+                    : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                }`}>
+                  <Lock className="w-5 h-5" />
                 </div>
 
-                {/* Right Status Indicator */}
-                <div className="shrink-0 flex items-center justify-center">
+                {/* Text */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-sm font-black ${isPinnedForMe ? 'text-indigo-700 dark:text-indigo-300' : 'text-zinc-900 dark:text-white'}`}>
+                      Pin just for me
+                    </span>
+                    {isPinnedForMe && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-indigo-500 text-white text-[9px] font-mono font-black uppercase">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-tight">
+                    Visible only to you in your own view
+                  </p>
+                </div>
+
+                {/* State Indicator */}
+                <div className="shrink-0">
                   {isPinningMode === 'ME' ? (
-                    <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                      <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
                     </div>
                   ) : isPinnedForMe ? (
-                    <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-xs">
+                    <motion.div
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center shadow-sm"
+                    >
                       <Check className="w-4 h-4 stroke-[3]" />
-                    </div>
+                    </motion.div>
                   ) : (
-                    <div className="w-7 h-7 rounded-full border-2 border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 flex items-center justify-center text-transparent hover:border-blue-400 transition-colors">
-                      <Pin className="w-3.5 h-3.5 text-zinc-400" />
+                    <div className="w-8 h-8 rounded-full border-2 border-zinc-300 dark:border-zinc-700 flex items-center justify-center">
+                      <User className="w-3.5 h-3.5 text-zinc-400" />
                     </div>
                   )}
                 </div>
               </div>
-            </motion.div>
+            </motion.button>
+
+            {/* Status summary pill */}
+            {(isPinnedForAll || isPinnedForMe) && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+              >
+                <div className="flex items-center gap-1.5">
+                  {isPinnedForAll && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                      <Globe className="w-3 h-3" /> All
+                    </span>
+                  )}
+                  {isPinnedForAll && isPinnedForMe && (
+                    <span className="text-zinc-400 text-[10px]">+</span>
+                  )}
+                  {isPinnedForMe && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-400">
+                      <Lock className="w-3 h-3" /> You
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-zinc-400 flex-1">Tap a card above to toggle</span>
+              </motion.div>
+            )}
           </div>
 
           {/* Footer */}
-          <div className="p-4 bg-zinc-50 dark:bg-zinc-900/60 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-end">
+          <div className="px-3 pb-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold text-xs rounded-xl hover:opacity-90 transition active:scale-95 shadow-sm"
+              className="w-full py-2.5 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black text-xs tracking-wide hover:opacity-90 transition active:scale-95"
             >
               Done
             </button>
