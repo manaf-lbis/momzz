@@ -51,6 +51,41 @@ export class JobRepository {
       .sort({ isPinnedForAll: -1, status: -1, createdAt: -1 });
   }
 
+  async findLiveJobs(): Promise<IJobCard[]> {
+    return await JobCard.find({
+      isDeleted: { $ne: true },
+      $or: [
+        { status: 'IN_PROGRESS' },
+        { verifiedAt: null }
+      ]
+    })
+      .populate('verifiedBy', 'name mobile role')
+      .populate('createdBy', 'name mobile role profileImageUrl')
+      .sort({ isPinnedForAll: -1, status: -1, createdAt: -1 });
+  }
+
+  async getJobStats(): Promise<{
+    activeCount: number;
+    totalCount: number;
+    pendingVerificationCount: number;
+    totalCompletedTasks: number;
+  }> {
+    const [activeCount, totalCount, pendingVerificationCount, totalCompletedTasks] = await Promise.all([
+      JobCard.countDocuments({ isDeleted: { $ne: true }, status: 'IN_PROGRESS' }),
+      JobCard.countDocuments({ isDeleted: { $ne: true } }),
+      JobCard.countDocuments({ isDeleted: { $ne: true }, status: 'COMPLETED', verifiedAt: null }),
+      Task.countDocuments({ status: 'COMPLETED' }),
+    ]);
+
+    return {
+      activeCount,
+      totalCount,
+      pendingVerificationCount,
+      totalCompletedTasks,
+    };
+  }
+
+
   async findPaginatedJobs(options: {
     page?: number;
     limit?: number;

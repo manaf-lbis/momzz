@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
-import { useGetJobCardsQuery, JobCardData } from '../api/jobApi';
+import { useGetJobCardsQuery, useGetJobStatsQuery, JobCardData } from '../api/jobApi';
 import { useGetPendingWorkersQuery, useGetAllUsersQuery } from '../api/authApi';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -50,29 +50,32 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const { data: jobsResponse, isLoading: isJobsLoading } = useGetJobCardsQuery();
+  const { data: statsResponse } = useGetJobStatsQuery();
   const { data: pendingResponse } = useGetPendingWorkersQuery(undefined, { skip: !isAdmin });
   const { data: usersResponse } = useGetAllUsersQuery(undefined, { skip: !isAdmin });
 
-  const allJobs: JobCardData[] = Array.isArray(jobsResponse?.data)
+  const activeJobs: JobCardData[] = Array.isArray(jobsResponse?.data)
     ? (jobsResponse!.data as unknown as JobCardData[])
     : ((jobsResponse?.data as any)?.jobs || []);
 
-  const activeJobs = allJobs.filter(
+  const stats = statsResponse?.data;
+  const activeCount = stats?.activeCount ?? activeJobs.filter(
     (j) => j.status === 'IN_PROGRESS' && j.tasks?.some((t) => t.status === 'OPEN')
-  );
-  const activeCount = activeJobs.length;
+  ).length;
 
-  const pendingVerificationJobs = allJobs.filter(
+  const totalCount = stats?.totalCount ?? activeJobs.length;
+
+  const pendingVerificationCount = stats?.pendingVerificationCount ?? activeJobs.filter(
     (job) => !job.verifiedAt && job.tasks?.length > 0 && job.tasks.every((task) => task.status === 'COMPLETED')
-  );
-  const pendingVerificationCount = pendingVerificationJobs.length;
+  ).length;
 
-  const totalCompletedTasks = allJobs.reduce((acc, job) => {
+  const totalCompletedTasks = stats?.totalCompletedTasks ?? activeJobs.reduce((acc, job) => {
     return acc + (job.tasks?.filter((t) => t.status === 'COMPLETED').length || 0);
   }, 0);
 
   const pendingWorkersCount = pendingResponse?.data?.length || 0;
   const totalUsersCount = usersResponse?.data?.length || 0;
+
 
   const currentUserId = user?.id || (user as any)?._id;
   const stackJobCards: StackJobCardItem[] = activeJobs.map((job) => {
@@ -161,7 +164,7 @@ export const Dashboard: React.FC = () => {
                 <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
                 <div className="text-center">
                   <p className="text-2xl font-black tabular-nums leading-none">
-                    <NumberTicker value={allJobs.length} />
+                    <NumberTicker value={totalCount} />
                   </p>
                   <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-400 mt-0.5">Total</p>
                 </div>
@@ -183,7 +186,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <div className="w-px h-7 bg-slate-200 dark:bg-slate-800" />
               <div className="text-center">
-                <p className="text-xl font-black tabular-nums"><NumberTicker value={allJobs.length} /></p>
+                <p className="text-xl font-black tabular-nums"><NumberTicker value={totalCount} /></p>
                 <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-400">Total</p>
               </div>
               <div className="w-px h-7 bg-slate-200 dark:bg-slate-800" />
@@ -192,6 +195,7 @@ export const Dashboard: React.FC = () => {
                 <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-400">Done</p>
               </div>
             </div>
+
           </div>
         </FadeUp>
 
@@ -240,8 +244,9 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 border border-amber-400/25 px-2.5 py-1 rounded-xl hover:bg-amber-400/8 transition-colors shrink-0">
-                  All ({allJobs.length})<ChevronRight className="w-3.5 h-3.5" />
+                  Live ({activeCount})<ChevronRight className="w-3.5 h-3.5" />
                 </div>
+
               </div>
 
               <div className="flex-1 flex flex-col justify-center overflow-hidden">
@@ -442,9 +447,10 @@ export const Dashboard: React.FC = () => {
               </div>
               <div className="relative z-10 flex items-center gap-4 shrink-0">
                 <div className="text-center">
-                  <p className="text-2xl font-black text-cyan-600 dark:text-cyan-400 tabular-nums leading-none"><NumberTicker value={allJobs.length} /></p>
+                  <p className="text-2xl font-black text-cyan-600 dark:text-cyan-400 tabular-nums leading-none"><NumberTicker value={totalCount} /></p>
                   <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-400 mt-0.5">Records</p>
                 </div>
+
                 <div className="w-px h-10 bg-slate-200 dark:bg-slate-800" />
                 <div className="flex items-center gap-1 text-xs font-bold text-cyan-600 dark:text-cyan-400">
                   Search history <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />

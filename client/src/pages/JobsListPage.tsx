@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useGetJobCardsQuery, useToggleJobPinMutation, JobCardData } from '../api/jobApi';
+import { useGetJobCardsQuery, useGetJobStatsQuery, useToggleJobPinMutation, JobCardData } from '../api/jobApi';
+
 import { Navbar } from '../components/navbar/Navbar';
 import { PinJobModal } from '../components/jobCard/PinJobModal';
 import { BorderBeam } from '../components/magicui/BorderBeam';
@@ -82,17 +83,13 @@ export const JobsListPage: React.FC = () => {
 
   const [toggleJobPin] = useToggleJobPinMutation();
 
-  // Fetch true global totals for accurate tab badges
-  const { data: allGlobalJobsResponse } = useGetJobCardsQuery();
-  const allGlobalJobs: JobCardData[] = Array.isArray(allGlobalJobsResponse?.data)
-    ? (allGlobalJobsResponse!.data as unknown as JobCardData[])
-    : ((allGlobalJobsResponse?.data as any)?.jobs || []);
+  // Fetch fast lightweight stats for tab badge counts (0ms from cache)
+  const { data: statsResponse } = useGetJobStatsQuery();
+  const stats = statsResponse?.data;
 
-  const myJobsCount = allGlobalJobs.filter((j) => j.tasks?.some((t) => t.status === 'OPEN')).length;
-  const pendingCount = allGlobalJobs.filter(
-    (j) => j.tasks?.length && j.tasks.every((t) => t.status === 'COMPLETED') && !j.verifiedAt
-  ).length;
-  const allCount = allGlobalJobs.length;
+  const myJobsCount = stats?.activeCount ?? 0;
+  const pendingCount = stats?.pendingVerificationCount ?? 0;
+  const allCount = stats?.totalCount ?? 0;
 
   const isJobPinnedForMe = (job: JobCardData) => {
     if (!currentUserId) return false;
@@ -113,8 +110,9 @@ export const JobsListPage: React.FC = () => {
   const isJobPinned = (job: JobCardData) => isJobPinnedForAll(job) || isJobPinnedForMe(job);
 
   const handleToggleJobPin = async (jobCardId: string, mode: 'ALL' | 'ME', closeModal?: () => void) => {
-    const job = [...accumulatedJobs, ...allGlobalJobs].find((j) => (j.id || j._id) === jobCardId);
+    const job = accumulatedJobs.find((j) => (j.id || j._id) === jobCardId);
     if (!job) return;
+
 
     const curPinnedForAll = isJobPinnedForAll(job);
     const curPinnedForMe = isJobPinnedForMe(job);

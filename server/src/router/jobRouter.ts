@@ -3,6 +3,7 @@ import {
   createJobWithTasks,
   getJobCards,
   getJobCardById,
+  getJobStats,
   setTaskStatus,
   addTaskToJob,
   addInventoryTaskToJob,
@@ -24,7 +25,9 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get('/', getJobCards);
+router.get('/stats', getJobStats);
 router.get('/:jobCardId', getJobCardById);
+
 router.post('/create', adminMiddleware, createJobWithTasks);
 router.patch('/tasks/:taskId/status', validateRequest({ body: setTaskStatusSchema }), setTaskStatus);
 router.patch('/tasks/:taskId/pin', toggleTaskPin);

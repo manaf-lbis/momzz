@@ -229,12 +229,20 @@ export const jobApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['JobCard'],
     }),
+    getJobStats: builder.query<
+      { success: boolean; data: { activeCount: number; totalCount: number; pendingVerificationCount: number; totalCompletedTasks: number } },
+      void
+    >({
+      query: () => '/jobs/stats',
+      providesTags: ['JobCard'],
+    }),
   }),
 });
 
 export const {
   useGetJobCardsQuery,
   useGetJobCardByIdQuery,
+  useGetJobStatsQuery,
   useCreateJobMutation,
   useUpdateJobMutation,
   useSetTaskStatusMutation,
@@ -247,4 +255,5 @@ export const {
   useVerifyJobCardMutation,
   useUploadJobImageMutation,
 } = jobApi;
+
 
