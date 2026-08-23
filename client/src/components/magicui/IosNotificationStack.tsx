@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -68,6 +69,8 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
   const isReady = currentJob.totalTasks > 0 && currentJob.completedTasks === currentJob.totalTasks;
   const deliveryInfo = getDeliveryStatusInfo(currentJob.expectedDeliveryDate, isReady);
 
+  const isDraggingRef = useRef(false);
+
   const handleNext = () => setCurrentIndex((prev) => (prev + 1) % total);
   const handlePrev = () => setCurrentIndex((prev) => (prev - 1 + total) % total);
 
@@ -91,13 +94,24 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.3}
+            onDragStart={() => {
+              isDraggingRef.current = true;
+            }}
             onDragEnd={(_, info) => {
               if (info.offset.x < -40) handleNext();
               else if (info.offset.x > 40) handlePrev();
+              setTimeout(() => {
+                isDraggingRef.current = false;
+              }, 120);
             }}
-            onClick={() => navigate(`/jobs/${currentJob.id}`)}
+            onClick={() => {
+              if (!isDraggingRef.current) {
+                navigate(`/jobs/${currentJob.id}`);
+              }
+            }}
             className="w-full rounded-2xl p-3.5 sm:p-4 cursor-pointer flex flex-col justify-between backdrop-blur-xl bg-white/95 dark:bg-slate-900/95 border border-amber-400/50 dark:border-amber-400/40 shadow-lg shadow-amber-500/5 dark:shadow-black/50"
           >
+
             {/* Header: Vehicle Icon, Model & Reg Plate */}
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">

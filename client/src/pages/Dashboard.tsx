@@ -239,14 +239,14 @@ export const Dashboard: React.FC = () => {
 
           {/* ── LIVE WORKFLOW HERO ── col-span 7 on lg */}
           <FadeUp delay={0.07} className="col-span-2 sm:col-span-6 lg:col-span-7 row-span-1">
-            <div
-              className="group relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400/40 dark:hover:border-amber-400/30 shadow-sm hover:shadow-lg hover:shadow-amber-500/5 transition-all duration-300 p-4 sm:p-5 cursor-pointer flex flex-col min-h-[230px] sm:min-h-[250px]"
-              onClick={() => navigate('/jobs')}
-            >
+            <div className="group relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400/40 dark:hover:border-amber-400/30 shadow-sm hover:shadow-lg hover:shadow-amber-500/5 transition-all duration-300 p-4 sm:p-5 flex flex-col min-h-[230px] sm:min-h-[250px]">
               <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(380px_circle_at_60%_-10%,rgba(251,191,36,0.07),transparent_70%)]" />
 
               <div className="flex items-center justify-between shrink-0 mb-3">
-                <div className="flex items-center gap-2.5">
+                <div
+                  className="flex items-center gap-2.5 cursor-pointer"
+                  onClick={() => navigate('/jobs')}
+                >
                   <div className="w-9 h-9 rounded-2xl bg-amber-400/10 dark:bg-amber-400/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:bg-amber-400 group-hover:text-slate-950 transition-all duration-300">
                     <Activity className="w-4.5 h-4.5" />
                   </div>
@@ -257,13 +257,19 @@ export const Dashboard: React.FC = () => {
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />Live
                       </span>
                     </h3>
-                    <p className="text-[10px] font-mono text-slate-400 mt-0.5">Swipe through active vehicles in service</p>
+                    <p className="text-[10px] font-mono text-slate-400 mt-0.5">Tap card for details • Swipe to loop</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 border border-amber-400/25 px-2.5 py-1 rounded-xl hover:bg-amber-400/8 transition-colors shrink-0">
-                  Live ({activeCount})<ChevronRight className="w-3.5 h-3.5" />
-                </div>
-
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/jobs');
+                  }}
+                  className="flex items-center gap-1 text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 border border-amber-400/25 px-2.5 py-1 rounded-xl hover:bg-amber-400/8 transition-colors shrink-0 cursor-pointer"
+                >
+                  All Jobs ({activeCount})<ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
 
               <div className="flex-1 flex flex-col justify-center overflow-hidden">
@@ -271,6 +277,7 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
           </FadeUp>
+
 
           {/* ── CREATE JOB / MY TASKS ── col-span 5 on lg */}
           <FadeUp delay={0.1} className="col-span-2 sm:col-span-3 lg:col-span-5 row-span-1">
