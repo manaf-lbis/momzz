@@ -153,12 +153,13 @@ export class AuthService {
         if (decoded?.exp) {
           const remainingSeconds = decoded.exp - Math.floor(Date.now() / 1000);
           if (remainingSeconds > 0) {
-            await cacheService.set(`jwt:blacklist:${accessToken}`, true, remainingSeconds);
+            await cacheService.blacklistToken(accessToken, remainingSeconds);
           }
         }
         if (decoded?.id) {
           await cacheService.del(`user:session:${decoded.id}`);
         }
+
       } catch (err) {
         // Ignore decode error on logout
       }

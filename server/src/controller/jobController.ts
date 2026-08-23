@@ -241,27 +241,28 @@ export const getJobCards = async (req: Request, res: Response) => {
 
     if (page || limit || timeframe || tab || search || sortBy) {
       const paginatedResult = await jobRepository.findPaginatedJobs({ page, limit, timeframe, tab, search, sortBy, sortOrder });
-      const jobsWithTasks = await Promise.all(
-        paginatedResult.jobs.map(async (job) => {
-          const tasks = await jobRepository.findTasksByJobCardId(job._id.toString());
-          const allCompleted = tasks.length > 0 && tasks.every((t) => t.status === 'COMPLETED');
-          const targetStatus = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
+      const jobIds = paginatedResult.jobs.map((j) => j._id);
+      const taskMap = await jobRepository.findTasksForJobs(jobIds);
 
-          if (job.status !== targetStatus) {
-            await jobRepository.updateJobStatus(job._id.toString(), targetStatus);
-            job.status = targetStatus;
-          }
+      const jobsWithTasks = paginatedResult.jobs.map((job) => {
+        const tasks = taskMap[job._id.toString()] || [];
+        const allCompleted = tasks.length > 0 && tasks.every((t) => t.status === 'COMPLETED');
+        const targetStatus = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
 
-          return mapJobCardImages({
-            ...job.toObject(),
-            id: job._id.toString(),
-            tasks: tasks.map((t) => mapTaskImages({
-              ...t.toObject(),
-              id: t._id.toString(),
-            })),
-          });
-        })
-      );
+        if (job.status !== targetStatus) {
+          jobRepository.updateJobStatus(job._id.toString(), targetStatus).catch(() => {});
+          job.status = targetStatus;
+        }
+
+        return mapJobCardImages({
+          ...job.toObject(),
+          id: job._id.toString(),
+          tasks: tasks.map((t) => mapTaskImages({
+            ...t.toObject(),
+            id: t._id.toString(),
+          })),
+        });
+      });
 
       return sendSuccess(
         res,
@@ -279,31 +280,31 @@ export const getJobCards = async (req: Request, res: Response) => {
     }
 
     const jobs = await jobRepository.findAllJobs();
+    const jobIds = jobs.map((j) => j._id);
+    const taskMap = await jobRepository.findTasksForJobs(jobIds);
 
-    const jobsWithTasks = await Promise.all(
-      jobs.map(async (job) => {
-        const tasks = await jobRepository.findTasksByJobCardId(job._id.toString());
+    const jobsWithTasks = jobs.map((job) => {
+      const tasks = taskMap[job._id.toString()] || [];
+      const allCompleted = tasks.length > 0 && tasks.every((t) => t.status === 'COMPLETED');
+      const targetStatus = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
 
-        const allCompleted = tasks.length > 0 && tasks.every((t) => t.status === 'COMPLETED');
-        const targetStatus = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
+      if (job.status !== targetStatus) {
+        jobRepository.updateJobStatus(job._id.toString(), targetStatus).catch(() => {});
+        job.status = targetStatus;
+      }
 
-        if (job.status !== targetStatus) {
-          await jobRepository.updateJobStatus(job._id.toString(), targetStatus);
-          job.status = targetStatus;
-        }
-
-        return mapJobCardImages({
-          ...job.toObject(),
-          id: job._id.toString(),
-          tasks: tasks.map((t) => mapTaskImages({
-            ...t.toObject(),
-            id: t._id.toString(),
-          })),
-        });
-      })
-    );
+      return mapJobCardImages({
+        ...job.toObject(),
+        id: job._id.toString(),
+        tasks: tasks.map((t) => mapTaskImages({
+          ...t.toObject(),
+          id: t._id.toString(),
+        })),
+      });
+    });
 
     return sendSuccess(res, 'Job cards retrieved successfully.', jobsWithTasks, 200);
+
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to fetch job cards.', 500);
   }

@@ -147,6 +147,26 @@ export class JobRepository {
       .populate('inventoryItem', 'title thumbnailUrl itemType stockQuantity');
   }
 
+  async findTasksForJobs(jobCardIds: (string | mongoose.Types.ObjectId)[]): Promise<Record<string, ITask[]>> {
+    if (!jobCardIds || jobCardIds.length === 0) return {};
+    const tasks = await Task.find({ jobCardId: { $in: jobCardIds } })
+      .populate('completedBy', 'name mobile role profileImageUrl')
+      .populate('partners', 'name mobile role profileImageUrl')
+      .populate('activityLog.user', 'name mobile role profileImageUrl')
+      .populate('inventoryItem', 'title thumbnailUrl itemType stockQuantity');
+
+    const map: Record<string, ITask[]> = {};
+    for (const t of tasks) {
+      const key = t.jobCardId ? t.jobCardId.toString() : '';
+      if (key) {
+        if (!map[key]) map[key] = [];
+        map[key].push(t);
+      }
+    }
+    return map;
+  }
+
+
   async findJobById(jobCardId: string): Promise<IJobCard | null> {
     if (!jobCardId || !mongoose.Types.ObjectId.isValid(jobCardId)) {
       return null;
