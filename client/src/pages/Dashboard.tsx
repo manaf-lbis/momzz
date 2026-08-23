@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
 import { useGetJobCardsQuery, JobCardData } from '../api/jobApi';
-import { useGetPendingWorkersQuery } from '../api/authApi';
+import { useGetPendingWorkersQuery, useGetAllUsersQuery } from '../api/authApi';
 import { useNavigate } from 'react-router-dom';
 import {
   ClipboardList,
@@ -22,14 +22,14 @@ import {
   History,
   CheckCheck,
   DollarSign,
+  Layers,
+  Users,
 } from 'lucide-react';
 import { PageShimmer } from '../components/common/PageShimmer';
 import { NumberTicker } from '../components/magicui/NumberTicker';
 import { BorderBeam } from '../components/magicui/BorderBeam';
-import { AnimatedList } from '../components/magicui/AnimatedList';
-import { ProgressBarBeam } from '../components/magicui/AnimatedBeam';
 import { BentoGrid, BentoCard } from '../components/magicui/BentoGrid';
-import { getDeliveryStatusInfo } from '../utils/dateUtils';
+import { IosNotificationStack, StackJobCardItem } from '../components/magicui/IosNotificationStack';
 
 export const Dashboard: React.FC = () => {
   const { user, isAdmin, isApproved } = useAuth();
@@ -37,6 +37,7 @@ export const Dashboard: React.FC = () => {
 
   const { data: jobsResponse, isLoading: isJobsLoading } = useGetJobCardsQuery();
   const { data: pendingResponse } = useGetPendingWorkersQuery(undefined, { skip: !isAdmin });
+  const { data: usersResponse } = useGetAllUsersQuery(undefined, { skip: !isAdmin });
 
   const allJobs: JobCardData[] = Array.isArray(jobsResponse?.data)
     ? (jobsResponse!.data as unknown as JobCardData[])
@@ -57,6 +58,34 @@ export const Dashboard: React.FC = () => {
   }, 0);
 
   const pendingWorkersCount = pendingResponse?.data?.length || 0;
+  const totalUsersCount = usersResponse?.data?.length || 0;
+
+  // Extract active vehicle job cards for the 1.5-card Infinite Loop Stack
+  const currentUserId = user?.id || (user as any)?._id;
+  const stackJobCards: StackJobCardItem[] = activeJobs.map((job) => {
+    const total = job.tasks?.length || 0;
+    const done = (job.tasks || []).filter((t) => t.status === 'COMPLETED').length;
+    const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+    const isJobPinned = !!(
+      job.isPinnedForAll ||
+      (Array.isArray(job.pinnedBy) &&
+        currentUserId &&
+        job.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === currentUserId))
+    );
+
+    return {
+      id: job.id || job._id!,
+      vehicleName: job.vehicleName || 'Vehicle',
+      vehicleNumber: job.vehicleNumber || '---',
+      vehicleColor: job.vehicleColor,
+      totalTasks: total,
+      completedTasks: done,
+      progressPercent: progress,
+      expectedDeliveryDate: job.expectedDeliveryDate || undefined,
+      isPinned: isJobPinned,
+      createdAt: job.createdAt,
+    };
+  });
 
   if (isJobsLoading) {
     return (
@@ -79,13 +108,11 @@ export const Dashboard: React.FC = () => {
 
       <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-3.5 sm:py-6 space-y-3.5 sm:space-y-6 pb-28 sm:pb-32">
         
-        {/* ── 1. MOBILE-FRIENDLY MODERN DASHBOARD HEADER ── */}
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 bg-white/90 dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800/90 shadow-xs backdrop-blur-xl">
+        {/* ── 1. CLEAN MODERN DASHBOARD HEADER ── */}
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-6 bg-white/90 dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800/90 shadow-xs backdrop-blur-xl">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 sm:w-64 h-48 sm:h-64 bg-gradient-to-bl from-amber-400/15 via-transparent to-transparent rounded-full blur-2xl pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-            
-            {/* Left: User Welcome & Workshop Status */}
+          <div className="relative z-10 flex items-center justify-between gap-3">
             <div className="space-y-1 sm:space-y-1.5">
               <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider">
@@ -101,39 +128,9 @@ export const Dashboard: React.FC = () => {
                 Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600 dark:from-yellow-400 dark:to-amber-300">{user?.name}</span>
               </h1>
               <p className="text-[11px] sm:text-xs font-mono text-slate-500 dark:text-slate-400">
-                {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
               </p>
             </div>
-
-            {/* Right: Quick Stat Chips */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex-1 sm:flex-initial flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-slate-50/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 backdrop-blur-md shadow-2xs">
-                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-emerald-500/10 dark:bg-emerald-400/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                  <Activity className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 animate-pulse" />
-                </div>
-                <div className="text-left font-mono">
-                  <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Active Bay</p>
-                  <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-1">
-                    <NumberTicker value={activeCount} />
-                    <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400">Vehicles</span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex-1 sm:flex-initial flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-slate-50/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 backdrop-blur-md shadow-2xs">
-                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                  <CheckCheck className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
-                </div>
-                <div className="text-left font-mono">
-                  <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Done Tasks</p>
-                  <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-1">
-                    <NumberTicker value={totalCompletedTasks} />
-                    <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400">Tasks</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
 
@@ -162,108 +159,46 @@ export const Dashboard: React.FC = () => {
         {/* ── 2. MOBILE-OPTIMIZED RESPONSIVE BENTO GRID ── */}
         <BentoGrid className="grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-12 gap-2.5 sm:gap-4">
           
-          {/* ── HERO 1: LIVE VEHICLE SERVICING FLOW (FULL WIDTH ON MOBILE: COL-SPAN-2) ── */}
+          {/* ── HERO 1: LIVE VEHICLE WORKFLOW WITH 1.5 JOB CARD INFINITE LOOP (FIXED HEIGHT) ── */}
           <div
-            className="col-span-2 md:col-span-3 lg:col-span-7 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800/90 shadow-xs dark:shadow-xl hover:border-amber-400/40 dark:hover:border-amber-400/30 transition-all duration-300 backdrop-blur-xl flex flex-col justify-between min-h-[260px] sm:min-h-[300px] group"
+            className="col-span-2 md:col-span-3 lg:col-span-7 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800/90 shadow-xs dark:shadow-xl hover:border-amber-400/40 dark:hover:border-amber-400/30 transition-all duration-300 backdrop-blur-xl flex flex-col justify-between min-h-[205px] sm:min-h-[220px] overflow-hidden group"
           >
-            {/* Header inside stream card */}
-            <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-slate-100 dark:border-slate-800/80">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
               <div className="flex items-center gap-2 sm:gap-2.5">
-                <div className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl bg-amber-500/10 dark:bg-amber-400/15 text-amber-600 dark:text-amber-400 group-hover:bg-amber-400 group-hover:text-slate-950 transition-all duration-300 shadow-2xs shrink-0">
-                  <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-xl bg-amber-500/10 dark:bg-amber-400/15 text-amber-600 dark:text-amber-400 group-hover:bg-amber-400 group-hover:text-slate-950 transition-all duration-300 shadow-2xs shrink-0">
+                  <Activity className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                 </div>
                 <div>
-                  <h3 className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5 sm:gap-2">
+                  <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
                     <span>Live Vehicle Workflow</span>
-                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[9px] sm:text-[10px] font-mono font-bold">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[8px] sm:text-[9px] font-mono font-bold">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Live
+                      Live Stream
                     </span>
                   </h3>
-                  <p className="text-[10px] sm:text-[11px] font-mono text-slate-500 dark:text-slate-400">Diagnosis progress & deadlines</p>
+                  <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                    Active vehicles in service & task progress
+                  </p>
                 </div>
               </div>
 
               <button
                 onClick={() => navigate('/jobs')}
-                className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-mono font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-400/10 transition-colors flex items-center gap-1 cursor-pointer border border-amber-400/20 shrink-0"
+                className="px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-400/10 transition-colors flex items-center gap-0.5 cursor-pointer border border-amber-400/20 shrink-0"
               >
                 <span>All ({allJobs.length})</span>
                 <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
 
-            {/* Body: Live vehicle items */}
-            <div className="py-2.5 flex-1 overflow-hidden flex flex-col justify-center">
-              {activeJobs.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center py-6 text-center text-slate-400">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
-                    <Car className="w-5 h-5 sm:w-6 sm:h-6 opacity-40 text-amber-500" />
-                  </div>
-                  <p className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-400">No active vehicles in service.</p>
-                  <p className="text-[10px] sm:text-[11px] text-slate-400">Create a job or assign open tasks to begin.</p>
-                </div>
-              ) : (
-                <AnimatedList delay={2400} className="w-full space-y-2">
-                  {activeJobs.slice(0, 3).map((job) => {
-                    const total = job.tasks?.length || 0;
-                    const done = (job.tasks || []).filter((t) => t.status === 'COMPLETED').length;
-                    const progress = total > 0 ? Math.round((done / total) * 100) : 0;
-                    const deliveryInfo = getDeliveryStatusInfo(job.expectedDeliveryDate, done === total);
-
-                    return (
-                      <div
-                        key={job.id || job._id}
-                        onClick={() => navigate(`/jobs/${job.id || job._id}`)}
-                        className="w-full p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-slate-50/90 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 hover:border-amber-400/60 dark:hover:border-amber-400/40 hover:bg-white dark:hover:bg-slate-900 cursor-pointer transition-all duration-200 flex items-center justify-between gap-2.5 sm:gap-3 group/item shadow-2xs"
-                      >
-                        <div className="min-w-0 flex-1 space-y-1.5">
-                          <div className="flex items-center justify-between gap-1.5 flex-wrap">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white uppercase truncate max-w-[120px] sm:max-w-[200px] group-hover/item:text-amber-500 transition-colors">
-                                {job.vehicleName}
-                              </span>
-                              <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-800 dark:text-slate-200 bg-slate-200/90 dark:bg-slate-800 px-1.5 py-0.2 rounded border border-slate-300/60 dark:border-slate-700">
-                                {job.vehicleNumber}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {job.expectedDeliveryDate && (
-                                <span className={`text-[8px] sm:text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full border ${deliveryInfo.badgeClass}`}>
-                                  {deliveryInfo.shortLabel}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 sm:gap-3">
-                            <div className="flex-1">
-                              <ProgressBarBeam progress={progress} />
-                            </div>
-                            <span className="text-[10px] sm:text-xs font-mono font-black text-amber-600 dark:text-amber-400 shrink-0">
-                              {progress}%
-                            </span>
-                          </div>
-                        </div>
-
-                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover/item:text-amber-500 group-hover/item:translate-x-1 transition-all shrink-0" />
-                      </div>
-                    );
-                  })}
-                </AnimatedList>
-              )}
-            </div>
-
-            {/* Bottom stats footer */}
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] font-mono text-slate-500">
-              <span>{activeCount} Active vehicles</span>
-              <span className="text-amber-600 dark:text-amber-400 font-bold hover:underline cursor-pointer" onClick={() => navigate('/jobs')}>
-                View all jobs →
-              </span>
+            {/* Body: 1.5 Job Card Infinite Loop */}
+            <div className="my-auto py-1 flex-1 flex flex-col justify-center overflow-hidden">
+              <IosNotificationStack jobs={stackJobCards} />
             </div>
           </div>
 
-          {/* ── CARD 2: QUICK INTAKE / CREATE JOB (COL-SPAN-2 ON MOBILE OR COL-SPAN-1) ── */}
+          {/* ── CARD 2: QUICK INTAKE / CREATE JOB ── */}
           {isAdmin ? (
             <BentoCard
               name="Create Job"
@@ -289,7 +224,7 @@ export const Dashboard: React.FC = () => {
             <BentoCard
               name="My Assigned Jobs"
               subtitle="Active Tasks"
-              description="View your active checklist items, update status & upload photos."
+              description="View your active checklist items, update status & complete tasks."
               Icon={ClipboardList}
               accent="amber"
               cta="View My Tasks"
@@ -303,7 +238,7 @@ export const Dashboard: React.FC = () => {
             />
           )}
 
-          {/* ── CARD 3: POS EXPRESS COUNTER SALES (COL-SPAN-1 ON MOBILE) ── */}
+          {/* ── CARD 3: POS EXPRESS COUNTER SALES ── */}
           <BentoCard
             name="Counter POS"
             subtitle="Express Billing"
@@ -321,7 +256,7 @@ export const Dashboard: React.FC = () => {
             }
           />
 
-          {/* ── CARD 4: QUALITY VERIFICATION (COL-SPAN-1 ON MOBILE) ── */}
+          {/* ── CARD 4: QUALITY VERIFICATION ── */}
           <BentoCard
             name="Verification"
             subtitle="Quality Pass"
@@ -345,7 +280,7 @@ export const Dashboard: React.FC = () => {
             }
           />
 
-          {/* ── CARD 5: MECHANIC LEADERBOARD (COL-SPAN-1 ON MOBILE) ── */}
+          {/* ── CARD 5: MECHANIC LEADERBOARD ── */}
           <BentoCard
             name="Leaderboard"
             subtitle="Rankings"
@@ -363,7 +298,7 @@ export const Dashboard: React.FC = () => {
             }
           />
 
-          {/* ── CARD 6: WORK LOGS & TIMELINE (COL-SPAN-1 ON MOBILE) ── */}
+          {/* ── CARD 6: WORK LOGS & TIMELINE ── */}
           <BentoCard
             name="Work Logs"
             subtitle="Activity Stream"
@@ -380,7 +315,27 @@ export const Dashboard: React.FC = () => {
             }
           />
 
-          {/* ── CARD 7: PARTS INVENTORY (ADMIN) (COL-SPAN-1 ON MOBILE) ── */}
+          {/* ── CARD 7: USERS & ROLES MANAGEMENT (ADMIN) ── */}
+          {isAdmin && (
+            <BentoCard
+              name="Users & Team"
+              subtitle="Staff Matrix"
+              description="Manage technicians, role permissions, accounts & workshop staff."
+              Icon={Users}
+              accent="purple"
+              cta="Manage Team"
+              onClick={() => navigate('/admin/users')}
+              className="col-span-1 sm:col-span-1 md:col-span-1 lg:col-span-4 min-h-[140px] sm:min-h-[165px]"
+              badge={
+                <span className="px-2 py-0.5 bg-purple-500/10 text-purple-700 dark:text-purple-300 font-mono text-[8px] sm:text-[9px] font-bold uppercase rounded-full border border-purple-500/20 flex items-center gap-1">
+                  <Users className="w-2.5 h-2.5 text-purple-500" />
+                  <NumberTicker value={totalUsersCount} /> Staff
+                </span>
+              }
+            />
+          )}
+
+          {/* ── CARD 8: PARTS INVENTORY (ADMIN) ── */}
           {isAdmin && (
             <BentoCard
               name="Inventory"
@@ -399,7 +354,7 @@ export const Dashboard: React.FC = () => {
             />
           )}
 
-          {/* ── CARD 8: WORKER APPROVALS (ADMIN) (COL-SPAN-1 ON MOBILE) ── */}
+          {/* ── CARD 9: WORKER APPROVALS (ADMIN) ── */}
           {isAdmin && (
             <BentoCard
               name="Approvals"
@@ -424,7 +379,7 @@ export const Dashboard: React.FC = () => {
             />
           )}
 
-          {/* ── CARD 9: VEHICLE LIFETIME ARCHIVE (FULL WIDTH COL-SPAN-2 ON MOBILE) ── */}
+          {/* ── CARD 10: VEHICLE LIFETIME ARCHIVE ── */}
           <BentoCard
             name="Vehicle History"
             subtitle="Lifetime Archives"

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useGetJobCardsQuery, JobCardData } from '../api/jobApi';
+import { useGetJobCardsQuery, useToggleJobPinMutation, JobCardData } from '../api/jobApi';
 import { Navbar } from '../components/navbar/Navbar';
+import { PinJobModal } from '../components/jobCard/PinJobModal';
+import { BorderBeam } from '../components/magicui/BorderBeam';
 import { BlurFade } from '../components/magicui/BlurFade';
 import {
   ArrowLeft,
@@ -18,6 +20,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Pin,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { PageShimmer } from '../components/common/PageShimmer';
@@ -51,7 +54,8 @@ const SORT_CONFIG: Array<{ value: SortOption; label: string; shortLabel: string;
 export const JobsListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const currentUserId = user?.id || (user as any)?._id;
 
   const initialView: JobsView =
     location.state?.view === 'verify'
@@ -70,8 +74,92 @@ export const JobsListPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [accumulatedJobs, setAccumulatedJobs] = useState<JobCardData[]>([]);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [selectedPinJob, setSelectedPinJob] = useState<JobCardData | null>(null);
+  const [pinningJobMode, setPinningJobMode] = useState<'ALL' | 'ME' | null>(null);
+  const [optimisticPins, setOptimisticPins] = useState<Record<string, { isPinnedForAll: boolean; pinnedByMe: boolean }>>({});
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const [toggleJobPin] = useToggleJobPinMutation();
+
+  // Fetch true global totals for accurate tab badges
+  const { data: allGlobalJobsResponse } = useGetJobCardsQuery();
+  const allGlobalJobs: JobCardData[] = Array.isArray(allGlobalJobsResponse?.data)
+    ? (allGlobalJobsResponse!.data as unknown as JobCardData[])
+    : ((allGlobalJobsResponse?.data as any)?.jobs || []);
+
+  const myJobsCount = allGlobalJobs.filter((j) => j.tasks?.some((t) => t.status === 'OPEN')).length;
+  const pendingCount = allGlobalJobs.filter(
+    (j) => j.tasks?.length && j.tasks.every((t) => t.status === 'COMPLETED') && !j.verifiedAt
+  ).length;
+  const allCount = allGlobalJobs.length;
+
+  const isJobPinnedForMe = (job: JobCardData) => {
+    if (!currentUserId) return false;
+    const opt = optimisticPins[job.id || job._id!];
+    if (opt !== undefined) return opt.pinnedByMe;
+    return (
+      Array.isArray(job.pinnedBy) &&
+      job.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === currentUserId)
+    );
+  };
+
+  const isJobPinnedForAll = (job: JobCardData) => {
+    const opt = optimisticPins[job.id || job._id!];
+    if (opt !== undefined) return opt.isPinnedForAll;
+    return !!job.isPinnedForAll;
+  };
+
+  const isJobPinned = (job: JobCardData) => isJobPinnedForAll(job) || isJobPinnedForMe(job);
+
+  const handleToggleJobPin = async (jobCardId: string, mode: 'ALL' | 'ME', closeModal?: () => void) => {
+    const job = [...accumulatedJobs, ...allGlobalJobs].find((j) => (j.id || j._id) === jobCardId);
+    if (!job) return;
+
+    const curPinnedForAll = isJobPinnedForAll(job);
+    const curPinnedForMe = isJobPinnedForMe(job);
+
+    setOptimisticPins((prev) => ({
+      ...prev,
+      [jobCardId]: {
+        isPinnedForAll: mode === 'ALL' ? !curPinnedForAll : curPinnedForAll,
+        pinnedByMe: mode === 'ME' ? !curPinnedForMe : curPinnedForMe,
+      },
+    }));
+
+    setPinningJobMode(mode);
+    if (closeModal) closeModal();
+
+    try {
+      await toggleJobPin({ jobCardId, mode }).unwrap();
+    } catch (err: any) {
+      setOptimisticPins((prev) => {
+        const next = { ...prev };
+        delete next[jobCardId];
+        return next;
+      });
+    } finally {
+      setPinningJobMode(null);
+      setTimeout(() => {
+        setOptimisticPins((prev) => {
+          const next = { ...prev };
+          delete next[jobCardId];
+          return next;
+        });
+      }, 1500);
+    }
+  };
+
+  const handlePinButtonClick = (e: React.MouseEvent, job: JobCardData) => {
+    e.stopPropagation();
+    const jobId = job.id || job._id!;
+    if (isJobPinned(job)) {
+      const mode: 'ALL' | 'ME' = isJobPinnedForAll(job) ? 'ALL' : 'ME';
+      handleToggleJobPin(jobId, mode);
+    } else {
+      setSelectedPinJob(job);
+    }
+  };
 
   // Close sort menu on click outside
   useEffect(() => {
@@ -184,6 +272,11 @@ export const JobsListPage: React.FC = () => {
       );
     })
     .sort((a, b) => {
+      const aPinned = isJobPinned(a);
+      const bPinned = isJobPinned(b);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+
       const aTotalTasks = a.tasks?.length || 0;
       const aCompletedTasks = (a.tasks || []).filter((t) => t.status === 'COMPLETED').length;
       const aProgress = aTotalTasks > 0 ? aCompletedTasks / aTotalTasks : 0;
@@ -222,12 +315,6 @@ export const JobsListPage: React.FC = () => {
       }
     });
 
-  const myJobsCount = displayJobs.filter((j) => j.tasks?.some((t) => t.status === 'OPEN')).length;
-  const pendingCount = displayJobs.filter(
-    (j) => j.tasks?.length && j.tasks.every((t) => t.status === 'COMPLETED') && !j.verifiedAt
-  ).length;
-  const allCount = displayJobs.length;
-
   const VIEWS: { key: JobsView; label: string; count: number }[] = [
     { key: 'MY_JOBS', label: 'My Jobs', count: myJobsCount },
     { key: 'PENDING_VERIFICATION', label: 'Pending', count: pendingCount },
@@ -244,7 +331,7 @@ export const JobsListPage: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => navigate('/dashboard')}
-              className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 transition active:scale-95 shadow-xs"
+              className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 transition active:scale-95 shadow-xs cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -256,7 +343,7 @@ export const JobsListPage: React.FC = () => {
                 Active Vehicle Jobs
               </h1>
               <p className="text-[11px] text-zinc-400 font-mono mt-0.5">
-                {filteredJobs.length} vehicle{filteredJobs.length !== 1 ? 's' : ''} in workshop
+                {allCount} total vehicle{allCount !== 1 ? 's' : ''} in workshop database
               </p>
             </div>
           </div>
@@ -264,7 +351,7 @@ export const JobsListPage: React.FC = () => {
           {isAdmin && (
             <button
               onClick={() => navigate('/jobs/create')}
-              className="px-3 py-2 bg-amber-500 dark:bg-amber-400 text-zinc-950 font-black text-xs uppercase rounded-xl hover:bg-amber-400 dark:hover:bg-amber-300 transition active:scale-95 flex items-center gap-1.5 shadow-sm"
+              className="px-3 py-2 bg-amber-500 dark:bg-amber-400 text-zinc-950 font-black text-xs uppercase rounded-xl hover:bg-amber-400 dark:hover:bg-amber-300 transition active:scale-95 flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Create Job</span>
@@ -275,13 +362,13 @@ export const JobsListPage: React.FC = () => {
 
         {/* ── Sticky Filter & Search Control Tray ── */}
         <div className="sticky top-0 z-30 -mx-3.5 sm:-mx-6 px-3.5 sm:px-6 py-2 bg-zinc-100/90 dark:bg-zinc-950/90 backdrop-blur-md border-y border-zinc-200/60 dark:border-zinc-800/60 shadow-xs space-y-2">
-          {/* ── View Tabs ── */}
+          {/* ── Accurate Global View Tabs ── */}
           <div className="flex gap-1.5 p-1 bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 rounded-xl shadow-xs backdrop-blur-sm">
             {VIEWS.map(({ key, label, count }) => (
               <button
                 key={key}
                 onClick={() => setJobsView(key)}
-                className={`relative flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all active:scale-95 ${
+                className={`relative flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer ${
                   jobsView === key
                     ? 'text-zinc-900 dark:text-white'
                     : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
@@ -295,13 +382,15 @@ export const JobsListPage: React.FC = () => {
                   />
                 )}
                 <span className="relative z-10 font-black">{label}</span>
-                {count > 0 && (
-                  <span className={`relative z-10 text-[9px] font-black rounded-full px-1.5 py-0.2 min-w-[18px] text-center shadow-2xs ${
-                    jobsView === key ? 'bg-amber-400 text-slate-950' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                  }`}>
-                    <NumberTicker value={count} />
-                  </span>
-                )}
+                <span
+                  className={`relative z-10 text-[9px] font-black rounded-full px-1.5 py-0.2 min-w-[18px] text-center shadow-2xs ${
+                    jobsView === key
+                      ? 'bg-amber-400 text-slate-950'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  <NumberTicker value={count} />
+                </span>
               </button>
             ))}
           </div>
@@ -406,7 +495,7 @@ export const JobsListPage: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* ── Ultra-Clean Icon-Only Vehicle Cards Grid ── */}
+            {/* ── Vehicle Cards Grid (With Thumbnail and Pin Icon restored) ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {filteredJobs.map((job, idx) => {
                 const totalTasks = job.tasks?.length || 0;
@@ -414,6 +503,9 @@ export const JobsListPage: React.FC = () => {
                 const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
                 const isReady = totalTasks > 0 && completedTasks === totalTasks;
                 const durationStr = getGarageDuration(job.createdAt);
+                const pinnedForAll = isJobPinnedForAll(job);
+                const pinnedForMe = isJobPinnedForMe(job);
+                const isPinned = pinnedForAll || pinnedForMe;
                 const deliveryInfo = getDeliveryStatusInfo(job.expectedDeliveryDate, isReady);
 
                 return (
@@ -422,73 +514,147 @@ export const JobsListPage: React.FC = () => {
                       whileHover={{ y: -3, scale: 1.01 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => navigate(`/jobs/${job.id || job._id}`)}
-                      className={`group relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between min-h-[160px] sm:min-h-[175px] transition-all bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border ${
-                        deliveryInfo.isOverdue && !isReady
-                          ? 'border-rose-500/50 hover:border-rose-500 shadow-sm'
+                      className={`group relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between min-h-[175px] sm:min-h-[190px] transition-all border ${
+                        pinnedForAll
+                          ? 'border-amber-400 ring-2 ring-amber-400/40 shadow-xl shadow-amber-500/15'
+                          : pinnedForMe
+                          ? 'border-blue-400 ring-2 ring-blue-400/40 shadow-xl shadow-blue-500/15'
+                          : deliveryInfo.isOverdue && !isReady
+                          ? 'border-rose-500/70 shadow-lg shadow-rose-500/15'
                           : isReady
-                          ? 'border-emerald-500/50 hover:border-emerald-500 shadow-sm'
-                          : 'border-slate-200/90 dark:border-slate-800/90 hover:border-amber-400/50 shadow-xs dark:shadow-lg dark:shadow-slate-950/40'
-                      }`}
+                          ? 'border-emerald-500/60 shadow-lg shadow-emerald-500/15'
+                          : 'border-slate-200/90 dark:border-zinc-800 hover:border-amber-400/50 shadow-xs dark:shadow-xl dark:shadow-black/50'
+                      } ${job.thumbnailUrl ? 'bg-slate-900' : 'bg-white dark:bg-[#0b132b]'}`}
                     >
-                      {/* Top Row: Icon, Vehicle Name & Reg Plate */}
-                      <div className="flex items-start justify-between gap-2.5">
-                        <div className="flex items-start gap-3 min-w-0 flex-1">
-                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 shadow-2xs ${
-                            isReady
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                          }`}>
-                            <Car className="w-5 h-5" />
-                          </div>
-                          
+                      {/* BorderBeam for Pinned Cards */}
+                      {pinnedForAll && (
+                        <BorderBeam size={200} duration={6} colorFrom="#facc15" colorTo="#fbbf24" borderWidth={2} />
+                      )}
+                      {pinnedForMe && !pinnedForAll && (
+                        <BorderBeam size={200} duration={6} colorFrom="#38bdf8" colorTo="#60a5fa" borderWidth={2} />
+                      )}
+
+                      {/* Thumbnail Background Image with Clean Gradient Overlay */}
+                      {job.thumbnailUrl ? (
+                        <>
+                          <img
+                            src={job.thumbnailUrl}
+                            alt={job.vehicleName || 'Vehicle'}
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                            }}
+                            className="absolute inset-0 w-full h-full object-cover object-center z-0 transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-r from-[#0b1328] via-[#0b1328]/85 via-45% to-transparent z-0" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#0b1328]/70 via-transparent to-black/30 z-0" />
+                        </>
+                      ) : (
+                        <div className="absolute right-2 -bottom-2 opacity-5 dark:opacity-10 pointer-events-none z-0">
+                          <Car className="w-36 h-36 text-slate-400 dark:text-white" />
+                        </div>
+                      )}
+
+                      {/* Content Container */}
+                      <div className="relative z-10 flex flex-col justify-between flex-1 gap-3">
+                        {/* Top Row: Vehicle Info & Pin Button */}
+                        <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1 space-y-1">
-                            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white uppercase truncate group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">
-                              {job.vehicleName || 'Vehicle'}
-                            </h3>
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[10px] font-mono font-black text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                              <h3
+                                className={`text-sm sm:text-base font-black uppercase tracking-tight truncate flex items-center gap-1.5 ${
+                                  job.thumbnailUrl ? 'text-white' : 'text-slate-900 dark:text-white'
+                                } group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors`}
+                              >
+                                <Car className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
+                                <span className="truncate">{job.vehicleName || 'Vehicle'}</span>
+                              </h3>
+                              {job.vehicleColor && (
+                                <span className="text-amber-600 dark:text-amber-400 font-bold text-xs shrink-0">
+                                  · {job.vehicleColor}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {/* High-Contrast Crisp Vehicle License Plate */}
+                              <span
+                                className="inline-block text-xs font-mono font-black px-2.5 py-0.5 rounded-md bg-amber-400 text-slate-950 border border-amber-500/50 shadow-xs tracking-wider"
+                              >
                                 {job.vehicleNumber || '---'}
                               </span>
+
                               {job.expectedDeliveryDate && (
-                                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${deliveryInfo.badgeClass}`}>
+                                <span className={`text-[9px] sm:text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${deliveryInfo.badgeClass}`}>
                                   {deliveryInfo.shortLabel}
                                 </span>
                               )}
                             </div>
                           </div>
+
+                          {/* Right Action: Pin Icon Button */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => handlePinButtonClick(e, job)}
+                              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 shadow-xs cursor-pointer ${
+                                isPinned
+                                  ? 'bg-amber-400 text-zinc-950 shadow-amber-400/25 ring-1 ring-amber-400'
+                                  : job.thumbnailUrl
+                                  ? 'bg-black/60 text-slate-200 hover:text-amber-400 border border-white/20 hover:border-amber-400/40 backdrop-blur-xs'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-amber-600 border border-slate-200 dark:border-slate-700'
+                              }`}
+                              title={isPinned ? 'Tap to unpin' : 'Pin Vehicle'}
+                            >
+                              <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-zinc-950 stroke-[2.5]' : ''}`} />
+                            </button>
+                          </div>
                         </div>
 
-                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-500 group-hover:translate-x-1 transition-all shrink-0 mt-1" />
-                      </div>
-
-                      {/* Middle: Progress Bar Beam */}
-                      <div className="space-y-1.5 py-2">
-                        <div className="flex items-center justify-between text-[11px] font-mono">
-                          <span className="text-slate-400 uppercase tracking-wider text-[10px] font-bold">
-                            Progress
-                          </span>
-                          <span className="font-bold text-amber-600 dark:text-amber-400">
-                            {completedTasks}/{totalTasks} ({progressPct}%)
-                          </span>
-                        </div>
-                        <ProgressBarBeam progress={progressPct} />
-                      </div>
-
-                      {/* Bottom Row: Garage Duration & Status */}
-                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          Garage: {durationStr}
-                        </span>
-                        <span>
-                          {job.expectedDeliveryDate ? (
-                            <span className={deliveryInfo.textClass}>
-                              {deliveryInfo.label}
+                        {/* Middle: Progress Bar with High-Contrast Numbers */}
+                        <div className="space-y-1.5 py-1">
+                          <div className="flex items-center justify-between text-xs font-mono">
+                            <span
+                              className={`uppercase tracking-wider text-[10px] font-bold ${
+                                job.thumbnailUrl ? 'text-slate-300' : 'text-slate-600 dark:text-slate-400'
+                              }`}
+                            >
+                              Tasks Progress
                             </span>
-                          ) : (
-                            new Date(job.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })
-                          )}
-                        </span>
+                            <span
+                              className={`font-black text-xs px-2 py-0.5 rounded-md border ${
+                                job.thumbnailUrl
+                                  ? 'bg-black/60 text-amber-300 border-amber-400/30'
+                                  : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/25'
+                              }`}
+                            >
+                              {completedTasks}/{totalTasks} ({progressPct}%)
+                            </span>
+                          </div>
+                          <ProgressBarBeam progress={progressPct} />
+                        </div>
+
+                        {/* Bottom Row: Garage Duration & Delivery Deadline */}
+                        <div
+                          className={`flex items-center justify-between text-xs font-mono pt-1.5 border-t ${
+                            job.thumbnailUrl
+                              ? 'border-white/15 text-slate-200 font-bold'
+                              : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium'
+                          }`}
+                        >
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span>Garage: {durationStr}</span>
+                          </span>
+                          <span>
+                            {job.expectedDeliveryDate ? (
+                              <span className={deliveryInfo.textClass}>
+                                {deliveryInfo.label}
+                              </span>
+                            ) : (
+                              new Date(job.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })
+                            )}
+                          </span>
+                        </div>
                       </div>
                     </motion.div>
                   </BlurFade>
@@ -523,6 +689,19 @@ export const JobsListPage: React.FC = () => {
             </AnimatePresence>
           </>
         )}
+
+        {/* Pin Job Card Modal */}
+        <PinJobModal
+          isOpen={selectedPinJob !== null}
+          onClose={() => setSelectedPinJob(null)}
+          job={selectedPinJob}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          onTogglePin={(jobCardId, mode) =>
+            handleToggleJobPin(jobCardId, mode, () => setSelectedPinJob(null))
+          }
+          isPinningMode={pinningJobMode}
+        />
       </main>
     </div>
   );
