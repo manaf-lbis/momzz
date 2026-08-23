@@ -235,6 +235,20 @@ export const getJobCardById = async (req: Request, res: Response) => {
   }
 };
 
+export const getJobStats = async (req: Request, res: Response) => {
+  try {
+    const cachedStats = await cacheService.get<any>('cache:jobs:stats');
+    if (cachedStats) {
+      return sendSuccess(res, 'Job stats retrieved successfully.', cachedStats, 200);
+    }
+    const stats = await jobRepository.getJobStats();
+    await cacheService.set('cache:jobs:stats', stats);
+    return sendSuccess(res, 'Job stats retrieved successfully.', stats, 200);
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to fetch job stats.', 500);
+  }
+};
+
 export const getJobCards = async (req: Request, res: Response) => {
   try {
     const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
@@ -244,7 +258,9 @@ export const getJobCards = async (req: Request, res: Response) => {
     const search = req.query.search as string | undefined;
     const sortBy = req.query.sortBy as string | undefined;
     const sortOrder = req.query.sortOrder as 'asc' | 'desc' | undefined;
+    const liveOnly = req.query.liveOnly === 'true';
 
+    // Historical / Search / Paginated tabs (e.g. ALL_VEHICLES) load directly from MongoDB via indexes
     if (page || limit || timeframe || tab || search || sortBy) {
       const paginatedResult = await jobRepository.findPaginatedJobs({ page, limit, timeframe, tab, search, sortBy, sortOrder });
       const jobIds = paginatedResult.jobs.map((j) => j._id);
@@ -285,17 +301,17 @@ export const getJobCards = async (req: Request, res: Response) => {
       );
     }
 
-    // Direct in-memory cache check for dashboard (0ms, 0 queries, 0 Redis commands)
-    const cachedJobs = await cacheService.get<any[]>('cache:jobs:all');
-    if (cachedJobs) {
-      return sendSuccess(res, 'Job cards retrieved successfully.', cachedJobs, 200);
+    // Live active garage vehicles only — cached in memory (0ms, 0 queries, almost 0 RAM overhead)
+    const cachedLiveJobs = await cacheService.get<any[]>('cache:jobs:live');
+    if (cachedLiveJobs) {
+      return sendSuccess(res, 'Live job cards retrieved successfully.', cachedLiveJobs, 200);
     }
 
-    const jobs = await jobRepository.findAllJobs();
-    const jobIds = jobs.map((j) => j._id);
+    const liveJobs = await jobRepository.findLiveJobs();
+    const jobIds = liveJobs.map((j) => j._id);
     const taskMap = await jobRepository.findTasksForJobs(jobIds);
 
-    const jobsWithTasks = jobs.map((job) => {
+    const liveJobsWithTasks = liveJobs.map((job) => {
       const tasks = taskMap[job._id.toString()] || [];
       const allCompleted = tasks.length > 0 && tasks.every((t) => t.status === 'COMPLETED');
       const targetStatus = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
@@ -315,14 +331,14 @@ export const getJobCards = async (req: Request, res: Response) => {
       });
     });
 
-    await cacheService.set('cache:jobs:all', jobsWithTasks);
-    return sendSuccess(res, 'Job cards retrieved successfully.', jobsWithTasks, 200);
-
+    await cacheService.set('cache:jobs:live', liveJobsWithTasks);
+    return sendSuccess(res, 'Live job cards retrieved successfully.', liveJobsWithTasks, 200);
 
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to fetch job cards.', 500);
   }
 };
+
 
 export const toggleTaskPin = async (req: Request, res: Response) => {
   try {
