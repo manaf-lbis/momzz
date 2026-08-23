@@ -276,32 +276,57 @@ export const Dashboard: React.FC = () => {
           </FadeUp>
 
 
-          {/* ── CREATE JOB / MY TASKS ── col-span 5 on lg */}
+          {/* ── CREATE JOB & MY JOBS ── col-span 5 on lg */}
           <FadeUp delay={0.1} className="col-span-2 sm:col-span-3 lg:col-span-5 row-span-1">
             {isAdmin ? (
-              <div
-                className="group relative overflow-hidden rounded-2xl sm:rounded-3xl cursor-pointer flex flex-col min-h-[140px] sm:min-h-[250px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400/40 dark:hover:border-amber-400/30 shadow-sm hover:shadow-lg transition-all duration-300 p-3.5 sm:p-5"
-                onClick={() => navigate('/jobs/create')}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-500/10 dark:bg-amber-400/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:bg-amber-400 group-hover:text-slate-950 transition-all duration-300">
-                    <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3 h-full">
+                {/* 1. New Job Card */}
+                <div
+                  className="group relative overflow-hidden rounded-2xl sm:rounded-3xl cursor-pointer flex flex-col justify-between min-h-[140px] sm:min-h-[250px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 dark:hover:border-amber-400/40 shadow-xs hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 p-3.5 sm:p-5"
+                  onClick={() => navigate('/jobs/create')}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-500/10 dark:bg-amber-400/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:bg-amber-400 group-hover:text-slate-950 transition-all duration-300 shadow-xs">
+                      <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-700 dark:text-amber-300 text-[8px] sm:text-[9px] font-mono font-black uppercase tracking-wider flex items-center gap-1 border border-amber-400/20">
+                      <Sparkles className="w-2.5 h-2.5" />New
+                    </span>
                   </div>
-                  <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-amber-400/10 text-amber-700 dark:text-amber-300 text-[8px] sm:text-[9px] font-mono font-black uppercase tracking-wider flex items-center gap-1 border border-amber-400/20">
-                    <Sparkles className="w-2.5 h-2.5" />Intake
-                  </span>
+                  <div className="mt-auto pt-2">
+                    <h2 className="text-base sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">New Job</h2>
+                    <p className="text-[11px] text-slate-400 mt-1 leading-snug hidden sm:block">Intake & vehicle registration</p>
+                    <div className="mt-2 sm:mt-3 flex items-center gap-1 text-[11px] sm:text-xs font-bold text-amber-600 dark:text-amber-400">
+                      Create <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1.5 transition-transform" />
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-auto pt-2">
-                  <h2 className="text-lg sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">New Job</h2>
-                  <p className="text-[11px] sm:text-xs text-slate-400 mt-1 leading-snug hidden sm:block">Register vehicle, assign mechanics & build checklist</p>
-                  <div className="mt-2 sm:mt-3.5 flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
-                    Create intake <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1.5 transition-transform" />
+
+                {/* 2. My Jobs Card */}
+                <div
+                  className="group relative overflow-hidden rounded-2xl sm:rounded-3xl cursor-pointer flex flex-col justify-between min-h-[140px] sm:min-h-[250px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 dark:hover:border-amber-400/40 shadow-xs hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 p-3.5 sm:p-5"
+                  onClick={() => navigate('/jobs')}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-500/10 dark:bg-amber-400/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:bg-amber-400 group-hover:text-slate-950 transition-all duration-300 shadow-xs">
+                      <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300 text-[8px] sm:text-[9px] font-mono font-black">
+                      <NumberTicker value={activeCount} /> Active
+                    </span>
+                  </div>
+                  <div className="mt-auto pt-2">
+                    <h2 className="text-base sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">My Jobs</h2>
+                    <p className="text-[11px] text-slate-400 mt-1 leading-snug hidden sm:block">View all workshop tasks</p>
+                    <div className="mt-2 sm:mt-3 flex items-center gap-1 text-[11px] sm:text-xs font-bold text-amber-600 dark:text-amber-400">
+                      View all <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1.5 transition-transform" />
+                    </div>
                   </div>
                 </div>
               </div>
             ) : (
               <div
-                className="group relative overflow-hidden rounded-2xl sm:rounded-3xl cursor-pointer flex flex-col min-h-[140px] sm:min-h-[250px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400/40 shadow-sm hover:shadow-lg transition-all duration-300 p-3.5 sm:p-5"
+                className="group relative overflow-hidden rounded-2xl sm:rounded-3xl cursor-pointer flex flex-col justify-between min-h-[140px] sm:min-h-[250px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 dark:hover:border-amber-400/40 shadow-xs hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 p-3.5 sm:p-5"
                 onClick={() => navigate('/jobs')}
               >
                 <div className="flex items-start justify-between">
@@ -502,11 +527,11 @@ interface CompactCardProps {
 
 const CompactCard: React.FC<CompactCardProps> = ({ icon, iconBg, border, label, title, cta, ctaColor, badge, onClick }) => (
   <div
-    className={`group relative overflow-hidden rounded-2xl sm:rounded-3xl cursor-pointer bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 ${border} shadow-sm hover:shadow-md transition-all duration-300 p-3.5 sm:p-4 min-h-[130px] sm:min-h-[150px] flex flex-col`}
+    className={`group relative overflow-hidden rounded-2xl sm:rounded-3xl cursor-pointer bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 ${border} shadow-xs hover:shadow-xl hover:shadow-slate-900/5 dark:hover:shadow-black/40 hover:-translate-y-1 active:scale-[0.97] transition-all duration-300 p-3.5 sm:p-4 min-h-[130px] sm:min-h-[150px] flex flex-col`}
     onClick={onClick}
   >
     <div className="flex items-start justify-between">
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 ${iconBg}`}>
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 shadow-xs ${iconBg}`}>
         {icon}
       </div>
       {badge && <div className="shrink-0">{badge}</div>}
@@ -515,8 +540,9 @@ const CompactCard: React.FC<CompactCardProps> = ({ icon, iconBg, border, label, 
       <p className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">{label}</p>
       <h3 className="text-sm font-black text-slate-900 dark:text-white mt-0.5">{title}</h3>
       <div className={`mt-1.5 flex items-center gap-0.5 text-[10px] font-bold ${ctaColor}`}>
-        {cta} <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+        {cta} <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
       </div>
     </div>
   </div>
 );
+
