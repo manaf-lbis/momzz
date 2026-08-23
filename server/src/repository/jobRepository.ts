@@ -182,13 +182,24 @@ export class JobRepository {
       .populate('inventoryItem', 'title thumbnailUrl itemType stockQuantity');
   }
 
-  async findTasksForJobs(jobCardIds: (string | mongoose.Types.ObjectId)[]): Promise<Record<string, ITask[]>> {
+  async findTasksForJobs(jobCardIds: (string | mongoose.Types.ObjectId)[], isDetailed: boolean = false): Promise<Record<string, ITask[]>> {
     if (!jobCardIds || jobCardIds.length === 0) return {};
-    const tasks = await Task.find({ jobCardId: { $in: jobCardIds } })
-      .populate('completedBy', 'name mobile role profileImageUrl')
-      .populate('partners', 'name mobile role profileImageUrl')
-      .populate('activityLog.user', 'name mobile role profileImageUrl')
-      .populate('inventoryItem', 'title thumbnailUrl itemType stockQuantity');
+
+    let query = Task.find({ jobCardId: { $in: jobCardIds } });
+    if (!isDetailed) {
+      // Lightweight projection for lists — avoids 4 slow document joins
+      query = query
+        .select('title status jobCardId isPinned completedBy createdAt completedAt')
+        .populate('completedBy', 'name role') as any;
+    } else {
+      query = query
+        .populate('completedBy', 'name mobile role profileImageUrl')
+        .populate('partners', 'name mobile role profileImageUrl')
+        .populate('activityLog.user', 'name mobile role profileImageUrl')
+        .populate('inventoryItem', 'title thumbnailUrl itemType stockQuantity') as any;
+    }
+
+    const tasks = await query;
 
     const map: Record<string, ITask[]> = {};
     for (const t of tasks) {
@@ -200,6 +211,7 @@ export class JobRepository {
     }
     return map;
   }
+
 
 
   async findJobById(jobCardId: string): Promise<IJobCard | null> {
