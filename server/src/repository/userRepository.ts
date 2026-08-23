@@ -86,9 +86,10 @@ export class UserRepository {
     });
 
     const result = limit ? userObjects.slice(0, limit) : userObjects;
-    await cacheService.set(cacheKey, result, 60);
+    await cacheService.set(cacheKey, result, 86400);
     return result;
   }
+
 
 
   async incrementTaskCount(userId: string): Promise<IUser | null> {

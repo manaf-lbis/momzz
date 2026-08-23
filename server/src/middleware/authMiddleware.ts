@@ -27,8 +27,8 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
   const token = authHeader.split(' ')[1];
 
   try {
-    // 0. Check if token was revoked via logout
-    const isBlacklisted = await cacheService.get<boolean>(`jwt:blacklist:${token}`);
+    // 0. Fast local check: verify if token is blacklisted (0 remote commands)
+    const isBlacklisted = await cacheService.isTokenBlacklisted(token);
     if (isBlacklisted) {
       return sendError(res, 'Access token has been revoked. Please log in again.', 401);
     }
@@ -36,11 +36,10 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     const decoded = jwt.verify(token, ENV.JWT_ACCESS_SECRET) as AuthUserPayload;
     const sessionKey = `user:session:${decoded.id}`;
 
-
-    // 1. Try Redis cache first
+    // 1. Try Cache first (L1 Memory / L2 Redis)
     let userDoc = await cacheService.get<CachedUserSession>(sessionKey);
 
-    // 2. Cache miss -> fetch from MongoDB & cache in Redis for 15 mins (900 seconds)
+    // 2. Cold miss -> fetch from MongoDB & cache with long retention (invalidated only on user changes)
     if (!userDoc) {
       const dbUser = await userRepository.findById(decoded.id);
       if (!dbUser) {
@@ -56,7 +55,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         taskCount: dbUser.taskCount,
         profileImageUrl: dbUser.profileImageUrl,
       };
-      await cacheService.set(sessionKey, userDoc, 900);
+      await cacheService.set(sessionKey, userDoc, 86400); // 24 hours
     }
 
     if (userDoc.status === 'BLOCKED') {
@@ -74,14 +73,14 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       role: userDoc.role as any,
     };
 
-    // 3. Heartbeat: use Redis key with 120s TTL to prevent hammering MongoDB on every single request
-    const heartbeatKey = `user:heartbeat:${userDoc.id}`;
-    const shouldUpdateDbHeartbeat = await cacheService.setNX(heartbeatKey, '1', 120);
-    if (shouldUpdateDbHeartbeat) {
+    // 3. In-memory throttled heartbeat (updates DB at most once every 5 minutes, 0 Redis commands burned)
+    if (cacheService.shouldExecuteThrottled(`user:heartbeat:${userDoc.id}`, 300)) {
       userRepository.setUserOnlineStatus(userDoc.id, true).catch(() => {});
     }
 
     next();
+
+
   } catch (error) {
     return sendError(res, 'Invalid or expired access token.', 401, error);
   }
