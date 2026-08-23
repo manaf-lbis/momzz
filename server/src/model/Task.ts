@@ -53,5 +53,9 @@ const TaskSchema: Schema = new Schema(
   { timestamps: true }
 );
 
+TaskSchema.index({ jobCardId: 1 });
+TaskSchema.index({ status: 1, completedBy: 1 });
+
 export const Task = mongoose.model<ITask>('Task', TaskSchema);
 export default Task;
+

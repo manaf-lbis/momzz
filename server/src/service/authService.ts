@@ -7,6 +7,8 @@ import { AuthRepository } from '../repository/authRepository';
 import { userRepository } from '../repository/userRepository';
 import { emitUserApproved, emitUserBlocked } from '../config/socket';
 import { getCloudinaryUrl, uploadToCloudinary } from '../utils/cloudinaryHelper';
+import { cacheService } from './cacheService';
+
 
 export interface RegisterDTO {
   name: string;
@@ -141,11 +143,28 @@ export class AuthService {
     return { user, ...tokens };
   }
 
-  async logout(refreshToken: string) {
+  async logout(refreshToken?: string, accessToken?: string) {
     if (refreshToken) {
       await this.authRepo.deleteRefreshToken(refreshToken);
     }
+    if (accessToken) {
+      try {
+        const decoded: any = jwt.decode(accessToken);
+        if (decoded?.exp) {
+          const remainingSeconds = decoded.exp - Math.floor(Date.now() / 1000);
+          if (remainingSeconds > 0) {
+            await cacheService.set(`jwt:blacklist:${accessToken}`, true, remainingSeconds);
+          }
+        }
+        if (decoded?.id) {
+          await cacheService.del(`user:session:${decoded.id}`);
+        }
+      } catch (err) {
+        // Ignore decode error on logout
+      }
+    }
   }
+
 
   private formatUser(user: any) {
     if (!user) return user;
@@ -170,12 +189,14 @@ export class AuthService {
     // Store ONLY the Cloudinary publicId in the database
     const user = await this.authRepo.updateProfileImage(userId, publicId);
     if (!user) throw new Error('User not found.');
+    await cacheService.del(`user:session:${userId}`);
     return this.formatUser(user);
   }
 
   async approveWorker(userId: string, isApproved: boolean) {
     const user = await userRepository.updateApprovalStatus(userId, isApproved);
     if (!user) throw new Error('Worker user not found.');
+    await cacheService.del(`user:session:${userId}`);
     if (isApproved) {
       emitUserApproved(userId);
     }
@@ -228,6 +249,7 @@ export class AuthService {
   async toggleUserStatus(userId: string, status: 'ACTIVE' | 'BLOCKED') {
     const user = await userRepository.updateUserStatus(userId, status);
     if (!user) throw new Error('User not found.');
+    await cacheService.del(`user:session:${userId}`);
     if (status === 'BLOCKED') {
       emitUserBlocked(userId);
     }
@@ -237,23 +259,25 @@ export class AuthService {
   async updateUserRole(userId: string, role: typeof ROLES[keyof typeof ROLES]) {
     const user = await userRepository.updateUserRole(userId, role);
     if (!user) throw new Error('User not found.');
+    await cacheService.del(`user:session:${userId}`);
     return this.formatUser(user);
   }
 
   async adminResetPassword(userId: string, newPassword: string) {
-    if (!newPassword || newPassword.length < 6) {
-      throw new Error('New password must be at least 6 characters long.');
+    if (!newPassword || newPassword.length < 8) {
+      throw new Error('New password must be at least 8 characters long.');
     }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     const user = await userRepository.updateUserPassword(userId, hashedPassword);
     if (!user) throw new Error('User not found.');
+    await cacheService.del(`user:session:${userId}`);
     return { message: 'Password reset successfully.' };
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
-    if (!newPassword || newPassword.length < 6) {
-      throw new Error('New password must be at least 6 characters long.');
+    if (!newPassword || newPassword.length < 8) {
+      throw new Error('New password must be at least 8 characters long.');
     }
 
     const user = await userRepository.findByMobile((await userRepository.findById(userId))?.mobile || '');
@@ -265,6 +289,7 @@ export class AuthService {
       const salt = await bcrypt.genSalt(10);
       rawUser.password = await bcrypt.hash(newPassword, salt);
       await rawUser.save();
+      await cacheService.del(`user:session:${userId}`);
       return { message: 'Password changed successfully.' };
     }
 
@@ -274,14 +299,17 @@ export class AuthService {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     await userRepository.updateUserPassword(userId, hashedPassword);
+    await cacheService.del(`user:session:${userId}`);
     return { message: 'Password changed successfully.' };
   }
 
   async updateUserByAdmin(userId: string, updates: { name?: string; mobile?: string; role?: any; status?: any; isApproved?: boolean }) {
     const user = await userRepository.updateUserByAdmin(userId, updates);
     if (!user) throw new Error('User not found.');
+    await cacheService.del(`user:session:${userId}`);
     return this.formatUser(user);
   }
 }
+
 
 export const authService = new AuthService();

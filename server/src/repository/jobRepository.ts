@@ -3,6 +3,8 @@ import { JobCard, IJobCard } from '../model/JobCard';
 import { Task, ITask } from '../model/Task';
 import User from '../model/User';
 import { catalogRepository } from './catalogRepository';
+import { cacheService } from '../service/cacheService';
+
 
 export class JobRepository {
   async createJobCard(data: {
@@ -306,6 +308,9 @@ export class JobRepository {
       status: allCompleted ? 'COMPLETED' : 'IN_PROGRESS',
     });
 
+    // Invalidate cached leaderboard
+    cacheService.delByPrefix('cache:leaderboard').catch(() => {});
+
     return await Task.findById(taskId)
       .populate('completedBy', 'name mobile role profileImageUrl')
       .populate('partners', 'name mobile role profileImageUrl')
@@ -380,8 +385,12 @@ export class JobRepository {
       });
     }
 
+    // Invalidate cached leaderboard
+    cacheService.delByPrefix('cache:leaderboard').catch(() => {});
+
     return task; // Return the task so the controller can access jobCardId
   }
+
 
 
   async deleteJobCard(jobCardId: string, deletedBy: string): Promise<boolean> {

@@ -1,23 +1,28 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
 import cookieParser from 'cookie-parser';
 import { ENV } from './config/env';
 import { connectDB } from './config/db';
 import authRouter from './router/authRouter';
+import { requestLogger } from './middleware/requestLogger';
 
 const app: Application = express();
+
+// Security HTTP Headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false,
+}));
+
+// Attach Request Analytics Logger
+app.use(requestLogger);
 
 // Required when the API is deployed behind a proxy (for example, Render or Vercel).
 // This lets Express correctly detect HTTPS from the X-Forwarded-Proto header.
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
-app.use((req: Request, res: Response, next: NextFunction) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  next();
-});
 
 // Dynamic CORS origin handler
 const allowedOrigins = ENV.CORS_ORIGINS;
@@ -56,7 +61,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 app.use(express.json({ limit: '3mb' }));
+app.use(mongoSanitize({ replaceWith: '_' }));
 app.use(cookieParser());
+
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
@@ -116,12 +123,14 @@ app.get('/api/dummy', (req: Request, res: Response) => {
 
 import http from 'http';
 import { initSocket } from './config/socket';
+import { testRedisConnection } from './config/redis';
 
 // Bootstrapping Database & Server
 const server = http.createServer(app);
 initSocket(server);
 
-connectDB().then(() => {
+connectDB().then(async () => {
+  await testRedisConnection();
   server.listen(ENV.PORT, () => {
     console.log(`[SERVER] Momzz backend listening on http://localhost:${ENV.PORT}`);
     console.log(`[SERVER] Configured Client URL from env: ${ENV.CLIENT_URL}`);
@@ -129,3 +138,4 @@ connectDB().then(() => {
 });
 
 export default app;
+

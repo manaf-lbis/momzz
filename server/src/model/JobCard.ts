@@ -45,5 +45,11 @@ const JobCardSchema: Schema = new Schema(
   { timestamps: true }
 );
 
+JobCardSchema.index({ isDeleted: 1, status: 1, createdAt: -1 });
+JobCardSchema.index({ isDeleted: 1, isPinnedForAll: -1, createdAt: -1 });
+JobCardSchema.index({ isDeleted: 1, vehicleNumber: 1, customerMobile: 1 });
+JobCardSchema.index({ isDeleted: 1, verifiedAt: 1, status: 1 });
+
 export const JobCard = mongoose.model<IJobCard>('JobCard', JobCardSchema);
 export default JobCard;
+
