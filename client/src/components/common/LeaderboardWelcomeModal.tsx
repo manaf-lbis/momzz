@@ -8,18 +8,18 @@ import confetti from 'canvas-confetti';
 import { NumberTicker } from '../magicui/NumberTicker';
 import { BorderBeam } from '../magicui/BorderBeam';
 
-const SESSION_KEY = 'podium_welcome_shown_v5';
+const SESSION_KEY = 'podium_welcome_shown_v6';
 
 const triggerModalPopper = () => {
   try {
     confetti({
-      particleCount: 28,
-      spread: 55,
-      origin: { y: 0.45 },
-      colors: ['#f59e0b', '#fbbf24', '#ffffff', '#10b981'],
-      ticks: 140,
-      gravity: 1.2,
-      scalar: 0.8,
+      particleCount: 35,
+      spread: 60,
+      origin: { y: 0.4 },
+      colors: ['#f59e0b', '#fbbf24', '#fef08a', '#ffffff', '#10b981'],
+      ticks: 160,
+      gravity: 1.1,
+      scalar: 0.85,
       disableForReducedMotion: true,
     });
   } catch (e) {}
@@ -77,55 +77,55 @@ export const LeaderboardWelcomeModal: React.FC = () => {
   return (
     <AnimatePresence>
       <div
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs"
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-3 bg-black/65 backdrop-blur-xs"
         onClick={handleClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.82, y: 15 }}
+          initial={{ opacity: 0, scale: 0.85, y: 18 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.82, y: 15 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-          className="relative w-full max-w-[290px] overflow-hidden rounded-[26px] bg-white/98 dark:bg-slate-900/98 backdrop-blur-2xl border border-amber-400/40 shadow-2xl shadow-amber-500/15 p-4 space-y-3 text-center select-none"
+          exit={{ opacity: 0, scale: 0.85, y: 18 }}
+          transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+          className="relative w-full max-w-[315px] overflow-hidden rounded-[28px] bg-white/98 dark:bg-slate-900/98 backdrop-blur-2xl border border-amber-400/50 shadow-2xl shadow-amber-500/20 p-4 space-y-3.5 text-center select-none"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Animated Gold Edge Beam */}
-          <BorderBeam size={160} duration={5} colorFrom="#facc15" colorTo="#f59e0b" borderWidth={1.5} />
+          {/* Animated Golden Radiance Edge Beam */}
+          <BorderBeam size={180} duration={5} colorFrom="#facc15" colorTo="#f59e0b" borderWidth={1.5} />
 
           {/* Golden Radiant Backdrop */}
-          <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 w-36 h-36 rounded-full bg-amber-400/20 blur-2xl" />
+          <div className="pointer-events-none absolute -top-14 left-1/2 -translate-x-1/2 w-44 h-44 rounded-full bg-gradient-to-b from-amber-400/25 to-transparent blur-2xl" />
 
-          {/* Close X */}
+          {/* Close Button */}
           <button
             type="button"
             onClick={handleClose}
-            className="absolute top-3 right-3 p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition active:scale-90 cursor-pointer z-20"
+            className="absolute top-3.5 right-3.5 p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition active:scale-90 cursor-pointer z-20"
           >
             <X className="w-3.5 h-3.5" />
           </button>
 
-          {/* Mini Header Tag */}
-          <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300 text-[9px] font-mono font-black uppercase tracking-wider">
+          {/* Tagline */}
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300 text-[9px] font-mono font-black uppercase tracking-wider">
             <Sparkles className="w-2.5 h-2.5 text-amber-500 animate-pulse" />
-            <span>Monthly Leader</span>
+            <span>Monthly Garage Leader</span>
           </div>
 
-          {/* ── Compact Champion Avatar & Info ── */}
-          <div className="space-y-1.5 pt-1">
+          {/* ── #1 Champion Hero Spotlight with Bigger Profile Picture ── */}
+          <div className="space-y-1.5 pt-0.5">
             <div className="relative inline-block">
-              {/* Floating Crown */}
+              {/* Floating Animated 3D Crown */}
               <motion.div
-                animate={{ y: [0, -3, 0] }}
+                animate={{ y: [0, -4, 0] }}
                 transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-                className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20"
+                className="absolute -top-4 left-1/2 -translate-x-1/2 z-20"
               >
-                <div className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow-md shadow-amber-400/40">
-                  <Crown className="w-3 h-3 fill-current" />
+                <div className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-400/40">
+                  <Crown className="w-3.5 h-3.5 fill-current" />
                 </div>
               </motion.div>
 
-              {/* Glowing Avatar */}
-              <div className="w-14 h-14 rounded-2xl p-0.5 bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-600 shadow-md shadow-amber-500/20">
-                <div className="w-full h-full rounded-[14px] overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white font-black text-sm">
+              {/* Big Glossy Avatar (80px) */}
+              <div className="w-20 h-20 rounded-2xl p-1 bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-600 shadow-xl shadow-amber-500/25">
+                <div className="w-full h-full rounded-[14px] overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white font-black text-xl">
                   {rank1.profileImageUrl ? (
                     <img src={rank1.profileImageUrl} alt={rank1.name} className="w-full h-full object-cover" />
                   ) : (
@@ -134,44 +134,89 @@ export const LeaderboardWelcomeModal: React.FC = () => {
                 </div>
               </div>
 
-              <div className="absolute -bottom-1 -right-1 px-1 py-0.2 rounded-md bg-amber-400 text-slate-950 text-[8px] font-mono font-black flex items-center gap-0.5 shadow-xs">
-                <Star className="w-2 h-2 fill-current" />
+              {/* Rank 1 Star Badge */}
+              <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-md bg-amber-400 text-slate-950 text-[9px] font-mono font-black flex items-center gap-0.5 shadow-md">
+                <Star className="w-2.5 h-2.5 fill-current" />
                 #1
               </div>
             </div>
 
             <div>
-              <h4 className="text-sm font-black text-slate-900 dark:text-white truncate px-1">
+              <h4 className="text-base font-black text-slate-900 dark:text-white truncate px-2">
                 {rank1.name}
               </h4>
-              <p className="text-[10px] font-mono text-slate-400 mt-0.5">
-                Top Garage Performer
+              <p className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-bold">
+                Top Performer
               </p>
             </div>
 
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300">
-              <Flame className="w-3 h-3 text-amber-500 fill-current" />
-              <span className="text-[11px] font-mono font-black">
-                <NumberTicker value={(rank1 as any).points || (rank1 as any).taskCount || 0} /> QP
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300">
+              <Flame className="w-3.5 h-3.5 text-amber-500 fill-current" />
+              <span className="text-xs font-mono font-black">
+                <NumberTicker value={(rank1 as any).points || (rank1 as any).taskCount || 0} /> Quality Points
               </span>
             </div>
           </div>
 
-          {/* ── Mini 2nd & 3rd Place Inline Strip ── */}
+          {/* ── 2nd and 3rd Place Mini Showcase with Avatars ── */}
           {(rank2 || rank3) && (
-            <div className="py-1.5 px-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800 text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 truncate">
-              {rank2 && <span>🥈 {rank2.name?.split(' ')[0]}</span>}
-              {rank2 && rank3 && <span>•</span>}
-              {rank3 && <span>🥉 {rank3.name?.split(' ')[0]}</span>}
+            <div className="grid grid-cols-2 gap-2 text-left pt-1">
+              {/* 2nd Place Silver */}
+              {rank2 && (
+                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 flex items-center gap-2">
+                  <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-black text-slate-700 dark:text-slate-200 shrink-0">
+                    {rank2.profileImageUrl ? (
+                      <img src={rank2.profileImageUrl} alt={rank2.name} className="w-full h-full object-cover" />
+                    ) : (
+                      getInitials(rank2.name)
+                    )}
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-slate-300 dark:bg-slate-600 rounded-tl text-[7px] font-mono font-bold flex items-center justify-center">
+                      2
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-slate-900 dark:text-slate-100 truncate">
+                      {rank2.name}
+                    </p>
+                    <p className="text-[10px] font-mono text-slate-400 font-bold">
+                      {(rank2 as any).points || (rank2 as any).taskCount || 0} QP
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 3rd Place Bronze */}
+              {rank3 && (
+                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 flex items-center gap-2">
+                  <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-xs font-black text-amber-800 dark:text-amber-300 shrink-0">
+                    {rank3.profileImageUrl ? (
+                      <img src={rank3.profileImageUrl} alt={rank3.name} className="w-full h-full object-cover" />
+                    ) : (
+                      getInitials(rank3.name)
+                    )}
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-amber-200 dark:bg-amber-800 rounded-tl text-[7px] font-mono font-bold flex items-center justify-center">
+                      3
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-slate-900 dark:text-slate-100 truncate">
+                      {rank3.name}
+                    </p>
+                    <p className="text-[10px] font-mono text-slate-400 font-bold">
+                      {(rank3 as any).points || (rank3 as any).taskCount || 0} QP
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* ── Actions ── */}
-          <div className="pt-0.5 space-y-1">
+          <div className="pt-1 space-y-1">
             <button
               type="button"
               onClick={handleViewLeaderboard}
-              className="w-full py-2 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-1 shadow-sm active:scale-95 transition cursor-pointer"
+              className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 shadow-md shadow-amber-400/20 active:scale-95 transition cursor-pointer"
             >
               <span>View Leaderboard</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -182,7 +227,7 @@ export const LeaderboardWelcomeModal: React.FC = () => {
               onClick={handleClose}
               className="w-full py-1 text-center text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
             >
-              Dismiss
+              Continue to Garage
             </button>
           </div>
         </motion.div>
