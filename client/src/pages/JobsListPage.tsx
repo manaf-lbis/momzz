@@ -81,7 +81,49 @@ export const JobsListPage: React.FC = () => {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
+  const [isPulling, setIsPulling] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const touchStartY = useRef<number>(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY <= 5) {
+      touchStartY.current = e.touches[0].clientY;
+    } else {
+      touchStartY.current = 0;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current > 0 && window.scrollY <= 5) {
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - touchStartY.current;
+      if (diff > 0) {
+        setPullDistance(Math.min(diff * 0.45, 80));
+        setIsPulling(true);
+      }
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullDistance > 55) {
+      setPullDistance(50);
+      try {
+        await refetch();
+      } finally {
+        setTimeout(() => {
+          setPullDistance(0);
+          setIsPulling(false);
+        }, 400);
+      }
+    } else {
+      setPullDistance(0);
+      setIsPulling(false);
+    }
+    touchStartY.current = 0;
+  };
+
   const [toggleJobPin] = useToggleJobPinMutation();
+
 
   // Fetch fast lightweight stats for tab badge counts (0ms from cache)
   const { data: statsResponse } = useGetJobStatsQuery();
@@ -320,8 +362,28 @@ export const JobsListPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors">
+    <div
+      className="min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <Navbar />
+
+      {/* Pull to Refresh Indicator */}
+      <AnimatePresence>
+        {isPulling && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: pullDistance }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-center justify-center overflow-hidden bg-amber-500/10 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 font-mono text-xs font-bold gap-2"
+          >
+            <Loader2 className={`w-4 h-4 ${pullDistance >= 50 ? 'animate-spin' : ''}`} />
+            <span>{pullDistance >= 50 ? 'Release to refresh' : 'Pull down to refresh'}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-3.5 sm:px-6 py-4 sm:py-5 space-y-4 pb-24 sm:pb-28">
         {/* ── Header ── */}
@@ -361,11 +423,13 @@ export const JobsListPage: React.FC = () => {
         {/* ── Sticky Filter & Search Control Tray ── */}
         <div className="sticky top-0 z-30 -mx-3.5 sm:-mx-6 px-3.5 sm:px-6 py-2 bg-zinc-100/90 dark:bg-zinc-950/90 backdrop-blur-md border-y border-zinc-200/60 dark:border-zinc-800/60 shadow-xs space-y-2">
           {/* ── Accurate Global View Tabs ── */}
-          <div className="flex gap-1 p-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
-            {VIEWS.map(({ key, label, count }) => (
-              <button
-                key={key}
-                onClick={() => setJobsView(key)}
+          <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex gap-1 p-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm min-w-full">
+              {VIEWS.map(({ key, label, count }) => (
+                <button
+                  key={key}
+                  onClick={() => setJobsView(key)}
+
                 className={`relative flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer ${
                   jobsView === key
                     ? 'text-zinc-900 dark:text-white'
@@ -393,10 +457,12 @@ export const JobsListPage: React.FC = () => {
                 </span>
               </button>
             ))}
+            </div>
           </div>
 
           {/* ── Search & Sort Bar ── */}
           <div className="flex items-center gap-2">
+
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
               <input

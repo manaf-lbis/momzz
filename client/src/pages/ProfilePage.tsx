@@ -1,23 +1,38 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 import { Navbar } from '../components/navbar/Navbar';
-import { Button } from '../components/common/Button';
 import {
   User as UserIcon,
-  Award,
-  CheckCircle2,
-  ShieldCheck,
-  LogOut,
-  Phone,
+  Car,
+  BarChart3,
+  Package,
+  ShoppingCart,
+  Users,
+  Trophy,
+  Moon,
+  Sun,
+  Volume2,
+  VolumeX,
+  Smartphone,
   KeyRound,
-  Lock,
+  Phone,
+  Info,
+  LogOut,
+  ChevronRight,
+  Edit2,
   Camera,
   X,
-  UserCheck,
-  Building2,
-  Trophy,
-  ChevronRight,
+  CheckCircle2,
+  MoreHorizontal,
+  Lock,
+  Loader2,
+  ArrowRight,
+  Sparkles,
+  Shield,
+  Clock,
+  Calendar,
 } from 'lucide-react';
 import { useAppDispatch } from '../hooks/useAppDispatch';
 import { logout, updateUser } from '../slice/authSlice';
@@ -28,13 +43,16 @@ import {
   useChangePasswordMutation,
   useUpdateProfileImageMutation,
 } from '../api/authApi';
+import { isCompletionSoundEnabled, setCompletionSoundEnabled } from '../utils/completionSound';
 import { ImageCropperModal } from '../components/common/ImageCropperModal';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const dispatch = useAppDispatch();
-  const [logoutApi] = useLogoutApiMutation();
+  const [logoutApi, { isLoading: isLoggingOut }] = useLogoutApiMutation();
   const { data: meData } = useGetMeQuery();
   const { data: leaderboardData } = useGetLeaderboardQuery();
   const [changePasswordMutation, { isLoading: isChangingPassword }] = useChangePasswordMutation();
@@ -43,27 +61,48 @@ export const ProfilePage: React.FC = () => {
 
   const currentUser = meData?.data || user;
 
+  // State
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(isCompletionSoundEnabled());
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [cropSource, setCropSource] = useState<string | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
 
-  // Leaderboard rank helpers
-  const leaderboard = leaderboardData?.data || [];
-  const currentUserId = String(currentUser?.id || (currentUser as any)?._id || '');
-  const currentUserMobile = currentUser?.mobile || '';
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+    }
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
-  const rankIndex = leaderboard.findIndex(
-    (w: any) =>
-      (currentUserId && String(w.id || w._id) === currentUserId) ||
-      (currentUserMobile && w.mobile === currentUserMobile)
-  );
-  const myEntry = rankIndex !== -1 ? leaderboard[rankIndex] : null;
-  const rankNumber = rankIndex !== -1 ? rankIndex + 1 : null;
-  const medalEmoji = rankNumber === 1 ? '🥇' : rankNumber === 2 ? '🥈' : rankNumber === 3 ? '🥉' : null;
-  const currentRank = rankNumber ? `${medalEmoji ? medalEmoji + ' ' : ''}#${rankNumber}` : 'N/A';
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      alert('Momzz OS is already installed or your browser does not support quick PWA installation.');
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+    }
+  };
+
+  const handleSoundToggle = () => {
+    const next = !isSoundEnabled;
+    setIsSoundEnabled(next);
+    setCompletionSoundEnabled(next);
+  };
 
   const handleLogout = async () => {
     try {
@@ -71,6 +110,7 @@ export const ProfilePage: React.FC = () => {
     } catch (e) {
     } finally {
       dispatch(logout());
+      navigate('/login');
     }
   };
 
@@ -87,7 +127,7 @@ export const ProfilePage: React.FC = () => {
       setTimeout(() => {
         setSuccessMsg('');
         setIsPasswordModalOpen(false);
-      }, 2000);
+      }, 1500);
     } catch (err: any) {
       setErrorMsg(err?.data?.message || 'Failed to change password.');
     }
@@ -113,350 +153,524 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+  const initialLetter = currentUser?.name ? currentUser.name.trim().charAt(0).toUpperCase() : 'U';
+
+  const memberSince = currentUser?.createdAt
+    ? new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' }).format(
+        new Date(currentUser.createdAt)
+      )
+    : 'Recent';
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0F172A] dark:text-white transition-colors duration-200">
+    <div className="min-h-screen bg-slate-100/70 dark:bg-[#070c18] text-slate-900 dark:text-slate-100 transition-colors duration-200 pb-28 sm:pb-32">
       <Navbar />
 
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10 space-y-6">
-        {/* Profile Card Header */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs dark:border-slate-800 dark:bg-slate-900 text-center space-y-4">
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-emerald-500" />
-
-          {/* Avatar Container */}
-          <div className="relative w-24 h-24 mx-auto mt-2">
-            <div className="w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-800 flex items-center justify-center text-amber-500 shadow-lg">
-              {currentUser?.profileImageUrl ? (
-                <img
-                  src={currentUser.profileImageUrl}
-                  alt={`${currentUser.name}'s profile`}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <UserIcon className="w-12 h-12 stroke-[1.5]" />
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => profileImageInputRef.current?.click()}
-              className="absolute right-0 bottom-0 w-8 h-8 rounded-full bg-amber-500 text-slate-950 border-2 border-white dark:border-slate-900 flex items-center justify-center shadow-md transition hover:scale-105 active:scale-95"
-              title="Change profile photo (1:1 Square)"
-              aria-label="Change profile photo"
-            >
-              <Camera className="w-4 h-4" />
-            </button>
-            <input
-              ref={profileImageInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleImageSelection}
-              className="hidden"
-            />
-          </div>
-
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 space-y-6">
+        {/* Page Top Header */}
+        <div className="flex items-center justify-between py-1">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-              {currentUser?.name || 'User Profile'}
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              User Profile & Settings
             </h1>
-            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-slate-400" /> {currentUser?.mobile || 'No mobile linked'}
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              Manage your workshop credentials, operational tools and system preferences
             </p>
           </div>
-
-          <div className="flex items-center justify-center gap-2 pt-1">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-600 dark:text-amber-300 text-xs font-bold uppercase tracking-wider">
-              <ShieldCheck className="w-3.5 h-3.5" /> {currentUser?.role || 'WORKER'}
-            </span>
-            <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                currentUser?.status === 'BLOCKED'
-                  ? 'bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400'
-                  : currentUser?.isApproved
-                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                  : 'bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400'
-              }`}
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-              {currentUser?.status === 'BLOCKED'
-                ? 'BLOCKED'
-                : currentUser?.isApproved
-                ? 'ACTIVE MEMBER'
-                : 'APPROVAL PENDING'}
-            </span>
-          </div>
+          <button
+            onClick={() => profileImageInputRef.current?.click()}
+            className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-amber-500 shadow-xs active:scale-95 transition cursor-pointer"
+            title="Change photo"
+          >
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Lifetime Performance Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center space-y-1 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 dark:bg-emerald-500/15">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white pt-1">
-              {(() => {
-                const raw = myEntry?.taskCount ?? currentUser?.taskCount ?? 0;
-                const n = Number(raw);
-                return Number.isInteger(n) ? n.toString() : n.toFixed(2);
-              })()}
-            </p>
-            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Tasks Completed
-            </p>
-          </div>
+        {/* Responsive Grid: 2 Columns on Tablets/Desktops (col-span-4 & col-span-8) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* ── LEFT COLUMN (Profile Summary & Quick Preferences) ── */}
+          <div className="lg:col-span-5 space-y-5">
+            {/* User Identity Card */}
+            <section className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 shadow-sm dark:shadow-xl space-y-5">
+              <div className="flex flex-col items-center text-center space-y-3">
+                {/* Avatar with Camera Trigger */}
+                <div className="relative group">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-amber-100 dark:bg-slate-800 border-4 border-white dark:border-slate-800 flex items-center justify-center font-black text-2xl text-amber-700 dark:text-amber-300 shadow-lg ring-2 ring-amber-400/50">
+                    {currentUser?.profileImageUrl ? (
+                      <img
+                        src={currentUser.profileImageUrl}
+                        alt={currentUser.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <span>{initialLetter}</span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => profileImageInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 flex items-center justify-center shadow-lg active:scale-90 transition cursor-pointer"
+                    title="Update photo"
+                  >
+                    <Camera className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+                </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center space-y-1 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 dark:bg-amber-500/15">
-              <Award className="w-5 h-5" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 pt-1">
-              {currentRank}
-            </p>
-            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Leaderboard Rank
-            </p>
-          </div>
-        </div>
-
-        {/* Leaderboard Card with Progress Bars */}
-        {leaderboard.length > 0 && (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-4">
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-amber-500" />
-                <h2 className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
-                  Garage Leaderboard
-                </h2>
+                {/* Name, Role & Mobile */}
+                <div>
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                    {currentUser?.name || 'Technician'}
+                  </h2>
+                  <div className="flex items-center justify-center gap-2 mt-1">
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-700 dark:text-amber-300 font-mono font-black text-[10px] uppercase tracking-wider border border-amber-400/30">
+                      {currentUser?.role || 'WORKER'}
+                    </span>
+                    <span className="text-xs text-slate-400 font-mono font-medium">
+                      {currentUser?.mobile || 'No Mobile'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-mono text-slate-400 mt-2 flex items-center justify-center gap-1">
+                    <Calendar className="w-3 h-3 text-slate-400" />
+                    <span>Member since {memberSince}</span>
+                  </p>
+                </div>
               </div>
+
+              {/* Quick Actions inside Left Card */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2.5">
+                <button
+                  onClick={() => setIsPasswordModalOpen(true)}
+                  className="py-2.5 px-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 border border-slate-200/60 dark:border-slate-700/60 cursor-pointer"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Security</span>
+                </button>
+                <button
+                  onClick={() => setIsLogoutModalOpen(true)}
+                  className="py-2.5 px-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 border border-rose-500/20 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Logout</span>
+                </button>
+              </div>
+
+              <input
+                ref={profileImageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageSelection}
+              />
+            </section>
+
+            {/* Section 2: Preferences & Controls */}
+            <section className="rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 shadow-sm dark:shadow-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/60">
+              <div className="px-5 py-3 bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Preferences & Hardware
+              </div>
+
+              {/* Theme Switcher Row */}
+              <div className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-9 h-9 rounded-2xl bg-slate-500/10 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+                    {theme === 'dark' ? <Moon className="w-4.5 h-4.5 text-amber-400" /> : <Sun className="w-4.5 h-4.5 text-amber-500" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                      Appearance
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                      {theme === 'dark' ? 'Dark Mode Active' : 'Light Mode Active'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Toggle Switch */}
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className={`w-12 h-6.5 rounded-full p-1 transition-colors flex items-center cursor-pointer ${
+                    theme === 'dark' ? 'bg-amber-400 justify-end' : 'bg-slate-300 justify-start'
+                  }`}
+                >
+                  <motion.div
+                    layout
+                    className="w-4.5 h-4.5 rounded-full bg-white dark:bg-slate-950 shadow-md"
+                  />
+                </button>
+              </div>
+
+              {/* Sound FX Toggle Row */}
+              <div className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-9 h-9 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    {isSoundEnabled ? <Volume2 className="w-4.5 h-4.5" /> : <VolumeX className="w-4.5 h-4.5" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                      Audio Feedback
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                      Completion chimes & haptic sounds
+                    </p>
+                  </div>
+                </div>
+
+                {/* Toggle Switch */}
+                <button
+                  type="button"
+                  onClick={handleSoundToggle}
+                  className={`w-12 h-6.5 rounded-full p-1 transition-colors flex items-center cursor-pointer ${
+                    isSoundEnabled ? 'bg-amber-400 justify-end' : 'bg-slate-300 justify-start'
+                  }`}
+                >
+                  <motion.div
+                    layout
+                    className="w-4.5 h-4.5 rounded-full bg-white dark:bg-slate-950 shadow-md"
+                  />
+                </button>
+              </div>
+
+              {/* Install App / PWA */}
               <button
-                onClick={() => navigate('/leaderboard')}
-                className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5"
+                onClick={handleInstallClick}
+                className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition active:bg-slate-100 dark:active:bg-slate-800 cursor-pointer"
               >
-                <span>View Podium</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-9 h-9 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
+                    <Smartphone className="w-4.5 h-4.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                      Install PWA App
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                      {isInstalled ? 'App installed on device' : 'Add to home screen for 1-tap launch'}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
               </button>
-            </div>
+            </section>
+          </div>
 
-            <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
-              {(() => {
-                const maxPts = Number(leaderboard[0]?.taskCount || 1);
-                return leaderboard.slice(0, 7).map((worker: any, idx: number) => {
-                  const isMe = (currentUserId && String(worker.id || worker._id) === currentUserId) || (currentUserMobile && worker.mobile === currentUserMobile);
-                  const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
-                  const pts = Number(worker.taskCount ?? 0);
-                  const pct = maxPts > 0 ? (pts / maxPts) * 100 : 0;
-                  const initials = (worker.name || '?')
-                    .split(' ')
-                    .map((n: string) => n[0])
-                    .join('')
-                    .slice(0, 2)
-                    .toUpperCase();
+          {/* ── RIGHT COLUMN (Workshop Operations & Tools Bento Grid) ── */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* Section 1: Workshop & Operations Bento Grid */}
+            <section className="rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 shadow-sm dark:shadow-xl overflow-hidden p-4 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    Workshop Operations & Modules
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    Direct access to garage workflows, logs and administration
+                  </p>
+                </div>
+              </div>
 
-                  return (
-                    <div
-                      key={worker.id || worker._id}
-                      className={`flex items-center gap-3 py-3 px-2 rounded-xl transition ${
-                        isMe
-                          ? 'bg-amber-500/10 dark:bg-amber-500/10'
-                          : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/40'
-                      }`}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 1. Vehicle Service History */}
+                <button
+                  onClick={() => navigate('/jobs', { state: { view: 'all' } })}
+                  className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-amber-500/10 dark:hover:bg-amber-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <Car className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      Vehicle Archives
+                    </h4>
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                      Complete lifetime service records & vehicle jobs
+                    </p>
+                  </div>
+                </button>
+
+                {/* 2. Leaderboard & Work Logs */}
+                <button
+                  onClick={() => navigate('/leaderboard')}
+                  className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-amber-500/10 dark:hover:bg-amber-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <Trophy className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      Technician Standings
+                    </h4>
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                      Completed tasks, mechanic points & leaderboard
+                    </p>
+                  </div>
+                </button>
+
+                {/* Admin Exclusive Modules */}
+                {isAdmin && (
+                  <>
+                    {/* Analytics */}
+                    <button
+                      onClick={() => navigate('/analytics')}
+                      className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-500/10 dark:hover:bg-indigo-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-indigo-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
                     >
-                      {/* Rank Number */}
-                      <span className="w-6 text-center text-xs font-black text-zinc-400 dark:text-zinc-500 shrink-0">
-                        {medal ?? `#${idx + 1}`}
-                      </span>
-
-                      {/* Avatar */}
-                      <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-xs font-black text-zinc-600 dark:text-zinc-300">
-                        {worker.profileImageUrl ? (
-                          <img src={worker.profileImageUrl} alt={worker.name} className="h-full w-full object-cover" />
-                        ) : (
-                          initials
-                        )}
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <BarChart3 className="w-5 h-5" />
                       </div>
-
-                      {/* Name + Progress Bar */}
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-xs sm:text-sm font-bold truncate ${isMe ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-800 dark:text-zinc-200'}`}>
-                          {worker.name} {isMe && <span className="text-[11px] font-normal text-amber-500">(You)</span>}
-                        </p>
-                        <div className="mt-1 h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              idx === 0 ? 'bg-amber-400' : idx === 1 ? 'bg-zinc-400' : idx === 2 ? 'bg-orange-400' : 'bg-zinc-300 dark:bg-zinc-600'
-                            }`}
-                            style={{ width: `${Math.max(4, pct)}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Task Count / Points */}
-                      <div className="shrink-0 text-right">
-                        <span className={`text-xs sm:text-sm font-black ${idx === 0 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-700 dark:text-zinc-200'}`}>
-                          {Number.isInteger(pts) ? pts : pts.toFixed(1)}
-                        </span>
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-none">
-                          pts
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          Workshop Analytics
+                        </h4>
+                        <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                          Revenue trends, turnaround time & KPI stats
                         </p>
                       </div>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
+                    </button>
+
+                    {/* Inventory */}
+                    <button
+                      onClick={() => navigate('/inventory')}
+                      className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-emerald-500/10 dark:hover:bg-emerald-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-emerald-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Package className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                          Inventory & Parts
+                        </h4>
+                        <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                          Manage garage stock, spare parts & pricing
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Sales / POS */}
+                    <button
+                      onClick={() => navigate('/sales')}
+                      className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-rose-500/10 dark:hover:bg-rose-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-rose-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <ShoppingCart className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                          Sales & POS Billing
+                        </h4>
+                        <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                          Customer invoices, payment receipts & bills
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Team Approvals */}
+                    <button
+                      onClick={() => navigate('/users')}
+                      className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-purple-500/10 dark:hover:bg-purple-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-purple-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                          Team & Approvals
+                        </h4>
+                        <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">
+                          Worker onboarding, roles & garage access
+                        </p>
+                      </div>
+                    </button>
+                  </>
+                )}
+              </div>
+            </section>
+
+            {/* Support & System Status Banner */}
+            <section className="rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm dark:shadow-xl flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <Phone className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    Need Help or Service Support?
+                  </h4>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                    MOMZ'Z Workshop Hotline • +91 7994414155
+                  </p>
+                </div>
+              </div>
+              <a
+                href="tel:+917994414155"
+                className="px-4 py-2 rounded-xl bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shrink-0 hover:bg-emerald-400 transition active:scale-95 shadow-md shadow-emerald-500/20"
+              >
+                Call Hotline
+              </a>
+            </section>
+          </div>
+        </div>
+      </main>
+
+      {/* Modern iOS Bottom Sheet Logout Modal (Matching Reference Image) */}
+      <AnimatePresence>
+        {isLogoutModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsLogoutModalOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+            />
+
+            {/* Bottom Sheet Modal */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 26, stiffness: 280 }}
+              className="relative z-10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 shadow-2xl space-y-5 text-center"
+            >
+              {/* Drag Pill */}
+              <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto" />
+
+              <div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                  Logout
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Are you sure you want to log out?
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsLogoutModalOpen(false)}
+                  className="py-3 px-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition active:scale-95 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isLoggingOut}
+                  onClick={handleLogout}
+                  className="py-3 px-4 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md shadow-amber-400/25 transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {isLoggingOut ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Yes, Logout</span>
+                </button>
+              </div>
+            </motion.div>
           </div>
         )}
+      </AnimatePresence>
 
-        {/* Account Details Summary */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-            <Building2 className="w-4 h-4 text-amber-500" /> Account Summary
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
-            <div>
-              <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
-                Full Name
-              </span>
-              <span className="font-bold text-slate-900 dark:text-white">{currentUser?.name}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
-                Registered Mobile
-              </span>
-              <span className="font-bold text-slate-900 dark:text-white">{currentUser?.mobile}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
-                System Role
-              </span>
-              <span className="font-bold text-amber-600 dark:text-amber-400">{currentUser?.role}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
-                Account Status
-              </span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                {currentUser?.status === 'BLOCKED'
-                  ? 'BLOCKED'
-                  : currentUser?.isApproved
-                  ? 'ACTIVE'
-                  : 'PENDING'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Security & Action Buttons */}
-        <div className="space-y-3 pt-2">
-          <Button
-            variant="outline"
-            onClick={() => setIsPasswordModalOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-3 text-sm font-bold border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            <KeyRound className="w-4 h-4 text-amber-500" /> Change My Password
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-3 text-sm font-bold text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10"
-          >
-            <LogOut className="w-4 h-4" /> Sign Out of Garage System
-          </Button>
-        </div>
-
-        {/* Change Password Modal */}
+      {/* Change Password Modal */}
+      <AnimatePresence>
         {isPasswordModalOpen && (
-          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsPasswordModalOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+            />
+
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="relative z-10 w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4"
+            >
               <div className="flex items-center justify-between">
-                <h3 className="font-extrabold text-base uppercase tracking-wider flex items-center gap-2 text-slate-900 dark:text-white">
-                  <Lock className="w-4 h-4 text-amber-500" />
-                  Change Password
+                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-amber-500" /> Change Password
                 </h3>
                 <button
                   onClick={() => setIsPasswordModalOpen(false)}
-                  className="rounded-full p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {successMsg ? (
-                <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold">
-                  {successMsg}
-                </div>
-              ) : (
-                <form onSubmit={handleChangePassword} className="space-y-4">
-                  {errorMsg && (
-                    <div className="p-3.5 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold">
-                      {errorMsg}
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                      Current Password
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="Enter current password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                      New Password
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="Minimum 6 characters"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsPasswordModalOpen(false)}
-                      className="flex-1 text-xs font-bold py-2.5"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      disabled={isChangingPassword}
-                      className="flex-1 text-xs font-bold py-2.5 bg-emerald-500 text-white hover:bg-emerald-600"
-                    >
-                      {isChangingPassword ? 'Saving...' : 'Update Password'}
-                    </Button>
-                  </div>
-                </form>
+              {errorMsg && (
+                <p className="text-xs text-rose-500 font-semibold p-2 bg-rose-500/10 rounded-xl">
+                  {errorMsg}
+                </p>
               )}
-            </div>
+              {successMsg && (
+                <p className="text-xs text-emerald-500 font-semibold p-2 bg-emerald-500/10 rounded-xl">
+                  {successMsg}
+                </p>
+              )}
+
+              <form onSubmit={handleChangePassword} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-400"
+                    placeholder="Enter current password"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-400"
+                    placeholder="Enter new password"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsPasswordModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isChangingPassword}
+                    className="px-4 py-2 rounded-xl bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-400/20 disabled:opacity-50"
+                  >
+                    {isChangingPassword ? 'Saving...' : 'Update Password'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
           </div>
         )}
+      </AnimatePresence>
 
-        {/* Square Profile Photo Cropper Modal (1:1 Ratio) */}
-        {cropSource && (
-          <ImageCropperModal
-            isOpen={!!cropSource}
-            imageSrc={cropSource}
-            aspectRatio={1}
-            title="Crop Profile Photo (1:1 Square)"
-            onClose={() => setCropSource(null)}
-            onCropComplete={handleSquareCropComplete}
-          />
-        )}
-      </main>
+      {/* Square Avatar Crop Modal */}
+      {cropSource && (
+        <ImageCropperModal
+          isOpen={!!cropSource}
+          imageSrc={cropSource}
+          aspectRatio={1}
+          onClose={() => setCropSource(null)}
+          onCropComplete={(croppedBase64) => {
+            handleSquareCropComplete(croppedBase64);
+            setCropSource(null);
+          }}
+        />
+      )}
     </div>
   );
 };
