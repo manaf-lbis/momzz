@@ -10,6 +10,8 @@ import {
   emitTaskDeleted,
 } from '../config/socket';
 import { getCloudinaryUrl, uploadToCloudinary, extractPublicId } from '../utils/cloudinaryHelper';
+import { cacheService } from '../service/cacheService';
+
 
 /**
  * Maps all populated image fields in a job card object through getCloudinaryUrl().
@@ -113,6 +115,7 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
     });
 
     emitJobCreated(fullJob);
+    await cacheService.delByPrefix('cache:jobs');
 
     return sendSuccess(res, 'Job Card Published!', fullJob, 201);
   } catch (error: any) {
@@ -143,6 +146,7 @@ export const updateJobCard = async (req: Request, res: Response) => {
       id: updatedJob._id.toString(),
     });
     emitJobUpdated(formatted);
+    await cacheService.delByPrefix('cache:jobs');
     return sendSuccess(res, 'Job card updated successfully.', formatted);
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to update job card.', 500);
@@ -172,7 +176,9 @@ export const uploadJobImage = async (req: Request, res: Response) => {
     });
 
     emitJobUpdated(formatted);
+    await cacheService.delByPrefix('cache:jobs');
     return sendSuccess(res, 'Vehicle photo updated successfully.', formatted);
+
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to upload vehicle photo.', 500);
   }
@@ -279,6 +285,12 @@ export const getJobCards = async (req: Request, res: Response) => {
       );
     }
 
+    // Direct in-memory cache check for dashboard (0ms, 0 queries, 0 Redis commands)
+    const cachedJobs = await cacheService.get<any[]>('cache:jobs:all');
+    if (cachedJobs) {
+      return sendSuccess(res, 'Job cards retrieved successfully.', cachedJobs, 200);
+    }
+
     const jobs = await jobRepository.findAllJobs();
     const jobIds = jobs.map((j) => j._id);
     const taskMap = await jobRepository.findTasksForJobs(jobIds);
@@ -303,7 +315,9 @@ export const getJobCards = async (req: Request, res: Response) => {
       });
     });
 
+    await cacheService.set('cache:jobs:all', jobsWithTasks);
     return sendSuccess(res, 'Job cards retrieved successfully.', jobsWithTasks, 200);
+
 
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to fetch job cards.', 500);
@@ -322,6 +336,7 @@ export const toggleTaskPin = async (req: Request, res: Response) => {
     });
 
     emitTaskUpdated(updatedTask.jobCardId.toString(), taskId, formattedTask, 'PIN_TOGGLED');
+    await cacheService.delByPrefix('cache:jobs');
 
     return sendSuccess(
       res,
@@ -356,6 +371,7 @@ export const toggleJobPin = async (req: Request, res: Response) => {
     });
 
     emitJobUpdated(formattedJob);
+    await cacheService.delByPrefix('cache:jobs');
 
     return sendSuccess(
       res,
@@ -406,6 +422,7 @@ export const setTaskStatus = async (req: Request, res: Response) => {
 
     // Emit with the explicit action so clients know exactly what happened
     emitTaskUpdated(updatedTask.jobCardId.toString(), taskId, formattedTask, action);
+    await cacheService.delByPrefix('cache:jobs');
 
     return sendSuccess(
       res,
@@ -429,6 +446,7 @@ export const verifyJobCard = async (req: Request, res: Response) => {
     }
     const verifiedJob = await jobRepository.verifyJobCard(jobCardId, req.user!.id);
     if (!verifiedJob) return sendError(res, 'This job card has already been verified.', 400);
+    await cacheService.delByPrefix('cache:jobs');
     return sendSuccess(res, 'Job card verified successfully.', { ...verifiedJob.toObject(), id: verifiedJob._id.toString() });
   } catch (error: any) {
     return sendError(res, error.message || 'Unable to verify job card.', 500);
@@ -457,6 +475,7 @@ export const addTaskToJob = async (req: Request, res: Response) => {
     };
 
     emitTaskAdded(jobCardId, formattedTask);
+    await cacheService.delByPrefix('cache:jobs');
 
     return sendSuccess(res, 'Task added successfully.', formattedTask, 201);
   } catch (error: any) {
@@ -474,6 +493,7 @@ export const addInventoryTaskToJob = async (req: Request, res: Response) => {
     const task = await jobRepository.addInventoryTask(jobCardId, itemId, Number(quantityUsed), Number(discountAmount));
     const formattedTask = { ...task.toObject(), id: task._id.toString() };
     emitTaskAdded(jobCardId, formattedTask);
+    await cacheService.delByPrefix('cache:jobs');
     return sendSuccess(res, 'Inventory item added to job.', formattedTask, 201);
   } catch (error: any) { return sendError(res, error.message || 'Could not add inventory item.', 400); }
 };
@@ -488,6 +508,7 @@ export const deleteTask = async (req: Request, res: Response) => {
 
     // Emit with the correct jobCardId from the deleted task document
     emitTaskDeleted(deletedTask.jobCardId.toString(), taskId);
+    await cacheService.delByPrefix('cache:jobs');
 
     return sendSuccess(res, 'Task deleted successfully.', null, 200);
   } catch (error: any) {
@@ -505,9 +526,11 @@ export const deleteJobCard = async (req: Request, res: Response) => {
     }
 
     emitJobDeleted(jobCardId);
+    await cacheService.delByPrefix('cache:jobs');
 
     return sendSuccess(res, 'Job card moved to deleted records successfully.', null, 200);
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to delete job card.', 500);
   }
 };
+

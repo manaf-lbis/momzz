@@ -179,9 +179,15 @@ export class AuthService {
   }
 
   async getMe(userId: string) {
+    const cacheKey = `user:profile:${userId}`;
+    const cached = await cacheService.get<any>(cacheKey);
+    if (cached) return cached;
+
     const user = await this.authRepo.findById(userId);
     if (!user) throw new Error('User not found');
-    return this.formatUser(user);
+    const formatted = this.formatUser(user);
+    await cacheService.set(cacheKey, formatted);
+    return formatted;
   }
 
   async updateProfileImage(userId: string, imageData: string) {
@@ -190,19 +196,20 @@ export class AuthService {
     // Store ONLY the Cloudinary publicId in the database
     const user = await this.authRepo.updateProfileImage(userId, publicId);
     if (!user) throw new Error('User not found.');
-    await cacheService.del(`user:session:${userId}`);
+    await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
     return this.formatUser(user);
   }
 
   async approveWorker(userId: string, isApproved: boolean) {
     const user = await userRepository.updateApprovalStatus(userId, isApproved);
     if (!user) throw new Error('Worker user not found.');
-    await cacheService.del(`user:session:${userId}`);
+    await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
     if (isApproved) {
       emitUserApproved(userId);
     }
     return this.formatUser(user);
   }
+
 
   async getPendingWorkers() {
     const pendingUsers = await userRepository.findPendingUsers();
@@ -250,7 +257,7 @@ export class AuthService {
   async toggleUserStatus(userId: string, status: 'ACTIVE' | 'BLOCKED') {
     const user = await userRepository.updateUserStatus(userId, status);
     if (!user) throw new Error('User not found.');
-    await cacheService.del(`user:session:${userId}`);
+    await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
     if (status === 'BLOCKED') {
       emitUserBlocked(userId);
     }
@@ -260,7 +267,7 @@ export class AuthService {
   async updateUserRole(userId: string, role: typeof ROLES[keyof typeof ROLES]) {
     const user = await userRepository.updateUserRole(userId, role);
     if (!user) throw new Error('User not found.');
-    await cacheService.del(`user:session:${userId}`);
+    await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
     return this.formatUser(user);
   }
 
@@ -272,7 +279,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     const user = await userRepository.updateUserPassword(userId, hashedPassword);
     if (!user) throw new Error('User not found.');
-    await cacheService.del(`user:session:${userId}`);
+    await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
     return { message: 'Password reset successfully.' };
   }
 
@@ -290,7 +297,7 @@ export class AuthService {
       const salt = await bcrypt.genSalt(10);
       rawUser.password = await bcrypt.hash(newPassword, salt);
       await rawUser.save();
-      await cacheService.del(`user:session:${userId}`);
+      await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
       return { message: 'Password changed successfully.' };
     }
 
@@ -300,16 +307,17 @@ export class AuthService {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     await userRepository.updateUserPassword(userId, hashedPassword);
-    await cacheService.del(`user:session:${userId}`);
+    await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
     return { message: 'Password changed successfully.' };
   }
 
   async updateUserByAdmin(userId: string, updates: { name?: string; mobile?: string; role?: any; status?: any; isApproved?: boolean }) {
     const user = await userRepository.updateUserByAdmin(userId, updates);
     if (!user) throw new Error('User not found.');
-    await cacheService.del(`user:session:${userId}`);
+    await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
     return this.formatUser(user);
   }
+
 }
 
 

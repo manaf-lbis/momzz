@@ -1,29 +1,24 @@
 import { redis } from '../config/redis';
 
-interface MemoryCacheEntry<T> {
-  value: T;
-  expiresAt: number;
-}
-
 export class CacheService {
-  // L1 In-Memory Cache — keeps data until explicit invalidation / change
-  private memoryCache = new Map<string, MemoryCacheEntry<any>>();
+  // Permanent L1 In-Memory Cache — persists until explicit update/delete on change
+  private memoryCache = new Map<string, any>();
 
   // In-memory token blacklist Set — 0 Redis commands on every normal request
   private blacklistSet = new Set<string>();
 
+  // In-memory throttled timestamps for background tasks
+  private throttleMap = new Map<string, number>();
+
   /**
-   * Check if token is blacklisted. Checks fast local memory Set first (0 commands), then Redis only if needed.
+   * Check if token is blacklisted. Fast local memory lookup (0 commands).
    */
   async isTokenBlacklisted(token: string): Promise<boolean> {
-    if (this.blacklistSet.has(token)) {
-      return true;
-    }
-    return false;
+    return this.blacklistSet.has(token);
   }
 
   /**
-   * Blacklist a token on logout in both memory Set and Redis.
+   * Blacklist a token on logout in memory and Redis.
    */
   async blacklistToken(token: string, ttlSeconds: number): Promise<void> {
     this.blacklistSet.add(token);
@@ -39,30 +34,20 @@ export class CacheService {
   }
 
   /**
-   * Get value. Checks in-memory L1 cache first (0 Redis commands).
-   * Only queries Upstash Redis on cold cache miss.
+   * Get value from cached memory directly (0ms, 0 Redis commands).
+   * Falls back to Upstash Redis only on cold server start.
    */
   async get<T>(key: string): Promise<T | null> {
-    const now = Date.now();
-
-    // 1. Check L1 in-memory cache
-    const memoryEntry = this.memoryCache.get(key);
-    if (memoryEntry) {
-      if (memoryEntry.expiresAt > now) {
-        return memoryEntry.value as T;
-      }
-      this.memoryCache.delete(key);
+    // 1. Direct in-memory lookup (Zero TTL, never deleted unless changed)
+    if (this.memoryCache.has(key)) {
+      return this.memoryCache.get(key) as T;
     }
 
-    // 2. Fallback to L2 Upstash Redis on cold start
+    // 2. Fallback to Upstash Redis on cold start
     try {
       const data = await redis.get<T>(key);
       if (data !== null && data !== undefined) {
-        // Retain in L1 memory for 24 hours (or until explicitly deleted on change)
-        this.memoryCache.set(key, {
-          value: data,
-          expiresAt: now + 24 * 60 * 60 * 1000,
-        });
+        this.memoryCache.set(key, data);
         return data;
       }
       return null;
@@ -73,28 +58,27 @@ export class CacheService {
   }
 
   /**
-   * Set value in both L1 memory and Upstash Redis.
-   * Uses long retention (24h+) — data is only replaced when a mutation occurs.
+   * Set value in memory and Upstash Redis permanently until data is changed.
+   * If ttlSeconds is not passed, data is stored permanently without auto-expiry.
    */
-  async set<T>(key: string, value: T, ttlSeconds: number = 86400): Promise<void> {
-    const now = Date.now();
+  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+    // Store in memory permanently (until change)
+    this.memoryCache.set(key, value);
 
-    // Set in L1 memory
-    this.memoryCache.set(key, {
-      value,
-      expiresAt: now + ttlSeconds * 1000,
-    });
-
-    // Set in Upstash Redis
+    // Sync to Upstash Redis
     try {
-      await redis.set(key, value, { ex: ttlSeconds });
+      if (ttlSeconds && ttlSeconds > 0) {
+        await redis.set(key, value, { ex: ttlSeconds });
+      } else {
+        await redis.set(key, value);
+      }
     } catch (error: any) {
       console.warn(`[CACHE WARNING] Failed to set key "${key}": ${error.message}`);
     }
   }
 
   /**
-   * Delete one or more keys from memory and Redis (called on data changes).
+   * Delete one or more keys from memory and Redis (called ONLY on database changes).
    */
   async del(keyOrKeys: string | string[]): Promise<void> {
     const keys = Array.isArray(keyOrKeys) ? keyOrKeys : [keyOrKeys];
@@ -135,15 +119,15 @@ export class CacheService {
   }
 
   /**
-   * In-memory throttled execution helper (avoids Redis command consumption for simple intervals).
+   * In-memory throttled execution helper for background updates.
    */
   shouldExecuteThrottled(key: string, intervalSeconds: number): boolean {
     const now = Date.now();
-    const entry = this.memoryCache.get(key);
-    if (entry && entry.expiresAt > now) {
+    const lastRun = this.throttleMap.get(key) || 0;
+    if (now - lastRun < intervalSeconds * 1000) {
       return false;
     }
-    this.memoryCache.set(key, { value: true, expiresAt: now + intervalSeconds * 1000 });
+    this.throttleMap.set(key, now);
     return true;
   }
 
