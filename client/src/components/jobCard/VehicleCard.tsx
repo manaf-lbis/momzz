@@ -245,12 +245,12 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
                           <button
                             disabled={isTaskUpdating}
                             onClick={() => promptReopen(taskId, task.title)}
-                            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold font-mono bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-amber-600 transition-all flex items-center gap-1 disabled:opacity-50"
+                            className="min-h-[44px] min-w-[64px] px-3 py-2 rounded-xl text-xs font-bold font-mono bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-amber-600 transition-all flex items-center justify-center gap-1.5 active:scale-90 disabled:opacity-50 cursor-pointer"
                           >
                             {isTaskUpdating ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             ) : (
-                              <RotateCcw className="w-3 h-3" />
+                              <RotateCcw className="w-3.5 h-3.5" />
                             )}
                             <span>Reopen</span>
                           </button>
@@ -258,16 +258,17 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
                           <button
                             disabled={isTaskUpdating}
                             onClick={() => handleToggle(taskId, task.status)}
-                            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold font-mono bg-amber-400 text-slate-950 hover:bg-amber-300 active:scale-95 transition-all flex items-center gap-1 disabled:opacity-50 shadow-2xs"
+                            className="min-h-[44px] min-w-[70px] px-3.5 py-2.5 rounded-xl text-xs font-black font-mono bg-amber-400 text-slate-950 hover:bg-amber-300 active:scale-90 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-md shadow-amber-400/20 cursor-pointer"
                           >
                             {isTaskUpdating ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
-                              <Sparkles className="w-3.5 h-3.5" />
+                              <Sparkles className="w-4 h-4" />
                             )}
                             <span>Done</span>
                           </button>
                         )}
+
                       </div>
                     </div>
                   );

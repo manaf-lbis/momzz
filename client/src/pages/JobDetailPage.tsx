@@ -1090,25 +1090,31 @@ export const JobDetailPage: React.FC = () => {
 
                     {/* Top Row: Checkbox, Title & Points (Line 1), Avatars & Time (Line 2) */}
                     <div className="p-3.5 sm:p-4 flex items-start gap-3">
-                      {/* Checkbox Button with Yellow Ring for non-completed */}
+                      {/* Left: 44px Thumb-Friendly Touch Target Checkbox */}
                       <button
                         type="button"
-                        disabled={isTaskUpdating || (!!currentJob.verifiedAt && !isAdmin)}
+                        disabled={isTaskUpdating}
                         onClick={(e) => {
                           e.stopPropagation();
                           promptTaskStatusChange(task);
                         }}
-                        className={`mt-0.5 w-5 h-5 rounded-lg flex items-center justify-center transition-all shrink-0 active:scale-90 ${
-                          isCompleted
-                            ? 'bg-emerald-500 text-white shadow-xs'
-                            : 'border-2 border-amber-400 dark:border-amber-400/90 hover:border-amber-500 bg-amber-50/50 dark:bg-amber-400/10'
-                        }`}
+                        className="w-11 h-11 -my-2.5 -ml-1.5 flex items-center justify-center shrink-0 active:scale-85 transition-transform cursor-pointer"
+                        title={isCompleted ? 'Tap to reopen task' : 'Tap to complete task'}
                       >
-                        {isTaskUpdating ? (
-                          <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
-                        ) : (
-                          isCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        )}
+
+                        <div
+                          className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all shadow-xs ${
+                            isCompleted
+                              ? 'bg-emerald-500 text-white shadow-emerald-500/20 ring-2 ring-emerald-500/30'
+                              : 'border-2 border-amber-400 dark:border-amber-400/90 hover:border-amber-500 bg-amber-50/60 dark:bg-amber-400/10'
+                          }`}
+                        >
+                          {isTaskUpdating ? (
+                            <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+                          ) : isCompleted ? (
+                            <Check className="w-4 h-4 stroke-[3]" />
+                          ) : null}
+                        </div>
                       </button>
 
                       {/* Content: Exactly 2 Lines */}
@@ -1370,10 +1376,46 @@ export const JobDetailPage: React.FC = () => {
           )}
         </div>
 
+        {/* Mobile Sticky Quick Add Task Floating Bar */}
+        {isAdmin && !currentJob.verifiedAt && (
+          <div className="sm:hidden fixed bottom-18 inset-x-3 z-40">
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/90 rounded-2xl p-2 shadow-2xl flex items-center gap-2 ring-1 ring-black/5 dark:ring-white/10">
+              <input
+                type="text"
+                placeholder="Quick add sub-task..."
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newTaskTitle.trim()) {
+                    handleAddTask(newTaskTitle.trim());
+                    setNewTaskTitle('');
+                  }
+                }}
+                className="flex-1 px-3 py-2 text-xs bg-slate-100 dark:bg-slate-800 rounded-xl outline-none text-slate-900 dark:text-white placeholder-slate-400 font-medium"
+              />
+              <button
+                type="button"
+                disabled={!newTaskTitle.trim()}
+                onClick={() => {
+                  if (newTaskTitle.trim()) {
+                    handleAddTask(newTaskTitle.trim());
+                    setNewTaskTitle('');
+                  }
+                }}
+                className="px-3.5 py-2 rounded-xl bg-amber-400 text-slate-950 font-black text-xs uppercase disabled:opacity-40 active:scale-95 transition flex items-center gap-1 shadow-xs shrink-0 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>Add</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Task Activity Modal with Scrollable View */}
         <AnimatePresence>
           {activityTask && (
             <div
+
               className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
               onClick={() => setActivityTask(null)}
             >
