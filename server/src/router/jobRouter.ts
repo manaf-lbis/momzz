@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createJobWithTasks,
   getJobCards,
+  getJobCardById,
   setTaskStatus,
   addTaskToJob,
   addInventoryTaskToJob,
@@ -21,6 +22,7 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get('/', getJobCards);
+router.get('/:jobCardId', getJobCardById);
 router.post('/create', adminMiddleware, createJobWithTasks);
 router.patch('/tasks/:taskId/status', setTaskStatus);
 router.patch('/tasks/:taskId/pin', toggleTaskPin);

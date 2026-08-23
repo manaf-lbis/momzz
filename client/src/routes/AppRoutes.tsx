@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ScrollToTop } from '../components/common/ScrollToTop';
+import { GsapPageTransition } from '../components/common/GsapPageTransition';
 import { lazy, Suspense } from 'react';
 import { PageShimmer } from '../components/common/PageShimmer';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -30,45 +31,47 @@ export const AppRoutes: React.FC = () => {
   return (
     <>
       <ScrollToTop />
-      <Suspense fallback={<PageShimmer label="Loading..." />}>
-        <Routes>
-      {/* Public Auth Routes */}
-      <Route path="/auth" element={<AuthPage />} />
-      <Route path="/login" element={<AuthPage />} />
-      <Route path="/register" element={<AuthPage />} />
-      <Route path="/track" element={<TrackServicePage />} />
+      <GsapPageTransition>
+        <Suspense fallback={<PageShimmer label="Loading..." />}>
+          <Routes>
+            {/* Public Auth Routes */}
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/login" element={<AuthPage />} />
+            <Route path="/register" element={<AuthPage />} />
+            <Route path="/track" element={<TrackServicePage />} />
 
-      {/* Admin-Only Routes */}
-      <Route element={<ProtectedRoute requireAdmin={true} />}>
-        <Route path="/admin/approvals" element={<AdminApproval />} />
-        <Route path="/admin/users" element={<UserManagementPage />} />
-        <Route path="/jobs/create" element={<CreateJobPage />} />
-        <Route path="/jobs/edit/:id" element={<EditJobPage />} />
-        <Route path="/inventory/new" element={<AddInventoryItemPage />} />
-      </Route>
+            {/* Admin-Only Routes */}
+            <Route element={<ProtectedRoute requireAdmin={true} />}>
+              <Route path="/admin/approvals" element={<AdminApproval />} />
+              <Route path="/admin/users" element={<UserManagementPage />} />
+              <Route path="/jobs/create" element={<CreateJobPage />} />
+              <Route path="/jobs/edit/:id" element={<EditJobPage />} />
+              <Route path="/inventory/new" element={<AddInventoryItemPage />} />
+            </Route>
 
-      {/* Authenticated Routes — available to all logged-in users */}
-      <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/jobs" element={<JobsListPage />} />
-        <Route path="/jobs/:id" element={<JobDetailPage />} />
-        <Route path="/jobs/:id/photo" element={<VehiclePhotoPage />} />
-        <Route path="/jobs/:id/capture" element={<VehiclePhotoPage />} />
-        <Route path="/analytics" element={<LeaderboardPage />} />
-        <Route path="/leaderboard" element={<LeaderboardPage />} />
-        <Route path="/top-performers" element={<LeaderboardPage />} />
-        <Route path="/work-logs" element={<WorkLogsPage />} />
-        <Route path="/sales" element={<SalesPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/inventory" element={<InventoryPage />} />
-        <Route path="/inventory/:id" element={<InventoryDetailPage />} />
-      </Route>
+            {/* Authenticated Routes — available to all logged-in users */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/jobs" element={<JobsListPage />} />
+              <Route path="/jobs/:id" element={<JobDetailPage />} />
+              <Route path="/jobs/:id/photo" element={<VehiclePhotoPage />} />
+              <Route path="/jobs/:id/capture" element={<VehiclePhotoPage />} />
+              <Route path="/analytics" element={<LeaderboardPage />} />
+              <Route path="/leaderboard" element={<LeaderboardPage />} />
+              <Route path="/top-performers" element={<LeaderboardPage />} />
+              <Route path="/work-logs" element={<WorkLogsPage />} />
+              <Route path="/sales" element={<SalesPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/inventory/:id" element={<InventoryDetailPage />} />
+            </Route>
 
-      {/* Catch-all redirect */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-    </Suspense>
+            {/* Catch-all redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </GsapPageTransition>
     </>
   );
 };

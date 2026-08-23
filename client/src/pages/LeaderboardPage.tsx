@@ -18,6 +18,7 @@ import { useGetLeaderboardQuery } from '../api/authApi';
 import { useGetJobCardsQuery, JobCardData } from '../api/jobApi';
 import { Navbar } from '../components/navbar/Navbar';
 import confetti from 'canvas-confetti';
+import { NumberTicker } from '../components/magicui/NumberTicker';
 
 type Timeframe = 'day' | 'week' | 'month' | 'year' | 'all';
 
@@ -417,8 +418,8 @@ export const LeaderboardPage: React.FC = () => {
                 <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate w-full">
                   {rank2 ? rank2.name : '—'}
                 </p>
-                <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-black text-zinc-600 dark:text-zinc-300">
-                  {rank2 ? `${rank2.points} QP` : '0 QP'}
+                <div className="mt-1 inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-black text-zinc-600 dark:text-zinc-300">
+                  {rank2 ? <><NumberTicker value={rank2.points} decimalPlaces={1} /> QP</> : '0 QP'}
                 </div>
               </div>
 
@@ -476,8 +477,8 @@ export const LeaderboardPage: React.FC = () => {
                 <p className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white truncate w-full">
                   {rank1 ? rank1.name : '—'}
                 </p>
-                <div className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-400/20 border border-amber-400/30 text-[10px] font-black text-amber-700 dark:text-amber-300">
-                  {rank1 ? `${rank1.points} QP` : '0 QP'}
+                <div className="mt-1 inline-flex items-center gap-0.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-400/20 border border-amber-400/30 text-[10px] font-black text-amber-700 dark:text-amber-300">
+                  {rank1 ? <><NumberTicker value={rank1.points} decimalPlaces={1} /> QP</> : '0 QP'}
                 </div>
               </div>
 
@@ -524,8 +525,8 @@ export const LeaderboardPage: React.FC = () => {
                 <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate w-full">
                   {rank3 ? rank3.name : '—'}
                 </p>
-                <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-black text-zinc-600 dark:text-zinc-300">
-                  {rank3 ? `${rank3.points} QP` : '0 QP'}
+                <div className="mt-1 inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-black text-zinc-600 dark:text-zinc-300">
+                  {rank3 ? <><NumberTicker value={rank3.points} decimalPlaces={1} /> QP</> : '0 QP'}
                 </div>
               </div>
 

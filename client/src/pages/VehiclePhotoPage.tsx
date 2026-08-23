@@ -22,7 +22,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Navbar } from '../components/navbar/Navbar';
-import { useGetJobCardsQuery, useUploadJobImageMutation, JobCardData } from '../api/jobApi';
+import { useGetJobCardsQuery, useGetJobCardByIdQuery, useUploadJobImageMutation, JobCardData } from '../api/jobApi';
 
 export const VehiclePhotoPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,12 +39,18 @@ export const VehiclePhotoPage: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [successMsg, setSuccessMsg] = useState<string>('');
 
-  const { data: jobsResponse, isLoading, isError } = useGetJobCardsQuery();
-  const [uploadJobImage] = useUploadJobImageMutation();
+  const { data: jobResponse, isLoading: isSingleLoading, isError: isSingleError } = useGetJobCardByIdQuery(id!, { skip: !id });
+  const { data: listResponse, isLoading: isListLoading } = useGetJobCardsQuery(undefined, { skip: !!jobResponse?.data });
 
-  const rawData = jobsResponse?.data;
-  const jobsList: JobCardData[] = Array.isArray(rawData) ? rawData : rawData?.jobs || [];
-  const currentJob = jobsList.find((j) => j.id === id || j._id === id);
+  const rawList = listResponse?.data;
+  const jobsList: JobCardData[] = Array.isArray(rawList) ? rawList : rawList?.jobs || [];
+  const fallbackJob = jobsList.find((j: JobCardData) => j.id === id || j._id === id);
+
+  const currentJob: JobCardData | undefined = jobResponse?.data || fallbackJob;
+  const isLoading = (isSingleLoading && !currentJob) || (isListLoading && !currentJob);
+  const isError = isSingleError && !currentJob;
+
+  const [uploadJobImage] = useUploadJobImageMutation();
 
   // 2.1:1 ratio matching the vehicle card on the checklist/job list
   const CARD_ASPECT_RATIO = 2.1 / 1;

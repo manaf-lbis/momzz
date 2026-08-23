@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useCreateJobMutation } from '../../api/jobApi';
 import { TaskAutoComplete } from '../common/TaskAutoComplete';
-import { X, Trash2, Car, Wrench, CheckCircle2, Hash, ArrowLeft, ShieldCheck, Check } from 'lucide-react';
+import { X, Trash2, Car, Wrench, CheckCircle2, Hash, ArrowLeft, ShieldCheck, Check, Clock } from 'lucide-react';
+import { getDeliveryPreset } from '../../utils/dateUtils';
+import { ModernDateTimePicker } from '../common/ModernDateTimePicker';
 
 interface CreateJobModalProps {
   isOpen: boolean;
@@ -12,6 +14,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({ isOpen, onClose 
   const [step, setStep] = useState<'FILL' | 'VERIFY'>('FILL');
   const [vehicleName, setVehicleName] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [tasks, setTasks] = useState<string[]>([]);
@@ -39,6 +42,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({ isOpen, onClose 
     setStep('FILL');
     setVehicleName('');
     setVehicleNumber('');
+    setExpectedDeliveryDate('');
     setCustomerMobile('');
     setCustomerEmail('');
     setTasks([]);
@@ -72,6 +76,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({ isOpen, onClose 
         vehicleNumber: vehicleNumber.trim().toUpperCase(),
         customerMobile: customerMobile.trim() || undefined,
         customerEmail: customerEmail.trim() || undefined,
+        expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : undefined,
         tasks,
       }).unwrap();
 
@@ -172,6 +177,14 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({ isOpen, onClose 
                 />
               </div>
             </div>
+
+            {/* Modern Expected Delivery Date & Time Calendar */}
+            <ModernDateTimePicker
+              value={expectedDeliveryDate}
+              onChange={setExpectedDeliveryDate}
+              label="Expected Delivery Date & Time"
+              placeholder="Click to pick delivery date & time"
+            />
 
             {/* Sub-tasks Section with Instant Click Auto-Complete */}
             <div className="space-y-2 relative">

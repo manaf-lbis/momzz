@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
-import { User, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
+import { User, Volume2, VolumeX } from 'lucide-react';
 import { InstallAppBanner } from '../common/InstallAppBanner';
 import { isCompletionSoundEnabled, setCompletionSoundEnabled, playWelcomeSound } from '../../utils/completionSound';
+import { AnimatedThemeToggle } from '../magicui/AnimatedThemeToggle';
 
 export const Navbar: React.FC<{ glass?: boolean }> = ({ glass = false }) => {
   const { user, isAuthenticated } = useAuth();
@@ -56,25 +57,8 @@ export const Navbar: React.FC<{ glass?: boolean }> = ({ glass = false }) => {
               {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </button>
 
-            {/* Theme Toggle Button */}
-            <button
-              onClick={toggleTheme}
-              className={`p-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-yellow-400 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-mono ${glass ? 'glass-btn' : 'bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800'}`}
-              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-              aria-label="Toggle Theme"
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="w-4 h-4 text-yellow-400" />
-                  <span className="hidden sm:inline">Light</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-4 h-4 text-amber-600" />
-                  <span className="hidden sm:inline">Dark</span>
-                </>
-              )}
-            </button>
+            {/* Animated Theme Toggle */}
+            <AnimatedThemeToggle variant="pill" />
 
             <Link
               to="/profile"

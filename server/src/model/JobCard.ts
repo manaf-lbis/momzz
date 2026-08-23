@@ -8,6 +8,7 @@ export interface IJobCard extends Document {
   customerMobile?: string;
   customerEmail?: string;
   thumbnailUrl?: string;
+  expectedDeliveryDate?: Date;
   status: 'IN_PROGRESS' | 'READY' | 'COMPLETED';
   createdBy?: mongoose.Types.ObjectId;
   isPinnedForAll?: boolean;
@@ -30,6 +31,7 @@ const JobCardSchema: Schema = new Schema(
     customerMobile: { type: String, trim: true },
     customerEmail: { type: String, trim: true, lowercase: true },
     thumbnailUrl: { type: String, trim: true, default: '' },
+    expectedDeliveryDate: { type: Date, default: null, index: true },
     status: { type: String, enum: ['IN_PROGRESS', 'READY', 'COMPLETED'], default: 'IN_PROGRESS' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     isPinnedForAll: { type: Boolean, default: false },
