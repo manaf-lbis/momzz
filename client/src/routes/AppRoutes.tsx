@@ -43,11 +43,14 @@ export const AppRoutes: React.FC = () => {
             {/* Admin-Only Routes */}
             <Route element={<ProtectedRoute requireAdmin={true} />}>
               <Route path="/admin/approvals" element={<AdminApproval />} />
+              <Route path="/approvals" element={<AdminApproval />} />
               <Route path="/admin/users" element={<UserManagementPage />} />
+              <Route path="/users" element={<UserManagementPage />} />
               <Route path="/jobs/create" element={<CreateJobPage />} />
               <Route path="/jobs/edit/:id" element={<EditJobPage />} />
               <Route path="/inventory/new" element={<AddInventoryItemPage />} />
             </Route>
+
 
             {/* Authenticated Routes — available to all logged-in users */}
             <Route element={<ProtectedRoute />}>

@@ -653,48 +653,60 @@ export const LeaderboardPage: React.FC = () => {
   </main>
 
 
-      {/* ── User Quick Profile Modal ── */}
+      {/* ── Modern User Podium Profile Modal ── */}
       <AnimatePresence>
         {selectedUserModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+            onClick={() => setSelectedUserModal(null)}
+          >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              initial={{ opacity: 0, scale: 0.9, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 max-w-xs w-full text-center space-y-4 shadow-2xl"
+              exit={{ opacity: 0, scale: 0.9, y: 15 }}
+              transition={{ type: 'spring', stiffness: 340, damping: 26 }}
+              className="relative w-full max-w-xs overflow-hidden rounded-[32px] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-2xl p-6 text-center space-y-4"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-20 h-20 mx-auto rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border-2 border-amber-400 shadow-md flex items-center justify-center text-zinc-800 dark:text-zinc-100 text-xl font-black">
-                {selectedUserModal.profileImageUrl ? (
-                  <img src={selectedUserModal.profileImageUrl} alt={selectedUserModal.name} className="w-full h-full object-cover" />
-                ) : (
-                  getInitials(selectedUserModal.name)
-                )}
+              {/* Golden Glow Backdrop */}
+              <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 w-40 h-40 rounded-full bg-amber-400/20 blur-2xl" />
+
+              <div className="relative w-20 h-20 mx-auto rounded-full p-1 bg-gradient-to-tr from-amber-400 to-amber-600 shadow-lg shadow-amber-500/25">
+                <div className="w-full h-full rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-900 dark:text-white text-xl font-black">
+                  {selectedUserModal.profileImageUrl ? (
+                    <img src={selectedUserModal.profileImageUrl} alt={selectedUserModal.name} className="w-full h-full object-cover" />
+                  ) : (
+                    getInitials(selectedUserModal.name)
+                  )}
+                </div>
               </div>
 
               <div>
-                <h3 className="text-base font-black text-zinc-900 dark:text-white">
+                <h3 className="text-lg font-black text-zinc-900 dark:text-white">
                   {selectedUserModal.name}
                 </h3>
-                <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest mt-0.5">
+                <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full bg-amber-400/15 text-amber-700 dark:text-amber-300 font-mono font-bold text-[10px] uppercase tracking-wider border border-amber-400/30">
                   {selectedUserModal.role || 'Mechanic'}
-                </p>
+                </span>
               </div>
 
-              <div className="p-3.5 bg-amber-500/10 dark:bg-amber-500/15 rounded-2xl border border-amber-500/30">
+              <div className="p-4 bg-amber-500/10 dark:bg-amber-500/15 rounded-2xl border border-amber-500/25">
                 <span className="text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider block">
-                  {new Date().toLocaleDateString(undefined, { month: 'long' }).toUpperCase()} MONTHLY POINTS
+                  {new Date().toLocaleDateString(undefined, { month: 'long' }).toUpperCase()} POINTS
                 </span>
                 <span className="text-3xl font-black text-amber-500 mt-1 block tracking-tight">
-                  {selectedUserModal.points} <span className="text-xs font-bold text-zinc-400 font-sans">QP</span>
+                  <NumberTicker value={selectedUserModal.points || 0} decimalPlaces={1} />{' '}
+                  <span className="text-xs font-bold text-zinc-400 font-sans">QP</span>
                 </span>
-                <p className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 mt-1">
-                  Resets 1st of every month
+                <p className="text-[10px] font-mono text-zinc-400 mt-1">
+                  Workshop ranking standing
                 </p>
               </div>
 
               <button
+                type="button"
                 onClick={() => setSelectedUserModal(null)}
-                className="w-full py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold text-xs active:scale-95 transition shadow-sm"
+                className="w-full py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-zinc-950 font-black text-xs uppercase tracking-wider shadow-md shadow-amber-400/20 active:scale-95 transition cursor-pointer"
               >
                 Close Podium Detail
               </button>
@@ -703,5 +715,6 @@ export const LeaderboardPage: React.FC = () => {
         )}
       </AnimatePresence>
     </div>
+
   );
 };

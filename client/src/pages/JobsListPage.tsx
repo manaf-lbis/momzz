@@ -66,7 +66,22 @@ export const JobsListPage: React.FC = () => {
       : 'MY_JOBS';
 
   const [jobsView, setJobsView] = useState<JobsView>(initialView);
+
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const viewParam = params.get('view');
+    if (viewParam === 'all' || viewParam === 'ALL_VEHICLES' || location.state?.view === 'all') {
+      setJobsView('ALL_VEHICLES');
+    } else if (viewParam === 'verify' || location.state?.view === 'verify') {
+      setJobsView('PENDING_VERIFICATION');
+    } else if (viewParam === 'my_jobs' || location.state?.view === 'my_jobs') {
+      setJobsView('MY_JOBS');
+    }
+  }, [location.search, location.state]);
+
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('ALL');
+
   const [sortBy, setSortBy] = useState<SortOption>('DELIVERY_SOONEST');
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement | null>(null);

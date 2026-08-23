@@ -371,7 +371,7 @@ export const ProfilePage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* 1. Vehicle Service History */}
                 <button
-                  onClick={() => navigate('/jobs', { state: { view: 'all' } })}
+                  onClick={() => navigate('/jobs?view=all', { state: { view: 'all' } })}
                   className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-amber-500/10 dark:hover:bg-amber-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
                 >
                   <div className="w-10 h-10 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -464,7 +464,7 @@ export const ProfilePage: React.FC = () => {
 
                     {/* Team Approvals */}
                     <button
-                      onClick={() => navigate('/users')}
+                      onClick={() => navigate('/admin/users')}
                       className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-purple-500/10 dark:hover:bg-purple-400/10 border border-slate-200/80 dark:border-slate-700/80 hover:border-purple-400/40 transition-all text-left flex items-start gap-3.5 group cursor-pointer"
                     >
                       <div className="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -495,17 +495,18 @@ export const ProfilePage: React.FC = () => {
                     Need Help or Service Support?
                   </h4>
                   <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                    MOMZ'Z Workshop Hotline • +91 7994414155
+                    MOMZ'Z Workshop Hotline • +91 9747382525
                   </p>
                 </div>
               </div>
               <a
-                href="tel:+917994414155"
+                href="tel:+919747382525"
                 className="px-4 py-2 rounded-xl bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shrink-0 hover:bg-emerald-400 transition active:scale-95 shadow-md shadow-emerald-500/20"
               >
                 Call Hotline
               </a>
             </section>
+
           </div>
         </div>
       </main>

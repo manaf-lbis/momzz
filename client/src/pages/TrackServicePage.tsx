@@ -274,14 +274,14 @@ export const TrackServicePage: React.FC = () => {
               {/* Quick Contact Buttons */}
               <div className="pt-2 flex items-center gap-2">
                 <a
-                  href="tel:+917994414155"
+                  href="tel:+919747382525"
                   className="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition"
                 >
                   <Phone className="w-3.5 h-3.5 text-sky-500" />
                   <span>Call Workshop</span>
                 </a>
                 <a
-                  href={`https://wa.me/917994414155?text=Hello%2C%20I%20am%20checking%20the%20status%20of%20my%20vehicle%20${encodeURIComponent(job.vehicleNumber)}`}
+                  href={`https://wa.me/919747382525?text=Hello%2C%20I%20am%20checking%20the%20status%20of%20my%20vehicle%20${encodeURIComponent(job.vehicleNumber)}`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold text-xs flex items-center justify-center gap-2 transition"
@@ -290,6 +290,7 @@ export const TrackServicePage: React.FC = () => {
                   <span>WhatsApp</span>
                 </a>
               </div>
+
             </section>
           );
         })}
