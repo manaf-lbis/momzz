@@ -142,7 +142,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
               </div>
               
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-mono font-black text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                <span className="text-xs font-mono font-black text-slate-950 bg-amber-400 px-2.5 py-0.5 rounded-md border border-amber-500/50 shadow-xs tracking-wider">
                   {job.vehicleNumber}
                 </span>
                 {job.expectedDeliveryDate && (
@@ -151,7 +151,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
                     <span>{deliveryInfo.shortLabel}</span>
                   </span>
                 )}
-                <span className="text-[10px] font-mono text-slate-400">⏱ {getElapsedTime(job.createdAt)} in garage</span>
+                <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">⏱ {getElapsedTime(job.createdAt)} in garage</span>
               </div>
             </div>
           </div>
@@ -168,8 +168,8 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
         {/* Live Dynamic Progress Bar */}
         <div className="space-y-1.5 bg-slate-50/80 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-3">
           <div className="flex justify-between items-center text-xs font-mono">
-            <span className="text-slate-400">Progress</span>
-            <span className="font-bold text-amber-600 dark:text-amber-400">
+            <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">Progress</span>
+            <span className="font-black text-xs px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/25">
               {completedTasks} / {totalTasks} Tasks ({progressPercent}%)
             </span>
           </div>

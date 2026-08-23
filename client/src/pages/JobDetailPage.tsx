@@ -490,13 +490,13 @@ export const JobDetailPage: React.FC = () => {
               <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
-            {/* Right Action Badges & Buttons */}
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
-              {/* Pinned Pill Button */}
+            {/* Right Action Badges & Buttons (Icon-Only, No Text Clutter) */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Pinned Icon Button */}
               <button
                 type="button"
                 onClick={() => setIsPinJobModalOpen(true)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md transition active:scale-95 border cursor-pointer ${
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center backdrop-blur-md transition active:scale-95 border cursor-pointer ${
                   currentJob.isPinnedForAll ||
                   (Array.isArray(currentJob.pinnedBy) &&
                     currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
@@ -507,45 +507,34 @@ export const JobDetailPage: React.FC = () => {
                 }`}
                 title="Pin Job Card"
               >
-                <Pin className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${
+                <Pin className={`w-4 h-4 ${
                   currentJob.isPinnedForAll ||
                   (Array.isArray(currentJob.pinnedBy) &&
                     currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id)))
                     ? 'fill-zinc-950 stroke-[2.5]'
                     : 'fill-amber-400 stroke-[2.5]'
                 }`} />
-                <span>
-                  {currentJob.isPinnedForAll
-                    ? 'PINNED'
-                    : Array.isArray(currentJob.pinnedBy) &&
-                      currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id))
-                    ? 'PINNED'
-                    : 'PIN'}
-                </span>
               </button>
 
-              {/* EDIT PHOTO Glowing Button */}
+              {/* Camera Photo Studio Button */}
               <button
                 type="button"
                 onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
-                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-[11px] sm:text-xs uppercase tracking-wider shadow-md shadow-amber-500/20 transition active:scale-95 shrink-0 cursor-pointer"
-                title="Edit Vehicle Photo in Studio"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 shadow-md shadow-amber-500/20 transition active:scale-95 shrink-0 cursor-pointer"
+                title="Vehicle Photo Studio"
               >
-                <Camera className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
-                <span>PHOTO</span>
+                <Camera className="w-4 h-4 stroke-[2.5]" />
               </button>
 
-              {/* IN WORK / READY Status Badge */}
+              {/* Status Icon */}
               {isAllCompleted ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md shadow-xs shrink-0">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
-                  READY
-                </span>
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 backdrop-blur-md shadow-xs shrink-0" title="Ready for Delivery">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                </div>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-mono font-black text-[11px] sm:text-xs uppercase tracking-wider backdrop-blur-md shadow-xs shrink-0">
-                  <Clock className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-                  IN WORK
-                </span>
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 backdrop-blur-md shadow-xs shrink-0" title="In Work">
+                  <Clock className="w-4 h-4 text-amber-500 dark:text-amber-400 animate-pulse" />
+                </div>
               )}
             </div>
           </div>
@@ -1008,46 +997,7 @@ export const JobDetailPage: React.FC = () => {
                 </p>
               </div>
             </div>
-
-            {/* Quick Add Task Button */}
-            <button
-              type="button"
-              onClick={() => setIsAddingQuickTask((prev) => !prev)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
-            >
-              <Plus className={`w-3.5 h-3.5 stroke-[3] transition-transform ${isAddingQuickTask ? 'rotate-45' : ''}`} />
-              <span>{isAddingQuickTask ? 'Close' : 'Add Task'}</span>
-            </button>
           </div>
-
-          {/* Quick Add Task Input Panel (Animated) */}
-          <AnimatePresence>
-            {isAddingQuickTask && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="pt-1 pb-1"
-              >
-                <div className="p-3 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                    Add Sub-Task to Checklist
-                  </label>
-                  <TaskAutoComplete
-                    value={newTaskTitle}
-                    onChange={setNewTaskTitle}
-                    onAddTask={(title) => {
-                      handleAddTask(title);
-                      setIsAddingQuickTask(false);
-                    }}
-                    placeholder="Search catalog service or enter custom task..."
-                    disabled={false}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           {/* Laser Progress Beam */}
           <div className="space-y-1.5 pt-1">
