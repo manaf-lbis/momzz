@@ -24,7 +24,7 @@ export const QuickAccessDock: React.FC = () => {
       title: 'Dashboard',
       icon: Home,
       path: '/dashboard',
-      isActive: currentPath === '/dashboard',
+      isActive: currentPath === '/dashboard' || currentPath === '/',
     },
     {
       id: 'jobs',
@@ -65,14 +65,17 @@ export const QuickAccessDock: React.FC = () => {
   return (
     <aside
       aria-label="Quick Access Menu"
-      className="fixed bottom-0 inset-x-0 z-50 flex justify-center items-center pointer-events-none px-4 pb-[max(0.85rem,env(safe-area-inset-bottom))]"
+      className="fixed bottom-0 inset-x-0 z-50 flex justify-center items-center pointer-events-none px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
     >
       <motion.nav
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="pointer-events-auto flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl shadow-slate-900/15 dark:shadow-black/70 ring-1 ring-black/5 dark:ring-white/10"
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="pointer-events-auto relative flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-full bg-[#0a0a14]/85 backdrop-blur-2xl border border-white/12 shadow-[0_12px_45px_rgba(0,0,0,0.85)] ring-1 ring-amber-400/20"
       >
+        {/* Subtle ambient gold shine behind dock */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-400/5 to-amber-500/10 blur-md pointer-events-none" />
+
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -82,15 +85,17 @@ export const QuickAccessDock: React.FC = () => {
               aria-label={item.title}
               title={item.title}
               className={`relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full transition-all duration-200 active:scale-90 cursor-pointer ${
-                item.isActive ? 'text-slate-950 dark:text-white' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                item.isActive
+                  ? 'text-slate-950 font-black'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
               {/* Active Tab Background Capsule */}
               {item.isActive && (
                 <motion.div
                   layoutId="active-dock-pill"
-                  className="absolute inset-0 rounded-full bg-amber-400 dark:bg-amber-400/90 shadow-md shadow-amber-400/30"
-                  transition={{ type: 'spring', bounce: 0.18, duration: 0.35 }}
+                  className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 shadow-lg shadow-amber-400/40"
+                  transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
                 />
               )}
 
@@ -101,7 +106,7 @@ export const QuickAccessDock: React.FC = () => {
                     className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden flex items-center justify-center font-black text-xs transition-transform ${
                       item.isActive
                         ? 'border-2 border-slate-950 text-slate-950 bg-amber-300'
-                        : 'border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
+                        : 'border border-white/20 bg-white/10 text-white'
                     }`}
                   >
                     {user.profileImageUrl ? (

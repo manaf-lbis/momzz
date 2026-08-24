@@ -6,9 +6,6 @@ import {
   Car,
   X,
   ChevronRight,
-  Clock,
-  CheckCircle2,
-  Sparkles,
 } from 'lucide-react';
 import { useGetJobCardsQuery, JobCardData } from '../../api/jobApi';
 
@@ -63,26 +60,26 @@ export const TopSearchBar: React.FC<TopSearchBarProps> = ({
     <div ref={containerRef} className={`relative w-full z-40 ${className}`}>
       {/* ── Search Input Box ── */}
       <div
-        className={`relative flex items-center gap-2.5 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border transition-all duration-200 shadow-xs ${
+        className={`relative flex items-center gap-2.5 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl bg-white/[0.04] backdrop-blur-xl border transition-all duration-300 shadow-lg ${
           isFocused
-            ? 'border-amber-400 dark:border-amber-400 ring-2 ring-amber-400/20 shadow-md shadow-amber-500/5'
-            : 'border-slate-200/90 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700'
+            ? 'border-amber-400/80 ring-2 ring-amber-400/20 bg-white/[0.07] shadow-amber-500/10'
+            : 'border-white/10 hover:border-white/20'
         }`}
       >
-        <Search className={`w-4 h-4 shrink-0 transition-colors ${isFocused ? 'text-amber-500' : 'text-slate-400'}`} />
+        <Search className={`w-4 h-4 shrink-0 transition-colors ${isFocused ? 'text-amber-400' : 'text-slate-400'}`} />
         <input
           type="text"
           placeholder={placeholder}
           value={query}
           onFocus={() => setIsFocused(true)}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none"
+          className="w-full bg-transparent text-xs sm:text-sm font-bold text-white placeholder-slate-500 outline-none"
         />
         {query && (
           <button
             type="button"
             onClick={() => setQuery('')}
-            className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition active:scale-90"
+            className="p-1 rounded-full text-slate-400 hover:text-white transition active:scale-90"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -97,20 +94,20 @@ export const TopSearchBar: React.FC<TopSearchBarProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl bg-white/98 dark:bg-slate-900/98 backdrop-blur-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl shadow-slate-900/20 dark:shadow-black/70 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 max-h-[65vh] overflow-y-auto"
+            className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl bg-[#0f0f1e]/95 backdrop-blur-2xl border border-white/12 shadow-2xl shadow-black/80 overflow-hidden divide-y divide-white/[0.06] max-h-[65vh] overflow-y-auto"
           >
-            <div className="px-3.5 py-2 bg-slate-50/70 dark:bg-slate-800/30 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+            <div className="px-3.5 py-2 bg-white/[0.02] text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
               <span>Matching Vehicles ({matchingJobs.length})</span>
-              <span>Tap to open vehicle</span>
+              <span className="text-amber-400/80">Tap to open</span>
             </div>
 
             {matchingJobs.length === 0 ? (
               <div className="py-8 text-center space-y-1.5 px-4">
-                <Car className="w-6 h-6 text-slate-300 dark:text-slate-600 mx-auto" />
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <Car className="w-6 h-6 text-slate-600 mx-auto" />
+                <p className="text-xs font-bold text-slate-300">
                   No matching vehicles found
                 </p>
-                <p className="text-[11px] text-slate-400 font-mono">
+                <p className="text-[11px] text-slate-500 font-mono">
                   Try checking plate number or customer name
                 </p>
               </div>
@@ -129,14 +126,14 @@ export const TopSearchBar: React.FC<TopSearchBarProps> = ({
                       setQuery('');
                       navigate(`/jobs/${job.id || job._id}`);
                     }}
-                    className="w-full p-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors group cursor-pointer"
+                    className="w-full p-3 flex items-center justify-between gap-3 text-left hover:bg-white/[0.05] transition-colors group cursor-pointer"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div
                         className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                           isReady
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-amber-400/15 text-amber-400 border border-amber-400/20'
                         }`}
                       >
                         <Car className="w-4.5 h-4.5" />
@@ -144,10 +141,10 @@ export const TopSearchBar: React.FC<TopSearchBarProps> = ({
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="text-xs sm:text-sm font-black uppercase text-slate-900 dark:text-white truncate group-hover:text-amber-500 transition-colors">
+                          <h4 className="text-xs sm:text-sm font-black uppercase text-white truncate group-hover:text-amber-400 transition-colors">
                             {job.vehicleName || 'Vehicle'}
                           </h4>
-                          <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 shadow-2xs">
+                          <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 shadow-xs">
                             {job.vehicleNumber}
                           </span>
                         </div>
@@ -157,7 +154,7 @@ export const TopSearchBar: React.FC<TopSearchBarProps> = ({
                       </div>
                     </div>
 
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 group-hover:text-amber-500 transition-all shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-slate-500 group-hover:translate-x-0.5 group-hover:text-amber-400 transition-all shrink-0" />
                   </button>
                 );
               })
