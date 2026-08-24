@@ -71,7 +71,7 @@ export const QuickAccessDock: React.FC = () => {
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="pointer-events-auto relative flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-full bg-[#0a0a14]/85 backdrop-blur-2xl border border-white/12 shadow-[0_12px_45px_rgba(0,0,0,0.85)] ring-1 ring-amber-400/20"
+        className="pointer-events-auto relative flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-full bg-[#0a0a14]/90 backdrop-blur-2xl border border-amber-400/20 shadow-[0_12px_45px_rgba(0,0,0,0.9)]"
       >
         {/* Subtle ambient gold shine behind dock */}
         <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-400/5 to-amber-500/10 blur-md pointer-events-none" />
@@ -87,7 +87,7 @@ export const QuickAccessDock: React.FC = () => {
               className={`relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full transition-all duration-200 active:scale-90 cursor-pointer ${
                 item.isActive
                   ? 'text-slate-950 font-black'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  : 'text-slate-400 hover:text-amber-300 hover:bg-white/5'
               }`}
             >
               {/* Active Tab Background Capsule */}
@@ -106,7 +106,7 @@ export const QuickAccessDock: React.FC = () => {
                     className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden flex items-center justify-center font-black text-xs transition-transform ${
                       item.isActive
                         ? 'border-2 border-slate-950 text-slate-950 bg-amber-300'
-                        : 'border border-white/20 bg-white/10 text-white'
+                        : 'border border-amber-400/30 bg-white/5 text-amber-200'
                     }`}
                   >
                     {user.profileImageUrl ? (
