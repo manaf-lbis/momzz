@@ -40,7 +40,8 @@ import {
   Calendar,
   Camera,
   History,
-  Info,
+  Sparkles,
+  UserPlus,
 } from 'lucide-react';
 import { getDeliveryStatusInfo } from '../utils/dateUtils';
 import { ProgressBarBeam } from '../components/magicui/AnimatedBeam';
@@ -107,8 +108,10 @@ export const JobDetailPage: React.FC = () => {
   const [optimisticPins, setOptimisticPins] = useState<Record<string, boolean>>({});
 
   const currentJob: JobCardData | undefined = jobResponse?.data;
+  const currentUserId = user?.id || (user as any)?._id;
+
   const allWorkers = (allUsersResponse?.data || []).filter(
-    (u: any) => u.id !== user?.id && u._id !== user?.id && u._id !== (user as any)?._id
+    (u: any) => (u.id || u._id) !== currentUserId
   );
 
   const tasks = currentJob?.tasks || [];
@@ -120,7 +123,7 @@ export const JobDetailPage: React.FC = () => {
 
   const isJobPinnedForMe =
     Array.isArray(currentJob?.pinnedBy) &&
-    currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === (user?.id || (user as any)?._id));
+    currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === currentUserId);
   const isJobPinnedForAll = !!currentJob?.isPinnedForAll;
   const isPinned = isJobPinnedForAll || isJobPinnedForMe;
 
@@ -262,6 +265,10 @@ export const JobDetailPage: React.FC = () => {
     if (minutes < 1440) return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
     return `${Math.floor(minutes / 1440)}d ${Math.floor((minutes % 1440) / 60)}h`;
   };
+
+  // Live points split calculations for completion modal
+  const totalParticipating = 1 + (completeTaskModal.isShared ? completeTaskModal.partnerIds.length : 0);
+  const pointsPerWorker = (1 / totalParticipating).toFixed(2);
 
   if (isLoading || !currentJob) {
     return (
@@ -555,7 +562,7 @@ export const JobDetailPage: React.FC = () => {
           })}
         </div>
 
-        {/* ── TASKS CHECKLIST (With Technician Avatars & Logs Sheet) ── */}
+        {/* ── TASKS CHECKLIST (With Technician Avatars, Partner Badges & Logs Sheet) ── */}
         <div className="space-y-2">
           {sortedTasks.length === 0 ? (
             <div className="py-16 text-center rounded-3xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
@@ -569,6 +576,8 @@ export const JobDetailPage: React.FC = () => {
               const isPinnedTask = optimisticPins[taskId] !== undefined ? optimisticPins[taskId] : !!task.isPinned;
               const isUpdating = updatingTaskId === taskId;
               const completedUser = task.completedBy;
+              const partners = task.partners || [];
+              const isShared = task.isShared && partners.length > 0;
 
               return (
                 <motion.div
@@ -599,7 +608,7 @@ export const JobDetailPage: React.FC = () => {
                       )}
                     </button>
 
-                    {/* Task Title & Worker Avatar / Audit Info */}
+                    {/* Task Title & Worker Avatars / Shared Team */}
                     <div
                       className="min-w-0 flex-1 cursor-pointer"
                       onClick={() => setActivityTask(task)}
@@ -612,20 +621,45 @@ export const JobDetailPage: React.FC = () => {
                         {task.title}
                       </h4>
 
-                      {/* Technician Avatar & Name on Completed Tasks */}
+                      {/* Completed Details: Avatar + Shared Partner Team */}
                       {isCompleted && completedUser && (
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <div className="w-4 h-4 rounded-full overflow-hidden bg-slate-800 border border-emerald-400/50 flex items-center justify-center text-[9px] font-bold text-emerald-300 shrink-0">
-                            {completedUser.profileImageUrl ? (
-                              <img src={completedUser.profileImageUrl} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              completedUser.name.charAt(0).toUpperCase()
-                            )}
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {/* Avatars Stack */}
+                          <div className="flex items-center -space-x-1.5 shrink-0">
+                            {/* Primary Worker Avatar */}
+                            <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-800 border-2 border-[#080810] flex items-center justify-center text-[9px] font-bold text-emerald-300 shadow-xs">
+                              {completedUser.profileImageUrl ? (
+                                <img src={completedUser.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                completedUser.name.charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            {/* Shared Partner Avatars */}
+                            {partners.map((p: any, pIdx: number) => (
+                              <div
+                                key={p.id || p._id || pIdx}
+                                className="w-5 h-5 rounded-full overflow-hidden bg-amber-900 border-2 border-[#080810] flex items-center justify-center text-[9px] font-bold text-amber-300 shadow-xs"
+                                title={p.name}
+                              >
+                                {p.profileImageUrl ? (
+                                  <img src={p.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  (p.name || 'W').charAt(0).toUpperCase()
+                                )}
+                              </div>
+                            ))}
                           </div>
+
+                          {/* Technician Names & Split Share */}
                           <span className="text-[10px] font-mono text-emerald-400 font-bold truncate">
                             {completedUser.name}
-                            {task.isShared && task.partners?.length ? ` + ${task.partners.length} shared` : ''}
+                            {isShared ? ` & ${partners.map((p: any) => p.name).join(', ')}` : ''}
                           </span>
+
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-white/5 border border-white/10 text-amber-300">
+                            {isShared ? `${(1 / (1 + partners.length)).toFixed(2)} pts each` : '1.0 pt'}
+                          </span>
+
                           {task.completedAt && (
                             <span className="text-[9px] font-mono text-slate-500 truncate">
                               • {new Date(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -636,7 +670,7 @@ export const JobDetailPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Right Task Actions (Pin & Logs, Accidental Delete Moved Safely to Logs Modal) */}
+                  {/* Right Task Actions */}
                   <div className="flex items-center gap-1 shrink-0">
                     {/* View Logs / Audit Icon */}
                     <button
@@ -697,7 +731,7 @@ export const JobDetailPage: React.FC = () => {
               </div>
 
               {/* Task Summary Card */}
-              <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
+              <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2.5">
                 <p className="text-xs font-black text-white">{activityTask.title}</p>
                 <div className="flex items-center gap-2">
                   <span
@@ -710,33 +744,69 @@ export const JobDetailPage: React.FC = () => {
                     {activityTask.status === 'COMPLETED' ? 'COMPLETED' : 'IN PROGRESS'}
                   </span>
                   {activityTask.isShared && (
-                    <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                    <span className="text-[10px] font-mono text-amber-300 flex items-center gap-1">
                       <Users className="w-3 h-3 text-amber-400" /> Shared Task
                     </span>
                   )}
                 </div>
 
+                {/* Participating Technicians List */}
                 {activityTask.completedBy && (
-                  <div className="pt-2 border-t border-white/[0.06] flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-800 border border-emerald-400/60 flex items-center justify-center text-xs font-black text-white">
-                      {activityTask.completedBy.profileImageUrl ? (
-                        <img src={activityTask.completedBy.profileImageUrl} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        activityTask.completedBy.name.charAt(0).toUpperCase()
-                      )}
+                  <div className="pt-2 border-t border-white/[0.06] space-y-2">
+                    <p className="text-[10px] font-mono uppercase text-slate-400 font-bold">Assigned Technicians</p>
+                    
+                    {/* Primary Lead */}
+                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-800 border border-emerald-400/60 flex items-center justify-center text-xs font-black text-white">
+                          {activityTask.completedBy.profileImageUrl ? (
+                            <img src={activityTask.completedBy.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            activityTask.completedBy.name.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white">{activityTask.completedBy.name}</p>
+                          <p className="text-[9px] font-mono text-slate-400">Primary Lead</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold text-emerald-400">
+                        {activityTask.isShared && activityTask.partners?.length
+                          ? `${(1 / (1 + activityTask.partners.length)).toFixed(2)} pts`
+                          : '1.0 pt'}
+                      </span>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">{activityTask.completedBy.name}</p>
-                      <p className="text-[10px] font-mono text-slate-400">
-                        {activityTask.completedBy.role || 'Mechanic'}
-                      </p>
-                    </div>
+
+                    {/* Shared Partners */}
+                    {activityTask.partners?.map((p: any) => (
+                      <div
+                        key={p.id || p._id}
+                        className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white/[0.03] border border-white/[0.06]"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full overflow-hidden bg-amber-900/60 border border-amber-400/60 flex items-center justify-center text-xs font-black text-amber-300">
+                            {p.profileImageUrl ? (
+                              <img src={p.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              (p.name || 'W').charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-white">{p.name}</p>
+                            <p className="text-[9px] font-mono text-amber-400">Partner Co-Worker</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-emerald-400">
+                          {(1 / (1 + (activityTask.partners?.length || 0))).toFixed(2)} pts
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
 
               {/* Activity Trail History */}
-              <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                 <p className="text-[10px] font-mono uppercase text-slate-400 font-bold">Activity Timeline</p>
                 {activityTask.activityLog && activityTask.activityLog.length > 0 ? (
                   activityTask.activityLog.map((log, idx) => (
@@ -783,83 +853,207 @@ export const JobDetailPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Complete Task / Multi-Worker Modal */}
+      {/* ── COMPLETE TASK & MULTI-WORKER POINTS SHARING MODAL ── */}
       <AnimatePresence>
         {completeTaskModal.isOpen && completeTaskModal.task && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pb-24 sm:pb-4 bg-black/80 backdrop-blur-md">
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 pb-24 sm:pb-4 bg-black/80 backdrop-blur-md"
+            onClick={() => setCompleteTaskModal({ isOpen: false, task: null, isShared: false, partnerIds: [] })}
+          >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-sm rounded-3xl bg-[#0f0f1e] border border-white/12 shadow-2xl p-5 space-y-4"
+              initial={{ opacity: 0, scale: 0.94, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-3xl bg-[#0f0f1e] border border-white/12 shadow-2xl p-5 space-y-4 overflow-hidden"
             >
-              <h3 className="text-base font-black text-white">Complete Checklist Task</h3>
-              <p className="text-xs text-slate-300 font-bold">{completeTaskModal.task.title}</p>
+              <BorderBeam size={180} duration={8} colorFrom="#10b981" colorTo="#fbbf24" borderWidth={1} />
 
-              {/* Multi-Worker Shared Toggle */}
-              <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-amber-400" />
-                    Shared with co-workers?
+              {/* Modal Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-white">Complete Sub-Task</h3>
+                    <p className="text-[10px] font-mono text-slate-400">Award points & log work</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCompleteTaskModal({ isOpen: false, task: null, isShared: false, partnerIds: [] })}
+                  className="w-7 h-7 rounded-full bg-white/5 border border-white/10 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Task Title Banner */}
+              <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 space-y-1">
+                <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-amber-300/80">
+                  {currentJob.vehicleNumber} • Checklist Item
+                </span>
+                <p className="text-xs sm:text-sm font-black text-white">{completeTaskModal.task.title}</p>
+              </div>
+
+              {/* Primary Completer Card */}
+              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-800 border border-emerald-400 flex items-center justify-center text-xs font-bold text-white">
+                    {user?.profileImageUrl ? (
+                      <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      user?.name?.charAt(0).toUpperCase() || 'U'
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">{user?.name || 'You'}</p>
+                    <p className="text-[9px] font-mono text-emerald-400">Primary Technician (Lead)</p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-mono font-black text-emerald-300">
+                  {pointsPerWorker} QP
+                </span>
+              </div>
+
+              {/* Shared Task Toggle */}
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCompleteTaskModal((prev) => ({
+                      ...prev,
+                      isShared: !prev.isShared,
+                      partnerIds: !prev.isShared ? prev.partnerIds : [],
+                    }))
+                  }
+                  className={`w-full p-2.5 rounded-2xl border transition-all flex items-center justify-between cursor-pointer ${
+                    completeTaskModal.isShared
+                      ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
+                      : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-bold">Work with partners?</span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                      completeTaskModal.isShared
+                        ? 'bg-amber-400 text-slate-950 font-black'
+                        : 'bg-white/10 text-slate-400'
+                    }`}
+                  >
+                    {completeTaskModal.isShared ? 'SHARED ENABLED' : 'SOLO'}
                   </span>
-                  <input
-                    type="checkbox"
-                    checked={completeTaskModal.isShared}
-                    onChange={(e) => setCompleteTaskModal({ ...completeTaskModal, isShared: e.target.checked })}
-                    className="rounded accent-amber-400"
-                  />
-                </label>
+                </button>
 
+                {/* Partner Workers Selection List with Avatars */}
                 {completeTaskModal.isShared && (
-                  <div className="space-y-1.5 pt-2 border-t border-white/[0.06]">
-                    <p className="text-[10px] font-mono text-slate-400">Select partner technicians:</p>
-                    <div className="max-h-36 overflow-y-auto space-y-1">
-                      {allWorkers.map((w: any) => {
-                        const isSelected = completeTaskModal.partnerIds.includes(w.id || w._id);
-                        return (
-                          <button
-                            key={w.id || w._id}
-                            type="button"
-                            onClick={() => {
-                              const id = w.id || w._id;
-                              setCompleteTaskModal((prev) => ({
-                                ...prev,
-                                partnerIds: isSelected
-                                  ? prev.partnerIds.filter((p) => p !== id)
-                                  : [...prev.partnerIds, id],
-                              }));
-                            }}
-                            className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-between ${
-                              isSelected
-                                ? 'bg-amber-400 text-slate-950'
-                                : 'bg-white/5 text-slate-300 hover:bg-white/10'
-                            }`}
-                          >
-                            <span>{w.name}</span>
-                            {isSelected && <Check className="w-3.5 h-3.5" />}
-                          </button>
-                        );
-                      })}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                      <span>Select co-workers to split points:</span>
+                      <span className="text-amber-300 font-bold">
+                        {completeTaskModal.partnerIds.length} selected
+                      </span>
+                    </div>
+
+                    <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
+                      {allWorkers.length === 0 ? (
+                        <p className="text-[11px] text-slate-500 font-mono py-2 text-center">
+                          No other registered technicians found
+                        </p>
+                      ) : (
+                        allWorkers.map((w: any) => {
+                          const wId = w.id || w._id;
+                          const isSelected = completeTaskModal.partnerIds.includes(wId);
+
+                          return (
+                            <button
+                              key={wId}
+                              type="button"
+                              onClick={() => {
+                                setCompleteTaskModal((prev) => ({
+                                  ...prev,
+                                  partnerIds: isSelected
+                                    ? prev.partnerIds.filter((p) => p !== wId)
+                                    : [...prev.partnerIds, wId],
+                                }));
+                              }}
+                              className={`w-full p-2 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer ${
+                                isSelected
+                                  ? 'bg-amber-400/20 border-amber-400/50 text-white'
+                                  : 'bg-white/[0.02] border-white/[0.06] text-slate-300 hover:bg-white/5'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-bold text-amber-300 shrink-0">
+                                  {w.profileImageUrl ? (
+                                    <img src={w.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    (w.name || 'W').charAt(0).toUpperCase()
+                                  )}
+                                </div>
+                                <div className="truncate">
+                                  <p className="text-xs font-bold truncate text-white">{w.name}</p>
+                                  <p className="text-[9px] font-mono text-slate-400 uppercase">{w.role || 'Mechanic'}</p>
+                                </div>
+                              </div>
+
+                              <div className="shrink-0 flex items-center gap-1.5">
+                                {isSelected && (
+                                  <span className="text-[9px] font-mono font-bold text-amber-300">
+                                    +{pointsPerWorker} QP
+                                  </span>
+                                )}
+                                <div
+                                  className={`w-5 h-5 rounded-md flex items-center justify-center ${
+                                    isSelected
+                                      ? 'bg-amber-400 text-slate-950'
+                                      : 'border border-white/20'
+                                  }`}
+                                >
+                                  {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="flex gap-2">
+              {/* Real-time Points Allocation Summary */}
+              <div className="p-2.5 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between text-[11px] font-mono">
+                <span className="text-slate-400">
+                  {completeTaskModal.isShared && completeTaskModal.partnerIds.length > 0
+                    ? `Equal Split (1/${totalParticipating})`
+                    : 'Full 1.0 QP Award'}
+                </span>
+                <span className="font-black text-amber-300 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  {pointsPerWorker} QP / Person
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-1">
                 <button
                   type="button"
                   onClick={executeCompleteTask}
                   disabled={isCompletingTask}
-                  className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs hover:bg-emerald-400 transition flex items-center justify-center gap-1.5"
+                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-emerald-500/25 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
-                  {isCompletingTask ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                  <span>Mark Complete</span>
+                  {isCompletingTask ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 stroke-[3]" />}
+                  <span>Complete & Award ({pointsPerWorker} QP)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCompleteTaskModal({ isOpen: false, task: null, isShared: false, partnerIds: [] })}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 text-slate-300 font-bold text-xs hover:bg-white/10"
+                  className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-bold text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -901,7 +1095,7 @@ export const JobDetailPage: React.FC = () => {
           isOpen={isPinJobModalOpen}
           onClose={() => setIsPinJobModalOpen(false)}
           job={currentJob}
-          currentUserId={user?.id || (user as any)?._id}
+          currentUserId={currentUserId}
           isAdmin={isAdmin}
           onTogglePin={handleToggleJobPin}
         />
