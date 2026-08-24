@@ -65,16 +65,23 @@ export const QuickAccessDock: React.FC = () => {
   return (
     <aside
       aria-label="Quick Access Menu"
-      className="fixed bottom-0 inset-x-0 z-50 flex justify-center items-center pointer-events-none px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+      className="fixed bottom-0 inset-x-0 z-50 flex justify-center items-center pointer-events-none px-4 pb-[max(1.1rem,env(safe-area-inset-bottom))]"
     >
       <motion.nav
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="pointer-events-auto relative flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-full bg-[#0a0a14]/90 backdrop-blur-2xl border border-amber-400/20 shadow-[0_12px_45px_rgba(0,0,0,0.9)]"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%), rgba(12, 14, 28, 0.55)',
+          backdropFilter: 'blur(32px) saturate(220%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(220%)',
+          boxShadow: 'inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4), 0 20px 50px -10px rgba(0, 0, 0, 0.8), 0 0 30px -5px rgba(251, 191, 36, 0.2)',
+          border: '1px solid rgba(255, 255, 255, 0.14)',
+        }}
+        className="pointer-events-auto relative flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2 rounded-full"
       >
-        {/* Subtle ambient gold shine behind dock */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-400/5 to-amber-500/10 blur-md pointer-events-none" />
+        {/* Ambient golden aura behind the glass dock */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500/15 via-yellow-400/10 to-amber-500/15 blur-lg pointer-events-none -z-10" />
 
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -87,14 +94,18 @@ export const QuickAccessDock: React.FC = () => {
               className={`relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full transition-all duration-200 active:scale-90 cursor-pointer ${
                 item.isActive
                   ? 'text-slate-950 font-black'
-                  : 'text-slate-400 hover:text-amber-300 hover:bg-white/5'
+                  : 'text-slate-300 hover:text-white hover:bg-white/10'
               }`}
             >
-              {/* Active Tab Background Capsule */}
+              {/* Active Tab Background Capsule with Specular Top Highlight */}
               {item.isActive && (
                 <motion.div
                   layoutId="active-dock-pill"
-                  className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 shadow-lg shadow-amber-400/40"
+                  style={{
+                    background: 'linear-gradient(135deg, #fde047 0%, #f59e0b 100%)',
+                    boxShadow: '0 4px 20px rgba(251, 191, 36, 0.55), inset 0 1px 1.5px rgba(255, 255, 255, 0.8)',
+                  }}
+                  className="absolute inset-0 rounded-full"
                   transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
                 />
               )}
@@ -106,7 +117,7 @@ export const QuickAccessDock: React.FC = () => {
                     className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden flex items-center justify-center font-black text-xs transition-transform ${
                       item.isActive
                         ? 'border-2 border-slate-950 text-slate-950 bg-amber-300'
-                        : 'border border-amber-400/30 bg-white/5 text-amber-200'
+                        : 'border border-white/30 bg-white/10 text-white shadow-xs'
                     }`}
                   >
                     {user.profileImageUrl ? (
@@ -127,7 +138,7 @@ export const QuickAccessDock: React.FC = () => {
                     className={`w-5 h-5 transition-transform ${
                       item.isActive
                         ? 'stroke-[2.5] text-slate-950 scale-105'
-                        : 'stroke-[1.8]'
+                        : 'stroke-[1.9] text-slate-300'
                     }`}
                   />
                 ) : null}
