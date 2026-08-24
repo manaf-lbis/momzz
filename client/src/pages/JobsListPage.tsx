@@ -403,105 +403,108 @@ export const JobsListPage: React.FC = () => {
           )}
         </div>
 
-        {/* ── LEADERBOARD-STYLE TABS (Gentle soft amber/gold glow) ── */}
-        <div className="flex gap-1 p-1 bg-white/[0.04] rounded-2xl border border-white/8">
-          {VIEWS.map(({ key, label, count }) => {
-            const isActive = jobsView === key;
-            return (
-              <button
-                key={key}
-                onClick={() => setJobsView(key)}
-                className={`relative flex-1 py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  isActive ? 'text-slate-900 font-black' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="jobs-view-tab"
-                    className="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 rounded-xl shadow-md shadow-amber-500/20"
-                    transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
-                  />
-                )}
-                <span className="relative z-10">{label}</span>
-                <span
-                  className={`relative z-10 text-[9px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
-                    isActive ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
+        {/* ── STICKY TOP CONTROLS (Tabs & Search/Sort) ── */}
+        <div className="sticky top-0 sm:top-14 z-30 bg-[#080810]/85 backdrop-blur-2xl py-2 -mx-3 px-3 sm:-mx-6 sm:px-6 space-y-2 border-b border-white/[0.06] shadow-xl shadow-black/40">
+          {/* ── LEADERBOARD-STYLE TABS (Gentle soft amber/gold glow) ── */}
+          <div className="flex gap-1 p-1 bg-white/[0.04] rounded-2xl border border-white/8">
+            {VIEWS.map(({ key, label, count }) => {
+              const isActive = jobsView === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setJobsView(key)}
+                  className={`relative flex-1 py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    isActive ? 'text-slate-900 font-black' : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ── SEARCH & SORT CONTROLS ── */}
-        <div className="flex items-center gap-2">
-          {/* Search Box */}
-          <div className="relative flex-1">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search vehicle model, reg plate (e.g. KL 01)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/10 focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20 text-xs font-bold text-white placeholder-slate-500 outline-none transition-all shadow-xs"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-white"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+                  {isActive && (
+                    <motion.div
+                      layoutId="jobs-view-tab"
+                      className="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 rounded-xl shadow-md shadow-amber-500/20"
+                      transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
+                    />
+                  )}
+                  <span className="relative z-10">{label}</span>
+                  <span
+                    className={`relative z-10 text-[9px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                      isActive ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Sort Dropdown */}
-          <div className="relative shrink-0" ref={sortRef}>
-            <button
-              onClick={() => setIsSortOpen(!isSortOpen)}
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/10 hover:border-white/20 text-xs font-bold text-slate-300 transition active:scale-95 cursor-pointer shadow-xs"
-            >
-              <ArrowUpDown className="w-3 h-3 text-slate-400" />
-              <span className="hidden sm:inline">
-                {SORT_CONFIG.find((s) => s.value === sortBy)?.shortLabel || 'Sort'}
-              </span>
-              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            <AnimatePresence>
-              {isSortOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-2xl bg-[#0f0f1e]/98 backdrop-blur-2xl border border-white/12 shadow-2xl shadow-black/80 overflow-hidden divide-y divide-white/[0.06] p-1"
+          {/* ── SEARCH & SORT CONTROLS ── */}
+          <div className="flex items-center gap-2">
+            {/* Search Box */}
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search vehicle model, reg plate (e.g. KL 01)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/10 focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20 text-xs font-bold text-white placeholder-slate-500 outline-none transition-all shadow-xs"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-white"
                 >
-                  {SORT_CONFIG.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        setSortBy(opt.value);
-                        setIsSortOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
-                        sortBy === opt.value
-                          ? 'bg-amber-400/15 text-amber-300'
-                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        {opt.icon}
-                        {opt.label}
-                      </span>
-                      {sortBy === opt.value && <Check className="w-3.5 h-3.5 text-amber-300" />}
-                    </button>
-                  ))}
-                </motion.div>
+                  <X className="w-3.5 h-3.5" />
+                </button>
               )}
-            </AnimatePresence>
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="relative shrink-0" ref={sortRef}>
+              <button
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                className="flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl bg-white/[0.03] backdrop-blur-xl border border-white/10 hover:border-white/20 text-xs font-bold text-slate-300 transition active:scale-95 cursor-pointer shadow-xs"
+              >
+                <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                <span className="hidden sm:inline">
+                  {SORT_CONFIG.find((s) => s.value === sortBy)?.shortLabel || 'Sort'}
+                </span>
+                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {isSortOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-2xl bg-[#0f0f1e]/98 backdrop-blur-2xl border border-white/12 shadow-2xl shadow-black/80 overflow-hidden divide-y divide-white/[0.06] p-1"
+                  >
+                    {SORT_CONFIG.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => {
+                          setSortBy(opt.value);
+                          setIsSortOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+                          sortBy === opt.value
+                            ? 'bg-amber-400/15 text-amber-300'
+                            : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          {opt.icon}
+                          {opt.label}
+                        </span>
+                        {sortBy === opt.value && <Check className="w-3.5 h-3.5 text-amber-300" />}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
