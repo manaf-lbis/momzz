@@ -19,7 +19,7 @@
 
     <!-- PWA & Mobile Web App Capabilities -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#09090b" />
+    <meta name="theme-color" content="#000000" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -28,109 +28,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Montserrat:wght@900&display=swap" rel="stylesheet">
-    
-    <style>
-      #app-splash {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background-color: #09090b;
-        color: #f4f4f5;
-        z-index: 99999;
-        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-      }
-      .splash-logo-wrap {
-        position: relative;
-        width: 80px;
-        height: 80px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .splash-ring {
-        position: absolute;
-        inset: -6px;
-        border-radius: 26px;
-        border: 2px solid transparent;
-        border-top-color: #f59e0b;
-        border-right-color: #f59e0b40;
-        animation: spin 1.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
-      }
-      .splash-pulse {
-        position: absolute;
-        inset: 0;
-        border-radius: 20px;
-        background: radial-gradient(circle, #f59e0b25 0%, transparent 70%);
-        animation: pulse 2s ease-in-out infinite;
-      }
-      .splash-logo {
-        width: 68px;
-        height: 68px;
-        border-radius: 18px;
-        object-fit: cover;
-        box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.25);
-        position: relative;
-        z-index: 2;
-      }
-      .splash-title {
-        margin-top: 24px;
-        font-size: 15px;
-        font-weight: 800;
-        letter-spacing: 0.15em;
-        text-transform: uppercase;
-        color: #f4f4f5;
-      }
-      .splash-title span {
-        color: #f59e0b;
-      }
-      .splash-bar-wrap {
-        margin-top: 16px;
-        width: 120px;
-        height: 3px;
-        background-color: #27272a;
-        border-radius: 9999px;
-        overflow: hidden;
-      }
-      .splash-bar {
-        width: 50%;
-        height: 100%;
-        background: linear-gradient(90deg, #f59e0b, #fbbf24);
-        border-radius: 9999px;
-        animation: progress 1.2s ease-in-out infinite alternate;
-      }
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      @keyframes pulse {
-        0%, 100% { transform: scale(1); opacity: 0.4; }
-        50% { transform: scale(1.25); opacity: 0.8; }
-      }
-      @keyframes progress {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(200%); }
-      }
-    </style>
   </head>
-  <body class="bg-zinc-950 text-zinc-100 font-sans antialiased min-h-screen selection:bg-yellow-400 selection:text-zinc-950">
-    <div id="root">
-      <div id="app-splash">
-        <div class="splash-logo-wrap">
-          <div class="splash-pulse"></div>
-          <div class="splash-ring"></div>
-          <img src="/logo.png" alt="MOMZ'Z Auto Garage" class="splash-logo" />
-        </div>
-        <div class="splash-title">
-          MOMZ<span>'Z</span> AUTO GARAGE
-        </div>
-        <div class="splash-bar-wrap">
-          <div class="splash-bar"></div>
-        </div>
-      </div>
-    </div>
+  <body class="bg-black text-zinc-100 font-sans antialiased min-h-screen selection:bg-yellow-400 selection:text-zinc-950">
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
