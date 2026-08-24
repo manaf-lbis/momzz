@@ -147,8 +147,9 @@ const TaskHistoryPanel: React.FC<{
   startTimestamp: number;
   endTimestamp: number;
   timeframe: Timeframe;
+  usersMap: Record<string, LeaderboardUser>;
   onClose: () => void;
-}> = ({ user, allJobs, startTimestamp, endTimestamp, timeframe, onClose }) => {
+}> = ({ user, allJobs, startTimestamp, endTimestamp, timeframe, usersMap, onClose }) => {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -165,23 +166,43 @@ const TaskHistoryPanel: React.FC<{
         if (timeframe !== 'all' && (ts < startTimestamp || ts > endTimestamp)) return;
 
         const primaryId = t.completedBy
-          ? String((t.completedBy as any).id || (t.completedBy as any)._id || '')
+          ? String((t.completedBy as any).id || (t.completedBy as any)._id || t.completedBy || '')
           : '';
-        const partners = (t.partners || []).map((p) => ({
-          id: String((p as any).id || (p as any)._id || ''),
-          name: (p as any).name || '',
-        }));
+        const primaryName = t.completedBy && typeof t.completedBy === 'object'
+          ? (t.completedBy as any).name || 'Mechanic'
+          : (usersMap[primaryId]?.name || 'Mechanic');
 
-        const allWorkerIds = Array.from(
-          new Set([primaryId, ...partners.map((p) => p.id)].filter(Boolean))
-        );
+        const partners = (t.partners || [])
+          .map((p: any) => {
+            const pid = String(p?.id || p?._id || p || '');
+            const pname = typeof p === 'object' && p?.name
+              ? p.name
+              : (usersMap[pid]?.name || 'Co-worker');
+            return { id: pid, name: pname };
+          })
+          .filter((p) => Boolean(p.id));
+
+        const partnerIds = partners.map((p) => p.id);
+        const allWorkerIds = Array.from(new Set([primaryId, ...partnerIds].filter(Boolean)));
 
         const isInvolved = allWorkerIds.includes(user.id);
         if (!isInvolved) return;
 
-        const shared = t.isShared && partners.length > 0;
-        const workerCount = shared ? allWorkerIds.length : 1;
-        const pts = workerCount > 0 ? 1 / workerCount : 1;
+        const isShared = Boolean((t.isShared || partnerIds.length > 0) && partnerIds.length > 0);
+        const workerCount = isShared && allWorkerIds.length > 0 ? allWorkerIds.length : 1;
+        const pts = 1 / workerCount;
+
+        // When current user is primary, other workers are the partners.
+        // When current user is a partner, other workers include primary + other partners.
+        const otherWorkers: string[] = [];
+        if (primaryId && primaryId !== user.id) {
+          otherWorkers.push(primaryName);
+        }
+        partners.forEach((p) => {
+          if (p.id !== user.id && p.id !== primaryId) {
+            otherWorkers.push(p.name);
+          }
+        });
 
         items.push({
           taskId: String(t.id || t._id || ''),
@@ -190,15 +211,15 @@ const TaskHistoryPanel: React.FC<{
           vehicleNumber: job.vehicleNumber || '',
           completedAt: t.completedAt,
           points: pts,
-          isShared: shared as boolean,
-          partnerNames: partners.filter((p) => p.id !== user.id).map((p) => p.name),
+          isShared,
+          partnerNames: otherWorkers,
         });
       });
     });
 
     // Sort newest first
     return items.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
-  }, [user.id, allJobs, startTimestamp, endTimestamp, timeframe]);
+  }, [user.id, allJobs, startTimestamp, endTimestamp, timeframe, usersMap]);
 
   const totalPoints = useMemo(() => history.reduce((sum, i) => sum + i.points, 0), [history]);
   const visible = history.slice(0, visibleCount);
@@ -370,6 +391,22 @@ export const LeaderboardPage: React.FC = () => {
   const { data: jobsResponse, isLoading: isJobsLoading } = useGetJobCardsQuery({ limit: 500 });
 
   const rawLeaderboard = leaderboardResponse?.data || [];
+  const usersMap: Record<string, LeaderboardUser> = useMemo(() => {
+    const map: Record<string, LeaderboardUser> = {};
+    rawLeaderboard.forEach((u: any) => {
+      const uid = String(u.id || u._id);
+      map[uid] = {
+        id: uid,
+        name: u.name || 'Technician',
+        mobile: u.mobile,
+        role: u.role || 'MECHANIC',
+        profileImageUrl: u.profileImageUrl,
+        points: Number(u.taskCount || 0),
+      };
+    });
+    return map;
+  }, [rawLeaderboard]);
+
   const allJobs: JobCardData[] = useMemo(() => {
     if (!jobsResponse?.data) return [];
     if (Array.isArray(jobsResponse.data)) return jobsResponse.data;
@@ -431,8 +468,8 @@ export const LeaderboardPage: React.FC = () => {
   // ─── Point calculation ───────────────────────────────────────────────────
   // Rules:
   //   • Solo completed task  → 1.0 QP for completedBy
-  //   • Shared task (isShared=true, partners exist) → 1.0 / total_workers QP each
-  //   • All-time mode uses rawLeaderboard taskCount (server-computed)
+  //   • Shared task (isShared=true or partners exist) → 1.0 / total_workers QP each
+  //   • All-time mode uses rawLeaderboard taskCount (server-computed across full database)
   //   • Values stored as exact floats, displayed to 1 decimal
   const rankedUsers: LeaderboardUser[] = useMemo(() => {
     if (timeframe === 'all' && rawLeaderboard.length > 0) {
@@ -443,7 +480,7 @@ export const LeaderboardPage: React.FC = () => {
           mobile: u.mobile,
           role: u.role || 'MECHANIC',
           profileImageUrl: u.profileImageUrl,
-          // Server gives integer taskCount; show as-is with 1 decimal
+          // Server gives float taskCount with full shared points included
           points: Number(u.taskCount || 0),
         }))
         .sort((a, b) => b.points - a.points);
@@ -464,21 +501,25 @@ export const LeaderboardPage: React.FC = () => {
         if (ts < startTimestamp || ts > endTimestamp) return;
 
         const primaryId = t.completedBy
-          ? String((t.completedBy as any).id || (t.completedBy as any)._id || '')
+          ? String((t.completedBy as any).id || (t.completedBy as any)._id || t.completedBy || '')
           : '';
         const partnerIds = (t.partners || [])
-          .map((p: any) => String(p.id || p._id || ''))
+          .map((p: any) => String(p?.id || p?._id || p || ''))
           .filter(Boolean);
 
-        const shared = t.isShared && partnerIds.length > 0;
+        const isShared = Boolean((t.isShared || partnerIds.length > 0) && partnerIds.length > 0);
 
-        if (shared) {
+        if (isShared) {
           // Unique worker set (primary + partners), no duplicates
           const allIds = Array.from(new Set([primaryId, ...partnerIds].filter(Boolean)));
-          const ptsEach = 1 / allIds.length; // exact fractional share
-          allIds.forEach((wid) => {
-            if (map[wid]) map[wid].points += ptsEach;
-          });
+          if (allIds.length > 0) {
+            const ptsEach = 1 / allIds.length; // exact fractional share
+            allIds.forEach((wid) => {
+              if (wid && map[wid]) {
+                map[wid].points += ptsEach;
+              }
+            });
+          }
         } else if (primaryId && map[primaryId]) {
           map[primaryId].points += 1;
         }
@@ -898,6 +939,7 @@ export const LeaderboardPage: React.FC = () => {
             startTimestamp={startTimestamp}
             endTimestamp={endTimestamp}
             timeframe={timeframe}
+            usersMap={usersMap}
             onClose={() => setSelectedUser(null)}
           />
         )}

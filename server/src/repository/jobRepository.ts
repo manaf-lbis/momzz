@@ -187,10 +187,11 @@ export class JobRepository {
 
     let query = Task.find({ jobCardId: { $in: jobCardIds } });
     if (!isDetailed) {
-      // Lightweight projection for lists — avoids 4 slow document joins
+      // Lightweight projection for lists — includes partner co-workers for shared points tracking
       query = query
-        .select('title status jobCardId isPinned completedBy createdAt completedAt')
-        .populate('completedBy', 'name role') as any;
+        .select('title status jobCardId isPinned completedBy partners isShared createdAt completedAt')
+        .populate('completedBy', 'name role profileImageUrl')
+        .populate('partners', 'name role profileImageUrl') as any;
     } else {
       query = query
         .populate('completedBy', 'name mobile role profileImageUrl')
