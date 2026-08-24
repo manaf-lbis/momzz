@@ -23,6 +23,9 @@ export default {
           'accent-glow': 'rgba(250, 204, 21, 0.15)',
         }
       },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+      },
       boxShadow: {
         'yellow-glow': '0 0 20px -5px rgba(250, 204, 21, 0.3)',
         'yellow-card': '0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(250, 204, 21, 0.15)',

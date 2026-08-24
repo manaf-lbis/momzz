@@ -1,37 +1,34 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Trophy,
   ChevronLeft,
   Crown,
-  Sparkles,
-  Clock,
-  Award,
-  Zap,
   Flame,
+  Trophy,
   Star,
-  ChevronRight,
-  Medal,
-  TrendingUp,
-  Target,
+  Clock,
+  Sparkles,
+  X,
+  CheckCircle,
   Users,
+  Calendar,
+  ChevronRight,
+  Car,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useGetLeaderboardQuery } from '../api/authApi';
-import { useGetJobCardsQuery, JobCardData } from '../api/jobApi';
+import { useGetJobCardsQuery, JobCardData, TaskItem } from '../api/jobApi';
 import { Navbar } from '../components/navbar/Navbar';
 import confetti from 'canvas-confetti';
 import { NumberTicker } from '../components/magicui/NumberTicker';
 import { BorderBeam } from '../components/magicui/BorderBeam';
 import { Meteors } from '../components/magicui/Meteors';
-import { BlurFade } from '../components/magicui/BlurFade';
 
 type Timeframe = 'day' | 'week' | 'month' | 'year' | 'all';
 
 interface LeaderboardUser {
   id: string;
-  _id?: string;
   name: string;
   mobile?: string;
   role?: string;
@@ -39,107 +36,404 @@ interface LeaderboardUser {
   points: number;
 }
 
-const triggerGalaPopper = () => {
+interface TaskHistoryItem {
+  taskId: string;
+  taskTitle: string;
+  vehicleName: string;
+  vehicleNumber: string;
+  completedAt: string;
+  points: number; // exact decimal
+  isShared: boolean;
+  partnerNames: string[];
+}
+
+// ─── Confetti pop ───────────────────────────────────────────────────────────
+const firePop = () => {
   try {
     confetti({
-      particleCount: 45,
-      spread: 70,
-      origin: { y: 0.45 },
-      colors: ['#f59e0b', '#fbbf24', '#fef08a', '#ffffff', '#10b981', '#38bdf8'],
-      ticks: 180,
-      gravity: 1.1,
-      scalar: 0.9,
+      particleCount: 60,
+      spread: 80,
+      origin: { y: 0.4 },
+      colors: ['#fbbf24', '#fef08a', '#f59e0b', '#ffffff', '#34d399', '#60a5fa'],
+      ticks: 220,
+      gravity: 1.0,
+      scalar: 1.0,
       disableForReducedMotion: true,
     });
-  } catch (e) {}
+  } catch (_) {}
 };
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const getInitials = (name: string) =>
+  (name || '?')
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+/** Returns exactly 1-decimal string: "31.2", "5.0", "0.5" */
+const fmtPts = (n: number) => {
+  const fixed = parseFloat(n.toFixed(1));
+  return fixed % 1 === 0 ? fixed.toFixed(1) : fixed.toString();
+};
+
+const fmtDate = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) +
+    ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+};
+
+// ─── Avatar ──────────────────────────────────────────────────────────────────
+const Avatar: React.FC<{
+  name: string;
+  imageUrl?: string;
+  size: number;
+  rank: number;
+  className?: string;
+}> = ({ name, imageUrl, size, rank, className = '' }) => {
+  const ring =
+    rank === 1
+      ? 'ring-2 ring-amber-400 shadow-[0_0_20px_4px_rgba(251,191,36,0.4)]'
+      : rank === 2
+      ? 'ring-2 ring-slate-300/60'
+      : rank === 3
+      ? 'ring-2 ring-amber-600/70'
+      : 'ring-[1px] ring-white/10';
+
+  const fontSize = size >= 76 ? 'text-xl' : size >= 56 ? 'text-base' : size >= 42 ? 'text-sm' : 'text-xs';
+
+  return (
+    <div
+      style={{ width: size, height: size, minWidth: size, minHeight: size }}
+      className={`rounded-full overflow-hidden bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center font-black text-white ${ring} ${className}`}
+    >
+      {imageUrl ? (
+        <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+      ) : (
+        <span className={fontSize}>{getInitials(name)}</span>
+      )}
+    </div>
+  );
+};
+
+// ─── Rank crown/medal for podium ─────────────────────────────────────────────
+const PodiumIcon: React.FC<{ rank: number }> = ({ rank }) => {
+  if (rank === 1)
+    return (
+      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 text-slate-900 flex items-center justify-center shadow-lg shadow-amber-500/40">
+        <Crown className="w-4 h-4 fill-current" />
+      </div>
+    );
+  if (rank === 2)
+    return (
+      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-200 to-slate-400 text-slate-800 flex items-center justify-center shadow text-xs font-black">
+        2
+      </div>
+    );
+  return (
+    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 text-white flex items-center justify-center shadow text-xs font-black">
+      3
+    </div>
+  );
+};
+
+// ─── Task History Modal with Infinite Scroll ─────────────────────────────────
+const PAGE_SIZE = 20;
+
+const TaskHistoryPanel: React.FC<{
+  user: LeaderboardUser;
+  allJobs: JobCardData[];
+  startTimestamp: number;
+  endTimestamp: number;
+  timeframe: Timeframe;
+  onClose: () => void;
+}> = ({ user, allJobs, startTimestamp, endTimestamp, timeframe, onClose }) => {
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Build full task history for this user within timeframe
+  const history: TaskHistoryItem[] = useMemo(() => {
+    const items: TaskHistoryItem[] = [];
+    allJobs.forEach((job) => {
+      (job.tasks || []).forEach((t: TaskItem) => {
+        if (t.status !== 'COMPLETED' || !t.completedAt) return;
+
+        const ts = new Date(t.completedAt).getTime();
+
+        // For 'all' timeframe, no date filter
+        if (timeframe !== 'all' && (ts < startTimestamp || ts > endTimestamp)) return;
+
+        const primaryId = t.completedBy
+          ? String((t.completedBy as any).id || (t.completedBy as any)._id || '')
+          : '';
+        const partners = (t.partners || []).map((p) => ({
+          id: String((p as any).id || (p as any)._id || ''),
+          name: (p as any).name || '',
+        }));
+
+        const allWorkerIds = Array.from(
+          new Set([primaryId, ...partners.map((p) => p.id)].filter(Boolean))
+        );
+
+        const isInvolved = allWorkerIds.includes(user.id);
+        if (!isInvolved) return;
+
+        const shared = t.isShared && partners.length > 0;
+        const workerCount = shared ? allWorkerIds.length : 1;
+        const pts = workerCount > 0 ? 1 / workerCount : 1;
+
+        items.push({
+          taskId: String(t.id || t._id || ''),
+          taskTitle: t.title || 'Task',
+          vehicleName: job.vehicleName || 'Vehicle',
+          vehicleNumber: job.vehicleNumber || '',
+          completedAt: t.completedAt,
+          points: pts,
+          isShared: shared as boolean,
+          partnerNames: partners.filter((p) => p.id !== user.id).map((p) => p.name),
+        });
+      });
+    });
+
+    // Sort newest first
+    return items.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+  }, [user.id, allJobs, startTimestamp, endTimestamp, timeframe]);
+
+  const totalPoints = useMemo(() => history.reduce((sum, i) => sum + i.points, 0), [history]);
+  const visible = history.slice(0, visibleCount);
+  const hasMore = visibleCount < history.length;
+
+  // Infinite scroll sentinel
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((c) => c + PAGE_SIZE);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    obs.observe(sentinelRef.current);
+    return () => obs.disconnect();
+  }, [hasMore, visibleCount]);
+
+  const periodLabel =
+    timeframe === 'day' ? 'Today' :
+    timeframe === 'week' ? 'This Week' :
+    timeframe === 'month' ? 'This Month' :
+    timeframe === 'year' ? 'This Year' : 'All Time';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+      />
+
+      {/* Panel — bottom sheet on mobile, centered modal on desktop */}
+      <motion.div
+        initial={{ opacity: 0, y: 60 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 60 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+        className="relative w-full sm:max-w-lg sm:rounded-[28px] rounded-t-[28px] bg-[#0f0f1e] border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+        style={{ maxHeight: '90vh' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <BorderBeam size={220} duration={7} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={1} />
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-white/[0.06] shrink-0">
+          <Avatar name={user.name} imageUrl={user.profileImageUrl} size={44} rank={0} />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-[15px] font-black text-white truncate">{user.name}</h3>
+            <p className="text-[11px] font-mono text-slate-400">{user.role || 'Mechanic'} · {periodLabel}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="text-lg font-black font-mono text-amber-400">{fmtPts(totalPoints)}</div>
+            <div className="text-[9px] font-mono text-slate-500 uppercase">Total QP</div>
+          </div>
+          <button
+            onClick={onClose}
+            className="ml-2 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-3 divide-x divide-white/[0.06] border-b border-white/[0.06] shrink-0">
+          {[
+            { label: 'Tasks Done', value: history.length },
+            { label: 'Solo Tasks', value: history.filter((i) => !i.isShared).length },
+            { label: 'Shared Tasks', value: history.filter((i) => i.isShared).length },
+          ].map(({ label, value }) => (
+            <div key={label} className="py-3 text-center">
+              <p className="text-[17px] font-black text-white">{value}</p>
+              <p className="text-[9px] font-mono text-slate-500 uppercase mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Scrollable task list */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          {history.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+              <CheckCircle className="w-8 h-8 text-slate-700" />
+              <p className="text-sm text-slate-500">No completed tasks this period.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/[0.04] px-1">
+              {visible.map((item, idx) => (
+                <motion.div
+                  key={item.taskId + idx}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(idx * 0.02, 0.3) }}
+                  className="flex items-start gap-3 px-4 py-3.5"
+                >
+                  {/* Left: point badge */}
+                  <div className={`mt-0.5 px-2 py-1 rounded-lg text-center shrink-0 ${
+                    item.isShared
+                      ? 'bg-violet-500/15 border border-violet-500/25'
+                      : 'bg-amber-400/10 border border-amber-400/20'
+                  }`}>
+                    <p className={`text-[13px] font-black font-mono leading-none ${
+                      item.isShared ? 'text-violet-300' : 'text-amber-400'
+                    }`}>
+                      {fmtPts(item.points)}
+                    </p>
+                    <p className={`text-[8px] font-mono uppercase mt-0.5 ${
+                      item.isShared ? 'text-violet-400/70' : 'text-amber-500/70'
+                    }`}>QP</p>
+                  </div>
+
+                  {/* Right: task info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-slate-100 truncate">{item.taskTitle}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <Car className="w-3 h-3 text-slate-500 shrink-0" />
+                      <span className="text-[11px] text-slate-400 truncate">
+                        {item.vehicleName}
+                        {item.vehicleNumber ? ` · ${item.vehicleNumber}` : ''}
+                      </span>
+                    </div>
+                    {item.isShared && item.partnerNames.length > 0 && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Users className="w-3 h-3 text-violet-400 shrink-0" />
+                        <span className="text-[10px] text-violet-300 truncate">
+                          with {item.partnerNames.slice(0, 2).join(', ')}
+                          {item.partnerNames.length > 2 ? ` +${item.partnerNames.length - 2}` : ''}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 mt-1">
+                      <Calendar className="w-3 h-3 text-slate-600 shrink-0" />
+                      <span className="text-[10px] font-mono text-slate-500">{fmtDate(item.completedAt)}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+
+              {/* Infinite scroll sentinel */}
+              {hasMore && (
+                <div ref={sentinelRef} className="py-6 flex justify-center">
+                  <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+              {!hasMore && history.length > 0 && (
+                <div className="py-5 text-center text-[10px] font-mono text-slate-600">
+                  All {history.length} tasks shown
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export const LeaderboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [timeframe, setTimeframe] = useState<Timeframe>('month');
-  const [selectedUserModal, setSelectedUserModal] = useState<LeaderboardUser | null>(null);
+  const [selectedUser, setSelectedUser] = useState<LeaderboardUser | null>(null);
 
   const { data: leaderboardResponse, isLoading: isLeaderboardLoading } = useGetLeaderboardQuery();
-  const { data: jobsResponse, isLoading: isJobsLoading } = useGetJobCardsQuery({ limit: 200 });
+  const { data: jobsResponse, isLoading: isJobsLoading } = useGetJobCardsQuery({ limit: 500 });
 
   const rawLeaderboard = leaderboardResponse?.data || [];
-  const jobs: JobCardData[] = useMemo(() => {
+  const allJobs: JobCardData[] = useMemo(() => {
     if (!jobsResponse?.data) return [];
     if (Array.isArray(jobsResponse.data)) return jobsResponse.data;
     if ((jobsResponse.data as any).jobs) return (jobsResponse.data as any).jobs;
     return [];
   }, [jobsResponse]);
 
-  // Timeframe boundaries
-  const { startTimestamp, endTimestamp, timeRemainingText, periodLabel } = useMemo(() => {
+  // ─── Precise timeframe boundaries ────────────────────────────────────────
+  // Day:   00:00:00.000  →  23:59:59.999 (local)
+  // Week:  Monday 00:00  →  Saturday 23:59:59.999 (local)
+  // Month: 1st 00:00     →  last day 23:59:59.999 (local)
+  // Year:  Jan 1 00:00   →  Dec 31 23:59:59.999 (local)
+  const { startTimestamp, endTimestamp, timeLabel, timeRemaining } = useMemo(() => {
     const now = new Date();
+    const Y = now.getFullYear(), M = now.getMonth(), D = now.getDate();
 
     if (timeframe === 'day') {
-      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
-      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
-      const diffMs = Math.max(0, end - now.getTime());
-      const hours = Math.floor(diffMs / (1000 * 60 * 60));
-      const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      return {
-        startTimestamp: start,
-        endTimestamp: end,
-        timeRemainingText: `${hours}h ${mins}m remaining today`,
-        periodLabel: 'Today’s Race',
-      };
+      const start = new Date(Y, M, D, 0, 0, 0, 0).getTime();
+      const end   = new Date(Y, M, D, 23, 59, 59, 999).getTime();
+      const diff  = Math.max(0, end - now.getTime());
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      return { startTimestamp: start, endTimestamp: end, timeLabel: "Today's Sprint", timeRemaining: `${h}h ${m}m left` };
     }
 
     if (timeframe === 'week') {
-      const dayOfWeek = now.getDay();
-      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday, 0, 0, 0, 0);
+      // Monday = day 1, Saturday = day 6
+      const dow = now.getDay(); // 0=Sun,1=Mon,...,6=Sat
+      const daysFromMonday = dow === 0 ? 6 : dow - 1; // days since Monday
+      const monday   = new Date(Y, M, D - daysFromMonday, 0, 0, 0, 0);
       const saturday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 5, 23, 59, 59, 999);
-      const diffMs = Math.max(0, saturday.getTime() - now.getTime());
-      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      return {
-        startTimestamp: monday.getTime(),
-        endTimestamp: saturday.getTime(),
-        timeRemainingText: `${days}d ${hours}h left this week`,
-        periodLabel: 'Weekly Championship',
-      };
+      const diff = Math.max(0, saturday.getTime() - now.getTime());
+      const days = Math.floor(diff / 86_400_000);
+      const hrs  = Math.floor((diff % 86_400_000) / 3_600_000);
+      return { startTimestamp: monday.getTime(), endTimestamp: saturday.getTime(), timeLabel: 'This Week', timeRemaining: `${days}d ${hrs}h left` };
     }
 
     if (timeframe === 'month') {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).getTime();
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-      const diffMs = Math.max(0, end - now.getTime());
-      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      return {
-        startTimestamp: start,
-        endTimestamp: end,
-        timeRemainingText: `${days}d remaining this month`,
-        periodLabel: 'Monthly Gala',
-      };
+      const start = new Date(Y, M, 1, 0, 0, 0, 0).getTime();
+      // Last day of month: day 0 of next month
+      const end   = new Date(Y, M + 1, 0, 23, 59, 59, 999).getTime();
+      const diff  = Math.max(0, end - now.getTime());
+      const days  = Math.floor(diff / 86_400_000);
+      return { startTimestamp: start, endTimestamp: end, timeLabel: now.toLocaleString('default', { month: 'long' }), timeRemaining: `${days}d left` };
     }
 
     if (timeframe === 'year') {
-      const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0).getTime();
-      const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
-      const diffMs = Math.max(0, end - now.getTime());
-      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      return {
-        startTimestamp: start,
-        endTimestamp: end,
-        timeRemainingText: `${days}d left in ${now.getFullYear()}`,
-        periodLabel: 'Annual Trophy',
-      };
+      const start = new Date(Y, 0, 1, 0, 0, 0, 0).getTime();
+      const end   = new Date(Y, 11, 31, 23, 59, 59, 999).getTime();
+      const diff  = Math.max(0, end - now.getTime());
+      const days  = Math.floor(diff / 86_400_000);
+      return { startTimestamp: start, endTimestamp: end, timeLabel: `Year ${Y}`, timeRemaining: `${days}d left` };
     }
 
-    return {
-      startTimestamp: 0,
-      endTimestamp: Infinity,
-      timeRemainingText: 'All-Time Record Hall of Fame',
-      periodLabel: 'All-Time Hall of Fame',
-    };
+    // all
+    return { startTimestamp: 0, endTimestamp: Infinity, timeLabel: 'All Time', timeRemaining: 'Hall of Fame' };
   }, [timeframe]);
 
-  // Ranking calculation
+  // ─── Point calculation ───────────────────────────────────────────────────
+  // Rules:
+  //   • Solo completed task  → 1.0 QP for completedBy
+  //   • Shared task (isShared=true, partners exist) → 1.0 / total_workers QP each
+  //   • All-time mode uses rawLeaderboard taskCount (server-computed)
+  //   • Values stored as exact floats, displayed to 1 decimal
   const rankedUsers: LeaderboardUser[] = useMemo(() => {
     if (timeframe === 'all' && rawLeaderboard.length > 0) {
       return [...rawLeaderboard]
@@ -149,598 +443,463 @@ export const LeaderboardPage: React.FC = () => {
           mobile: u.mobile,
           role: u.role || 'MECHANIC',
           profileImageUrl: u.profileImageUrl,
+          // Server gives integer taskCount; show as-is with 1 decimal
           points: Number(u.taskCount || 0),
         }))
         .sort((a, b) => b.points - a.points);
     }
 
-    const pointsMap: Record<string, { name: string; profileImageUrl?: string; role?: string; mobile?: string; points: number }> = {};
-
+    // Build zero map
+    const map: Record<string, { name: string; profileImageUrl?: string; role?: string; mobile?: string; points: number }> = {};
     rawLeaderboard.forEach((u: any) => {
       const uid = String(u.id || u._id);
-      pointsMap[uid] = {
-        name: u.name,
-        profileImageUrl: u.profileImageUrl,
-        role: u.role,
-        mobile: u.mobile,
-        points: 0,
-      };
+      map[uid] = { name: u.name, profileImageUrl: u.profileImageUrl, role: u.role, mobile: u.mobile, points: 0 };
     });
 
-    jobs.forEach((job) => {
-      (job.tasks || []).forEach((t) => {
-        if (t.status === 'COMPLETED' && t.completedAt) {
-          const compTime = new Date(t.completedAt).getTime();
-          if (compTime >= startTimestamp && compTime <= endTimestamp) {
-            const primaryId = t.completedBy ? String((t.completedBy as any).id || (t.completedBy as any)._id) : null;
-            const partnerIds = (t.partners || []).map((p: any) => String(p.id || p._id || p)).filter(Boolean);
+    allJobs.forEach((job) => {
+      (job.tasks || []).forEach((t: TaskItem) => {
+        if (t.status !== 'COMPLETED' || !t.completedAt) return;
 
-            if (t.isShared && partnerIds.length > 0) {
-              const allWorkerIds = Array.from(new Set([primaryId, ...partnerIds].filter(Boolean) as string[]));
-              const ptsEach = 1 / allWorkerIds.length;
-              allWorkerIds.forEach((wid) => {
-                if (wid && pointsMap[wid]) {
-                  pointsMap[wid].points += ptsEach;
-                }
-              });
-            } else if (primaryId && pointsMap[primaryId]) {
-              pointsMap[primaryId].points += 1;
-            }
-          }
+        const ts = new Date(t.completedAt).getTime();
+        if (ts < startTimestamp || ts > endTimestamp) return;
+
+        const primaryId = t.completedBy
+          ? String((t.completedBy as any).id || (t.completedBy as any)._id || '')
+          : '';
+        const partnerIds = (t.partners || [])
+          .map((p: any) => String(p.id || p._id || ''))
+          .filter(Boolean);
+
+        const shared = t.isShared && partnerIds.length > 0;
+
+        if (shared) {
+          // Unique worker set (primary + partners), no duplicates
+          const allIds = Array.from(new Set([primaryId, ...partnerIds].filter(Boolean)));
+          const ptsEach = 1 / allIds.length; // exact fractional share
+          allIds.forEach((wid) => {
+            if (map[wid]) map[wid].points += ptsEach;
+          });
+        } else if (primaryId && map[primaryId]) {
+          map[primaryId].points += 1;
         }
       });
     });
 
-    return Object.entries(pointsMap)
-      .map(([id, data]) => ({
+    return Object.entries(map)
+      .map(([id, d]) => ({
         id,
-        name: data.name || 'Technician',
-        mobile: data.mobile,
-        role: data.role || 'MECHANIC',
-        profileImageUrl: data.profileImageUrl,
-        points: parseFloat(data.points.toFixed(2)),
+        name: d.name || 'Technician',
+        mobile: d.mobile,
+        role: d.role || 'MECHANIC',
+        profileImageUrl: d.profileImageUrl,
+        // Keep full precision for sorting; round only for display
+        points: d.points,
       }))
       .sort((a, b) => b.points - a.points);
-  }, [timeframe, rawLeaderboard, jobs, startTimestamp, endTimestamp]);
+  }, [timeframe, rawLeaderboard, allJobs, startTimestamp, endTimestamp]);
 
-  // Current user standing
   const currentUserId = String(user?.id || (user as any)?._id || '');
-  const currentUserIndex = rankedUsers.findIndex((u) => u.id === currentUserId || (user?.mobile && u.mobile === user.mobile));
-  const currentUserRank = currentUserIndex !== -1 ? currentUserIndex + 1 : null;
-  const currentUserPoints = currentUserIndex !== -1 ? rankedUsers[currentUserIndex].points : 0;
-  const totalUsersCount = rankedUsers.length || 1;
+  const currentUserIdx = rankedUsers.findIndex(
+    (u) => u.id === currentUserId || (user?.mobile && u.mobile === user.mobile)
+  );
+  const currentUserRank   = currentUserIdx !== -1 ? currentUserIdx + 1 : null;
+  const currentUserPoints = currentUserIdx !== -1 ? rankedUsers[currentUserIdx].points : 0;
+  const maxPoints         = Math.max(1, rankedUsers[0]?.points || 1);
 
   useEffect(() => {
     if (!isLeaderboardLoading && rankedUsers.length > 0) {
-      const timer = setTimeout(() => {
-        triggerGalaPopper();
-      }, 400);
-      return () => clearTimeout(timer);
+      const t = setTimeout(firePop, 400);
+      return () => clearTimeout(t);
     }
   }, [isLeaderboardLoading]);
 
-  const dynamicInsight = useMemo(() => {
-    if (!currentUserRank) {
-      return {
-        badge: 'Garage Standings',
-        text: 'Verified task completions recorded live from workshop floor.',
-        targetGap: 0,
-      };
-    }
-
-    if (currentUserPoints === 0) {
-      return {
-        badge: 'Ready to Climb',
-        text: `Complete your first task this ${timeframe} to get on the podium!`,
-        targetGap: 1,
-      };
-    }
-
+  const motivationText = useMemo(() => {
+    if (!currentUserRank) return 'Complete tasks to enter the rankings';
     if (currentUserRank === 1) {
       const runnerUp = rankedUsers[1];
-      const leadGap = runnerUp ? parseFloat((currentUserPoints - runnerUp.points).toFixed(1)) : 0;
-      return {
-        badge: '👑 Defending Champion #1',
-        text: leadGap > 0
-          ? `You lead the workshop by +${leadGap} QP ahead of 2nd place!`
-          : `You are holding 1st place on the podium!`,
-        targetGap: 0,
-      };
+      const gap = runnerUp ? currentUserPoints - runnerUp.points : 0;
+      return gap > 0 ? `👑 Leading by +${fmtPts(gap)} QP` : '👑 You are leading the workshop!';
     }
+    const ahead = rankedUsers[currentUserRank - 2];
+    const gap   = ahead ? ahead.points - currentUserPoints : 0;
+    if (currentUserRank <= 3) return `🔥 ${fmtPts(gap)} QP to reach #${currentUserRank - 1}`;
+    return `⚡ ${fmtPts(gap)} QP to overtake #${currentUserRank - 1}`;
+  }, [currentUserRank, currentUserPoints, rankedUsers]);
 
-    if (currentUserRank === 2 || currentUserRank === 3) {
-      const aheadUser = rankedUsers[currentUserRank - 2];
-      const gap = aheadUser ? parseFloat((aheadUser.points - currentUserPoints).toFixed(1)) : 0;
-      return {
-        badge: `Podium Star (#${currentUserRank})`,
-        text: `Only ${gap} QP needed to overtake #${currentUserRank - 1} (${aheadUser?.name || 'Top'})!`,
-        targetGap: gap,
-      };
-    }
-
-    const aheadUser = rankedUsers[currentUserRank - 2];
-    const gap = aheadUser ? parseFloat((aheadUser.points - currentUserPoints).toFixed(1)) : 0;
-    return {
-      badge: `Challenger (#${currentUserRank})`,
-      text: `${gap} QP away from overtaking #${currentUserRank - 1} (${aheadUser?.name || 'Next'})!`,
-      targetGap: gap,
-    };
-  }, [currentUserRank, currentUserPoints, rankedUsers, timeframe]);
-
-  const maxPoints = Math.max(1, rankedUsers[0]?.points || 1);
-
-  // Top 3 Podium
   const rank1 = rankedUsers[0];
   const rank2 = rankedUsers[1];
   const rank3 = rankedUsers[2];
-  const remainingUsers = rankedUsers.slice(3);
+  const rest  = rankedUsers.slice(3);
 
-  const getInitials = (name: string) => {
-    return (name || '?')
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-  };
-
-  const TIMEFRAMES: Array<{ key: Timeframe; label: string }> = [
-    { key: 'day', label: 'Day' },
-    { key: 'week', label: 'Week' },
+  const TABS: { key: Timeframe; label: string }[] = [
+    { key: 'day',   label: 'Day'   },
+    { key: 'week',  label: 'Week'  },
     { key: 'month', label: 'Month' },
-    { key: 'year', label: 'Year' },
-    { key: 'all', label: 'All Time' },
+    { key: 'year',  label: 'Year'  },
+    { key: 'all',   label: 'All'   },
   ];
 
+  const isLoading = isLeaderboardLoading || isJobsLoading;
+
+  const openUser = (u: LeaderboardUser) => {
+    firePop();
+    setSelectedUser(u);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-amber-400 selection:text-slate-950 transition-colors duration-200">
-      {/* Background Awards Gala Ambient Light & Star Meteors */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[350px] rounded-full bg-gradient-to-b from-amber-400/15 via-yellow-500/10 to-transparent blur-3xl" />
-        <div className="absolute top-1/3 -left-32 w-80 h-80 rounded-full bg-amber-500/8 blur-3xl" />
-        <div className="absolute bottom-10 -right-32 w-80 h-80 rounded-full bg-emerald-500/8 blur-3xl" />
-        <Meteors number={12} />
+    <div className="min-h-screen bg-[#080810] text-white flex flex-col overflow-x-hidden selection:bg-amber-400/30">
+      {/* ── Background ── */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[420px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.16)_0%,transparent_65%)]" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] h-[300px] bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.08)_0%,transparent_70%)]" />
+        <Meteors number={14} />
       </div>
 
       <Navbar />
 
-      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-3.5 sm:px-6 py-3 sm:py-6 space-y-4 pb-28 sm:pb-32">
-        {/* ── LUXURY HEADER WITH BACK BUTTON ── */}
-        <BlurFade delay={0.05}>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
+      {/* ── Page content ── */}
+      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-28">
+
+        {/* ── TOP BAR ── */}
+        <div className="flex items-center justify-between mb-5">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-9 h-9 rounded-2xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+
+          <div className="text-center">
+            <h1 className="text-lg sm:text-xl font-black tracking-tight text-white">Leaderboard</h1>
+            <p className="text-[11px] font-medium text-slate-400 mt-0.5 flex items-center justify-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
+              {timeLabel}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/8 text-[10px] font-mono text-amber-400 shrink-0">
+            <Clock className="w-3 h-3" />
+            {timeRemaining}
+          </div>
+        </div>
+
+        {/* ── TIMEFRAME TABS ── */}
+        <div className="flex gap-1 p-1 bg-white/5 rounded-2xl border border-white/8 mb-5">
+          {TABS.map(({ key, label }) => {
+            const isActive = timeframe === key;
+            return (
               <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-slate-300 hover:text-amber-400 hover:border-amber-400/40 active:scale-95 transition-all shadow-md cursor-pointer flex items-center justify-center shrink-0"
-                title="Go back"
+                key={key}
+                onClick={() => { setTimeframe(key); firePop(); }}
+                className={`relative flex-1 py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
+                  isActive ? 'text-slate-900' : 'text-slate-400 hover:text-white'
+                }`}
               >
-                <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
+                {isActive && (
+                  <motion.div
+                    layoutId="tab-active"
+                    className="absolute inset-0 bg-gradient-to-br from-amber-400 via-yellow-300 to-amber-400 rounded-xl shadow-md shadow-amber-500/30"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
+                  />
+                )}
+                <span className="relative z-10">{label}</span>
               </button>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                    Leaderboard
-                  </h1>
-                  <span className="px-2 py-0.5 rounded-md bg-amber-400/15 border border-amber-400/30 text-amber-400 text-[10px] font-mono font-black uppercase">
-                    Live
+            );
+          })}
+        </div>
+
+        {/* ── YOUR STANDING ── */}
+        <motion.div
+          key={`standing-${timeframe}`}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl border border-amber-400/20 bg-gradient-to-r from-amber-500/10 via-[#0e0e18] to-[#0e0e18] p-4 mb-5"
+        >
+          <BorderBeam size={180} duration={7} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-900 font-black text-sm flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/25">
+              {currentUserRank ? `#${currentUserRank}` : '—'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] sm:text-sm font-black text-white truncate">
+                {user?.name || 'You'}{' '}
+                <span className="text-amber-400/70 font-medium text-[11px]">(you)</span>
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5 truncate">{motivationText}</p>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-lg sm:text-xl font-black font-mono text-amber-400 leading-none">
+                {fmtPts(currentUserPoints)}
+              </div>
+              <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest mt-0.5">QP</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {isLoading ? (
+          <div className="flex flex-col items-center gap-3 py-24">
+            <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+            <p className="text-xs text-slate-500 font-mono">Syncing workshop scores…</p>
+          </div>
+        ) : rankedUsers.length === 0 ? (
+          <div className="text-center py-20 text-slate-500 text-sm">No data for this period.</div>
+        ) : (
+          /* ── MAIN CONTENT: side-by-side on large screens ── */
+          <div className="lg:grid lg:grid-cols-5 lg:gap-7 space-y-5 lg:space-y-0">
+
+            {/* ── LEFT COL (lg:2/5): PODIUM ── */}
+            <div className="lg:col-span-2">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.06 }}
+                className="relative overflow-hidden rounded-3xl bg-white/[0.03] border border-white/8 pt-10 pb-6 px-4 sm:px-6 lg:px-5 h-full"
+              >
+                <BorderBeam size={280} duration={12} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={1} />
+
+                {/* Label */}
+                <div className="absolute top-3.5 left-1/2 -translate-x-1/2">
+                  <span className="flex items-center gap-1 text-[10px] font-mono font-bold text-amber-400/60 uppercase tracking-widest whitespace-nowrap">
+                    <Trophy className="w-3 h-3" /> Podium
                   </span>
                 </div>
-                <p className="text-xs font-mono text-slate-400 mt-0.5">
-                  {periodLabel} • Verified task points
-                </p>
-              </div>
-            </div>
 
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-amber-400 text-xs font-mono font-bold shadow-sm shrink-0">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{timeRemainingText}</span>
-            </div>
-          </div>
-        </BlurFade>
+                {/* Gold glow behind #1 */}
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 w-36 h-36 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
 
-        {/* ── LIQUID GLASS TIMEFRAME CAPSULE ── */}
-        <BlurFade delay={0.1}>
-          <div className="grid grid-cols-5 p-1 bg-slate-900/80 backdrop-blur-xl border border-slate-800/90 rounded-2xl shadow-lg">
-            {TIMEFRAMES.map(({ key, label }) => {
-              const isActive = timeframe === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => {
-                    setTimeframe(key);
-                    triggerGalaPopper();
-                  }}
-                  className={`relative py-2 text-xs font-bold rounded-xl transition-all capitalize cursor-pointer ${
-                    isActive
-                      ? 'text-slate-950 font-black'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="active-gala-pill"
-                      className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl shadow-md shadow-amber-400/30"
-                      transition={{ type: 'spring', bounce: 0.18, duration: 0.35 }}
-                    />
-                  )}
-                  <span className="relative z-10">{label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </BlurFade>
-
-        {/* ── VIP WORKER LIVE STATUS CARD ── */}
-        <BlurFade delay={0.15}>
-          <motion.div
-            key={`${timeframe}-${currentUserRank}`}
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-900 border border-amber-400/30 p-4 sm:p-5 shadow-xl shadow-black/40"
-          >
-            <div className="pointer-events-none absolute -right-10 -top-10 w-40 h-40 rounded-full bg-amber-400/10 blur-2xl" />
-
-            <div className="relative z-10 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-              <div className="flex items-center gap-3.5 min-w-0">
-                {/* User Rank Circle */}
-                <div
-                  className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-300 to-amber-500 text-slate-950 font-black text-lg flex items-center justify-center shadow-lg shadow-amber-400/25 shrink-0 cursor-pointer active:scale-95 transition-transform"
-                  onClick={triggerGalaPopper}
-                >
-                  {currentUserRank ? `#${currentUserRank}` : '—'}
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 animate-pulse" />
-                      {dynamicInsight.badge}
-                    </span>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.2 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-                      {user?.name} (You)
-                    </span>
-                  </div>
-                  <p className="text-xs sm:text-sm font-semibold text-slate-200 mt-1 truncate">
-                    {dynamicInsight.text}
-                  </p>
-                </div>
-              </div>
-
-              {/* Quality Points Display */}
-              <div className="flex items-center gap-3 shrink-0 ml-auto sm:ml-0">
-                <div className="text-right">
-                  <div className="flex items-center justify-end gap-1 text-xl sm:text-2xl font-black text-amber-400 font-mono leading-none">
-                    <Flame className="w-5 h-5 text-amber-400 fill-current" />
-                    <NumberTicker value={currentUserPoints} decimalPlaces={1} />
-                  </div>
-                  <p className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest mt-1">
-                    Quality Points
-                  </p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </BlurFade>
-
-        {/* ── THE GRAND PODIUM CEREMONY ── */}
-        <BlurFade delay={0.2}>
-          <div className="relative overflow-hidden rounded-3xl bg-slate-900/90 border border-slate-800/90 p-4 sm:p-6 shadow-2xl space-y-4">
-            <BorderBeam size={240} duration={8} colorFrom="#facc15" colorTo="#f59e0b" borderWidth={1.5} />
-
-            <div className="text-center relative z-10">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-400 text-[11px] font-mono font-black uppercase tracking-wider">
-                <Trophy className="w-3.5 h-3.5 fill-current" />
-                Workshop Podium Champions
-              </span>
-            </div>
-
-            {/* 3-Pillar Olympic Ceremony Grid */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 items-end pt-4 pb-1 relative z-10">
-              {/* 🥈 #2 SILVER CHAMPION (Left) */}
-              <motion.div
-                key={`podium-2-${timeframe}`}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, type: 'spring', stiffness: 280, damping: 22 }}
-                className="flex flex-col items-center cursor-pointer group"
-                onClick={() => {
-                  triggerGalaPopper();
-                  if (rank2) setSelectedUserModal(rank2);
-                }}
-              >
-                <div className="relative mb-2">
-                  <div className="w-15 h-15 sm:w-18 sm:h-18 rounded-2xl p-1 bg-gradient-to-b from-slate-200 via-slate-400 to-slate-600 shadow-lg ring-2 ring-slate-400/60 group-hover:scale-105 transition-transform">
-                    <div className="w-full h-full rounded-[12px] overflow-hidden bg-slate-800 flex items-center justify-center text-slate-200 font-black text-sm">
-                      {rank2?.profileImageUrl ? (
-                        <img src={rank2.profileImageUrl} alt={rank2.name} className="w-full h-full object-cover" />
-                      ) : (
-                        getInitials(rank2?.name || '2')
-                      )}
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-md bg-slate-300 text-slate-950 text-[9px] font-mono font-black shadow-md border border-slate-900">
-                    🥈 #2
-                  </div>
-                </div>
-
-                <div className="w-full text-center">
-                  <p className="text-xs font-bold text-slate-100 truncate w-full group-hover:text-amber-400 transition-colors">
-                    {rank2 ? rank2.name : '—'}
-                  </p>
-                  <p className="text-[11px] font-mono font-black text-slate-400 mt-0.5">
-                    {rank2 ? <><NumberTicker value={rank2.points} decimalPlaces={1} /> QP</> : '0 QP'}
-                  </p>
-                </div>
-
-                {/* Silver Pedestal */}
-                <div className="w-full h-16 sm:h-20 mt-3 rounded-2xl bg-gradient-to-b from-slate-800 via-slate-800/80 to-slate-900 border border-slate-700/80 flex flex-col items-center justify-center shadow-lg">
-                  <span className="text-xs sm:text-sm font-black text-slate-300 uppercase tracking-wider">2nd</span>
-                  <span className="text-[9px] font-mono text-slate-500 font-bold">SILVER</span>
-                </div>
-              </motion.div>
-
-              {/* 👑 #1 GOLD CHAMPION (Center Topper - Grand & Celebrated) */}
-              <motion.div
-                key={`podium-1-${timeframe}`}
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className="flex flex-col items-center z-20 cursor-pointer group"
-                onClick={() => {
-                  triggerGalaPopper();
-                  if (rank1) setSelectedUserModal(rank1);
-                }}
-              >
-                <div className="relative mb-2">
-                  {/* Floating 3D Gold Crown */}
-                  <motion.div
-                    animate={{ y: [0, -5, 0] }}
-                    transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
-                    className="absolute -top-5 left-1/2 -translate-x-1/2 z-30"
+                {/* 2 · 1 · 3 */}
+                <div className="grid grid-cols-3 items-end gap-2 sm:gap-4">
+                  {/* #2 Silver */}
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => rank2 && openUser(rank2)}
+                    className="flex flex-col items-center gap-1.5 cursor-pointer group"
                   >
-                    <div className="w-7 h-7 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow-xl shadow-amber-400/50">
-                      <Crown className="w-4 h-4 fill-current" />
+                    <p className="text-[11px] sm:text-xs font-bold text-slate-200 truncate w-full text-center group-hover:text-white transition max-w-[80px] mx-auto">
+                      {rank2?.name || '—'}
+                    </p>
+                    <p className="text-[10px] font-mono text-slate-400">
+                      {rank2 ? fmtPts(rank2.points) + ' QP' : '—'}
+                    </p>
+                    <div className="relative">
+                      <Avatar name={rank2?.name || ''} imageUrl={rank2?.profileImageUrl} size={58} rank={2} className="group-hover:scale-105 transition-transform" />
+                      <div className="absolute -bottom-1.5 -right-1.5"><PodiumIcon rank={2} /></div>
                     </div>
-                  </motion.div>
-
-                  {/* Topper Large Distinct Avatar (96px) with Radiant Halo */}
-                  <div className="w-22 h-22 sm:w-26 sm:h-26 rounded-3xl p-1 bg-gradient-to-tr from-amber-300 via-yellow-400 to-amber-600 shadow-2xl shadow-amber-500/40 ring-4 ring-amber-400 group-hover:scale-105 transition-transform">
-                    <div className="w-full h-full rounded-[20px] overflow-hidden bg-slate-900 flex items-center justify-center text-amber-300 font-black text-2xl">
-                      {rank1?.profileImageUrl ? (
-                        <img src={rank1.profileImageUrl} alt={rank1.name} className="w-full h-full object-cover" />
-                      ) : (
-                        getInitials(rank1?.name || '1')
-                      )}
+                    {/* Silver bar */}
+                    <div className="w-full h-14 sm:h-16 lg:h-20 rounded-t-2xl bg-gradient-to-t from-slate-800 to-slate-700/50 border border-slate-600/40 border-b-0 flex items-center justify-center">
+                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-wider">2nd</span>
                     </div>
-                  </div>
+                  </motion.button>
 
-                  <div className="absolute -bottom-1 -right-1 px-2.5 py-0.5 rounded-md bg-amber-400 text-slate-950 text-[10px] font-mono font-black shadow-lg border border-slate-900 flex items-center gap-0.5">
-                    <Star className="w-3 h-3 fill-current" />
-                    #1 Top
-                  </div>
-                </div>
+                  {/* #1 Gold */}
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => rank1 && openUser(rank1)}
+                    className="flex flex-col items-center gap-1.5 cursor-pointer group z-10"
+                  >
+                    <p className="text-[13px] sm:text-sm font-black text-white truncate w-full text-center group-hover:text-amber-300 transition max-w-[90px] mx-auto">
+                      {rank1?.name || '—'}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <Flame className="w-3 h-3 text-amber-400 fill-amber-400" />
+                      <span className="text-[11px] font-mono font-black text-amber-400">
+                        {rank1 ? fmtPts(rank1.points) + ' QP' : '—'}
+                      </span>
+                    </div>
+                    <div className="relative">
+                      {/* Crown */}
+                      <motion.div
+                        animate={{ y: [0, -4, 0] }}
+                        transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+                        className="absolute -top-6 left-1/2 -translate-x-1/2 z-10"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 text-slate-900 flex items-center justify-center shadow-xl shadow-amber-400/50 ring-2 ring-amber-300/60">
+                          <Crown className="w-5 h-5 fill-current" />
+                        </div>
+                      </motion.div>
+                      <Avatar name={rank1?.name || ''} imageUrl={rank1?.profileImageUrl} size={78} rank={1} className="group-hover:scale-105 transition-transform" />
+                      <div className="absolute -bottom-1.5 -right-1.5"><PodiumIcon rank={1} /></div>
+                    </div>
+                    {/* Gold bar */}
+                    <div className="w-full h-24 sm:h-28 lg:h-32 rounded-t-2xl bg-gradient-to-t from-amber-500/25 to-amber-400/8 border border-amber-400/35 border-b-0 flex items-center justify-center">
+                      <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">1st</span>
+                    </div>
+                  </motion.button>
 
-                <div className="w-full text-center">
-                  <p className="text-sm sm:text-base font-black text-white truncate w-full group-hover:text-amber-400 transition-colors">
-                    {rank1 ? rank1.name : '—'}
-                  </p>
-                  <div className="mt-1 inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/40 text-xs font-mono font-black text-amber-300">
-                    <Flame className="w-3.5 h-3.5 text-amber-400 fill-current" />
-                    {rank1 ? <><NumberTicker value={rank1.points} decimalPlaces={1} /> QP</> : '0 QP'}
-                  </div>
-                </div>
-
-                {/* Gold Pedestal (Tallest) */}
-                <div className="w-full h-24 sm:h-32 mt-3 rounded-2xl bg-gradient-to-b from-amber-400/30 via-amber-500/20 to-slate-900 border border-amber-400/50 flex flex-col items-center justify-center shadow-xl shadow-amber-500/20">
-                  <span className="text-sm sm:text-base font-black text-amber-400 uppercase tracking-wider">1st Champion</span>
-                  <span className="text-[10px] font-mono text-amber-300 font-black tracking-widest">GOLD MASTER</span>
+                  {/* #3 Bronze */}
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => rank3 && openUser(rank3)}
+                    className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                  >
+                    <p className="text-[11px] sm:text-xs font-bold text-slate-200 truncate w-full text-center group-hover:text-white transition max-w-[80px] mx-auto">
+                      {rank3?.name || '—'}
+                    </p>
+                    <p className="text-[10px] font-mono text-slate-400">
+                      {rank3 ? fmtPts(rank3.points) + ' QP' : '—'}
+                    </p>
+                    <div className="relative">
+                      <Avatar name={rank3?.name || ''} imageUrl={rank3?.profileImageUrl} size={50} rank={3} className="group-hover:scale-105 transition-transform" />
+                      <div className="absolute -bottom-1.5 -right-1.5"><PodiumIcon rank={3} /></div>
+                    </div>
+                    {/* Bronze bar */}
+                    <div className="w-full h-9 sm:h-11 lg:h-14 rounded-t-2xl bg-gradient-to-t from-amber-900/50 to-amber-800/20 border border-amber-700/35 border-b-0 flex items-center justify-center">
+                      <span className="text-[10px] font-black text-amber-600 uppercase tracking-wider">3rd</span>
+                    </div>
+                  </motion.button>
                 </div>
               </motion.div>
+            </div>
 
-              {/* 🥉 #3 BRONZE CONTENDER (Right) */}
+            {/* ── RIGHT COL (lg:3/5): RANKINGS LIST ── */}
+            <div className="lg:col-span-3">
               <motion.div
-                key={`podium-3-${timeframe}`}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15, type: 'spring', stiffness: 280, damping: 22 }}
-                className="flex flex-col items-center cursor-pointer group"
-                onClick={() => {
-                  triggerGalaPopper();
-                  if (rank3) setSelectedUserModal(rank3);
-                }}
+                transition={{ delay: 0.12 }}
+                className="rounded-3xl overflow-hidden border border-white/6 bg-white/[0.025] h-full"
               >
-                <div className="relative mb-2">
-                  <div className="w-15 h-15 sm:w-18 sm:h-18 rounded-2xl p-1 bg-gradient-to-b from-amber-600 via-amber-700 to-amber-900 shadow-lg ring-2 ring-amber-700/60 group-hover:scale-105 transition-transform">
-                    <div className="w-full h-full rounded-[12px] overflow-hidden bg-slate-800 flex items-center justify-center text-amber-200 font-black text-sm">
-                      {rank3?.profileImageUrl ? (
-                        <img src={rank3.profileImageUrl} alt={rank3.name} className="w-full h-full object-cover" />
-                      ) : (
-                        getInitials(rank3?.name || '3')
-                      )}
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <Star className="w-3.5 h-3.5 text-amber-400" />
+                    Full Standings
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-600">{rankedUsers.length} mechanics</span>
+                </div>
+
+                {/* Top 3 compact rows on the right side (lg only) */}
+                <div className="hidden lg:block border-b border-white/[0.06]">
+                  {[rank1, rank2, rank3].map((u, i) => {
+                    if (!u) return null;
+                    const rank = i + 1;
+                    const isMe = u.id === currentUserId || (user?.mobile && u.mobile === user.mobile);
+                    const pct  = Math.max(4, (u.points / maxPoints) * 100);
+                    return (
+                      <button
+                        key={u.id}
+                        onClick={() => openUser(u)}
+                        className={`w-full flex items-center gap-3 px-5 py-3 border-b border-white/[0.04] last:border-0 text-left transition cursor-pointer ${
+                          isMe ? 'bg-amber-400/8' : 'hover:bg-white/[0.04]'
+                        }`}
+                      >
+                        <PodiumIcon rank={rank} />
+                        <Avatar name={u.name} imageUrl={u.profileImageUrl} size={34} rank={rank} />
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-bold truncate ${isMe ? 'text-amber-300' : 'text-slate-100'}`}>
+                            {u.name} {isMe && <span className="text-[10px] font-mono text-amber-400/70">(you)</span>}
+                          </p>
+                          <div className="mt-1 h-[2px] w-full rounded-full bg-white/5 overflow-hidden">
+                            <div style={{ width: `${pct}%` }} className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500" />
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className={`text-sm font-black font-mono ${isMe ? 'text-amber-300' : 'text-white'}`}>{fmtPts(u.points)}</span>
+                          <p className="text-[9px] font-mono text-slate-500 uppercase">QP</p>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Rest (#4+) */}
+                <div className="divide-y divide-white/[0.04]">
+                  {rest.length === 0 ? (
+                    <div className="py-10 text-center text-xs text-slate-500 font-mono">
+                      No additional mechanics this period.
                     </div>
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-md bg-amber-600 text-white text-[9px] font-mono font-black shadow-md border border-slate-900">
-                    🥉 #3
-                  </div>
-                </div>
+                  ) : (
+                    rest.map((u, idx) => {
+                      const rank = idx + 4;
+                      const isMe = u.id === currentUserId || (user?.mobile && u.mobile === user.mobile);
+                      const pct  = Math.max(4, (u.points / maxPoints) * 100);
+                      const isTopTen = rank <= 10;
+                      return (
+                        <motion.button
+                          key={`${u.id}-${timeframe}`}
+                          initial={{ opacity: 0, x: -6 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: Math.min(idx * 0.025, 0.4) }}
+                          onClick={() => openUser(u)}
+                          className={`w-full flex items-center gap-3 px-4 sm:px-5 py-3.5 text-left transition cursor-pointer ${
+                            isMe ? 'bg-amber-400/8' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'
+                          }`}
+                        >
+                          {/* Rank */}
+                          <div className="w-8 text-center shrink-0">
+                            <span className={`text-xs font-black font-mono ${
+                              isTopTen ? 'text-amber-400/70' : 'text-slate-600'
+                            }`}>
+                              #{rank}
+                            </span>
+                          </div>
 
-                <div className="w-full text-center">
-                  <p className="text-xs font-bold text-slate-100 truncate w-full group-hover:text-amber-400 transition-colors">
-                    {rank3 ? rank3.name : '—'}
-                  </p>
-                  <p className="text-[11px] font-mono font-black text-slate-400 mt-0.5">
-                    {rank3 ? <><NumberTicker value={rank3.points} decimalPlaces={1} /> QP</> : '0 QP'}
-                  </p>
-                </div>
+                          {/* Avatar */}
+                          <Avatar
+                            name={u.name}
+                            imageUrl={u.profileImageUrl}
+                            size={isTopTen ? 40 : 36}
+                            rank={rank}
+                          />
 
-                {/* Bronze Pedestal */}
-                <div className="w-full h-12 sm:h-16 mt-3 rounded-2xl bg-gradient-to-b from-amber-950/60 via-slate-800 to-slate-900 border border-amber-800/50 flex flex-col items-center justify-center shadow-lg">
-                  <span className="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider">3rd</span>
-                  <span className="text-[9px] font-mono text-amber-500 font-bold">BRONZE</span>
+                          {/* Name + bar */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className={`text-[13px] sm:text-sm font-bold truncate ${isMe ? 'text-amber-300' : 'text-slate-100'}`}>
+                                {u.name}
+                              </p>
+                              {isMe && (
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-400 border border-amber-400/30 shrink-0">
+                                  You
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1.5 h-[2px] w-full rounded-full bg-white/5 overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${pct}%` }}
+                                transition={{ delay: 0.1 + idx * 0.02, duration: 0.5, ease: 'easeOut' }}
+                                className={`h-full rounded-full ${
+                                  isMe ? 'bg-amber-400' :
+                                  isTopTen ? 'bg-gradient-to-r from-blue-400 to-violet-400' :
+                                  'bg-white/15'
+                                }`}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Points */}
+                          <div className="shrink-0 text-right">
+                            <span className={`text-sm font-black font-mono ${isMe ? 'text-amber-300' : 'text-slate-200'}`}>
+                              {fmtPts(u.points)}
+                            </span>
+                            <p className="text-[9px] font-mono text-slate-500 uppercase">QP</p>
+                          </div>
+
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                        </motion.button>
+                      );
+                    })
+                  )}
                 </div>
               </motion.div>
             </div>
           </div>
-        </BlurFade>
-
-        {/* ── ALL TECHNICIANS STANDINGS TABLE (#4+) ── */}
-        <BlurFade delay={0.25}>
-          <div className="rounded-3xl bg-slate-900/90 border border-slate-800/90 p-4 sm:p-5 shadow-xl space-y-3">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <span className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
-                <Users className="w-3.5 h-3.5 text-amber-400" />
-                Workshop Roster Standings
-              </span>
-              <span className="text-xs font-mono font-bold text-slate-400">
-                {rankedUsers.length} Mechanics Ranked
-              </span>
-            </div>
-
-            {isLeaderboardLoading || isJobsLoading ? (
-              <div className="py-10 flex flex-col items-center gap-2">
-                <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                <p className="text-xs text-slate-400 font-mono">Syncing verified task scores...</p>
-              </div>
-            ) : remainingUsers.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-400 font-mono">
-                No other mechanics ranked for this timeframe.
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-800/70">
-                {remainingUsers.map((u, idx) => {
-                  const actualRank = idx + 4;
-                  const isMe = u.id === currentUserId || (user?.mobile && u.mobile === user.mobile);
-                  const pct = maxPoints > 0 ? (u.points / maxPoints) * 100 : 0;
-
-                  return (
-                    <motion.div
-                      key={`${u.id}-${timeframe}`}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex items-center gap-3 px-3 py-3.5 rounded-2xl transition-all cursor-pointer ${
-                        isMe
-                          ? 'bg-amber-400/15 border border-amber-400/40 shadow-md'
-                          : 'hover:bg-slate-800/60'
-                      }`}
-                      onClick={() => {
-                        triggerGalaPopper();
-                        setSelectedUserModal(u);
-                      }}
-                    >
-                      {/* Rank Position */}
-                      <div className="w-7 text-center text-sm font-black text-slate-400 font-mono shrink-0">
-                        #{actualRank}
-                      </div>
-
-                      {/* Avatar */}
-                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs shrink-0 text-slate-200 shadow-sm">
-                        {u.profileImageUrl ? (
-                          <img src={u.profileImageUrl} alt={u.name} className="w-full h-full object-cover" />
-                        ) : (
-                          getInitials(u.name)
-                        )}
-                      </div>
-
-                      {/* Name & Progress Bar */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className={`text-xs sm:text-sm font-bold truncate ${isMe ? 'text-amber-300' : 'text-slate-100'}`}>
-                            {u.name} {isMe && <span className="text-xs font-normal text-amber-400">(You)</span>}
-                          </p>
-                          <span className="text-[10px] font-mono text-slate-400 uppercase hidden sm:inline">
-                            {u.role || 'Mechanic'}
-                          </span>
-                        </div>
-                        <div className="mt-1.5 h-2 w-full rounded-full bg-slate-800 overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${Math.max(5, pct)}%` }}
-                            transition={{ duration: 0.6, ease: 'easeOut', delay: idx * 0.02 }}
-                            className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Points */}
-                      <div className="shrink-0 text-right pl-2">
-                        <span className="text-sm sm:text-base font-black text-white font-mono">
-                          {u.points}
-                        </span>
-                        <p className="text-[9px] font-bold text-amber-400 font-mono uppercase tracking-widest leading-none">
-                          QP
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </BlurFade>
+        )}
       </main>
 
-      {/* ── LUXURY USER PROFILE CEREMONY MODAL ── */}
+      {/* ── TASK HISTORY PANEL ── */}
       <AnimatePresence>
-        {selectedUserModal && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
-            onClick={() => setSelectedUserModal(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.88, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.88, y: 15 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-              className="relative w-full max-w-xs overflow-hidden rounded-[32px] bg-slate-900 border border-amber-400/40 shadow-2xl p-6 text-center space-y-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <BorderBeam size={180} duration={6} colorFrom="#facc15" colorTo="#f59e0b" borderWidth={1.5} />
-
-              <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 w-40 h-40 rounded-full bg-amber-400/20 blur-2xl" />
-
-              <div className="relative w-22 h-22 mx-auto rounded-3xl p-1 bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-600 shadow-xl shadow-amber-500/30 ring-4 ring-amber-400/50">
-                <div className="w-full h-full rounded-[20px] overflow-hidden bg-slate-950 flex items-center justify-center text-amber-300 text-2xl font-black">
-                  {selectedUserModal.profileImageUrl ? (
-                    <img src={selectedUserModal.profileImageUrl} alt={selectedUserModal.name} className="w-full h-full object-cover" />
-                  ) : (
-                    getInitials(selectedUserModal.name)
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-black text-white">
-                  {selectedUserModal.name}
-                </h3>
-                <span className="inline-block mt-1 px-3 py-0.5 rounded-full bg-amber-400/15 text-amber-400 font-mono font-bold text-[10px] uppercase tracking-wider border border-amber-400/30">
-                  {selectedUserModal.role || 'Mechanic'}
-                </span>
-              </div>
-
-              <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700/80 space-y-1">
-                <span className="text-[10px] font-mono font-bold text-amber-400 uppercase tracking-wider block">
-                  {timeframe.toUpperCase()} QUALITY SCORE
-                </span>
-                <span className="text-3xl font-black text-amber-300 font-mono block tracking-tight">
-                  <NumberTicker value={selectedUserModal.points || 0} decimalPlaces={1} />{' '}
-                  <span className="text-xs font-bold text-slate-400 font-sans">QP</span>
-                </span>
-                <p className="text-[10px] font-mono text-slate-400">
-                  Verified garage standing
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedUserModal(null)}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 active:scale-95 transition cursor-pointer"
-              >
-                Close Profile
-              </button>
-            </motion.div>
-          </div>
+        {selectedUser && (
+          <TaskHistoryPanel
+            user={selectedUser}
+            allJobs={allJobs}
+            startTimestamp={startTimestamp}
+            endTimestamp={endTimestamp}
+            timeframe={timeframe}
+            onClose={() => setSelectedUser(null)}
+          />
         )}
       </AnimatePresence>
     </div>
