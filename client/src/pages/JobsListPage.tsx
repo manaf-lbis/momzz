@@ -177,7 +177,13 @@ export const JobsListPage: React.FC = () => {
     }));
 
     try {
-      await toggleJobPin({ jobCardId, mode }).unwrap();
+      const res = await toggleJobPin({ jobCardId, mode }).unwrap();
+      if (res?.data) {
+        setAccumulatedJobs((prev) =>
+          prev.map((j) => ((j.id || j._id) === jobCardId ? { ...j, ...res.data } : j))
+        );
+      }
+      refetch();
     } catch {
       setOptimisticPins((prev) => ({
         ...prev,
