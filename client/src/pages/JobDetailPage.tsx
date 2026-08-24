@@ -1,14 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  useGetJobCardsQuery,
   useGetJobCardByIdQuery,
   useSetTaskStatusMutation,
-  useAddTaskMutation,
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
-  useUpdateJobMutation,
   useToggleTaskPinMutation,
   useToggleJobPinMutation,
   useVerifyJobCardMutation,
@@ -20,7 +17,6 @@ import { useAuth } from '../hooks/useAuth';
 import { Navbar } from '../components/navbar/Navbar';
 import { ConfirmationModal } from '../components/common/ConfirmationModal';
 import { PinJobModal } from '../components/jobCard/PinJobModal';
-import { TaskAutoComplete } from '../components/common/TaskAutoComplete';
 import { BorderBeam } from '../components/magicui/BorderBeam';
 import { Meteors } from '../components/magicui/Meteors';
 import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../utils/confetti';
@@ -30,13 +26,10 @@ import {
   CheckCircle2,
   Clock,
   Trash2,
-  Sparkles,
   Check,
-  RotateCcw,
   Loader2,
   Palette,
   Users,
-  UserPlus,
   X,
   Edit2,
   Phone,
@@ -46,7 +39,8 @@ import {
   ChevronDown,
   Calendar,
   Camera,
-  Plus,
+  History,
+  Info,
 } from 'lucide-react';
 import { getDeliveryStatusInfo } from '../utils/dateUtils';
 import { ProgressBarBeam } from '../components/magicui/AnimatedBeam';
@@ -58,11 +52,9 @@ export const JobDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
 
-  const [newTaskTitle, setNewTaskTitle] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [statusFilter, setStatusFilter] = useState<TaskFilterType>('ALL');
   const [activityTask, setActivityTask] = useState<TaskItem | null>(null);
-  const longPressTimer = useRef<number | null>(null);
 
   // Complete Sub-Task Modal State
   const [completeTaskModal, setCompleteTaskModal] = useState<{
@@ -103,7 +95,6 @@ export const JobDetailPage: React.FC = () => {
   const { data: jobResponse, isLoading, refetch } = useGetJobCardByIdQuery(id!, { skip: !id });
   const { data: allUsersResponse } = useGetAllUsersQuery();
   const [setTaskStatus] = useSetTaskStatusMutation();
-  const [addTask, { isLoading: isAddingTask }] = useAddTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
   const [deleteJobCard] = useDeleteJobCardMutation();
   const [toggleJobPin] = useToggleJobPinMutation();
@@ -126,7 +117,6 @@ export const JobDetailPage: React.FC = () => {
   const totalTasks = tasks.length;
   const progressPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
   const isAllCompleted = totalTasks > 0 && completedCount === totalTasks;
-  const deliveryInfo = getDeliveryStatusInfo(currentJob?.expectedDeliveryDate, isAllCompleted);
 
   const isJobPinnedForMe =
     Array.isArray(currentJob?.pinnedBy) &&
@@ -167,20 +157,6 @@ export const JobDetailPage: React.FC = () => {
       await toggleTaskPin({ taskId }).unwrap();
     } catch {
       setOptimisticPins((prev) => ({ ...prev, [taskId]: currentVal }));
-    }
-  };
-
-  const handleAddTask = async (title: string) => {
-    const trimmed = title.trim();
-    if (!trimmed || !currentJob) return;
-    try {
-      await addTask({
-        jobCardId: currentJob.id || currentJob._id!,
-        title: trimmed,
-      }).unwrap();
-      setNewTaskTitle('');
-    } catch (err: any) {
-      setErrorMessage(err?.data?.message || 'Failed to add task.');
     }
   };
 
@@ -362,13 +338,13 @@ export const JobDetailPage: React.FC = () => {
               </button>
             )}
 
-            {/* Delete Action (Admin) */}
+            {/* Delete Job Action (Admin) */}
             {isAdmin && (
               <button
                 type="button"
                 onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
                 className="p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 active:scale-90 transition cursor-pointer"
-                title="Delete Job"
+                title="Delete Job Card"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -391,7 +367,7 @@ export const JobDetailPage: React.FC = () => {
                 {currentJob.vehicleName || 'Vehicle'}
               </h1>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-mono font-black text-slate-950 bg-gradient-to-r from-amber-400 to-yellow-300 px-2.5 py-0.5 rounded-lg tracking-wider shadow-xs">
+                <span className="text-xs font-mono font-black text-amber-300 bg-white/[0.06] border border-white/10 px-2.5 py-0.5 rounded-lg tracking-wider">
                   {currentJob.vehicleNumber}
                 </span>
                 {currentJob.vehicleColor && (
@@ -522,7 +498,7 @@ export const JobDetailPage: React.FC = () => {
           </div>
         )}
 
-        {/* ── QA SIGN-OFF BUTTON (When all tasks completed & not verified) ── */}
+        {/* ── QA SIGN-OFF BUTTON ── */}
         {isAllCompleted && !currentJob.verifiedAt && isAdmin && (
           <button
             type="button"
@@ -579,35 +555,12 @@ export const JobDetailPage: React.FC = () => {
           })}
         </div>
 
-        {/* ── ADD SUB-TASK AUTOCOMPLETE ── */}
-        <div className="rounded-2xl bg-white/[0.03] backdrop-blur-xl border border-white/10 p-3 sm:p-4">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <TaskAutoComplete
-                value={newTaskTitle}
-                onChange={setNewTaskTitle}
-                onAddTask={(title: string) => handleAddTask(title)}
-                placeholder="Type new service checklist item..."
-              />
-            </div>
-            <button
-              type="button"
-              disabled={isAddingTask || !newTaskTitle.trim()}
-              onClick={() => handleAddTask(newTaskTitle)}
-              className="px-4 py-2.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xs hover:bg-amber-300 active:scale-95 transition disabled:opacity-50 cursor-pointer flex items-center gap-1 shrink-0"
-            >
-              {isAddingTask ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-              <span>Add</span>
-            </button>
-          </div>
-        </div>
-
-        {/* ── TASKS CHECKLIST ── */}
+        {/* ── TASKS CHECKLIST (With Technician Avatars & Logs Sheet) ── */}
         <div className="space-y-2">
           {sortedTasks.length === 0 ? (
             <div className="py-16 text-center rounded-3xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
               <p className="text-sm font-bold text-slate-300">No tasks in this view</p>
-              <p className="text-xs font-mono text-slate-500">Add checklist items or switch filter</p>
+              <p className="text-xs font-mono text-slate-500">All tasks in this category are clear</p>
             </div>
           ) : (
             sortedTasks.map((task: TaskItem) => {
@@ -615,6 +568,7 @@ export const JobDetailPage: React.FC = () => {
               const isCompleted = task.status === 'COMPLETED';
               const isPinnedTask = optimisticPins[taskId] !== undefined ? optimisticPins[taskId] : !!task.isPinned;
               const isUpdating = updatingTaskId === taskId;
+              const completedUser = task.completedBy;
 
               return (
                 <motion.div
@@ -622,12 +576,12 @@ export const JobDetailPage: React.FC = () => {
                   layout
                   className={`group relative overflow-hidden rounded-2xl p-3 sm:p-3.5 border transition-all duration-200 flex items-center justify-between gap-3 ${
                     isCompleted
-                      ? 'bg-white/[0.02] border-white/[0.06] text-slate-400'
-                      : 'bg-white/[0.035] backdrop-blur-2xl border-white/[0.08] hover:border-amber-400/40 text-white shadow-md'
+                      ? 'bg-white/[0.02] border-white/[0.06]'
+                      : 'bg-white/[0.035] backdrop-blur-2xl border-white/[0.08] hover:border-amber-400/40 shadow-md'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {/* Status Toggle Button */}
+                    {/* Status Checkbox Button */}
                     <button
                       type="button"
                       disabled={isUpdating}
@@ -645,8 +599,11 @@ export const JobDetailPage: React.FC = () => {
                       )}
                     </button>
 
-                    {/* Task Title & Worker Audit Info */}
-                    <div className="min-w-0 flex-1">
+                    {/* Task Title & Worker Avatar / Audit Info */}
+                    <div
+                      className="min-w-0 flex-1 cursor-pointer"
+                      onClick={() => setActivityTask(task)}
+                    >
                       <h4
                         className={`text-xs sm:text-sm font-bold truncate ${
                           isCompleted ? 'line-through text-slate-400' : 'text-white'
@@ -654,17 +611,43 @@ export const JobDetailPage: React.FC = () => {
                       >
                         {task.title}
                       </h4>
-                      {isCompleted && task.completedBy && (
-                        <p className="text-[10px] font-mono text-slate-500 mt-0.5 truncate">
-                          Completed by {task.completedBy.name || 'Technician'}
-                          {task.isShared && task.partners?.length ? ` + ${task.partners.length} shared` : ''}
-                        </p>
+
+                      {/* Technician Avatar & Name on Completed Tasks */}
+                      {isCompleted && completedUser && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="w-4 h-4 rounded-full overflow-hidden bg-slate-800 border border-emerald-400/50 flex items-center justify-center text-[9px] font-bold text-emerald-300 shrink-0">
+                            {completedUser.profileImageUrl ? (
+                              <img src={completedUser.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              completedUser.name.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <span className="text-[10px] font-mono text-emerald-400 font-bold truncate">
+                            {completedUser.name}
+                            {task.isShared && task.partners?.length ? ` + ${task.partners.length} shared` : ''}
+                          </span>
+                          {task.completedAt && (
+                            <span className="text-[9px] font-mono text-slate-500 truncate">
+                              • {new Date(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Right Task Actions */}
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Right Task Actions (Pin & Logs, Accidental Delete Moved Safely to Logs Modal) */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* View Logs / Audit Icon */}
+                    <button
+                      type="button"
+                      onClick={() => setActivityTask(task)}
+                      className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:text-white transition active:scale-90 cursor-pointer"
+                      title="View Task Audit Logs"
+                    >
+                      <History className="w-3.5 h-3.5" />
+                    </button>
+
                     {/* Pin Task */}
                     <button
                       type="button"
@@ -678,18 +661,6 @@ export const JobDetailPage: React.FC = () => {
                     >
                       <Pin className={`w-3 h-3 ${isPinnedTask ? 'fill-current' : ''}`} />
                     </button>
-
-                    {/* Delete Task (Admin) */}
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'TASK', taskId })}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 border border-white/10 transition active:scale-90 cursor-pointer"
-                        title="Delete task"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
                   </div>
                 </motion.div>
               );
@@ -697,6 +668,120 @@ export const JobDetailPage: React.FC = () => {
           )}
         </div>
       </main>
+
+      {/* ── TASK ACTIVITY LOGS MODAL ── */}
+      <AnimatePresence>
+        {activityTask && (
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 pb-24 sm:pb-4 bg-black/80 backdrop-blur-md"
+            onClick={() => setActivityTask(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-3xl bg-[#0f0f1e] border border-white/12 shadow-2xl p-5 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black text-white flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-400" /> Task Activity & Audit
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setActivityTask(null)}
+                  className="w-7 h-7 rounded-full bg-white/5 border border-white/10 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Task Summary Card */}
+              <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
+                <p className="text-xs font-black text-white">{activityTask.title}</p>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                      activityTask.status === 'COMPLETED'
+                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-amber-400/15 text-amber-300 border border-amber-400/30'
+                    }`}
+                  >
+                    {activityTask.status === 'COMPLETED' ? 'COMPLETED' : 'IN PROGRESS'}
+                  </span>
+                  {activityTask.isShared && (
+                    <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                      <Users className="w-3 h-3 text-amber-400" /> Shared Task
+                    </span>
+                  )}
+                </div>
+
+                {activityTask.completedBy && (
+                  <div className="pt-2 border-t border-white/[0.06] flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-800 border border-emerald-400/60 flex items-center justify-center text-xs font-black text-white">
+                      {activityTask.completedBy.profileImageUrl ? (
+                        <img src={activityTask.completedBy.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        activityTask.completedBy.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">{activityTask.completedBy.name}</p>
+                      <p className="text-[10px] font-mono text-slate-400">
+                        {activityTask.completedBy.role || 'Mechanic'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Activity Trail History */}
+              <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+                <p className="text-[10px] font-mono uppercase text-slate-400 font-bold">Activity Timeline</p>
+                {activityTask.activityLog && activityTask.activityLog.length > 0 ? (
+                  activityTask.activityLog.map((log, idx) => (
+                    <div key={idx} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-start gap-2.5 text-xs">
+                      <span
+                        className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                          log.action === 'COMPLETED' ? 'bg-emerald-400' : 'bg-amber-400'
+                        }`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-bold text-[11px]">
+                          {log.action === 'COMPLETED' ? 'Marked as Completed' : 'Reopened for Work'}
+                        </p>
+                        <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                          by {log.user?.name || 'Technician'} • {new Date(log.at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[11px] font-mono text-slate-500">No previous state changes recorded</p>
+                )}
+              </div>
+
+              {/* Guarded Delete Task for Admin */}
+              {isAdmin && (
+                <div className="pt-2 border-t border-white/[0.06] flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tid = activityTask.id || activityTask._id;
+                      setActivityTask(null);
+                      setConfirmDeleteModal({ isOpen: true, type: 'TASK', taskId: tid });
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition active:scale-95"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Task</span>
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Complete Task / Multi-Worker Modal */}
       <AnimatePresence>
