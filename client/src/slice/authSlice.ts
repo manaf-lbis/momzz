@@ -12,6 +12,8 @@ export interface User {
   taskCount?: number;
   lastLoginAttempt?: string;
   totalLoginAttempts?: number;
+  failedLoginAttempts?: number;
+  loginLockedUntil?: string;
   isOnline?: boolean;
   lastSeen?: string;
   updatedAt?: string;

@@ -245,6 +245,8 @@ export class AuthService {
       taskCount: user.taskCount || 0,
       lastLoginAttempt: user.lastLoginAttempt,
       totalLoginAttempts: user.totalLoginAttempts || 0,
+      failedLoginAttempts: user.failedLoginAttempts || 0,
+      loginLockedUntil: user.loginLockedUntil,
       isOnline: !!user.isOnline,
       lastSeen: user.lastSeen,
       profileImageUrl: getCloudinaryUrl(user.profileImageUrl),

@@ -120,11 +120,11 @@ export const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-[#080810] text-white flex flex-col overflow-x-hidden selection:bg-amber-400/30">
       {/* ── Ambient luxury light aura & Meteors ── */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[480px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.18)_0%,transparent_65%)]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] h-[320px] bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.08)_0%,transparent_70%)]" />
-        <div className="absolute top-1/3 -left-32 w-80 h-80 rounded-full bg-amber-500/5 blur-3xl" />
-        <div className="absolute top-2/3 -right-32 w-80 h-80 rounded-full bg-sky-500/5 blur-3xl" />
-        <Meteors number={16} />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[420px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.11)_0%,transparent_65%)]" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] h-[300px] bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.06)_0%,transparent_70%)]" />
+        <div className="absolute top-1/3 -left-32 w-80 h-80 rounded-full bg-amber-500/3 blur-3xl" />
+        <div className="absolute top-2/3 -right-32 w-80 h-80 rounded-full bg-sky-500/3 blur-3xl" />
+        <Meteors number={14} />
       </div>
 
       <Navbar glass />
@@ -137,7 +137,7 @@ export const Dashboard: React.FC = () => {
         <FadeUp delay={0}>
           <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white/[0.035] backdrop-blur-2xl border border-white/[0.08] shadow-2xl shadow-black/60 p-4 sm:p-6">
             <BorderBeam size={220} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
-            <div className="pointer-events-none absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-bl from-amber-400/20 to-transparent blur-2xl" />
+            <div className="pointer-events-none absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-bl from-amber-400/12 to-transparent blur-2xl" />
             
             <div className="relative z-10 flex items-center justify-between gap-4">
               <div className="space-y-1.5">

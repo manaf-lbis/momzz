@@ -10,21 +10,30 @@ import {
 import { User } from '../slice/authSlice';
 import { advancedSearch } from '../utils/searchAlgorithm';
 import {
-  Circle,
-  Clock3,
-  Edit2,
-  KeyRound,
-  Phone,
-  Save,
+  ChevronLeft,
   Search,
   ShieldCheck,
   User as UserIcon,
   Users,
   X,
-  ChevronRight,
+  Edit2,
+  KeyRound,
+  Phone,
+  Save,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Activity,
+  Lock,
+  Unlock,
+  ShieldAlert,
+  Globe,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
-import { formatDate } from '../utils/formatters';
+import { BorderBeam } from '../components/magicui/BorderBeam';
+import { Meteors } from '../components/magicui/Meteors';
+import { NumberTicker } from '../components/magicui/NumberTicker';
 
 const getUserId = (user: User) => user.id || user._id || '';
 
@@ -39,7 +48,6 @@ const formatLastSeen = (dateString?: string) => {
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  // Exact time string: "10:32 AM, Aug 11"
   const exactTime = new Intl.DateTimeFormat(undefined, {
     hour: 'numeric',
     minute: '2-digit',
@@ -47,12 +55,23 @@ const formatLastSeen = (dateString?: string) => {
     month: 'short',
   }).format(date);
 
-  if (diffMins < 2) return 'Just now';
+  if (diffMins < 2) return 'Active just now';
   if (diffMins < 60) return `${diffMins}m ago · ${exactTime}`;
   if (diffHours < 24) return `${diffHours}h ago · ${exactTime}`;
   if (diffDays === 1) return `Yesterday · ${exactTime}`;
   if (diffDays < 7) return `${diffDays}d ago · ${exactTime}`;
   return exactTime;
+};
+
+const formatAuditDate = (dateString?: string) => {
+  if (!dateString) return '—';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '—';
+  return (
+    date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) +
+    ', ' +
+    date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+  );
 };
 
 export const UserManagementPage: React.FC = () => {
@@ -61,6 +80,7 @@ export const UserManagementPage: React.FC = () => {
   const [adminResetPassword] = useAdminResetPasswordMutation();
 
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'ALL' | 'ONLINE' | 'ADMIN' | 'WORKER' | 'BLOCKED'>('ALL');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', mobile: '' });
@@ -70,508 +90,626 @@ export const UserManagementPage: React.FC = () => {
   const [resetSuccess, setResetSuccess] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const getUserLastActiveTimestamp = (u: User): number => {
-    if (u.isOnline) {
-      const seenTime = u.lastSeen ? new Date(u.lastSeen).getTime() : Date.now();
-      return Number.MAX_SAFE_INTEGER - (Date.now() - (isNaN(seenTime) ? Date.now() : seenTime));
-    }
-    if (u.lastSeen) {
-      const t = new Date(u.lastSeen).getTime();
-      if (!isNaN(t)) return t;
-    }
-    if (u.lastLoginAttempt) {
-      const t = new Date(u.lastLoginAttempt).getTime();
-      if (!isNaN(t)) return t;
-    }
-    if (u.updatedAt) {
-      const t = new Date(u.updatedAt).getTime();
-      if (!isNaN(t)) return t;
-    }
-    if (u.createdAt) {
-      const t = new Date(u.createdAt).getTime();
-      if (!isNaN(t)) return t;
-    }
-    return 0;
-  };
-
   const rawUsers = data?.data || [];
 
+  const onlineCount = rawUsers.filter((u: User) => u.isOnline).length;
+  const adminCount = rawUsers.filter((u: User) => u.role === 'ADMIN').length;
+  const workerCount = rawUsers.filter((u: User) => u.role === 'WORKER').length;
+  const blockedCount = rawUsers.filter((u: User) => u.status === 'BLOCKED').length;
+
   const filteredUsers = useMemo(() => {
-    if (!search.trim()) return rawUsers;
-    return advancedSearch<User>(
-      rawUsers,
-      search,
-      {
-        getTitle: (u) => u.name,
-        getSku: (u) => u.mobile,
-        getCategory: (u) => u.role,
-      },
-      120
+    let list = rawUsers;
+
+    if (roleFilter === 'ONLINE') {
+      list = list.filter((u: User) => u.isOnline);
+    } else if (roleFilter === 'ADMIN') {
+      list = list.filter((u: User) => u.role === 'ADMIN');
+    } else if (roleFilter === 'WORKER') {
+      list = list.filter((u: User) => u.role === 'WORKER');
+    } else if (roleFilter === 'BLOCKED') {
+      list = list.filter((u: User) => u.status === 'BLOCKED');
+    }
+
+    if (!search.trim()) return list;
+    const q = search.toLowerCase().trim();
+    return list.filter(
+      (u: User) =>
+        (u.name || '').toLowerCase().includes(q) ||
+        (u.mobile || '').toLowerCase().includes(q) ||
+        (u.role || '').toLowerCase().includes(q)
     );
-  }, [rawUsers, search]);
+  }, [rawUsers, search, roleFilter]);
 
-  const users = useMemo(() => {
-    return [...filteredUsers].sort((a, b) => {
-      // 1. Online users first
-      if (!!b.isOnline !== !!a.isOnline) {
-        return Number(!!b.isOnline) - Number(!!a.isOnline);
-      }
-      // 2. Sort by most recent activity / last online descending
-      const timeA = getUserLastActiveTimestamp(a);
-      const timeB = getUserLastActiveTimestamp(b);
-      if (timeB !== timeA) {
-        return timeB - timeA;
-      }
-      // 3. Alphabetical tie-breaker
-      return a.name.localeCompare(b.name);
-    });
-  }, [filteredUsers]);
-
-  const handleSelectUser = (user: User) => {
-    setErrorMsg('');
-    setSelectedUser(user);
-    setIsEditingUser(false);
-    setEditForm({ name: user.name, mobile: user.mobile });
-  };
-
-  const handleSaveAdminUserEdit = async (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser || !editForm.name.trim() || !editForm.mobile.trim()) return;
-
+    if (!selectedUser) return;
+    setErrorMsg('');
     try {
-      setErrorMsg('');
-      const userId = getUserId(selectedUser);
-      const res = await updateUserByAdmin({
-        userId,
-        name: editForm.name.trim(),
-        mobile: editForm.mobile.trim(),
+      await updateUserByAdmin({
+        userId: getUserId(selectedUser),
+        name: editForm.name,
+        mobile: editForm.mobile,
       }).unwrap();
-
-      setSelectedUser({
-        ...selectedUser,
-        name: res.data.name,
-        mobile: res.data.mobile,
-      });
       setIsEditingUser(false);
+      setSelectedUser((prev) => (prev ? { ...prev, name: editForm.name, mobile: editForm.mobile } : null));
     } catch (err: any) {
       setErrorMsg(err?.data?.message || 'Failed to update user details.');
     }
   };
 
-  const handleResetPassword = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!resetModalUserId || !newPassword) return;
+  const handleRoleToggle = async (user: User) => {
+    const newRole = user.role === 'ADMIN' ? 'WORKER' : 'ADMIN';
     try {
-      setErrorMsg('');
-      const response = await adminResetPassword({ userId: resetModalUserId, newPassword }).unwrap();
-      setResetSuccess(response.message || 'Password reset successfully.');
-      setNewPassword('');
+      await updateUserByAdmin({
+        userId: getUserId(user),
+        role: newRole,
+      }).unwrap();
+      if (selectedUser && getUserId(selectedUser) === getUserId(user)) {
+        setSelectedUser((prev) => (prev ? { ...prev, role: newRole } : null));
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.data?.message || 'Failed to update user role.');
+    }
+  };
+
+  const handleStatusToggle = async (user: User) => {
+    const newStatus = user.status === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED';
+    try {
+      await updateUserByAdmin({
+        userId: getUserId(user),
+        status: newStatus,
+      }).unwrap();
+      if (selectedUser && getUserId(selectedUser) === getUserId(user)) {
+        setSelectedUser((prev) => (prev ? { ...prev, status: newStatus } : null));
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.data?.message || 'Failed to toggle status.');
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetModalUserId || !newPassword.trim()) return;
+    setErrorMsg('');
+    try {
+      await adminResetPassword({
+        userId: resetModalUserId,
+        newPassword: newPassword.trim(),
+      }).unwrap();
+      setResetSuccess('Password reset successfully!');
       setTimeout(() => {
         setResetSuccess('');
         setResetModalUserId(null);
-      }, 1600);
+        setNewPassword('');
+      }, 1500);
     } catch (err: any) {
       setErrorMsg(err?.data?.message || 'Failed to reset password.');
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0F172A] dark:text-white flex flex-col transition-colors">
-      <Navbar />
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#080810] text-white flex flex-col">
+        <Navbar glass />
+        <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 pb-28">
+          <PageShimmer label="Loading User Control Center" cards={6} />
+        </main>
+      </div>
+    );
+  }
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-9">
-        {/* Mobile-Optimized Hero Header */}
-        <section className="mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-amber-500/10 text-amber-500 dark:bg-amber-400/15 dark:text-amber-300 ring-1 ring-amber-500/20 flex items-center justify-center shrink-0">
-                <Users className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 block">
-                  Team Directory
+  return (
+    <div className="min-h-screen bg-[#080810] text-white flex flex-col overflow-x-hidden selection:bg-amber-400/30">
+      {/* Ambient background aura & meteors */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[400px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.11)_0%,transparent_65%)]" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] h-[300px] bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.06)_0%,transparent_70%)]" />
+        <Meteors number={12} />
+      </div>
+
+      <Navbar glass />
+
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-5 pb-28 space-y-4">
+        {/* ── TOP HEADER BAR ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.history.back()}
+              className="w-9 h-9 rounded-2xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                User Control Center
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300">
+                  <NumberTicker value={rawUsers.length} /> Staff
                 </span>
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                  User Control Center
-                </h1>
-              </div>
+              </h1>
+              <p className="text-[11px] font-mono text-slate-400 mt-0.5">
+                Staff directory, security audits & permissions
+              </p>
             </div>
-            <span className="text-xs text-slate-500 dark:text-slate-400 sm:text-right">
-              {users.length} registered team member{users.length === 1 ? '' : 's'}
-            </span>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative mt-4">
-            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+          {/* Quick stats pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-[11px] font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-slate-400">Online:</span>
+              <span className="text-emerald-400 font-bold">{onlineCount}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-[11px] font-mono">
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-slate-400">Admins:</span>
+              <span className="text-purple-400 font-bold">{adminCount}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-[11px] font-mono">
+              <Users className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-slate-400">Workers:</span>
+              <span className="text-amber-400 font-bold">{workerCount}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── SEARCH & FILTER BAR ── */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
+              type="text"
+              placeholder="Search staff by name, mobile, role..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search team by name, mobile, role..."
-              className="w-full rounded-2xl bg-white border border-slate-200 py-3 pl-11 pr-4 text-xs sm:text-sm text-slate-900 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:focus:border-amber-400 transition shadow-xs"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white/[0.04] backdrop-blur-xl border border-white/10 focus:border-amber-400/70 focus:ring-2 focus:ring-amber-400/20 text-xs sm:text-sm font-bold text-white placeholder-slate-500 outline-none transition-all"
             />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
-        </section>
 
-        {isLoading ? (
-          <PageShimmer label="Loading team members" cards={4} />
-        ) : users.length === 0 ? (
-          <div className="rounded-3xl bg-white p-10 text-center text-xs sm:text-sm text-slate-400 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            No team members match your search criteria.
+          <div className="flex items-center gap-1.5 bg-white/[0.03] backdrop-blur-xl border border-white/10 p-1 rounded-2xl overflow-x-auto">
+            {(['ALL', 'ONLINE', 'ADMIN', 'WORKER', 'BLOCKED'] as const).map((tab) => {
+              const isActive = roleFilter === tab;
+              const label =
+                tab === 'ALL'
+                  ? `All (${rawUsers.length})`
+                  : tab === 'ONLINE'
+                  ? `Online (${onlineCount})`
+                  : tab === 'ADMIN'
+                  ? `Admins (${adminCount})`
+                  : tab === 'WORKER'
+                  ? `Mechanics (${workerCount})`
+                  : `Blocked (${blockedCount})`;
+
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setRoleFilter(tab)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+                    isActive
+                      ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-md shadow-amber-400/30'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── USER CARDS GRID ── */}
+        {filteredUsers.length === 0 ? (
+          <div className="py-16 text-center rounded-3xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+            <UserIcon className="w-8 h-8 text-slate-600 mx-auto" />
+            <p className="text-sm font-bold text-slate-300">No staff members found</p>
+            <p className="text-xs font-mono text-slate-500">Try adjusting your search or filter</p>
           </div>
         ) : (
-          /* Mobile-First Responsive User List */
-          <section className="space-y-3 sm:space-y-0 sm:overflow-hidden sm:rounded-3xl sm:bg-white sm:border sm:border-slate-200 sm:dark:border-slate-800 sm:dark:bg-slate-900 sm:shadow-xs">
-            {/* Desktop Table Header */}
-            <div className="hidden md:grid grid-cols-[minmax(240px,1.5fr)_120px_1fr_180px_28px] gap-4 px-6 py-3.5 border-b border-slate-100 dark:border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              <span>User</span>
-              <span>Role</span>
-              <span>Presence</span>
-              <span>Last Activity</span>
-              <span />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {filteredUsers.map((u: User) => {
+              const isOnline = !!u.isOnline;
+              const isBlocked = u.status === 'BLOCKED';
+              const isAdmin = u.role === 'ADMIN';
+              const lastAudit = (u.loginAudit || []).slice(-5).reverse();
 
-            {/* User Cards List */}
-            <div className="space-y-2.5 sm:space-y-0 sm:divide-y sm:divide-slate-100 sm:dark:divide-slate-800/60">
-              {users.map((user) => {
-                const online = !!user.isOnline;
-                return (
-                  <div
-                    key={getUserId(user)}
-                    onClick={() => handleSelectUser(user)}
-                    className="cursor-pointer rounded-2xl bg-white p-4 sm:p-0 sm:rounded-none border border-slate-200/80 sm:border-none dark:bg-slate-900 dark:border-slate-800 shadow-xs sm:shadow-none hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition"
-                  >
-                    <div className="flex items-center justify-between gap-3 sm:hidden">
-                      {/* Mobile Card Top: Avatar + Name + Chevron */}
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="relative shrink-0">
-                          <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-500 dark:text-slate-400">
-                            {user.profileImageUrl ? (
-                              <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+              return (
+                <motion.div
+                  key={getUserId(u)}
+                  whileHover={{ y: -3 }}
+                  transition={{ duration: 0.2 }}
+                  className="group relative overflow-hidden rounded-3xl bg-white/[0.035] backdrop-blur-2xl border border-white/[0.08] hover:border-amber-400/50 shadow-xl shadow-black/40 p-4 sm:p-5 flex flex-col justify-between transition-all duration-300"
+                >
+                  <BorderBeam size={180} duration={9} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={0.75} />
+
+                  <div>
+                    {/* Top: Avatar, Role, Online Dot & Quick Status */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-slate-700 to-slate-800 border border-white/10 flex items-center justify-center font-black text-sm text-white">
+                            {u.profileImageUrl ? (
+                              <img src={u.profileImageUrl} alt={u.name} className="w-full h-full object-cover" />
                             ) : (
-                              user.name.charAt(0)
+                              <span>{u.name?.charAt(0)?.toUpperCase() || 'U'}</span>
                             )}
                           </div>
+                          {/* Live Online Badge */}
                           <span
-                            className={`absolute -right-0.5 -bottom-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                              online ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                            className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#080810] ${
+                              isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'
                             }`}
+                            title={isOnline ? 'Active Now' : 'Offline'}
                           />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                              {user.name}
-                            </p>
-                            <span className="shrink-0 rounded-md bg-amber-400/15 border border-amber-400/30 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-700 dark:text-amber-300">
-                              {user.role}
+
+                        <div>
+                          <h3 className="text-sm sm:text-base font-black text-white truncate max-w-[180px]">
+                            {u.name}
+                          </h3>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span
+                              className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                                isAdmin
+                                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                  : 'bg-amber-400/15 text-amber-300 border border-amber-400/30'
+                              }`}
+                            >
+                              {u.role}
                             </span>
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-                            {user.mobile}
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-                    </div>
-
-                    {/* Mobile Card Bottom Info */}
-                    <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs sm:hidden">
-                      <span
-                        className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${
-                          online ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
-                        }`}
-                      >
-                        <Circle
-                          className={`w-2 h-2 fill-current ${
-                            online ? 'text-emerald-500' : 'text-slate-300 dark:bg-slate-600'
-                          }`}
-                        />
-                        {online ? 'ONLINE NOW' : 'OFFLINE'}
-                      </span>
-                      <span className="text-[11px] text-slate-400">
-                        {online ? 'Active now' : formatLastSeen(user.lastSeen)}
-                      </span>
-                    </div>
-
-                    {/* Desktop Grid Layout (sm and up) */}
-                    <div className="hidden sm:grid sm:grid-cols-[minmax(240px,1.5fr)_120px_1fr_180px_28px] gap-x-4 items-center px-6 py-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative shrink-0">
-                          <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-500 dark:text-slate-400">
-                            {user.profileImageUrl ? (
-                              <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              user.name.charAt(0)
+                            {isBlocked && (
+                              <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase">
+                                Blocked
+                              </span>
                             )}
                           </div>
-                          <span
-                            className={`absolute -right-0.5 -bottom-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                              online ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
-                            }`}
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                            {user.name}
-                          </p>
-                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">
-                            <Phone className="inline w-3 h-3 mr-1" />
-                            {user.mobile}
-                          </p>
                         </div>
                       </div>
 
+                      {/* Last Seen / Active Pill */}
+                      <span className="text-[10px] font-mono text-slate-400 text-right">
+                        {formatLastSeen(u.lastSeen || u.lastLoginAttempt)}
+                      </span>
+                    </div>
+
+                    {/* Contact & Tasks count */}
+                    <div className="mt-3.5 pt-3 border-t border-white/[0.06] grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="inline-flex rounded-full bg-amber-400/15 border border-amber-400/30 px-3 py-1 text-[10px] font-bold tracking-wider uppercase text-amber-700 dark:text-amber-300">
-                          {user.role}
+                        <p className="text-[9px] font-mono text-slate-500 uppercase">Mobile</p>
+                        <p className="font-mono text-slate-300 font-bold text-xs mt-0.5 truncate">
+                          {u.mobile || '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-mono text-slate-500 uppercase">QP Tasks</p>
+                        <p className="font-mono text-amber-400 font-black text-xs mt-0.5">
+                          {u.taskCount || 0} tasks
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* ── LAST 5 LOGINS STATUS PREVIEW ── */}
+                    <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                      <div className="flex items-center justify-between text-[10px] font-mono mb-1.5">
+                        <span className="text-slate-400 uppercase font-bold flex items-center gap-1">
+                          <Activity className="w-3 h-3 text-amber-400" /> Last 5 Logins
                         </span>
+                        <span className="text-slate-500">{u.totalLoginAttempts || 0} total</span>
                       </div>
 
-                      <div>
-                        <span
-                          className={`inline-flex items-center gap-1.5 text-xs font-bold ${
-                            online ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
-                          }`}
-                        >
-                          <Circle
-                            className={`w-2 h-2 fill-current ${
-                              online ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'
-                            }`}
-                          />
-                          {online ? 'ONLINE NOW' : 'OFFLINE'}
-                        </span>
-                      </div>
-
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                        {online ? 'Active now' : formatLastSeen(user.lastSeen)}
-                      </p>
-
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                      {lastAudit.length === 0 ? (
+                        <p className="text-[10px] font-mono text-slate-500 py-1">No login audit recorded</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {lastAudit.map((log: any, idx: number) => {
+                            const isSuccess = log.status === 'SUCCESS';
+                            return (
+                              <div
+                                key={idx}
+                                className={`flex items-center justify-between px-2 py-1 rounded-lg text-[10px] font-mono ${
+                                  isSuccess
+                                    ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
+                                    : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                                }`}
+                              >
+                                <span className="flex items-center gap-1">
+                                  {isSuccess ? (
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                  ) : (
+                                    <XCircle className="w-3 h-3 text-rose-400" />
+                                  )}
+                                  <span className="font-black">{log.status}</span>
+                                </span>
+                                <span className="text-slate-400">{formatAuditDate(log.timestamp)}</span>
+                                <span className="text-[9px] text-slate-500 truncate max-w-[80px]">
+                                  {log.ipAddress || '—'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </section>
+
+                  {/* Card Bottom Actions */}
+                  <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedUser(u);
+                        setEditForm({ name: u.name, mobile: u.mobile });
+                        setIsEditingUser(false);
+                      }}
+                      className="flex-1 py-1.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white transition-all active:scale-95 text-center cursor-pointer"
+                    >
+                      Inspect & Edit
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setResetModalUserId(getUserId(u));
+                        setNewPassword('');
+                        setErrorMsg('');
+                      }}
+                      className="p-2 rounded-xl bg-white/5 hover:bg-amber-400/15 border border-white/10 text-slate-300 hover:text-amber-300 transition-all active:scale-90 cursor-pointer"
+                      title="Reset Password"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() => handleStatusToggle(u)}
+                      className={`p-2 rounded-xl border transition-all active:scale-90 cursor-pointer ${
+                        isBlocked
+                          ? 'bg-rose-500/20 border-rose-500/40 text-rose-300 hover:bg-rose-500/30'
+                          : 'bg-white/5 border-white/10 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'
+                      }`}
+                      title={isBlocked ? 'Unblock User' : 'Block User'}
+                    >
+                      {isBlocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         )}
       </main>
 
-      {/* Drawer: Selected User Details & Admin Profile Editing */}
+      {/* ── USER DETAIL & CONTROL MODAL ── */}
       <AnimatePresence>
         {selectedUser && (
-          <>
-            <motion.button
-              aria-label="Close user details"
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedUser(null)}>
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedUser(null)}
-              className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs"
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
             />
-            <motion.aside
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="fixed right-0 top-0 z-50 h-full w-full max-w-md overflow-y-auto bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl pb-20"
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+              className="relative w-full max-w-lg rounded-3xl bg-[#0f0f1e] border border-white/12 shadow-2xl overflow-hidden p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-100 dark:border-slate-800">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  User Profile Details
-                </span>
+              <BorderBeam size={240} duration={8} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={1} />
+
+              {/* Modal Header */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-br from-slate-700 to-slate-800 border border-white/10 flex items-center justify-center font-black text-lg text-white">
+                    {selectedUser.profileImageUrl ? (
+                      <img src={selectedUser.profileImageUrl} alt={selectedUser.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{selectedUser.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-white">{selectedUser.name}</h2>
+                    <p className="text-xs font-mono text-slate-400">{selectedUser.mobile}</p>
+                    <span className="inline-block mt-1 text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-amber-400/15 border border-amber-400/30 text-amber-300 uppercase">
+                      {selectedUser.role} · {selectedUser.status}
+                    </span>
+                  </div>
+                </div>
+
                 <button
                   onClick={() => setSelectedUser(null)}
-                  className="p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white shadow-xs"
+                  className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="px-4 sm:px-5 py-6 space-y-4">
-                {/* Profile Overview Card */}
-                <section className="rounded-3xl bg-white dark:bg-slate-800/60 p-5 text-center shadow-xs border border-slate-200/80 dark:border-slate-800 space-y-4">
-                  <div className="relative inline-block">
-                    <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-2xl font-bold text-slate-500 shadow-md">
-                      {selectedUser.profileImageUrl ? (
-                        <img src={selectedUser.profileImageUrl} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        selectedUser.name.charAt(0)
-                      )}
-                    </div>
-                    <span
-                      className={`absolute right-0 bottom-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 ${
-                        selectedUser.isOnline ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
-                      }`}
+              {errorMsg && (
+                <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-mono">
+                  {errorMsg}
+                </div>
+              )}
+
+              {/* Edit Details Form */}
+              {isEditingUser ? (
+                <form onSubmit={handleEditSubmit} className="space-y-3 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                  <p className="text-xs font-bold text-amber-400 uppercase tracking-wider font-mono">Edit Staff Info</p>
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-400 uppercase">Full Name</label>
+                    <input
+                      type="text"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      required
+                      className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white outline-none focus:border-amber-400"
                     />
                   </div>
-
-                  {isEditingUser ? (
-                    <form onSubmit={handleSaveAdminUserEdit} className="space-y-3 text-left">
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                          User Name
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          value={editForm.name}
-                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                          Mobile Phone
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          value={editForm.mobile}
-                          onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value })}
-                          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                        />
-                      </div>
-
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setIsEditingUser(false)}
-                          className="flex-1 py-2 text-xs font-bold"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="submit"
-                          variant="primary"
-                          disabled={isUpdatingAdmin}
-                          className="flex-1 py-2 text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600"
-                        >
-                          <Save className="w-3.5 h-3.5 inline mr-1" />
-                          {isUpdatingAdmin ? 'Saving...' : 'Save Details'}
-                        </Button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div>
-                      <h2 className="text-xl font-black text-slate-900 dark:text-white">
-                        {selectedUser.name}
-                      </h2>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 font-mono">
-                        <Phone className="inline w-3 h-3 mr-1" />
-                        {selectedUser.mobile}
-                      </p>
-
-                      <div className="mt-3 flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingUser(true)}
-                          className="inline-flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-slate-700 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          Edit Info
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </section>
-
-                {/* Role & Access (Read-Only Display) */}
-                <section className="rounded-3xl bg-white dark:bg-slate-800/60 p-5 shadow-xs border border-slate-200/80 dark:border-slate-800 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-amber-500" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Role &amp; System Access
-                    </h3>
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-400 uppercase">Mobile Number</label>
+                    <input
+                      type="tel"
+                      value={editForm.mobile}
+                      onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value })}
+                      required
+                      className="w-full mt-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white outline-none focus:border-amber-400"
+                    />
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Assigned Role</span>
-                    <span className="px-3 py-1 rounded-full bg-amber-400/20 text-amber-700 dark:text-amber-300 font-extrabold text-xs">
-                      {selectedUser.role}
-                    </span>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={isUpdatingAdmin}
+                      className="flex-1 py-2 rounded-xl bg-amber-400 text-slate-950 font-black text-xs hover:bg-amber-300 transition cursor-pointer"
+                    >
+                      {isUpdatingAdmin ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingUser(false)}
+                      className="px-4 py-2 rounded-xl bg-white/5 text-slate-300 font-bold text-xs hover:bg-white/10"
+                    >
+                      Cancel
+                    </button>
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Account Approval</span>
-                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs">
-                      {selectedUser.isApproved ? 'APPROVED' : 'PENDING'}
-                    </span>
-                  </div>
-                </section>
-
-                {/* Password Reset Action */}
-                <section className="rounded-3xl bg-white dark:bg-slate-800/60 p-5 shadow-xs border border-slate-200/80 dark:border-slate-800">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
-                    Security Controls
-                  </h3>
+                </form>
+              ) : (
+                <div className="flex gap-2">
                   <button
-                    onClick={() => setResetModalUserId(getUserId(selectedUser))}
-                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    onClick={() => setIsEditingUser(true)}
+                    className="flex-1 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <KeyRound className="w-4 h-4 text-amber-500" />
-                    Reset User Password
+                    <Edit2 className="w-3.5 h-3.5" /> Edit Profile
                   </button>
-                </section>
+                  <button
+                    onClick={() => handleRoleToggle(selectedUser)}
+                    className="flex-1 py-2 px-3 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-xs font-bold text-purple-300 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Role: {selectedUser.role === 'ADMIN' ? 'Set Worker' : 'Set Admin'}
+                  </button>
+                </div>
+              )}
 
-                {errorMsg && (
-                  <p className="text-center text-xs font-bold text-red-500">{errorMsg}</p>
-                )}
+              {/* ── SECURITY & LAST 5 LOGINS AUDIT TABLE ── */}
+              <div className="space-y-2 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5" /> Login History & Audit
+                  </span>
+                  <span className="text-slate-400">
+                    Failed attempts: <strong className="text-rose-400">{selectedUser.failedLoginAttempts || 0}</strong>
+                  </span>
+                </div>
+
+                <div className="divide-y divide-white/[0.06] pt-1">
+                  {(selectedUser.loginAudit || []).slice(-5).reverse().length === 0 ? (
+                    <p className="text-xs font-mono text-slate-500 py-3 text-center">No login events on file.</p>
+                  ) : (
+                    (selectedUser.loginAudit || []).slice(-5).reverse().map((audit: any, idx: number) => {
+                      const isSuccess = audit.status === 'SUCCESS';
+                      return (
+                        <div key={idx} className="py-2 flex items-center justify-between text-xs font-mono gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-md font-bold text-[10px] flex items-center gap-1 ${
+                              isSuccess
+                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                            }`}
+                          >
+                            {isSuccess ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                            {audit.status}
+                          </span>
+                          <span className="text-slate-300">{formatAuditDate(audit.timestamp)}</span>
+                          <span className="text-slate-500 text-[10px] flex items-center gap-1">
+                            <Globe className="w-3 h-3" /> {audit.ipAddress || '—'}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </motion.aside>
-          </>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
-      {/* Password Reset Modal */}
-      {resetModalUserId && (
-        <div className="fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <form
-            onSubmit={handleResetPassword}
-            className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl space-y-4 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
-          >
-            <h3 className="font-black text-base uppercase tracking-wider flex items-center gap-2 text-slate-900 dark:text-white">
-              <KeyRound className="w-5 h-5 text-amber-500" />
-              Reset User Password
-            </h3>
+      {/* ── ADMIN PASSWORD RESET MODAL ── */}
+      <AnimatePresence>
+        {resetModalUserId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setResetModalUserId(null)}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-sm rounded-3xl bg-[#0f0f1e] border border-white/12 shadow-2xl p-5 sm:p-6 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-amber-400" /> Reset Password
+                </h3>
+                <button onClick={() => setResetModalUserId(null)} className="p-1 text-slate-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-            {resetSuccess ? (
-              <p className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                {resetSuccess}
-              </p>
-            ) : (
-              <>
-                <input
-                  type="password"
-                  required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="New password (minimum 6 characters)"
-                  className="w-full rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-amber-400"
-                />
+              {resetSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
+                  {resetSuccess}
+                </div>
+              )}
 
+              {errorMsg && (
+                <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-mono">
+                  {errorMsg}
+                </div>
+              )}
+
+              <form onSubmit={handlePasswordReset} className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">New Password</label>
+                  <input
+                    type="password"
+                    placeholder="Enter 6+ characters"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="w-full mt-1 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white outline-none focus:border-amber-400"
+                  />
+                </div>
                 <div className="flex gap-2 pt-1">
-                  <Button
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xs hover:bg-amber-300 transition cursor-pointer"
+                  >
+                    Confirm Reset
+                  </button>
+                  <button
                     type="button"
-                    variant="outline"
                     onClick={() => setResetModalUserId(null)}
-                    className="flex-1 py-2.5 text-xs font-bold"
+                    className="px-4 py-2.5 rounded-xl bg-white/5 text-slate-300 font-bold text-xs"
                   >
                     Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    className="flex-1 py-2.5 text-xs font-bold bg-amber-400 text-slate-950 hover:bg-amber-300"
-                  >
-                    Update
-                  </Button>
+                  </button>
                 </div>
-              </>
-            )}
-          </form>
-        </div>
-      )}
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
