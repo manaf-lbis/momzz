@@ -10,7 +10,6 @@ import { Meteors } from '../components/magicui/Meteors';
 import {
   ChevronLeft,
   Calendar,
-  Car,
   CheckCircle2,
   Clock,
   Search,
@@ -23,7 +22,6 @@ import {
   ChevronRight,
   Pin,
   X,
-  Flame,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { PageShimmer } from '../components/common/PageShimmer';
@@ -48,8 +46,8 @@ const SORT_CONFIG: Array<{ value: SortOption; label: string; shortLabel: string;
   { value: 'DELIVERY_LATEST', label: 'Delivery: Latest', shortLabel: 'Latest Delivery', icon: <Calendar className="w-3.5 h-3.5 text-amber-400" /> },
   { value: 'CREATED_NEWEST', label: 'Created: Newest', shortLabel: 'Newest First', icon: <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> },
   { value: 'CREATED_OLDEST', label: 'Created: Oldest', shortLabel: 'Oldest First', icon: <Clock className="w-3.5 h-3.5 text-slate-400" /> },
-  { value: 'VEHICLE_AZ', label: 'Vehicle: A to Z', shortLabel: 'Model A-Z', icon: <Car className="w-3.5 h-3.5 text-sky-400" /> },
-  { value: 'VEHICLE_ZA', label: 'Vehicle: Z to A', shortLabel: 'Model Z-A', icon: <Car className="w-3.5 h-3.5 text-sky-400" /> },
+  { value: 'VEHICLE_AZ', label: 'Vehicle: A to Z', shortLabel: 'Model A-Z', icon: <Sparkles className="w-3.5 h-3.5 text-sky-400" /> },
+  { value: 'VEHICLE_ZA', label: 'Vehicle: Z to A', shortLabel: 'Model Z-A', icon: <Sparkles className="w-3.5 h-3.5 text-sky-400" /> },
   { value: 'PROGRESS_LOWEST', label: 'Progress: Lowest', shortLabel: 'Low Progress', icon: <ArrowUpDown className="w-3.5 h-3.5 text-orange-400" /> },
   { value: 'PROGRESS_HIGHEST', label: 'Progress: Highest', shortLabel: 'High Progress', icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> },
 ];
@@ -339,8 +337,8 @@ export const JobsListPage: React.FC = () => {
 
   const VIEWS: { key: JobsView; label: string; count: number }[] = [
     { key: 'MY_JOBS', label: 'My Jobs', count: myJobsCount },
-    { key: 'PENDING_VERIFICATION', label: 'Pending', count: pendingCount },
-    { key: 'ALL_VEHICLES', label: 'History', count: allCount },
+    { key: 'PENDING_VERIFICATION', label: 'Pending QA', count: pendingCount },
+    { key: 'ALL_VEHICLES', label: 'Vehicle History', count: allCount },
   ];
 
   return (
@@ -376,86 +374,68 @@ export const JobsListPage: React.FC = () => {
 
       <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-5 pb-28 space-y-4">
         {/* ── TOP BAR: Header & View Switcher ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate(-1)}
-                className="w-9 h-9 rounded-2xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  Active Vehicles
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300">
-                    <NumberTicker value={filteredJobs.length} /> Live
-                  </span>
-                </h1>
-                <p className="text-[11px] font-mono text-slate-400 mt-0.5">
-                  Real-time garage checklist & service board
-                </p>
-              </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 rounded-2xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                Active Vehicles
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300">
+                  <NumberTicker value={filteredJobs.length} /> Live
+                </span>
+              </h1>
+              <p className="text-[11px] font-mono text-slate-400 mt-0.5">
+                Real-time garage checklist & service board
+              </p>
             </div>
-
-            {isAdmin && (
-              <button
-                onClick={() => navigate('/jobs/create')}
-                className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs shadow-md shadow-amber-400/30 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>New Job</span>
-              </button>
-            )}
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* View Switcher Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-white/[0.04] backdrop-blur-xl rounded-2xl border border-white/10 w-full sm:w-auto">
-              {VIEWS.map((tab) => {
-                const isActive = jobsView === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => setJobsView(tab.key)}
-                    className={`relative flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                      isActive ? 'text-slate-950 font-black' : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="jobs-view-tab"
-                        className="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 rounded-xl shadow-md shadow-amber-400/30"
-                        transition={{ type: 'spring', bounce: 0.18, duration: 0.35 }}
-                      />
-                    )}
-                    <span className="relative z-10 flex items-center justify-center gap-1.5 whitespace-nowrap">
-                      {tab.label}
-                      <span
-                        className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full ${
-                          isActive
-                            ? 'bg-slate-950/20 text-slate-950 font-black'
-                            : 'bg-white/10 text-slate-300'
-                        }`}
-                      >
-                        {tab.count}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/jobs/create')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs shadow-md shadow-amber-400/30 hover:opacity-95 active:scale-95 transition cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Vehicle</span>
+            </button>
+          )}
+        </div>
 
-            {isAdmin && (
+        {/* ── LEADERBOARD-STYLE TABS ── */}
+        <div className="flex gap-1 p-1 bg-white/5 rounded-2xl border border-white/8">
+          {VIEWS.map(({ key, label, count }) => {
+            const isActive = jobsView === key;
+            return (
               <button
-                onClick={() => navigate('/jobs/create')}
-                className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs shadow-md shadow-amber-400/30 hover:opacity-95 active:scale-95 transition cursor-pointer shrink-0"
+                key={key}
+                onClick={() => setJobsView(key)}
+                className={`relative flex-1 py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  isActive ? 'text-slate-900 font-black' : 'text-slate-400 hover:text-white'
+                }`}
               >
-                <Plus className="w-4 h-4" />
-                <span>New Vehicle</span>
+                {isActive && (
+                  <motion.div
+                    layoutId="jobs-view-tab"
+                    className="absolute inset-0 bg-gradient-to-br from-amber-400 via-yellow-300 to-amber-400 rounded-xl shadow-md shadow-amber-500/30"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
+                  />
+                )}
+                <span className="relative z-10">{label}</span>
+                <span
+                  className={`relative z-10 text-[9px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                    isActive ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
+                  }`}
+                >
+                  {count}
+                </span>
               </button>
-            )}
-          </div>
+            );
+          })}
         </div>
 
         {/* ── SEARCH & SORT CONTROLS ── */}
@@ -533,7 +513,6 @@ export const JobsListPage: React.FC = () => {
           <PageShimmer label="Loading active garage jobs" cards={6} />
         ) : filteredJobs.length === 0 ? (
           <div className="py-20 text-center rounded-3xl bg-white/[0.02] border border-white/[0.06] space-y-2">
-            <Car className="w-10 h-10 text-slate-600 mx-auto" />
             <p className="text-base font-bold text-slate-300">No vehicles found</p>
             <p className="text-xs font-mono text-slate-500">
               {searchQuery ? 'Try clearing your search terms' : 'All jobs in this category are clear'}
@@ -561,41 +540,34 @@ export const JobsListPage: React.FC = () => {
                   {pinned && <BorderBeam size={180} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />}
 
                   <div>
-                    {/* Top: Car Icon + Model + Reg Plate + Pin / Delivery Badge */}
+                    {/* Top: Model Title + Reg Plate + Pin / Delivery Badge (No generic car icon) */}
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div
-                          className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-colors shadow-xs ${
-                            isReady
-                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-amber-400/15 text-amber-400 border border-amber-400/30 group-hover:bg-amber-400 group-hover:text-slate-950'
-                          }`}
-                        >
-                          <Car className="w-5 h-5" />
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-sm sm:text-base font-black uppercase text-white tracking-tight truncate group-hover:text-amber-300 transition-colors">
-                            {job.vehicleName || 'Vehicle'}
-                          </h3>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] sm:text-xs font-mono font-black text-slate-950 bg-gradient-to-r from-amber-400 to-yellow-300 px-2 py-0.5 rounded-md border border-amber-500/50 shadow-xs inline-block tracking-wider">
-                              {job.vehicleNumber}
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <h3 className="text-base sm:text-lg font-black uppercase text-white tracking-tight truncate group-hover:text-amber-300 transition-colors">
+                          {job.vehicleName || 'Vehicle'}
+                        </h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-mono font-black text-slate-950 bg-gradient-to-r from-amber-400 to-yellow-300 px-2.5 py-0.5 rounded-lg border border-amber-500/50 shadow-xs inline-block tracking-wider">
+                            {job.vehicleNumber}
+                          </span>
+                          {job.vehicleColor && (
+                            <span className="text-xs font-mono text-slate-400 truncate">
+                              • {job.vehicleColor}
                             </span>
-                            {job.vehicleColor && (
-                              <span className="text-[10px] font-mono text-slate-400 truncate">
-                                • {job.vehicleColor}
-                              </span>
-                            )}
-                          </div>
+                          )}
+                          {isReady && (
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> Ready
+                            </span>
+                          )}
                         </div>
                       </div>
 
                       {/* Pin button & Delivery pill */}
-                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => setSelectedPinJob(job)}
-                          className={`p-1.5 rounded-xl border transition-all active:scale-90 ${
+                          className={`p-2 rounded-xl border transition-all active:scale-90 cursor-pointer ${
                             pinned
                               ? 'bg-amber-400/20 border-amber-400/40 text-amber-300'
                               : 'bg-white/5 border-white/10 text-slate-500 hover:text-slate-300'
@@ -606,7 +578,7 @@ export const JobsListPage: React.FC = () => {
                         </button>
 
                         {job.expectedDeliveryDate && (
-                          <span className={`text-[9px] font-mono font-bold px-2 py-1 rounded-lg border ${deliveryInfo.badgeClass}`}>
+                          <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-xl border ${deliveryInfo.badgeClass}`}>
                             {deliveryInfo.shortLabel}
                           </span>
                         )}
