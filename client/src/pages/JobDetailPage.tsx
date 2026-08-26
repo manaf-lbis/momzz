@@ -48,6 +48,16 @@ import { ProgressBarBeam } from '../components/magicui/AnimatedBeam';
 
 type TaskFilterType = 'ALL' | 'PENDING' | 'COMPLETED';
 
+const formatTaskDateTime = (dateString?: string) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  const day = date.getDate();
+  const month = date.toLocaleString('en-US', { month: 'short' });
+  const time = date.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${day} ${month} ${time}`;
+};
+
 export const JobDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -661,8 +671,8 @@ export const JobDetailPage: React.FC = () => {
                           </span>
 
                           {task.completedAt && (
-                            <span className="text-[9px] font-mono text-slate-500 truncate">
-                              • {new Date(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <span className="text-[9px] font-mono text-slate-400 truncate">
+                              • {formatTaskDateTime(task.completedAt)}
                             </span>
                           )}
                         </div>
@@ -821,7 +831,7 @@ export const JobDetailPage: React.FC = () => {
                           {log.action === 'COMPLETED' ? 'Marked as Completed' : 'Reopened for Work'}
                         </p>
                         <p className="text-[10px] font-mono text-slate-400 mt-0.5">
-                          by {log.user?.name || 'Technician'} • {new Date(log.at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          by {log.user?.name || 'Technician'} • {formatTaskDateTime(log.at)}
                         </p>
                       </div>
                     </div>
