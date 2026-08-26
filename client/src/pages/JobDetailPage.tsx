@@ -891,7 +891,7 @@ export const JobDetailPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ── COMPLETE SUB-TASK MODAL (Ultra-Clean, Modern & Minimal) ── */}
+      {/* ── COMPLETE SUB-TASK MODAL (Sleek, Amber-Themed & Scalable) ── */}
       <AnimatePresence>
         {completeTaskModal.isOpen && completeTaskModal.task && (
           <div
@@ -904,19 +904,19 @@ export const JobDetailPage: React.FC = () => {
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: 'spring', stiffness: 380, damping: 32 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-sm rounded-3xl bg-[#090912] border border-white/[0.08] shadow-2xl p-5 sm:p-6 space-y-4 overflow-hidden"
+              className="relative w-full max-w-sm rounded-3xl bg-[#090912] border border-white/[0.08] shadow-2xl p-5 sm:p-5.5 space-y-3.5 overflow-hidden"
             >
-              <BorderBeam size={160} duration={8} colorFrom="#10b981" colorTo="#fbbf24" borderWidth={0.75} />
+              <BorderBeam size={160} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={0.75} />
 
-              {/* Top Header */}
+              {/* Header */}
               <div className="flex items-start justify-between gap-2">
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-amber-300/80 uppercase tracking-wider mb-0.5">
                     <span>{currentJob.vehicleNumber}</span>
                     <span>•</span>
                     <span>Checklist</span>
                   </div>
-                  <h3 className="text-sm sm:text-base font-black text-white leading-snug">
+                  <h3 className="text-sm font-black text-white leading-snug truncate">
                     {completeTaskModal.task.title}
                   </h3>
                 </div>
@@ -930,43 +930,49 @@ export const JobDetailPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Points Highlight Pill */}
-              <div className="py-3 px-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-amber-400/5 to-transparent border border-emerald-500/20 text-center space-y-1">
-                <div className="text-2xl font-black font-mono text-emerald-300 tracking-tight">
-                  +{pointsPerWorker} <span className="text-xs text-amber-300/90 uppercase font-sans font-bold">QP</span>
+              {/* Theme-Matched Points Highlight */}
+              <div className="py-2.5 px-3 rounded-2xl bg-amber-400/10 border border-amber-400/25 text-center space-y-0.5">
+                <div className="text-xl sm:text-2xl font-black font-mono text-amber-300 tracking-tight">
+                  +{pointsPerWorker} <span className="text-xs font-sans font-bold uppercase text-amber-400/80">QP</span>
                 </div>
-                <p className="text-[10px] font-mono text-slate-400">
+                <p className="text-[10px] font-mono text-slate-400 truncate">
                   {completeTaskModal.partnerIds.length > 0
-                    ? `Split equally across ${totalParticipating} technicians (${pointsPerWorker} QP each)`
-                    : 'Awarded directly to your technician score'}
+                    ? `Split between ${totalParticipating} staff (${pointsPerWorker} QP each)`
+                    : 'Awarded directly to your score'}
                 </p>
               </div>
 
-              {/* Technician Selection Chips (Direct 1-tap select) */}
+              {/* Scalable Staff Selector (Handles 1 to 50+ employees smoothly) */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                  <span className="font-bold uppercase tracking-wider">Technicians on this task</span>
-                  <span className="text-amber-300">
-                    {completeTaskModal.partnerIds.length > 0 ? `${totalParticipating} workers` : 'Solo (You)'}
+                  <span className="font-bold uppercase tracking-wider">Assign Workers</span>
+                  <span className="text-amber-300 font-bold">
+                    {completeTaskModal.partnerIds.length > 0 ? `${totalParticipating} staff selected` : 'Solo (You)'}
                   </span>
                 </div>
 
-                {/* Horizontal / Grid of Modern Avatar Chips */}
-                <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto overscroll-contain pr-0.5" style={{ scrollbarWidth: 'thin' }}>
-                  {/* Current Active User (Always Included) */}
-                  <div className="flex items-center gap-2 p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-white">
-                    <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-800 border border-emerald-400 flex items-center justify-center text-[10px] font-bold text-emerald-300 shrink-0">
-                      {user?.profileImageUrl ? (
-                        <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        user?.name?.charAt(0).toUpperCase() || 'U'
-                      )}
+                {/* Horizontal Scrollable Avatar Roster (Ultra-compact & scalable) */}
+                <div
+                  className="flex gap-2.5 overflow-x-auto py-2 px-1 touch-pan-x"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {/* Current Active User (Always pre-selected Lead) */}
+                  <div className="flex flex-col items-center gap-1 shrink-0 cursor-default">
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-800 border-2 border-amber-400 shadow-md shadow-amber-400/20 flex items-center justify-center text-xs font-bold text-amber-300">
+                        {user?.profileImageUrl ? (
+                          <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          user?.name?.charAt(0).toUpperCase() || 'U'
+                        )}
+                      </div>
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center text-[8px] font-black shadow-xs">
+                        ✓
+                      </span>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold truncate text-white">{user?.name || 'You'}</p>
-                      <p className="text-[8px] font-mono text-emerald-400">Lead (You)</p>
-                    </div>
-                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 stroke-[3]" />
+                    <span className="text-[10px] font-mono font-bold text-amber-300 truncate max-w-[56px]">
+                      You
+                    </span>
                   </div>
 
                   {/* Other Workshop Staff */}
@@ -990,50 +996,55 @@ export const JobDetailPage: React.FC = () => {
                             };
                           });
                         }}
-                        className={`flex items-center gap-2 p-2 rounded-xl border text-left transition cursor-pointer active:scale-95 ${
-                          isSelected
-                            ? 'bg-amber-400/15 border-amber-400/40 text-white'
-                            : 'bg-white/[0.02] border-white/[0.06] text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                        }`}
+                        className="flex flex-col items-center gap-1 shrink-0 cursor-pointer active:scale-95 transition"
                       >
-                        <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-bold text-amber-300 shrink-0">
-                          {w.profileImageUrl ? (
-                            <img src={w.profileImageUrl} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            (w.name || 'W').charAt(0).toUpperCase()
+                        <div className="relative">
+                          <div
+                            className={`w-10 h-10 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center text-xs font-bold transition-all ${
+                              isSelected
+                                ? 'border-2 border-amber-400 shadow-md shadow-amber-400/30 text-amber-300 scale-105'
+                                : 'border border-white/10 text-slate-400 hover:border-white/25 hover:text-white opacity-70 hover:opacity-100'
+                            }`}
+                          >
+                            {w.profileImageUrl ? (
+                              <img src={w.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              (w.name || 'W').charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          {isSelected && (
+                            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center text-[8px] font-black shadow-xs">
+                              ✓
+                            </span>
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold truncate text-white">{w.name}</p>
-                          <p className="text-[8px] font-mono text-slate-400 truncate">{w.role || 'Mechanic'}</p>
-                        </div>
-                        <div
-                          className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${
-                            isSelected ? 'bg-amber-400 text-slate-950' : 'border border-white/15'
+                        <span
+                          className={`text-[10px] font-mono truncate max-w-[56px] ${
+                            isSelected ? 'text-amber-300 font-bold' : 'text-slate-400'
                           }`}
                         >
-                          {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                        </div>
+                          {w.name?.split(' ')[0] || 'Staff'}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Action Button */}
-              <div className="pt-2">
+              {/* Compact Gold Theme Action Button */}
+              <div className="pt-1">
                 <button
                   type="button"
                   onClick={executeCompleteTask}
                   disabled={isCompletingTask}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-emerald-500/20 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:brightness-105 text-slate-950 font-black text-xs sm:text-sm shadow-md shadow-amber-400/20 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   {isCompletingTask ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                    <Check className="w-4 h-4 stroke-[3]" />
                   )}
-                  <span>Mark Completed & Award {pointsPerWorker} QP</span>
+                  <span>Complete Task (+{pointsPerWorker} QP)</span>
                 </button>
               </div>
             </motion.div>
