@@ -242,11 +242,8 @@ export const Dashboard: React.FC = () => {
                     <Activity className="w-4.5 h-4.5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-white tracking-tight flex items-center gap-2">
-                      Live Workflow
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[8px] font-mono font-bold border border-emerald-500/20">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Live
-                      </span>
+                    <h3 className="text-sm font-black text-white tracking-tight">
+                      Workflow
                     </h3>
                     <p className="text-[10px] font-mono text-slate-400 mt-0.5">Tap card for details • Swipe to browse</p>
                   </div>
