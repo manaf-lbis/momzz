@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronRight,
@@ -31,54 +32,86 @@ interface IosNotificationStackProps {
   autoScrollInterval?: number;
 }
 
+// Number of loop clone sets to ensure endless forward and backward sliding
+const REPEAT_COUNT = 9;
+
 export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
   jobs,
   className,
-  autoScrollInterval = 5000,
+  autoScrollInterval = 4500,
 }) => {
   const navigate = useNavigate();
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const isDraggingRef = useRef(false);
-  const startXRef = useRef(0);
-  const scrollLeftRef = useRef(0);
-  const hasMovedRef = useRef(false);
-
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const total = jobs.length;
 
-  // Track active item on scroll
-  const handleScroll = () => {
-    if (!scrollContainerRef.current) return;
-    const container = scrollContainerRef.current;
-    const scrollLeft = container.scrollLeft;
-    const itemWidth = container.clientWidth * 0.77 + 12; // 77% card width + 12px gap
-    const newIndex = Math.round(scrollLeft / itemWidth);
-    if (newIndex >= 0 && newIndex < total && newIndex !== activeIndex) {
-      setActiveIndex(newIndex);
-    }
-  };
+  // Start in the middle repetition for infinite scroll in both directions
+  const baseOffset = Math.floor(REPEAT_COUNT / 2) * total;
+  const [virtualIndex, setVirtualIndex] = useState(baseOffset);
+  const [isPaused, setIsPaused] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(400);
+  const isDraggingRef = useRef(false);
 
-  // Scroll to a specific index
-  const scrollToIndex = (index: number) => {
-    if (!scrollContainerRef.current) return;
-    const container = scrollContainerRef.current;
-    const itemWidth = container.clientWidth * 0.77 + 12;
-    container.scrollTo({
-      left: index * itemWidth,
-      behavior: 'smooth',
-    });
-    setActiveIndex(index);
-  };
+  // Measure container width
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
+  // Compute repeated array
+  const repeatedJobs = React.useMemo(() => {
+    if (total === 0) return [];
+    const list: { job: StackJobCardItem; uniqueKey: string; originalIndex: number }[] = [];
+    for (let r = 0; r < REPEAT_COUNT; r++) {
+      for (let i = 0; i < total; i++) {
+        list.push({
+          job: jobs[i],
+          uniqueKey: `${r}-${jobs[i].id || i}`,
+          originalIndex: i,
+        });
+      }
+    }
+    return list;
+  }, [jobs, total]);
+
+  // Card dimensions for 1.3 card peek effect (78% card width + 12px gap)
+  const cardWidth = Math.max(220, containerWidth * 0.78);
+  const cardGap = 12;
+  const slideStep = cardWidth + cardGap;
+
+  // Active original job index (0 to total-1)
+  const activeOriginalIndex = total > 0 ? ((virtualIndex % total) + total) % total : 0;
 
   const handleNext = () => {
-    const nextIndex = (activeIndex + 1) % total;
-    scrollToIndex(nextIndex);
+    setVirtualIndex((prev) => {
+      const next = prev + 1;
+      // If we approach the right edge of repetitions, wrap smoothly
+      if (next >= repeatedJobs.length - total) {
+        return baseOffset + (next % total);
+      }
+      return next;
+    });
   };
 
   const handlePrev = () => {
-    const prevIndex = (activeIndex - 1 + total) % total;
-    scrollToIndex(prevIndex);
+    setVirtualIndex((prev) => {
+      const next = prev - 1;
+      // If we approach the left edge of repetitions, wrap smoothly
+      if (next < total) {
+        return baseOffset + (((next % total) + total) % total);
+      }
+      return next;
+    });
+  };
+
+  const handleDotClick = (targetOriginalIndex: number) => {
+    const diff = targetOriginalIndex - activeOriginalIndex;
+    setVirtualIndex((prev) => prev + diff);
   };
 
   // Auto-scroll loop
@@ -88,33 +121,22 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
       handleNext();
     }, autoScrollInterval);
     return () => clearInterval(timer);
-  }, [total, isPaused, activeIndex, autoScrollInterval]);
+  }, [total, isPaused, virtualIndex, autoScrollInterval]);
 
-  // Mouse / Pointer drag support for desktop & tablets
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!scrollContainerRef.current) return;
-    isDraggingRef.current = true;
-    hasMovedRef.current = false;
-    startXRef.current = e.pageX - scrollContainerRef.current.offsetLeft;
-    scrollLeftRef.current = scrollContainerRef.current.scrollLeft;
-    setIsPaused(true);
-  };
+  // Drag handling with Framer Motion Pan
+  const handleDragEnd = (_: any, info: PanInfo) => {
+    const threshold = 35;
+    const velocity = info.velocity.x;
+    const offset = info.offset.x;
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingRef.current || !scrollContainerRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startXRef.current) * 1.2;
-    if (Math.abs(walk) > 5) {
-      hasMovedRef.current = true;
+    if (offset < -threshold || velocity < -200) {
+      handleNext();
+    } else if (offset > threshold || velocity > 200) {
+      handlePrev();
     }
-    scrollContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
-  };
 
-  const handleMouseUp = () => {
-    isDraggingRef.current = false;
     setTimeout(() => {
-      hasMovedRef.current = false;
+      isDraggingRef.current = false;
       setIsPaused(false);
     }, 150);
   };
@@ -133,141 +155,150 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
 
   return (
     <div
-      className={cn('relative w-full space-y-2.5', className)}
+      className={cn('relative w-full space-y-2.5 overflow-hidden', className)}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={() => setIsPaused(true)}
+      onTouchEnd={() => setTimeout(() => setIsPaused(false), 3000)}
     >
-      {/* ── 1.3 CARDS SMOOTH HORIZONTAL PEEK TRACK (Touch & Swipe enabled) ── */}
-      <div
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={() => setIsPaused(true)}
-        onTouchEnd={() => setTimeout(() => setIsPaused(false), 3500)}
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory py-1 px-0.5 touch-pan-x cursor-grab active:cursor-grabbing no-scrollbar"
-        style={{
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          WebkitOverflowScrolling: 'touch',
-        }}
-      >
-        {jobs.map((job, idx) => {
-          const isReady = job.totalTasks > 0 && job.completedTasks === job.totalTasks;
-          const deliveryInfo = getDeliveryStatusInfo(job.expectedDeliveryDate, isReady);
-          const isActive = idx === activeIndex;
+      {/* ── 1.3 CARDS SEAMLESS INFINITE SLIDING TRACK ── */}
+      <div ref={containerRef} className="relative w-full overflow-hidden py-1 px-0.5">
+        <motion.div
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.25}
+          onDragStart={() => {
+            isDraggingRef.current = true;
+            setIsPaused(true);
+          }}
+          onDragEnd={handleDragEnd}
+          animate={{ x: -virtualIndex * slideStep }}
+          transition={{
+            type: 'spring',
+            stiffness: 240,
+            damping: 28,
+            mass: 0.75,
+          }}
+          className="flex cursor-grab active:cursor-grabbing"
+          style={{ gap: `${cardGap}px` }}
+        >
+          {repeatedJobs.map((item, idx) => {
+            const job = item.job;
+            const isReady = job.totalTasks > 0 && job.completedTasks === job.totalTasks;
+            const deliveryInfo = getDeliveryStatusInfo(job.expectedDeliveryDate, isReady);
+            const isCurrentActive = idx === virtualIndex;
 
-          return (
-            <div
-              key={job.id + '-' + idx}
-              onClick={() => {
-                if (!hasMovedRef.current) {
-                  navigate(`/jobs/${job.id}`);
-                }
-              }}
-              className={cn(
-                'group relative shrink-0 w-[77%] sm:w-[78%] md:w-[74%] snap-start rounded-2xl p-3.5 sm:p-4 cursor-pointer flex flex-col justify-between backdrop-blur-2xl transition-all duration-300 shadow-lg shadow-black/40 overflow-hidden select-none',
-                isActive
-                  ? 'bg-white/[0.045] border border-amber-400/40 hover:border-amber-400/70 shadow-amber-500/5'
-                  : 'bg-white/[0.025] border border-white/[0.07] opacity-85 hover:opacity-100 hover:border-white/20'
-              )}
-            >
-              {job.isPinned && (
-                <BorderBeam size={160} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={0.75} />
-              )}
+            return (
+              <div
+                key={item.uniqueKey + '-' + idx}
+                style={{ width: `${cardWidth}px` }}
+                onClick={() => {
+                  if (!isDraggingRef.current) {
+                    navigate(`/jobs/${job.id}`);
+                  }
+                }}
+                className={cn(
+                  'group relative shrink-0 rounded-2xl p-3.5 sm:p-4 cursor-pointer flex flex-col justify-between backdrop-blur-2xl transition-all duration-300 shadow-lg shadow-black/40 overflow-hidden select-none',
+                  isCurrentActive
+                    ? 'bg-white/[0.045] border border-amber-400/40 hover:border-amber-400/70 shadow-amber-500/5 scale-100 opacity-100'
+                    : 'bg-white/[0.02] border border-white/[0.07] opacity-75 hover:opacity-95 scale-[0.98]'
+                )}
+              >
+                {job.isPinned && isCurrentActive && (
+                  <BorderBeam size={160} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={0.75} />
+                )}
 
-              <div>
-                {/* Top Row: Vehicle Name, Reg Plate & Ready Status */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h4 className="text-xs sm:text-sm font-black uppercase tracking-tight truncate text-white group-hover:text-amber-200 transition-colors">
-                        {job.vehicleName}
-                      </h4>
-                      {isReady && (
-                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-0.5">
-                          <CheckCircle2 className="w-2.5 h-2.5" /> Ready
+                <div>
+                  {/* Top Row: Vehicle Name, Reg Plate & Ready Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h4 className="text-xs sm:text-sm font-black uppercase tracking-tight truncate text-white group-hover:text-amber-200 transition-colors">
+                          {job.vehicleName}
+                        </h4>
+                        {isReady && (
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-0.5">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> Ready
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] font-mono font-black text-amber-300/90 bg-white/[0.06] px-2 py-0.5 rounded-md border border-white/10 tracking-wider">
+                          {job.vehicleNumber}
+                        </span>
+                        {job.vehicleColor && (
+                          <span className="text-[10px] font-mono text-slate-400 truncate">
+                            • {job.vehicleColor}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Priority / Delivery Pill */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {job.isPinned && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[8px] font-mono font-black border border-amber-400/40 shadow-xs">
+                          <Sparkles className="w-2.5 h-2.5" />
+                          Pin
+                        </span>
+                      )}
+                      {job.expectedDeliveryDate && (
+                        <span className={cn('text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border', deliveryInfo.badgeClass)}>
+                          {deliveryInfo.shortLabel}
                         </span>
                       )}
                     </div>
+                  </div>
 
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[11px] font-mono font-black text-amber-300/90 bg-white/[0.06] px-2 py-0.5 rounded-md border border-white/10 tracking-wider">
-                        {job.vehicleNumber}
+                  {/* Progress Bar Beam */}
+                  <div className="space-y-1 mt-2.5 pt-2 border-t border-white/[0.05]">
+                    <div className="flex items-center justify-between text-[10px] font-mono">
+                      <span className="text-slate-400 uppercase font-bold">
+                        Progress
                       </span>
-                      {job.vehicleColor && (
-                        <span className="text-[10px] font-mono text-slate-400 truncate">
-                          • {job.vehicleColor}
-                        </span>
-                      )}
+                      <span
+                        className={cn(
+                          'font-black text-[10px] px-1.5 py-0.2 rounded',
+                          isReady
+                            ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                            : 'bg-white/5 text-amber-300 border border-white/10'
+                        )}
+                      >
+                        {job.completedTasks}/{job.totalTasks} ({job.progressPercent}%)
+                      </span>
                     </div>
-                  </div>
-
-                  {/* Priority / Delivery Pill */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {job.isPinned && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[8px] font-mono font-black border border-amber-400/40 shadow-xs">
-                        <Sparkles className="w-2.5 h-2.5" />
-                        Pin
-                      </span>
-                    )}
-                    {job.expectedDeliveryDate && (
-                      <span className={cn('text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border', deliveryInfo.badgeClass)}>
-                        {deliveryInfo.shortLabel}
-                      </span>
-                    )}
+                    <ProgressBarBeam progress={job.progressPercent} />
                   </div>
                 </div>
 
-                {/* Progress Bar Beam */}
-                <div className="space-y-1 mt-2.5 pt-2 border-t border-white/[0.05]">
-                  <div className="flex items-center justify-between text-[10px] font-mono">
-                    <span className="text-slate-400 uppercase font-bold">
-                      Progress
-                    </span>
-                    <span
-                      className={cn(
-                        'font-black text-[10px] px-1.5 py-0.2 rounded',
-                        isReady
-                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                          : 'bg-white/5 text-amber-300 border border-white/10'
-                      )}
-                    >
-                      {job.completedTasks}/{job.totalTasks} ({job.progressPercent}%)
+                {/* Bottom CTA Strip */}
+                <div className="mt-2.5 pt-2 border-t border-white/[0.05] flex items-center justify-between text-[10px] font-mono">
+                  <div className="flex items-center gap-1 text-slate-400 truncate">
+                    <Clock className="w-3 h-3 text-slate-500 shrink-0" />
+                    <span className="truncate">
+                      {job.expectedDeliveryDate ? deliveryInfo.label : 'In Garage Service'}
                     </span>
                   </div>
-                  <ProgressBarBeam progress={job.progressPercent} />
+
+                  <div className="flex items-center gap-0.5 text-slate-300 group-hover:text-amber-300 font-bold transition-colors shrink-0">
+                    <span>Checklist</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </div>
                 </div>
               </div>
-
-              {/* Bottom CTA Strip */}
-              <div className="mt-2.5 pt-2 border-t border-white/[0.05] flex items-center justify-between text-[10px] font-mono">
-                <div className="flex items-center gap-1 text-slate-400 truncate">
-                  <Clock className="w-3 h-3 text-slate-500 shrink-0" />
-                  <span className="truncate">
-                    {job.expectedDeliveryDate ? deliveryInfo.label : 'In Garage Service'}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-0.5 text-slate-300 group-hover:text-amber-300 font-bold transition-colors shrink-0">
-                  <span>Checklist</span>
-                  <ChevronRight className="w-3 h-3" />
-                </div>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </motion.div>
       </div>
 
-      {/* ── PEAK FLOW CONTROLS & PAGINATION INDICATOR (No White Rings on Arrows) ── */}
+      {/* ── PEAK FLOW CONTROLS & PAGINATION INDICATOR ── */}
       {total > 1 && (
         <div className="flex items-center justify-between px-1 text-[10px] font-mono text-slate-400 pt-0.5">
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             <span>
-              Vehicle {activeIndex + 1} of {total} • Swipe to browse
+              Vehicle {activeOriginalIndex + 1} of {total} • Infinite loop
             </span>
           </div>
 
@@ -288,10 +319,10 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
                 <button
                   key={i}
                   type="button"
-                  onClick={() => scrollToIndex(i)}
+                  onClick={() => handleDotClick(i)}
                   className={cn(
                     'h-1 rounded-full transition-all duration-300 cursor-pointer border-0 outline-none',
-                    i === activeIndex
+                    i === activeOriginalIndex
                       ? 'w-4 bg-amber-400 shadow-sm shadow-amber-400/50'
                       : 'w-1.5 bg-white/20 hover:bg-amber-400/60'
                   )}
