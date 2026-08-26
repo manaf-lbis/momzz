@@ -833,10 +833,18 @@ export const JobDetailPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Minimalist Activity Timeline */}
+              {/* Minimalist Activity Timeline (Handled for long log histories) */}
               <div className="space-y-2">
-                <p className="text-[10px] font-mono uppercase text-slate-400 font-bold tracking-wider">Timeline</p>
-                <div className="max-h-36 overflow-y-auto space-y-1.5 pr-0.5">
+                <div className="flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-slate-400 uppercase font-bold tracking-wider">
+                    Timeline {activityTask.activityLog?.length ? `(${activityTask.activityLog.length})` : ''}
+                  </span>
+                  {activityTask.activityLog && activityTask.activityLog.length > 3 && (
+                    <span className="text-slate-500 text-[9px]">Scroll for more</span>
+                  )}
+                </div>
+
+                <div className="max-h-44 sm:max-h-48 overflow-y-auto overscroll-contain space-y-1.5 pr-1" style={{ scrollbarWidth: 'thin' }}>
                   {activityTask.activityLog && activityTask.activityLog.length > 0 ? (
                     activityTask.activityLog.map((log, idx) => (
                       <div key={idx} className="flex items-start gap-2.5 p-2 rounded-xl bg-white/[0.015] border border-white/[0.04] text-xs">
@@ -883,7 +891,7 @@ export const JobDetailPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ── COMPLETE TASK & MULTI-WORKER POINTS SHARING MODAL ── */}
+      {/* ── COMPLETE TASK & MULTI-WORKER POINTS SHARING MODAL (Clean & Minimal) ── */}
       <AnimatePresence>
         {completeTaskModal.isOpen && completeTaskModal.task && (
           <div
@@ -891,64 +899,65 @@ export const JobDetailPage: React.FC = () => {
             onClick={() => setCompleteTaskModal({ isOpen: false, task: null, isShared: false, partnerIds: [] })}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.94, y: 15 }}
+              initial={{ opacity: 0, scale: 0.94, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 15 }}
+              exit={{ opacity: 0, scale: 0.94, y: 12 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-sm rounded-3xl bg-[#0f0f1e] border border-white/12 shadow-2xl p-5 space-y-4 overflow-hidden"
+              className="relative w-full max-w-sm rounded-3xl bg-[#0b0b14] border border-white/[0.09] shadow-2xl p-5 sm:p-5.5 space-y-4 overflow-hidden"
             >
-              <BorderBeam size={180} duration={8} colorFrom="#10b981" colorTo="#fbbf24" borderWidth={1} />
+              <BorderBeam size={180} duration={8} colorFrom="#10b981" colorTo="#fbbf24" borderWidth={0.75} />
 
               {/* Modal Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   </div>
                   <div>
-                    <h3 className="text-sm sm:text-base font-black text-white">Complete Sub-Task</h3>
-                    <p className="text-[10px] font-mono text-slate-400">Award points & log work</p>
+                    <h3 className="text-sm font-black text-white tracking-tight">Complete Sub-Task</h3>
+                    <p className="text-[10px] font-mono text-slate-400">Award points & log progress</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setCompleteTaskModal({ isOpen: false, task: null, isShared: false, partnerIds: [] })}
-                  className="w-7 h-7 rounded-full bg-white/5 border border-white/10 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+                  className="w-7 h-7 rounded-full bg-white/5 border border-white/10 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition active:scale-90"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              {/* Task Title Banner */}
-              <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 space-y-1">
+              {/* Task Summary Banner */}
+              <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.06] space-y-1">
                 <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-amber-300/80">
                   {currentJob.vehicleNumber} • Checklist Item
                 </span>
-                <p className="text-xs sm:text-sm font-black text-white">{completeTaskModal.task.title}</p>
+                <p className="text-xs sm:text-sm font-bold text-white leading-snug">{completeTaskModal.task.title}</p>
               </div>
 
-              {/* Primary Completer Card */}
+              {/* Primary Lead Technician Card */}
               <div className="flex items-center justify-between p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-800 border border-emerald-400 flex items-center justify-center text-xs font-bold text-white">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-800 border border-emerald-400/50 flex items-center justify-center text-[10px] font-bold text-emerald-300 shrink-0">
                     {user?.profileImageUrl ? (
                       <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
                       user?.name?.charAt(0).toUpperCase() || 'U'
                     )}
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-white">{user?.name || 'You'}</p>
-                    <p className="text-[9px] font-mono text-emerald-400">Primary Technician (Lead)</p>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{user?.name || 'You'}</p>
+                    <p className="text-[8px] font-mono text-emerald-400">Lead Technician</p>
                   </div>
                 </div>
-                <span className="text-[11px] font-mono font-black text-emerald-300">
+                <span className="text-[10px] font-mono font-bold text-emerald-300 px-1.5 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20 shrink-0">
                   {pointsPerWorker} QP
                 </span>
               </div>
 
-              {/* Shared Task Toggle */}
-              <div className="space-y-2.5">
+              {/* Shared Task Selection */}
+              <div className="space-y-2">
                 <button
                   type="button"
                   onClick={() =>
@@ -960,39 +969,39 @@ export const JobDetailPage: React.FC = () => {
                   }
                   className={`w-full p-2.5 rounded-2xl border transition-all flex items-center justify-between cursor-pointer ${
                     completeTaskModal.isShared
-                      ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
-                      : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
+                      ? 'bg-amber-400/10 border-amber-400/30 text-amber-300'
+                      : 'bg-white/[0.02] border-white/[0.06] text-slate-300 hover:border-white/15'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-amber-400" />
-                    <span className="text-xs font-bold">Work with partners?</span>
+                    <Users className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-xs font-bold">Split with Partners</span>
                   </div>
                   <span
-                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                    className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded ${
                       completeTaskModal.isShared
                         ? 'bg-amber-400 text-slate-950 font-black'
-                        : 'bg-white/10 text-slate-400'
+                        : 'bg-white/5 text-slate-400 border border-white/10'
                     }`}
                   >
-                    {completeTaskModal.isShared ? 'SHARED ENABLED' : 'SOLO'}
+                    {completeTaskModal.isShared ? 'ENABLED' : 'SOLO'}
                   </span>
                 </button>
 
                 {/* Partner Workers Selection List with Avatars */}
                 {completeTaskModal.isShared && (
-                  <div className="space-y-2 pt-1">
-                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                      <span>Select co-workers to split points:</span>
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 px-0.5">
+                      <span>Select co-workers:</span>
                       <span className="text-amber-300 font-bold">
-                        {completeTaskModal.partnerIds.length} selected
+                        {completeTaskModal.partnerIds.length} chosen
                       </span>
                     </div>
 
-                    <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
+                    <div className="max-h-36 overflow-y-auto overscroll-contain space-y-1.5 pr-0.5" style={{ scrollbarWidth: 'thin' }}>
                       {allWorkers.length === 0 ? (
-                        <p className="text-[11px] text-slate-500 font-mono py-2 text-center">
-                          No other registered technicians found
+                        <p className="text-[10px] text-slate-500 font-mono py-2 text-center">
+                          No other registered staff found
                         </p>
                       ) : (
                         allWorkers.map((w: any) => {
@@ -1013,21 +1022,21 @@ export const JobDetailPage: React.FC = () => {
                               }}
                               className={`w-full p-2 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer ${
                                 isSelected
-                                  ? 'bg-amber-400/20 border-amber-400/50 text-white'
-                                  : 'bg-white/[0.02] border-white/[0.06] text-slate-300 hover:bg-white/5'
+                                  ? 'bg-amber-400/15 border-amber-400/40 text-white'
+                                  : 'bg-white/[0.015] border-white/[0.05] text-slate-300 hover:bg-white/5'
                               }`}
                             >
                               <div className="flex items-center gap-2 min-w-0">
-                                <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-bold text-amber-300 shrink-0">
+                                <div className="w-5.5 h-5.5 rounded-full overflow-hidden bg-slate-800 border border-white/10 flex items-center justify-center text-[9px] font-bold text-amber-300 shrink-0">
                                   {w.profileImageUrl ? (
                                     <img src={w.profileImageUrl} alt="" className="w-full h-full object-cover" />
                                   ) : (
                                     (w.name || 'W').charAt(0).toUpperCase()
                                   )}
                                 </div>
-                                <div className="truncate">
+                                <div className="min-w-0">
                                   <p className="text-xs font-bold truncate text-white">{w.name}</p>
-                                  <p className="text-[9px] font-mono text-slate-400 uppercase">{w.role || 'Mechanic'}</p>
+                                  <p className="text-[8px] font-mono text-slate-400 uppercase">{w.role || 'Mechanic'}</p>
                                 </div>
                               </div>
 
@@ -1038,7 +1047,7 @@ export const JobDetailPage: React.FC = () => {
                                   </span>
                                 )}
                                 <div
-                                  className={`w-5 h-5 rounded-md flex items-center justify-center ${
+                                  className={`w-4.5 h-4.5 rounded flex items-center justify-center ${
                                     isSelected
                                       ? 'bg-amber-400 text-slate-950'
                                       : 'border border-white/20'
@@ -1056,16 +1065,16 @@ export const JobDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Real-time Points Allocation Summary */}
-              <div className="p-2.5 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between text-[11px] font-mono">
+              {/* Real-time Points Split Preview */}
+              <div className="p-2.5 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between text-[10px] font-mono">
                 <span className="text-slate-400">
                   {completeTaskModal.isShared && completeTaskModal.partnerIds.length > 0
-                    ? `Equal Split (1/${totalParticipating})`
+                    ? `Split equally (1/${totalParticipating})`
                     : 'Full 1.0 QP Award'}
                 </span>
-                <span className="font-black text-amber-300 flex items-center gap-1">
+                <span className="font-bold text-amber-300 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-amber-400" />
-                  {pointsPerWorker} QP / Person
+                  {pointsPerWorker} QP each
                 </span>
               </div>
 
@@ -1075,15 +1084,15 @@ export const JobDetailPage: React.FC = () => {
                   type="button"
                   onClick={executeCompleteTask}
                   disabled={isCompletingTask}
-                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-emerald-500/25 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
-                  {isCompletingTask ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 stroke-[3]" />}
-                  <span>Complete & Award ({pointsPerWorker} QP)</span>
+                  {isCompletingTask ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  <span>Complete ({pointsPerWorker} QP)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCompleteTaskModal({ isOpen: false, task: null, isShared: false, partnerIds: [] })}
-                  className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-bold text-xs cursor-pointer"
+                  className="px-3.5 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-bold text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
