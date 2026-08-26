@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronRight,
@@ -7,7 +6,6 @@ import {
   Sparkles,
   CheckCircle2,
   Clock,
-  Pin,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ProgressBarBeam } from './AnimatedBeam';
@@ -36,12 +34,17 @@ interface IosNotificationStackProps {
 export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
   jobs,
   className,
-  autoScrollInterval = 4500,
+  autoScrollInterval = 5000,
 }) => {
   const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
+  const hasMovedRef = useRef(false);
+
   const total = jobs.length;
 
   // Track active item on scroll
@@ -87,6 +90,35 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
     return () => clearInterval(timer);
   }, [total, isPaused, activeIndex, autoScrollInterval]);
 
+  // Mouse / Pointer drag support for desktop & tablets
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollContainerRef.current) return;
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    startXRef.current = e.pageX - scrollContainerRef.current.offsetLeft;
+    scrollLeftRef.current = scrollContainerRef.current.scrollLeft;
+    setIsPaused(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current || !scrollContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - startXRef.current) * 1.2;
+    if (Math.abs(walk) > 5) {
+      hasMovedRef.current = true;
+    }
+    scrollContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
+  };
+
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+    setTimeout(() => {
+      hasMovedRef.current = false;
+      setIsPaused(false);
+    }, 150);
+  };
+
   if (total === 0) {
     return (
       <div className="w-full h-32 flex flex-col items-center justify-center text-center p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
@@ -101,17 +133,21 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
 
   return (
     <div
-      className={cn('relative w-full select-none space-y-2.5', className)}
+      className={cn('relative w-full space-y-2.5', className)}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      onTouchStart={() => setIsPaused(true)}
-      onTouchEnd={() => setTimeout(() => setIsPaused(false), 3000)}
     >
-      {/* ── 1.3 CARDS SMOOTH HORIZONTAL PEEK TRACK ── */}
+      {/* ── 1.3 CARDS SMOOTH HORIZONTAL PEEK TRACK (Touch & Swipe enabled) ── */}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory py-1 px-0.5 no-scrollbar"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchStart={() => setIsPaused(true)}
+        onTouchEnd={() => setTimeout(() => setIsPaused(false), 3500)}
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory py-1 px-0.5 touch-pan-x cursor-grab active:cursor-grabbing no-scrollbar"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
@@ -124,12 +160,15 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
           const isActive = idx === activeIndex;
 
           return (
-            <motion.div
+            <div
               key={job.id + '-' + idx}
-              whileHover={{ y: -2 }}
-              onClick={() => navigate(`/jobs/${job.id}`)}
+              onClick={() => {
+                if (!hasMovedRef.current) {
+                  navigate(`/jobs/${job.id}`);
+                }
+              }}
               className={cn(
-                'group relative shrink-0 w-[77%] sm:w-[78%] md:w-[74%] snap-start rounded-2xl p-3.5 sm:p-4 cursor-pointer flex flex-col justify-between backdrop-blur-2xl transition-all duration-300 shadow-lg shadow-black/40 overflow-hidden',
+                'group relative shrink-0 w-[77%] sm:w-[78%] md:w-[74%] snap-start rounded-2xl p-3.5 sm:p-4 cursor-pointer flex flex-col justify-between backdrop-blur-2xl transition-all duration-300 shadow-lg shadow-black/40 overflow-hidden select-none',
                 isActive
                   ? 'bg-white/[0.045] border border-amber-400/40 hover:border-amber-400/70 shadow-amber-500/5'
                   : 'bg-white/[0.025] border border-white/[0.07] opacity-85 hover:opacity-100 hover:border-white/20'
@@ -217,12 +256,12 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
                   <ChevronRight className="w-3 h-3" />
                 </div>
               </div>
-            </motion.div>
+            </div>
           );
         })}
       </div>
 
-      {/* ── PEAK FLOW CONTROLS & PAGINATION INDICATOR ── */}
+      {/* ── PEAK FLOW CONTROLS & PAGINATION INDICATOR (No White Rings on Arrows) ── */}
       {total > 1 && (
         <div className="flex items-center justify-between px-1 text-[10px] font-mono text-slate-400 pt-0.5">
           <div className="flex items-center gap-1.5">
@@ -232,25 +271,26 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
+            {/* Left Arrow: Zero borders, zero rings */}
             <button
               type="button"
               onClick={handlePrev}
-              className="p-1 rounded-lg bg-white/5 border border-white/8 text-slate-300 hover:text-amber-400 hover:bg-white/10 transition active:scale-90 cursor-pointer"
+              className="p-1.5 rounded-full text-slate-400 hover:text-amber-300 hover:bg-white/10 active:scale-90 transition cursor-pointer border-0 outline-none ring-0 shadow-none"
               title="Previous vehicle"
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
 
             {/* Dot Stack Indicators */}
-            <div className="flex items-center gap-1 px-1">
+            <div className="flex items-center gap-1 px-0.5">
               {jobs.slice(0, Math.min(total, 6)).map((_, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => scrollToIndex(i)}
                   className={cn(
-                    'h-1 rounded-full transition-all duration-300 cursor-pointer',
+                    'h-1 rounded-full transition-all duration-300 cursor-pointer border-0 outline-none',
                     i === activeIndex
                       ? 'w-4 bg-amber-400 shadow-sm shadow-amber-400/50'
                       : 'w-1.5 bg-white/20 hover:bg-amber-400/60'
@@ -261,13 +301,14 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
               {total > 6 && <span className="text-[8px] text-slate-500">+{total - 6}</span>}
             </div>
 
+            {/* Right Arrow: Zero borders, zero rings */}
             <button
               type="button"
               onClick={handleNext}
-              className="p-1 rounded-lg bg-white/5 border border-white/8 text-slate-300 hover:text-amber-400 hover:bg-white/10 transition active:scale-90 cursor-pointer"
+              className="p-1.5 rounded-full text-slate-400 hover:text-amber-300 hover:bg-white/10 active:scale-90 transition cursor-pointer border-0 outline-none ring-0 shadow-none"
               title="Next vehicle"
             >
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
