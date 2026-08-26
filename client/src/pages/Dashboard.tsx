@@ -248,7 +248,7 @@ export const Dashboard: React.FC = () => {
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Live
                       </span>
                     </h3>
-                    <p className="text-[10px] font-mono text-slate-400 mt-0.5">Tap card for details • Swipe to loop</p>
+                    <p className="text-[10px] font-mono text-slate-400 mt-0.5">Tap card for details • Swipe to browse</p>
                   </div>
                 </div>
                 <button

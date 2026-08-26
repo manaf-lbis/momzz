@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  Car,
   ChevronRight,
   ChevronLeft,
   Sparkles,
   CheckCircle2,
   Clock,
+  Pin,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ProgressBarBeam } from './AnimatedBeam';
+import { BorderBeam } from './BorderBeam';
 import { getDeliveryStatusInfo } from '../../utils/dateUtils';
 
 export interface StackJobCardItem {
@@ -35,164 +36,199 @@ interface IosNotificationStackProps {
 export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
   jobs,
   className,
-  autoScrollInterval = 4000,
+  autoScrollInterval = 4500,
 }) => {
   const navigate = useNavigate();
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const total = jobs.length;
+
+  // Track active item on scroll
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    const container = scrollContainerRef.current;
+    const scrollLeft = container.scrollLeft;
+    const itemWidth = container.clientWidth * 0.77 + 12; // 77% card width + 12px gap
+    const newIndex = Math.round(scrollLeft / itemWidth);
+    if (newIndex >= 0 && newIndex < total && newIndex !== activeIndex) {
+      setActiveIndex(newIndex);
+    }
+  };
+
+  // Scroll to a specific index
+  const scrollToIndex = (index: number) => {
+    if (!scrollContainerRef.current) return;
+    const container = scrollContainerRef.current;
+    const itemWidth = container.clientWidth * 0.77 + 12;
+    container.scrollTo({
+      left: index * itemWidth,
+      behavior: 'smooth',
+    });
+    setActiveIndex(index);
+  };
+
+  const handleNext = () => {
+    const nextIndex = (activeIndex + 1) % total;
+    scrollToIndex(nextIndex);
+  };
+
+  const handlePrev = () => {
+    const prevIndex = (activeIndex - 1 + total) % total;
+    scrollToIndex(prevIndex);
+  };
 
   // Auto-scroll loop
   useEffect(() => {
     if (total <= 1 || isPaused) return;
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % total);
+      handleNext();
     }, autoScrollInterval);
     return () => clearInterval(timer);
-  }, [total, isPaused, autoScrollInterval]);
+  }, [total, isPaused, activeIndex, autoScrollInterval]);
 
   if (total === 0) {
     return (
-      <div className="w-full h-28 flex flex-col items-center justify-center text-center p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+      <div className="w-full h-32 flex flex-col items-center justify-center text-center p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
         <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center mb-1">
           <CheckCircle2 className="w-4.5 h-4.5" />
         </div>
-        <p className="text-xs font-bold text-slate-200 font-mono">No Active Jobs in Service</p>
+        <p className="text-xs font-bold text-slate-200 font-mono">No Active Vehicles in Service</p>
         <p className="text-[10px] text-slate-500 font-mono">All workshop vehicles are clear</p>
       </div>
     );
   }
 
-  const currentJob = jobs[currentIndex];
-  const isReady = currentJob.totalTasks > 0 && currentJob.completedTasks === currentJob.totalTasks;
-  const deliveryInfo = getDeliveryStatusInfo(currentJob.expectedDeliveryDate, isReady);
-
-  const isDraggingRef = useRef(false);
-
-  const handleNext = () => setCurrentIndex((prev) => (prev + 1) % total);
-  const handlePrev = () => setCurrentIndex((prev) => (prev - 1 + total) % total);
-
   return (
     <div
-      className={cn('relative w-full select-none space-y-2', className)}
+      className={cn('relative w-full select-none space-y-2.5', className)}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={() => setIsPaused(true)}
-      onTouchEnd={() => setTimeout(() => setIsPaused(false), 2500)}
+      onTouchEnd={() => setTimeout(() => setIsPaused(false), 3000)}
     >
-      {/* ── INTERACTIVE SWIPEABLE CARD CONTAINER ── */}
-      <div className="relative overflow-hidden min-h-[135px] sm:min-h-[145px] flex items-center">
-        <AnimatePresence mode="popLayout" initial={false}>
-          <motion.div
-            key={currentJob.id + '-' + currentIndex}
-            initial={{ opacity: 0, x: 50, scale: 0.96 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -50, scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.3}
-            onDragStart={() => {
-              isDraggingRef.current = true;
-            }}
-            onDragEnd={(_, info) => {
-              if (info.offset.x < -40) handleNext();
-              else if (info.offset.x > 40) handlePrev();
-              setTimeout(() => {
-                isDraggingRef.current = false;
-              }, 120);
-            }}
-            onClick={() => {
-              if (!isDraggingRef.current) {
-                navigate(`/jobs/${currentJob.id}`);
-              }
-            }}
-            className="w-full rounded-2xl p-3.5 sm:p-4 cursor-pointer flex flex-col justify-between backdrop-blur-2xl bg-white/[0.04] border border-amber-400/30 hover:border-amber-400/60 shadow-xl shadow-black/60 transition-all duration-300"
-          >
-            {/* Header: Vehicle Icon, Model & Reg Plate */}
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div
-                  className={cn(
-                    'w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors shadow-xs',
-                    isReady
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-amber-400/20 text-amber-400 border border-amber-400/30'
-                  )}
-                >
-                  <Car className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-                </div>
+      {/* ── 1.3 CARDS SMOOTH HORIZONTAL PEEK TRACK ── */}
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory py-1 px-0.5 no-scrollbar"
+        style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        {jobs.map((job, idx) => {
+          const isReady = job.totalTasks > 0 && job.completedTasks === job.totalTasks;
+          const deliveryInfo = getDeliveryStatusInfo(job.expectedDeliveryDate, isReady);
+          const isActive = idx === activeIndex;
 
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-xs sm:text-sm font-black uppercase tracking-tight leading-tight truncate text-white">
-                    {currentJob.vehicleName}
-                  </h4>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] sm:text-xs font-mono font-black text-slate-950 bg-gradient-to-r from-amber-400 to-yellow-300 px-2 py-0.5 rounded-md border border-amber-500/50 shadow-xs inline-block tracking-wider">
-                      {currentJob.vehicleNumber}
-                    </span>
-                    {currentJob.vehicleColor && (
-                      <span className="text-[10px] font-mono text-slate-400 truncate">
-                        • {currentJob.vehicleColor}
+          return (
+            <motion.div
+              key={job.id + '-' + idx}
+              whileHover={{ y: -2 }}
+              onClick={() => navigate(`/jobs/${job.id}`)}
+              className={cn(
+                'group relative shrink-0 w-[77%] sm:w-[78%] md:w-[74%] snap-start rounded-2xl p-3.5 sm:p-4 cursor-pointer flex flex-col justify-between backdrop-blur-2xl transition-all duration-300 shadow-lg shadow-black/40 overflow-hidden',
+                isActive
+                  ? 'bg-white/[0.045] border border-amber-400/40 hover:border-amber-400/70 shadow-amber-500/5'
+                  : 'bg-white/[0.025] border border-white/[0.07] opacity-85 hover:opacity-100 hover:border-white/20'
+              )}
+            >
+              {job.isPinned && (
+                <BorderBeam size={160} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={0.75} />
+              )}
+
+              <div>
+                {/* Top Row: Vehicle Name, Reg Plate & Ready Status */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h4 className="text-xs sm:text-sm font-black uppercase tracking-tight truncate text-white group-hover:text-amber-200 transition-colors">
+                        {job.vehicleName}
+                      </h4>
+                      {isReady && (
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-0.5">
+                          <CheckCircle2 className="w-2.5 h-2.5" /> Ready
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] font-mono font-black text-amber-300/90 bg-white/[0.06] px-2 py-0.5 rounded-md border border-white/10 tracking-wider">
+                        {job.vehicleNumber}
+                      </span>
+                      {job.vehicleColor && (
+                        <span className="text-[10px] font-mono text-slate-400 truncate">
+                          • {job.vehicleColor}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Priority / Delivery Pill */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {job.isPinned && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[8px] font-mono font-black border border-amber-400/40 shadow-xs">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        Pin
+                      </span>
+                    )}
+                    {job.expectedDeliveryDate && (
+                      <span className={cn('text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border', deliveryInfo.badgeClass)}>
+                        {deliveryInfo.shortLabel}
                       </span>
                     )}
                   </div>
                 </div>
+
+                {/* Progress Bar Beam */}
+                <div className="space-y-1 mt-2.5 pt-2 border-t border-white/[0.05]">
+                  <div className="flex items-center justify-between text-[10px] font-mono">
+                    <span className="text-slate-400 uppercase font-bold">
+                      Progress
+                    </span>
+                    <span
+                      className={cn(
+                        'font-black text-[10px] px-1.5 py-0.2 rounded',
+                        isReady
+                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-white/5 text-amber-300 border border-white/10'
+                      )}
+                    >
+                      {job.completedTasks}/{job.totalTasks} ({job.progressPercent}%)
+                    </span>
+                  </div>
+                  <ProgressBarBeam progress={job.progressPercent} />
+                </div>
               </div>
 
-              <div className="flex items-center gap-1 shrink-0">
-                {currentJob.isPinned && (
-                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[9px] font-mono font-black border border-amber-400/40 shadow-xs animate-pulse">
-                    <Sparkles className="w-2.5 h-2.5" />
-                    Priority
+              {/* Bottom CTA Strip */}
+              <div className="mt-2.5 pt-2 border-t border-white/[0.05] flex items-center justify-between text-[10px] font-mono">
+                <div className="flex items-center gap-1 text-slate-400 truncate">
+                  <Clock className="w-3 h-3 text-slate-500 shrink-0" />
+                  <span className="truncate">
+                    {job.expectedDeliveryDate ? deliveryInfo.label : 'In Garage Service'}
                   </span>
-                )}
-                {currentJob.expectedDeliveryDate && (
-                  <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-md border ${deliveryInfo.badgeClass}`}>
-                    {deliveryInfo.shortLabel}
-                  </span>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Middle: Progress Bar Beam */}
-            <div className="space-y-1.5 py-1.5">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-400 uppercase tracking-wider text-[9px] sm:text-[10px] font-bold">
-                  Progress
-                </span>
-                <span className="font-black text-amber-400 text-xs px-2 py-0.5 rounded bg-amber-400/15 border border-amber-400/30">
-                  {currentJob.completedTasks}/{currentJob.totalTasks} ({currentJob.progressPercent}%)
-                </span>
+                <div className="flex items-center gap-0.5 text-slate-300 group-hover:text-amber-300 font-bold transition-colors shrink-0">
+                  <span>Checklist</span>
+                  <ChevronRight className="w-3 h-3" />
+                </div>
               </div>
-              <ProgressBarBeam progress={currentJob.progressPercent} />
-            </div>
-
-            {/* Bottom: Delivery Status & Open CTA */}
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/[0.06] text-[10px] font-mono">
-              <div className="flex items-center gap-1.5 text-slate-400 truncate">
-                <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                <span className="truncate">
-                  {currentJob.expectedDeliveryDate ? deliveryInfo.label : 'In Garage Service'}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-0.5 text-amber-400 font-bold shrink-0">
-                <span>View Job</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
+            </motion.div>
+          );
+        })}
       </div>
 
-      {/* ── LOOP COUNTER & NAVIGATION CONTROLS ── */}
+      {/* ── PEAK FLOW CONTROLS & PAGINATION INDICATOR ── */}
       {total > 1 && (
-        <div className="flex items-center justify-between px-1 text-[10px] font-mono text-slate-400">
+        <div className="flex items-center justify-between px-1 text-[10px] font-mono text-slate-400 pt-0.5">
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             <span>
-              Vehicle {currentIndex + 1} of {total} • Swipe to loop
+              Vehicle {activeIndex + 1} of {total} • Swipe to browse
             </span>
           </div>
 
@@ -200,35 +236,36 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
             <button
               type="button"
               onClick={handlePrev}
-              className="p-1 rounded-lg bg-white/5 border border-white/8 text-slate-300 hover:text-amber-400 hover:bg-white/10 transition active:scale-90"
-              title="Previous car"
+              className="p-1 rounded-lg bg-white/5 border border-white/8 text-slate-300 hover:text-amber-400 hover:bg-white/10 transition active:scale-90 cursor-pointer"
+              title="Previous vehicle"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
 
             {/* Dot Stack Indicators */}
             <div className="flex items-center gap-1 px-1">
-              {jobs.map((_, i) => (
+              {jobs.slice(0, Math.min(total, 6)).map((_, i) => (
                 <button
                   key={i}
                   type="button"
-                  onClick={() => setCurrentIndex(i)}
+                  onClick={() => scrollToIndex(i)}
                   className={cn(
                     'h-1 rounded-full transition-all duration-300 cursor-pointer',
-                    i === currentIndex
+                    i === activeIndex
                       ? 'w-4 bg-amber-400 shadow-sm shadow-amber-400/50'
                       : 'w-1.5 bg-white/20 hover:bg-amber-400/60'
                   )}
                   title={`Vehicle ${i + 1}`}
                 />
               ))}
+              {total > 6 && <span className="text-[8px] text-slate-500">+{total - 6}</span>}
             </div>
 
             <button
               type="button"
               onClick={handleNext}
-              className="p-1 rounded-lg bg-white/5 border border-white/8 text-slate-300 hover:text-amber-400 hover:bg-white/10 transition active:scale-90"
-              title="Next car"
+              className="p-1 rounded-lg bg-white/5 border border-white/8 text-slate-300 hover:text-amber-400 hover:bg-white/10 transition active:scale-90 cursor-pointer"
+              title="Next vehicle"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
