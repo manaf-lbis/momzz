@@ -5,8 +5,8 @@ import mongoSanitize from 'express-mongo-sanitize';
 import cookieParser from 'cookie-parser';
 import { ENV } from './config/env';
 import { connectDB } from './config/db';
-import authRouter from './router/authRouter';
-import { requestLogger } from './middleware/requestLogger';
+import authRouter from './features/authentication/auth.router';
+import { requestLogger } from './shared/middleware/request-logger.middleware';
 
 const app: Application = express();
 
@@ -42,11 +42,28 @@ app.disable('x-powered-by');
 // Dynamic CORS origin handler
 const allowedOrigins = ENV.CORS_ORIGINS;
 
-const isAllowedOrigin = (origin: string) => {
+export const isAllowedOrigin = (origin?: string): boolean => {
+  if (!origin) return true;
   const cleanOrigin = origin.replace(/\/$/, '');
-  return allowedOrigins.some(
-    (allowed) => allowed && allowed.replace(/\/$/, '') === cleanOrigin
-  );
+  
+  if (allowedOrigins.length === 0) return true;
+
+  return allowedOrigins.some((allowed) => {
+    if (!allowed) return false;
+    const cleanAllowed = allowed.replace(/\/$/, '');
+    if (cleanAllowed === cleanOrigin) return true;
+
+    // Support wildcard matching e.g. https://*.vercel.app or *.vercel.app
+    if (cleanAllowed.includes('*')) {
+      const pattern = cleanAllowed
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\*/g, '.*');
+      const regex = new RegExp(`^${pattern}$`, 'i');
+      return regex.test(cleanOrigin);
+    }
+
+    return false;
+  });
 };
 
 const corsOptions: cors.CorsOptions = {
@@ -99,11 +116,11 @@ app.get('/.well-known/*', (req: Request, res: Response) => {
   res.status(200).json({ status: 'OK' });
 });
 
-import jobRouter from './router/jobRouter';
-import inventoryRouter from './router/inventoryRouter';
-import publicRouter from './router/publicRouter';
-import catalogRouter from './router/catalogRouter';
-import { globalApiRateLimiter } from './middleware/rateLimitMiddleware';
+import jobRouter from './features/jobs/job.router';
+import inventoryRouter from './features/inventory/inventory.router';
+import publicRouter from './features/users/public.router';
+import catalogRouter from './features/catalog/catalog.router';
+import { globalApiRateLimiter } from './shared/middleware/rate-limit.middleware';
 
 // Global API Rate Limiter
 app.use('/api', globalApiRateLimiter);
@@ -136,6 +153,8 @@ app.get('/api/health', (req: Request, res: Response) => {
     status: 'UP',
     serverUrl: `http://localhost:${ENV.PORT}`,
     clientUrl: ENV.CLIENT_URL,
+    clientUrls: ENV.CLIENT_URLS,
+    corsOrigins: ENV.CORS_ORIGINS,
     timestamp: new Date().toISOString(),
   });
 });
@@ -166,9 +185,9 @@ connectDB().then(async () => {
   await testRedisConnection();
   server.listen(ENV.PORT, () => {
     console.log(`[SERVER] Momzz backend listening on http://localhost:${ENV.PORT}`);
-    console.log(`[SERVER] Configured Client URL from env: ${ENV.CLIENT_URL}`);
+    console.log(`[SERVER] Configured Client URLs: ${ENV.CLIENT_URLS.join(', ') || ENV.CLIENT_URL || 'None'}`);
+    console.log(`[SERVER] Allowed CORS Origins: ${ENV.CORS_ORIGINS.join(', ') || 'All'}`);
   });
 });
 
 export default app;
-

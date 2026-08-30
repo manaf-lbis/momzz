@@ -25,11 +25,28 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="MOMZ'Z GARAGE" />
     
+    <!-- Early Theme Loader (Zero Flash) -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('garagehub_theme');
+          var root = document.documentElement;
+          if (saved === 'light') {
+            root.classList.remove('dark');
+            root.classList.add('light');
+          } else {
+            root.classList.add('dark');
+            root.classList.remove('light');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Montserrat:wght@900&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-black text-zinc-100 font-sans antialiased min-h-screen selection:bg-yellow-400 selection:text-zinc-950">
+  <body class="bg-zinc-100 dark:bg-[#080810] text-zinc-900 dark:text-zinc-100 font-sans antialiased min-h-screen selection:bg-yellow-400 selection:text-zinc-950 transition-colors duration-200">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

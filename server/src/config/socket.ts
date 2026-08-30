@@ -2,24 +2,41 @@ import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { ENV } from './env';
-import { userRepository } from '../repository/userRepository';
-import { cacheService } from '../service/cacheService';
+import { userRepository } from '../features/users/user.repository';
+import { cacheService } from '../features/cache/cache.service';
 
 let io: Server | null = null;
 
-const isAllowedOrigin = (origin?: string): boolean => {
+const isAllowedSocketOrigin = (origin?: string): boolean => {
   if (!origin) return true;
   const cleanOrigin = origin.replace(/\/$/, '');
-  return ENV.CORS_ORIGINS.some(
-    (allowed) => allowed && allowed.replace(/\/$/, '') === cleanOrigin
-  );
+  const allowedOrigins = ENV.CORS_ORIGINS;
+
+  if (allowedOrigins.length === 0) return true;
+
+  return allowedOrigins.some((allowed) => {
+    if (!allowed) return false;
+    const cleanAllowed = allowed.replace(/\/$/, '');
+    if (cleanAllowed === cleanOrigin) return true;
+
+    // Support wildcard matching e.g. https://*.vercel.app
+    if (cleanAllowed.includes('*')) {
+      const pattern = cleanAllowed
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\*/g, '.*');
+      const regex = new RegExp(`^${pattern}$`, 'i');
+      return regex.test(cleanOrigin);
+    }
+
+    return false;
+  });
 };
 
 export const initSocket = (server: HttpServer): Server => {
   io = new Server(server, {
     cors: {
       origin: (origin, callback) => {
-        if (!origin || isAllowedOrigin(origin) || ENV.CORS_ORIGINS.length === 0) {
+        if (!origin || isAllowedSocketOrigin(origin) || ENV.CORS_ORIGINS.length === 0) {
           callback(null, true);
         } else {
           console.warn(`[SOCKET CORS] Blocked origin: ${origin}`);
@@ -51,7 +68,7 @@ export const initSocket = (server: HttpServer): Server => {
         try {
           const decoded = jwt.verify(rawToken, ENV.JWT_ACCESS_SECRET) as any;
           socket.data.user = decoded;
-        } catch (jwtError) {
+        } catch {
           return next(new Error('Invalid or expired socket access token.'));
         }
       }
@@ -83,7 +100,6 @@ export const initSocket = (server: HttpServer): Server => {
     }
 
     socket.on('disconnect', async () => {
-      console.log(`[SOCKET] Client disconnected: ${socket.id}`);
       if (currentUserId) {
         try {
           await userRepository.setUserOnlineStatus(currentUserId, false);
@@ -109,21 +125,18 @@ export const getIO = (): Server => {
 
 export const emitJobCreated = (jobCard: any) => {
   if (io) {
-    console.log('[SOCKET] Emitting jobCard:created for', jobCard?.vehicleNumber);
     io.emit('jobCard:created', jobCard);
   }
 };
 
 export const emitJobUpdated = (jobCard: any) => {
   if (io) {
-    console.log('[SOCKET] Emitting jobCard:updated for', jobCard?.vehicleNumber || jobCard?.id);
     io.emit('jobCard:updated', jobCard);
   }
 };
 
 export const emitJobDeleted = (jobCardId: string) => {
   if (io) {
-    console.log('[SOCKET] Emitting jobCard:deleted for', jobCardId);
     io.emit('jobCard:deleted', { jobCardId });
   }
 };
@@ -132,7 +145,6 @@ export const emitJobDeleted = (jobCardId: string) => {
 
 export const emitTaskAdded = (jobCardId: string, task: any) => {
   if (io) {
-    console.log('[SOCKET] Emitting task:added for job', jobCardId);
     io.emit('task:added', { jobCardId, task });
   }
 };
@@ -144,14 +156,12 @@ export const emitTaskUpdated = (
   action: 'COMPLETE' | 'REOPEN' | 'PIN_TOGGLED'
 ) => {
   if (io) {
-    console.log('[SOCKET] Emitting task:updated', taskId, '-> action:', action, 'status:', task?.status);
     io.emit('task:updated', { jobCardId, taskId, task, action });
   }
 };
 
 export const emitTaskDeleted = (jobCardId: string, taskId: string) => {
   if (io) {
-    console.log('[SOCKET] Emitting task:deleted', taskId);
     io.emit('task:deleted', { jobCardId, taskId });
   }
 };
