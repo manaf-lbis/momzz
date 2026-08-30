@@ -84,7 +84,6 @@ export const initSocket = (server: HttpServer): Server => {
     const currentUserId = authUser?.id;
 
     if (currentUserId) {
-      console.log(`[SOCKET] Authenticated client connected: ${socket.id} (User: ${currentUserId})`);
       socket.join(`user:${currentUserId}`);
 
       try {
@@ -95,8 +94,6 @@ export const initSocket = (server: HttpServer): Server => {
       } catch (err) {
         console.error('[SOCKET] Error updating online status:', err);
       }
-    } else {
-      console.log(`[SOCKET] Guest/Public client connected: ${socket.id}`);
     }
 
     socket.on('disconnect', async () => {

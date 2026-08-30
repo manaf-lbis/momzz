@@ -1,15 +1,8 @@
 import { redis } from '../../config/redis';
 
-interface CacheEntry<T> {
-  value: T;
-  expiresAt?: number;
-}
-
-const MAX_MEMORY_CACHE_ENTRIES = 2000;
-
 export class CacheService {
-  // Bounded L1 In-Memory LRU Cache with TTL support
-  private memoryCache = new Map<string, CacheEntry<any>>();
+  // Permanent L1 In-Memory Cache — persists until explicit update/delete on change
+  private memoryCache = new Map<string, any>();
 
   // In-memory token blacklist Set — 0 Redis commands on every normal request
   private blacklistSet = new Set<string>();
@@ -42,27 +35,19 @@ export class CacheService {
 
   /**
    * Get value from cached memory directly (0ms, 0 Redis commands).
-   * Falls back to Upstash Redis only on cold server start or memory cache miss.
+   * Falls back to Upstash Redis only on cold server start.
    */
   async get<T>(key: string): Promise<T | null> {
-    // 1. Direct in-memory lookup with LRU refresh and TTL check
+    // 1. Direct in-memory lookup (Zero TTL, never deleted unless changed)
     if (this.memoryCache.has(key)) {
-      const entry = this.memoryCache.get(key)!;
-      if (entry.expiresAt && Date.now() > entry.expiresAt) {
-        this.memoryCache.delete(key);
-      } else {
-        // Refresh LRU order (delete & re-set moves it to the back)
-        this.memoryCache.delete(key);
-        this.memoryCache.set(key, entry);
-        return entry.value as T;
-      }
+      return this.memoryCache.get(key) as T;
     }
 
     // 2. Fallback to Upstash Redis on cold start
     try {
       const data = await redis.get<T>(key);
       if (data !== null && data !== undefined) {
-        this.setInMemory(key, data);
+        this.memoryCache.set(key, data);
         return data;
       }
       return null;
@@ -73,30 +58,12 @@ export class CacheService {
   }
 
   /**
-   * Helper to set in memory with bounded LRU eviction.
-   */
-  private setInMemory<T>(key: string, value: T, ttlSeconds?: number): void {
-    if (this.memoryCache.has(key)) {
-      this.memoryCache.delete(key);
-    } else if (this.memoryCache.size >= MAX_MEMORY_CACHE_ENTRIES) {
-      // Evict least recently used (first key in map iteration order)
-      const oldestKey = this.memoryCache.keys().next().value;
-      if (oldestKey) {
-        this.memoryCache.delete(oldestKey);
-      }
-    }
-
-    const expiresAt = ttlSeconds && ttlSeconds > 0 ? Date.now() + ttlSeconds * 1000 : undefined;
-    this.memoryCache.set(key, { value, expiresAt });
-  }
-
-  /**
-   * Set value in memory and Upstash Redis.
-   * If ttlSeconds is not passed, data is stored permanently until explicit invalidation.
+   * Set value in memory and Upstash Redis permanently until data is changed.
+   * If ttlSeconds is not passed, data is stored permanently without auto-expiry.
    */
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    // Store in bounded memory cache
-    this.setInMemory(key, value, ttlSeconds);
+    // Store in memory permanently (until change)
+    this.memoryCache.set(key, value);
 
     // Sync to Upstash Redis
     try {

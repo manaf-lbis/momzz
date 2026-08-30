@@ -50,6 +50,7 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       localStorage.setItem('token', action.payload.token);
       localStorage.setItem('user', JSON.stringify(action.payload.user));
+      if (action.payload.refreshToken) localStorage.setItem('refreshToken', action.payload.refreshToken);
     },
     updateUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;

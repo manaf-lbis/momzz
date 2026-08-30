@@ -373,10 +373,6 @@ export const toggleJobPin = async (req: Request, res: Response) => {
       return sendError(res, 'Invalid pin mode. Must be "ALL" or "ME".', 400);
     }
 
-    if (mode === 'ALL' && req.user?.role !== 'ADMIN') {
-      return sendError(res, 'Only administrators can pin jobs globally for all users.', 403);
-    }
-
     const userId = req.user?.id;
     if (!userId) return sendError(res, 'Unauthorized', 401);
 

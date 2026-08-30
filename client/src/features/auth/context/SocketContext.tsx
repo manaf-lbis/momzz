@@ -68,13 +68,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     const backendUrl = getBackendUrl();
-    const token = localStorage.getItem('token');
     console.log('[SOCKET] Connecting to:', backendUrl);
 
     const socket = io(backendUrl, {
       transports: ['polling', 'websocket'],
       withCredentials: true,
-      auth: { token },
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
@@ -84,10 +82,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('[SOCKET] ✅ Connected:', socket.id);
-      const userId = user?.id || (user as any)?._id;
-      if (userId) {
-        socket.emit('join', userId);
+      if (user?.id) {
+        socket.emit('join', user.id);
       }
     });
 
