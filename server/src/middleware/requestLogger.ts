@@ -47,6 +47,19 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
 
       const logLine = JSON.stringify(logEntry) + '\n';
 
+      // Check log size and rotate if > 10MB to protect disk space
+      try {
+        if (fs.existsSync(ACCESS_LOG_FILE)) {
+          const stats = fs.statSync(ACCESS_LOG_FILE);
+          if (stats.size > 10 * 1024 * 1024) {
+            const backupFile = path.join(LOG_DIR, 'access.log.1');
+            fs.renameSync(ACCESS_LOG_FILE, backupFile);
+          }
+        }
+      } catch {
+        // Ignore rotation error
+      }
+
       fs.appendFile(ACCESS_LOG_FILE, logLine, (err) => {
         if (err) {
           console.warn(`[LOGGER WARNING] Failed to append access log: ${err.message}`);

@@ -25,7 +25,6 @@ export const InstallAppBanner: React.FC = () => {
 
     // Listen for app installed event
     const handleAppInstalled = () => {
-      console.log('[PWA] App successfully installed!');
       setIsInstalled(true);
       setIsDismissed(true);
     };
@@ -45,7 +44,6 @@ export const InstallAppBanner: React.FC = () => {
         // Trigger native 1-tap browser install prompt directly
         promptEvent.prompt();
         const { outcome } = await promptEvent.userChoice;
-        console.log(`[PWA] Direct install outcome: ${outcome}`);
         (window as any).deferredPwaPrompt = null;
         if (outcome === 'accepted') {
           setIsDismissed(true);

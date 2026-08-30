@@ -7,6 +7,7 @@ import { jobApi, TaskItem, JobCardData } from '../api/jobApi';
 import { logout, updateUser } from '../slice/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { store } from '../store/store';
+import { getBaseServerUrl } from '../utils/serverUrl';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -15,9 +16,7 @@ interface SocketContextType {
 const SocketContext = createContext<SocketContextType>({ socket: null });
 
 const getBackendUrl = (): string => {
-  const raw = import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_API_URL || '';
-  if (raw) return raw.replace(/\/api\/?$/, '');
-  return 'http://localhost:5000';
+  return getBaseServerUrl();
 };
 
 /**
@@ -82,20 +81,17 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('[SOCKET] ✅ Connected:', socket.id);
       if (user?.id) {
         socket.emit('join', user.id);
       }
     });
 
     socket.on('connect_error', (err) => {
-      console.error('[SOCKET] ❌ Connection error:', err.message);
+      console.error('[SOCKET] Connection error:', err.message);
     });
 
     // ───── Job Card Created ─────────────────────────────────────────────
     socket.on('jobCard:created', (jobCard: any) => {
-      console.log('[SOCKET] 📥 jobCard:created', jobCard?.vehicleNumber);
-
       // Instant cache patch → then background refetch
       patchAllJobCardCaches(dispatch, (jobsList) => {
         const exists = jobsList.some(
@@ -112,8 +108,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // ───── Job Card Updated ─────────────────────────────────────────────
     socket.on('jobCard:updated', (jobCard: any) => {
-      console.log('[SOCKET] 📥 jobCard:updated', jobCard?.vehicleNumber || jobCard?.id);
-
       patchAllJobCardCaches(dispatch, (jobsList) => {
         const idx = jobsList.findIndex(
           (j: any) => (j.id || j._id) === (jobCard.id || jobCard._id)
@@ -128,8 +122,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // ───── Job Card Deleted ─────────────────────────────────────────────
     socket.on('jobCard:deleted', (data: { jobCardId: string }) => {
-      console.log('[SOCKET] 📥 jobCard:deleted', data?.jobCardId);
-
       patchAllJobCardCaches(dispatch, (jobsList) => {
         const idx = jobsList.findIndex(
           (j: any) => (j.id || j._id) === data.jobCardId
@@ -142,8 +134,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // ───── Task Added ───────────────────────────────────────────────────
     socket.on('task:added', (data: { jobCardId: string; task: any }) => {
-      console.log('[SOCKET] 📥 task:added for job', data?.jobCardId);
-
       patchAllJobCardCaches(dispatch, (jobsList) => {
         const job = jobsList.find(
           (j: any) => (j.id || j._id) === data.jobCardId
@@ -167,15 +157,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socket.on(
       'task:updated',
       (data: { jobCardId: string; taskId: string; task: any; action: string }) => {
-        console.log(
-          '[SOCKET] 📥 task:updated',
-          data?.taskId,
-          'action:',
-          data?.action,
-          'status:',
-          data?.task?.status
-        );
-
         // Instant patch: replace the task in every cached job list
         patchAllJobCardCaches(dispatch, (jobsList) => {
           for (const job of jobsList) {
@@ -205,8 +186,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // ───── Task Deleted ─────────────────────────────────────────────────
     socket.on('task:deleted', (data: { jobCardId: string; taskId: string }) => {
-      console.log('[SOCKET] 📥 task:deleted', data?.taskId);
-
       patchAllJobCardCaches(dispatch, (jobsList) => {
         for (const job of jobsList) {
           if (!job.tasks) continue;
@@ -237,7 +216,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     socket.on('user:approved', ({ userId }: { userId: string }) => {
-      console.log('[SOCKET] 📥 user:approved for:', userId);
       dispatch(apiSlice.util.invalidateTags(['User', 'PendingWorkers']));
       if (user && user.id === userId) {
         dispatch(updateUser({ ...user, isApproved: true }));
@@ -246,7 +224,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     socket.on('user:blocked', ({ userId }: { userId: string }) => {
-      console.log('[SOCKET] 📥 user:blocked for:', userId);
       if (user && user.id === userId) {
         dispatch(logout());
         navigate('/login');
@@ -254,18 +231,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     return () => {
-      console.log('[SOCKET] Disconnecting...');
       socket.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, user?.id]);
-
-  // Re-join room when user changes
-  useEffect(() => {
-    if (socketRef.current?.connected && user?.id) {
-      socketRef.current.emit('join', user.id);
-    }
-  }, [user?.id]);
 
   return (
     <SocketContext.Provider value={{ socket: socketRef.current }}>
