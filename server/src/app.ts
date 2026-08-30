@@ -11,10 +11,25 @@ import { requestLogger } from './middleware/requestLogger';
 const app: Application = express();
 
 // Security HTTP Headers
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-  contentSecurityPolicy: false,
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'blob:'],
+        connectSrc: ["'self'", 'https://res.cloudinary.com', 'ws:', 'wss:', ...(ENV.CORS_ORIGINS || [])],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+      },
+    },
+    hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+  })
+);
 
 // Attach Request Analytics Logger
 app.use(requestLogger);
@@ -88,6 +103,10 @@ import jobRouter from './router/jobRouter';
 import inventoryRouter from './router/inventoryRouter';
 import publicRouter from './router/publicRouter';
 import catalogRouter from './router/catalogRouter';
+import { globalApiRateLimiter } from './middleware/rateLimitMiddleware';
+
+// Global API Rate Limiter
+app.use('/api', globalApiRateLimiter);
 
 // API Routes
 app.use('/api/auth', authRouter);
@@ -95,6 +114,20 @@ app.use('/api/jobs', jobRouter);
 app.use('/api/inventory', inventoryRouter);
 app.use('/api/public', publicRouter);
 app.use('/api/catalog', catalogRouter);
+
+// Centralized Error-Handling Middleware (Mask internal errors in production)
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('[UNHANDLED ERROR]', err);
+  const statusCode = err.status || err.statusCode || 500;
+  const isProd = process.env.NODE_ENV === 'production';
+  const message = isProd && statusCode === 500 ? 'An unexpected server error occurred.' : err.message || 'Server error';
+  
+  res.status(statusCode).json({
+    success: false,
+    message,
+    ...(isProd ? {} : { stack: err.stack }),
+  });
+});
 
 
 // Health check

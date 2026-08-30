@@ -109,3 +109,25 @@ export const publicTrackRateLimiter = createRateLimiter({
   limit: 30, // 30 queries per minute
   windowSeconds: 60,
 });
+
+/** Pre-configured rate limiter for user registration to prevent bot abuse */
+export const registerRateLimiter = createRateLimiter({
+  name: 'register',
+  limit: 5, // 5 registration attempts per 15 minutes per IP
+  windowSeconds: 15 * 60,
+});
+
+/** Pre-configured rate limiter for refresh token rotation */
+export const refreshRateLimiter = createRateLimiter({
+  name: 'refresh_token',
+  limit: 30, // 30 refresh requests per minute per IP
+  windowSeconds: 60,
+});
+
+/** Global API rate limiter to mitigate denial-of-service */
+export const globalApiRateLimiter = createRateLimiter({
+  name: 'global_api',
+  limit: 200, // 200 requests per minute per IP
+  windowSeconds: 60,
+});
+

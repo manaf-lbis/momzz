@@ -69,11 +69,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     const backendUrl = getBackendUrl();
+    const token = localStorage.getItem('token');
     console.log('[SOCKET] Connecting to:', backendUrl);
 
     const socket = io(backendUrl, {
       transports: ['websocket', 'polling'],
       withCredentials: true,
+      auth: { token },
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
@@ -83,9 +85,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     socket.on('connect', () => {
       console.log('[SOCKET] ✅ Connected:', socket.id);
-      if (user?.id) {
-        socket.emit('join', user.id);
-      }
     });
 
     socket.on('connect_error', (err) => {
@@ -257,15 +256,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.log('[SOCKET] Disconnecting...');
       socket.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, user?.id]);
-
-  // Re-join room when user changes
-  useEffect(() => {
-    if (socketRef.current?.connected && user?.id) {
-      socketRef.current.emit('join', user.id);
-    }
-  }, [user?.id]);
 
   return (
     <SocketContext.Provider value={{ socket: socketRef.current }}>

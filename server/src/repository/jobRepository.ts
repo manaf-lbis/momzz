@@ -6,6 +6,10 @@ import { catalogRepository } from './catalogRepository';
 import { cacheService } from '../service/cacheService';
 
 
+const escapeRegex = (text: string): string => {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+};
+
 export class JobRepository {
   async createJobCard(data: {
     vehicleName: string;
@@ -112,14 +116,15 @@ export class JobRepository {
     }
 
     if (options.search && options.search.trim()) {
-      const s = options.search.trim();
-      const cleanPlate = s.replace(/[\s-]+/g, '');
+      const rawSearch = options.search.trim();
+      const safeSearch = escapeRegex(rawSearch);
+      const cleanPlate = escapeRegex(rawSearch.replace(/[\s-]+/g, ''));
       query.$or = [
-        { vehicleName: { $regex: s, $options: 'i' } },
-        { vehicleNumber: { $regex: s, $options: 'i' } },
+        { vehicleName: { $regex: safeSearch, $options: 'i' } },
+        { vehicleNumber: { $regex: safeSearch, $options: 'i' } },
         { vehicleNumber: { $regex: cleanPlate, $options: 'i' } },
-        { customerName: { $regex: s, $options: 'i' } },
-        { customerMobile: { $regex: s, $options: 'i' } },
+        { customerName: { $regex: safeSearch, $options: 'i' } },
+        { customerMobile: { $regex: safeSearch, $options: 'i' } },
       ];
     }
 

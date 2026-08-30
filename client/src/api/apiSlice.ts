@@ -23,7 +23,7 @@ const refreshAccessToken = (
 ) => {
   if (!refreshRequest) {
     refreshRequest = Promise.resolve(baseQuery(
-      { url: '/auth/refresh', method: 'POST', body: { refreshToken: localStorage.getItem('refreshToken') } },
+      { url: '/auth/refresh', method: 'POST' },
       api,
       extraOptions
     )).finally(() => {

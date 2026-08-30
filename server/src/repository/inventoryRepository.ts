@@ -1,6 +1,8 @@
 import { TaskInventory, ITaskInventory } from '../model/TaskInventory';
 import { advancedSearch, findDuplicateCandidates } from '../utils/searchAlgorithm';
 
+const escapeRegex = (text: string): string => text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+
 export class InventoryRepository {
   async search(query: string, limit = 20): Promise<ITaskInventory[]> {
     if (!query || !query.trim()) {
@@ -27,8 +29,9 @@ export class InventoryRepository {
 
   async upsertByName(name: string, category?: string): Promise<ITaskInventory> {
     const trimmed = name.trim();
-    // Direct exact match check
-    const existingExact = await TaskInventory.findOne({ name: { $regex: `^${trimmed}$`, $options: 'i' } });
+    // Direct exact match check with escaped regex
+    const safeRegex = escapeRegex(trimmed);
+    const existingExact = await TaskInventory.findOne({ name: { $regex: `^${safeRegex}$`, $options: 'i' } });
     if (existingExact) return existingExact;
 
     // Check near duplicates to avoid small spelling/spacing duplicates

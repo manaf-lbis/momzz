@@ -1,40 +1,86 @@
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
+import jwt from 'jsonwebtoken';
 import { ENV } from './env';
 import { userRepository } from '../repository/userRepository';
+import { cacheService } from '../service/cacheService';
 
 let io: Server | null = null;
+
+const isAllowedOrigin = (origin?: string): boolean => {
+  if (!origin) return true;
+  const cleanOrigin = origin.replace(/\/$/, '');
+  return ENV.CORS_ORIGINS.some(
+    (allowed) => allowed && allowed.replace(/\/$/, '') === cleanOrigin
+  );
+};
 
 export const initSocket = (server: HttpServer): Server => {
   io = new Server(server, {
     cors: {
-      origin: '*',
+      origin: (origin, callback) => {
+        if (!origin || isAllowedOrigin(origin) || ENV.CORS_ORIGINS.length === 0) {
+          callback(null, true);
+        } else {
+          console.warn(`[SOCKET CORS] Blocked origin: ${origin}`);
+          callback(new Error('Origin not allowed by Socket CORS policy'));
+        }
+      },
       methods: ['GET', 'POST', 'PATCH', 'DELETE'],
       credentials: true,
     },
     transports: ['websocket', 'polling'],
   });
 
-  io.on('connection', (socket: Socket) => {
-    let currentUserId: string | null = null;
-    console.log(`[SOCKET] Client connected: ${socket.id}`);
+  // JWT Authentication Handshake Middleware
+  io.use(async (socket: Socket, next) => {
+    try {
+      const rawToken =
+        socket.handshake.auth?.token ||
+        (socket.handshake.headers?.authorization &&
+          socket.handshake.headers.authorization.startsWith('Bearer ')
+          ? socket.handshake.headers.authorization.split(' ')[1]
+          : null);
 
-    socket.on('join', async (userId: string) => {
-      if (userId) {
-        currentUserId = userId;
-        socket.join(`user:${userId}`);
-        console.log(`[SOCKET] Socket ${socket.id} joined room user:${userId}`);
+      if (rawToken) {
+        const isRevoked = await cacheService.isTokenBlacklisted(rawToken);
+        if (isRevoked) {
+          return next(new Error('Access token has been revoked.'));
+        }
 
         try {
-          await userRepository.setUserOnlineStatus(userId, true);
-          if (io) {
-            io.emit('user:status_changed', { userId, isOnline: true });
-          }
-        } catch (err) {
-          console.error('[SOCKET] Error updating online status:', err);
+          const decoded = jwt.verify(rawToken, ENV.JWT_ACCESS_SECRET) as any;
+          socket.data.user = decoded;
+        } catch (jwtError) {
+          return next(new Error('Invalid or expired socket access token.'));
         }
       }
-    });
+
+      next();
+    } catch (err: any) {
+      next(err);
+    }
+  });
+
+  io.on('connection', async (socket: Socket) => {
+    const authUser = socket.data.user;
+    const currentUserId = authUser?.id;
+
+    if (currentUserId) {
+      console.log(`[SOCKET] Authenticated client connected: ${socket.id} (User: ${currentUserId})`);
+      socket.join(`user:${currentUserId}`);
+
+      try {
+        await userRepository.setUserOnlineStatus(currentUserId, true);
+        if (io) {
+          io.emit('user:status_changed', { userId: currentUserId, isOnline: true });
+        }
+      } catch (err) {
+        console.error('[SOCKET] Error updating online status:', err);
+      }
+    } else {
+      console.log(`[SOCKET] Guest/Public client connected: ${socket.id}`);
+    }
 
     socket.on('disconnect', async () => {
       console.log(`[SOCKET] Client disconnected: ${socket.id}`);
