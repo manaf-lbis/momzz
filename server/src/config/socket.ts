@@ -2,8 +2,8 @@ import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { ENV } from './env';
-import { userRepository } from '../repository/userRepository';
-import { cacheService } from '../service/cacheService';
+import { userRepository } from '../features/users/user.repository';
+import { cacheService } from '../features/cache/cache.service';
 
 let io: Server | null = null;
 

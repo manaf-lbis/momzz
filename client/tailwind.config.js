@@ -10,16 +10,30 @@ export default {
       fontFamily: {
         sans: ['Outfit', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
+        display: ['Montserrat', 'Outfit', 'sans-serif'],
       },
       colors: {
+        void: {
+          950: '#080810', // Deep void canvas
+          900: '#0c0c16', // Surface tier 1
+          800: '#141424', // Surface tier 2
+          700: '#1e1e34', // Border tier
+        },
+        garage: {
+          yellow: '#facc15', // Electric yellow
+          gold: '#fbbf24',   // Amber gold
+          amber: '#f59e0b',  // Rich amber
+          hover: '#eab308',  // Yellow hover
+          glow: 'rgba(250, 204, 21, 0.18)',
+        },
         industrial: {
-          950: '#09090b', // bg-zinc-950
-          900: '#18181b', // bg-zinc-900 surface
-          800: '#27272a', // border/card hover
+          950: '#09090b',
+          900: '#18181b',
+          800: '#27272a',
           700: '#3f3f46',
           400: '#a1a1aa',
-          accent: '#facc15', // yellow-400
-          'accent-hover': '#eab308', // yellow-500
+          accent: '#facc15',
+          'accent-hover': '#eab308',
           'accent-glow': 'rgba(250, 204, 21, 0.15)',
         }
       },

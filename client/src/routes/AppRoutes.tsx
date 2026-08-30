@@ -1,31 +1,31 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ScrollToTop } from '../components/common/ScrollToTop';
-import { GsapPageTransition } from '../components/common/GsapPageTransition';
+import { ScrollToTop } from '../shared/components/common/ScrollToTop';
+import { GsapPageTransition } from '../shared/components/common/GsapPageTransition';
 import { lazy, Suspense } from 'react';
-import { PageShimmer } from '../components/common/PageShimmer';
+import { PageShimmer } from '../shared/components/common/PageShimmer';
 import { ProtectedRoute } from './ProtectedRoute';
 
 // Lazy load pages
-const AuthPage = lazy(() => import('../pages/Auth').then((m) => ({ default: m.AuthPage })));
-const Dashboard = lazy(() => import('../pages/Dashboard').then((m) => ({ default: m.Dashboard })));
-const JobsListPage = lazy(() => import('../pages/JobsListPage').then((m) => ({ default: m.JobsListPage })));
-const JobDetailPage = lazy(() => import('../pages/JobDetailPage').then((m) => ({ default: m.JobDetailPage })));
-const AdminApproval = lazy(() => import('../pages/AdminApproval').then((m) => ({ default: m.AdminApproval })));
-const HomePage = lazy(() => import('../pages/HomePage').then((m) => ({ default: m.HomePage })));
-const ProfilePage = lazy(() => import('../pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
-const UserManagementPage = lazy(() => import('../pages/UserManagementPage').then((m) => ({ default: m.UserManagementPage })));
-const AnalyticsPage = lazy(() => import('../pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
-const LeaderboardPage = lazy(() => import('../pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
-const WorkLogsPage = lazy(() => import('../pages/WorkLogsPage').then((m) => ({ default: m.WorkLogsPage })));
-const CreateJobPage = lazy(() => import('../pages/CreateJobPage').then((m) => ({ default: m.CreateJobPage })));
-const EditJobPage = lazy(() => import('../pages/EditJobPage').then((m) => ({ default: m.EditJobPage })));
-const InventoryPage = lazy(() => import('../pages/InventoryPage').then((m) => ({ default: m.InventoryPage })));
-const InventoryDetailPage = lazy(() => import('../pages/InventoryDetailPage').then((m) => ({ default: m.InventoryDetailPage })));
-const AddInventoryItemPage = lazy(() => import('../pages/AddInventoryItemPage').then((m) => ({ default: m.AddInventoryItemPage })));
-const VehiclePhotoPage = lazy(() => import('../pages/VehiclePhotoPage').then((m) => ({ default: m.VehiclePhotoPage })));
-const TrackServicePage = lazy(() => import('../pages/TrackServicePage').then((m) => ({ default: m.TrackServicePage })));
-const SalesPage = lazy(() => import('../pages/SalesPage').then((m) => ({ default: m.SalesPage })));
+const AuthPage = lazy(() => import('../features/auth/pages/Auth').then((m) => ({ default: m.AuthPage })));
+const Dashboard = lazy(() => import('../features/dashboard/pages/Dashboard').then((m) => ({ default: m.Dashboard })));
+const JobsListPage = lazy(() => import('../features/jobs/pages/JobsListPage').then((m) => ({ default: m.JobsListPage })));
+const JobDetailPage = lazy(() => import('../features/jobs/pages/JobDetailPage').then((m) => ({ default: m.JobDetailPage })));
+const AdminApproval = lazy(() => import('../features/users/pages/AdminApproval').then((m) => ({ default: m.AdminApproval })));
+const HomePage = lazy(() => import('../features/home/pages/HomePage').then((m) => ({ default: m.HomePage })));
+const ProfilePage = lazy(() => import('../features/users/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const UserManagementPage = lazy(() => import('../features/users/pages/UserManagementPage').then((m) => ({ default: m.UserManagementPage })));
+const AnalyticsPage = lazy(() => import('../features/analytics/pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
+const LeaderboardPage = lazy(() => import('../features/analytics/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
+const WorkLogsPage = lazy(() => import('../features/jobs/pages/WorkLogsPage').then((m) => ({ default: m.WorkLogsPage })));
+const CreateJobPage = lazy(() => import('../features/jobs/pages/CreateJobPage').then((m) => ({ default: m.CreateJobPage })));
+const EditJobPage = lazy(() => import('../features/jobs/pages/EditJobPage').then((m) => ({ default: m.EditJobPage })));
+const InventoryPage = lazy(() => import('../features/catalog/pages/InventoryPage').then((m) => ({ default: m.InventoryPage })));
+const InventoryDetailPage = lazy(() => import('../features/catalog/pages/InventoryDetailPage').then((m) => ({ default: m.InventoryDetailPage })));
+const AddInventoryItemPage = lazy(() => import('../features/catalog/pages/AddInventoryItemPage').then((m) => ({ default: m.AddInventoryItemPage })));
+const VehiclePhotoPage = lazy(() => import('../features/jobs/pages/VehiclePhotoPage').then((m) => ({ default: m.VehiclePhotoPage })));
+const TrackServicePage = lazy(() => import('../features/jobs/pages/TrackServicePage').then((m) => ({ default: m.TrackServicePage })));
+const SalesPage = lazy(() => import('../features/catalog/pages/SalesPage').then((m) => ({ default: m.SalesPage })));
 
 export const AppRoutes: React.FC = () => {
   return (
