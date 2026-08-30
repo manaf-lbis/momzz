@@ -9,12 +9,21 @@ const getSecret = (name: 'JWT_ACCESS_SECRET' | 'JWT_REFRESH_SECRET', development
   return value || developmentValue;
 };
 
-const configuredOrigins = (process.env.CORS_ORIGINS || process.env.CLIENT_URL || '')
-  .split(',')
-  .map((origin) => origin.trim().replace(/\/$/, ''))
-  .filter(Boolean);
+const parseCommaSeparatedUrls = (value?: string): string[] => {
+  if (!value) return [];
+  return value
+    .split(/[,;\s]+/)
+    .map((url) => url.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+};
 
-if (process.env.NODE_ENV === 'production' && configuredOrigins.length === 0) {
+const clientUrls = parseCommaSeparatedUrls(process.env.CLIENT_URL);
+const corsOrigins = parseCommaSeparatedUrls(process.env.CORS_ORIGINS);
+
+// Merge and deduplicate all allowed origins from both CLIENT_URL and CORS_ORIGINS
+const allConfiguredOrigins = Array.from(new Set([...clientUrls, ...corsOrigins]));
+
+if (process.env.NODE_ENV === 'production' && allConfiguredOrigins.length === 0) {
   throw new Error('CLIENT_URL or CORS_ORIGINS must be set in production.');
 }
 
@@ -23,8 +32,9 @@ export const ENV = {
   MONGO_URI: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/momzz',
   JWT_ACCESS_SECRET: getSecret('JWT_ACCESS_SECRET', 'momzz_dev_access_secret_only'),
   JWT_REFRESH_SECRET: getSecret('JWT_REFRESH_SECRET', 'momzz_dev_refresh_secret_only'),
-  CLIENT_URL: process.env.CLIENT_URL || '',
-  CORS_ORIGINS: configuredOrigins,
+  CLIENT_URL: clientUrls[0] || process.env.CLIENT_URL || '',
+  CLIENT_URLS: clientUrls,
+  CORS_ORIGINS: allConfiguredOrigins,
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',

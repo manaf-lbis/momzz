@@ -36,6 +36,27 @@ export const extractPublicId = (publicIdOrUrl?: string): string => {
   return publicIdOrUrl;
 };
 
+const isValidImageMagicBytes = (base64Payload: string): boolean => {
+  try {
+    const rawBase64 = base64Payload.split(',')[1] || base64Payload;
+    const headerBuffer = Buffer.from(rawBase64.slice(0, 32), 'base64');
+    if (headerBuffer.length < 4) return false;
+
+    // JPEG (FF D8 FF)
+    if (headerBuffer[0] === 0xFF && headerBuffer[1] === 0xD8 && headerBuffer[2] === 0xFF) return true;
+
+    // PNG (89 50 4E 47)
+    if (headerBuffer[0] === 0x89 && headerBuffer[1] === 0x50 && headerBuffer[2] === 0x4E && headerBuffer[3] === 0x47) return true;
+
+    // WebP (RIFF .... WEBP)
+    if (headerBuffer.length >= 12 && headerBuffer.toString('ascii', 0, 4) === 'RIFF' && headerBuffer.toString('ascii', 8, 12) === 'WEBP') return true;
+
+    return false;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Uploads a base64 image to Cloudinary and returns the public_id and generated URL.
  */
@@ -49,6 +70,10 @@ export const uploadToCloudinary = async (
 
   if (!imageData || typeof imageData !== 'string' || !/^data:image\/(jpeg|jpg|png|webp);base64,/.test(imageData)) {
     throw new Error('Please provide a valid JPG, PNG, or WebP base64 image string.');
+  }
+
+  if (!isValidImageMagicBytes(imageData)) {
+    throw new Error('Invalid image data: File binary signature does not match a valid image format.');
   }
 
   // Enforce max 5MB base64 payload size (~6.7MB string length)

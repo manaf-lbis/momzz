@@ -1,7 +1,8 @@
 import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
 import { setCredentials, logout } from '../slice/authSlice';
+import { getBaseServerUrl } from '../utils/serverUrl';
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+const SERVER_URL = getBaseServerUrl();
 
 const baseQuery = fetchBaseQuery({
   baseUrl: `${SERVER_URL}/api`,

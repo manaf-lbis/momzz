@@ -14,6 +14,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { formatDeliveryDate, getDeliveryStatusInfo } from '../utils/dateUtils';
+import { getBaseServerUrl } from '../utils/serverUrl';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type PublicJob = {
@@ -27,7 +28,7 @@ type PublicJob = {
   tasks: { id: string; title: string; status: string }[];
 };
 
-const serverUrl = (import.meta.env.VITE_SERVER_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
+const serverUrl = getBaseServerUrl();
 const serviceDate = (value: string) =>
   new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
 
