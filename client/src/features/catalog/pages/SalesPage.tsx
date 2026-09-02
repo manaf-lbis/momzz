@@ -128,17 +128,17 @@ export const SalesPage: React.FC = () => {
 
   const Checkout = ({ mobile = false }: { mobile?: boolean }) => (
     <aside
-      className={`pos-checkout flex min-h-0 flex-col bg-white dark:bg-slate-900 ${
+      className={`pos-checkout flex min-h-0 flex-col ${
         mobile
-          ? 'h-[85dvh] rounded-t-3xl border-t border-slate-200 dark:border-slate-800'
-          : 'h-full border-l border-slate-200 dark:border-slate-800'
+          ? 'h-[85dvh] rounded-t-3xl glass-modern-panel shadow-2xl'
+          : 'h-full border-l border-slate-200/80 dark:border-white/[0.08] glass-modern-panel'
       }`}
     >
       {/* Checkout Header */}
-      <div className="border-b border-slate-100 p-5 dark:border-slate-800/80">
+      <div className="border-b border-slate-200/80 dark:border-white/[0.08] p-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+            <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
               POS Checkout
             </p>
             <h2 className="mt-0.5 text-xl font-black text-slate-900 dark:text-white">Current Sale</h2>
@@ -146,12 +146,12 @@ export const SalesPage: React.FC = () => {
           {mobile && (
             <button
               onClick={() => setMobileCartOpen(false)}
-              className="rounded-full bg-slate-100 p-2 text-slate-500 hover:text-slate-800 dark:bg-slate-800 dark:text-slate-400"
+              className="rounded-full bg-slate-100 dark:bg-white/10 p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
           )}
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+          <span className="rounded-full bg-amber-400/20 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300 border border-amber-400/30">
             {itemCount} {itemCount === 1 ? 'item' : 'items'}
           </span>
         </div>
@@ -162,7 +162,7 @@ export const SalesPage: React.FC = () => {
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
             placeholder="Customer Name (optional)"
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/15 dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:focus:border-amber-400"
+            className="w-full rounded-xl glass-modern-input px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none transition"
           />
         </div>
       </div>
@@ -171,7 +171,7 @@ export const SalesPage: React.FC = () => {
       <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-3">
         {cart.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-slate-500">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-slate-500">
               <ShoppingBag className="h-6 w-6" />
             </div>
             <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-300">Cart is empty</p>
@@ -181,7 +181,7 @@ export const SalesPage: React.FC = () => {
           cart.map((line) => (
             <div
               key={line.item.id}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3 dark:border-white/[0.06] dark:bg-white/[0.03]"
+              className="flex items-center justify-between gap-3 rounded-2xl glass-modern-card p-3 shadow-2xs"
             >
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-black text-slate-900 dark:text-white truncate">{line.item.title}</p>
@@ -191,10 +191,10 @@ export const SalesPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex items-center rounded-xl border border-slate-200 bg-white p-0.5 dark:border-white/10 dark:bg-white/5">
+                <div className="flex items-center rounded-xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-white/5 p-0.5">
                   <button
                     onClick={() => quantity(line.item.id, -1)}
-                    className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
                   >
                     <Minus className="h-3 w-3" />
                   </button>
@@ -203,7 +203,7 @@ export const SalesPage: React.FC = () => {
                   </span>
                   <button
                     onClick={() => quantity(line.item.id, 1)}
-                    className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
                   >
                     <Plus className="h-3 w-3" />
                   </button>
@@ -211,7 +211,7 @@ export const SalesPage: React.FC = () => {
 
                 <button
                   onClick={() => remove(line.item.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-500"
+                  className="p-1.5 text-slate-400 hover:text-rose-500 cursor-pointer transition"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -222,7 +222,7 @@ export const SalesPage: React.FC = () => {
       </div>
 
       {/* Cart Summary & Checkout Action */}
-      <div className="border-t border-slate-200/80 bg-white/95 p-5 dark:border-white/[0.08] dark:bg-[#12131F]/90">
+      <div className="border-t border-slate-200/80 dark:border-white/[0.08] p-5 pb-8">
         <div className="space-y-2 text-sm">
           <p className="flex justify-between text-slate-500 dark:text-slate-400">
             <span>Subtotal</span>
@@ -231,24 +231,24 @@ export const SalesPage: React.FC = () => {
 
           <button
             onClick={() => setDiscountOpen(true)}
-            className="flex w-full justify-between text-red-600 hover:text-red-700 dark:text-red-400 cursor-pointer"
+            className="flex w-full justify-between text-amber-600 hover:text-amber-700 dark:text-amber-400 cursor-pointer"
           >
             <span className="font-bold">Discount {safeDiscount ? '(Edit)' : '(Apply)'}</span>
             <b className="font-extrabold">-{money(safeDiscount)}</b>
           </button>
 
-          <div className="my-3 border-t border-slate-100 dark:border-white/[0.06]" />
+          <div className="my-3 border-t border-slate-200/60 dark:border-white/[0.06]" />
 
           <p className="flex justify-between text-xl font-black text-slate-900 dark:text-white">
             <span>Total Payable</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-mono">{money(total)}</span>
+            <span className="text-amber-600 dark:text-amber-300 font-mono">{money(total)}</span>
           </p>
         </div>
 
         <button
           disabled={!cart.length || isLoading}
           onClick={checkout}
-          className="mt-5 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-3.5 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition hover:opacity-95 active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+          className="mt-5 w-full rounded-xl glass-gold-btn py-3.5 text-sm font-black text-slate-950 shadow-lg transition hover:opacity-95 active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         >
           {isLoading ? 'Processing Sale...' : `Complete Sale · ${money(total)}`}
         </button>
@@ -259,22 +259,22 @@ export const SalesPage: React.FC = () => {
   const chips: Array<{ id: Filter; label: string }> = [
     { id: 'ALL', label: 'All Items' },
     { id: 'SERVICE', label: 'Services' },
-    { id: 'PRODUCT', label: 'Products & Parts' },
-    { id: 'FAST', label: 'Fast Moving' },
+    { id: 'PRODUCT', label: 'Products' },
+    { id: 'FAST', label: 'Low Stock' },
   ];
 
   return (
-    <div className="pos-page flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#080810] dark:text-slate-100 transition-colors duration-200">
+    <div className="flex h-screen flex-col glass-canvas overflow-hidden text-slate-900 dark:text-white">
       <Navbar glass />
 
       <main className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1">
         {/* Catalog Section */}
         <section className="flex min-w-0 flex-1 flex-col">
           {/* Header & Filter Controls */}
-          <div className="border-b border-slate-200/80 bg-white/95 px-4 py-4 dark:border-white/[0.08] dark:bg-[#12131F]/90 sm:px-6 backdrop-blur-2xl">
+          <div className="border-b border-slate-200/80 bg-white/95 px-4 py-4 dark:border-white/[0.08] dark:bg-[#080811]/90 sm:px-6 backdrop-blur-2xl">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                   Point of Sale
                 </p>
                 <h1 className="mt-0.5 text-2xl font-black tracking-tight text-slate-900 dark:text-white">
@@ -295,12 +295,12 @@ export const SalesPage: React.FC = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search products, services, or parts..."
-                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 py-2.5 pl-10 pr-24 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:bg-white dark:text-white dark:focus:border-amber-400 font-mono"
+                className="w-full rounded-xl glass-modern-input py-2.5 pl-10 pr-24 text-sm text-slate-900 dark:text-white outline-none font-mono"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute right-16 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="absolute right-16 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -318,8 +318,8 @@ export const SalesPage: React.FC = () => {
                   onClick={() => setFilter(chip.id)}
                   className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
                     filter === chip.id
-                      ? 'bg-amber-400 text-slate-950 shadow-xs font-black'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10'
+                      ? 'bg-amber-400 text-slate-950 shadow-2xs font-black'
+                      : 'glass-ghost-btn text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   {chip.label}
@@ -329,7 +329,7 @@ export const SalesPage: React.FC = () => {
           </div>
 
           {/* Product Grid Area */}
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 pb-40">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Catalog Items
@@ -344,14 +344,14 @@ export const SalesPage: React.FC = () => {
                 ? [...Array(8)].map((_, i) => (
                     <div
                       key={i}
-                      className="relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900"
+                      className="relative flex flex-col overflow-hidden rounded-2xl glass-modern-card shadow-2xs"
                     >
-                      <div className="aspect-[4/3] w-full bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                      <div className="aspect-[4/3] w-full bg-slate-200/60 dark:bg-white/5 animate-pulse" />
                       <div className="p-3.5 space-y-3">
-                        <div className="h-4 w-3/4 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
-                        <div className="flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-800">
-                          <div className="h-3 w-16 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
-                          <div className="h-5 w-14 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                        <div className="h-4 w-3/4 rounded bg-slate-200/60 dark:bg-white/5 animate-pulse" />
+                        <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-white/5 pt-2">
+                          <div className="h-3 w-16 rounded bg-slate-200/60 dark:bg-white/5 animate-pulse" />
+                          <div className="h-5 w-14 rounded bg-slate-200/60 dark:bg-white/5 animate-pulse" />
                         </div>
                       </div>
                     </div>
@@ -360,9 +360,9 @@ export const SalesPage: React.FC = () => {
                     <button
                       key={item.id}
                       onClick={() => add(item)}
-                      className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white text-left shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/10 active:scale-[0.98] dark:border-slate-800 dark:bg-slate-900"
+                      className="group relative flex flex-col overflow-hidden rounded-2xl glass-modern-card text-left shadow-2xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-400/50 hover:shadow-xl active:scale-[0.98] cursor-pointer"
                     >
-                      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+                      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 dark:bg-white/5">
                         {item.thumbnailUrl ? (
                           <img
                             src={item.thumbnailUrl}
@@ -390,7 +390,7 @@ export const SalesPage: React.FC = () => {
                           {item.title}
                         </b>
 
-                        <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-100 pt-2 dark:border-slate-800">
+                        <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-200/60 dark:border-white/[0.06] pt-2">
                           <span className="text-xs text-slate-500 dark:text-slate-400">
                             {item.itemType === 'PRODUCT' ? `${item.stockQuantity} in stock` : 'Service Item'}
                           </span>
@@ -404,7 +404,7 @@ export const SalesPage: React.FC = () => {
             </div>
 
             {!isFetching && !products.length && (
-              <div className="mt-8 rounded-2xl border border-dashed border-slate-300 p-12 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+              <div className="mt-8 rounded-2xl border border-dashed border-slate-300 dark:border-white/10 p-12 text-center text-sm text-slate-500 dark:text-slate-400">
                 No catalog items match your search.
               </div>
             )}
@@ -417,19 +417,26 @@ export const SalesPage: React.FC = () => {
         </div>
       </main>
 
-      {/* Mobile Cart Trigger Button */}
-      <button
-        onClick={() => setMobileCartOpen(true)}
-        className="fixed bottom-4 left-4 right-4 z-40 flex items-center justify-between rounded-2xl bg-emerald-500 px-5 py-4 font-bold text-white shadow-xl shadow-emerald-500/30 lg:hidden"
-      >
-        <span>{itemCount} {itemCount === 1 ? 'item' : 'items'}</span>
-        <span>View Sale · {money(total)}</span>
-      </button>
+      {/* Mobile Cart Trigger Button - Elevated above QuickAccessDock */}
+      {itemCount > 0 && (
+        <div className="fixed bottom-20 inset-x-3 z-40 lg:hidden">
+          <button
+            onClick={() => setMobileCartOpen(true)}
+            className="w-full flex items-center justify-between rounded-2xl glass-gold-btn px-5 py-3.5 font-black text-slate-950 shadow-2xl active:scale-95 transition cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4 text-slate-950" />
+              <span>{itemCount} {itemCount === 1 ? 'item' : 'items'}</span>
+            </div>
+            <span>View Cart · {money(total)}</span>
+          </button>
+        </div>
+      )}
 
       {/* Mobile Cart Sheet Modal */}
       {mobileCartOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-slate-950/60 p-2 backdrop-blur-xs lg:hidden"
+          className="fixed inset-0 z-50 flex items-end bg-black/70 p-2 backdrop-blur-md lg:hidden"
           onClick={() => setMobileCartOpen(false)}
         >
           <div className="w-full" onClick={(event) => event.stopPropagation()}>
@@ -441,7 +448,7 @@ export const SalesPage: React.FC = () => {
       {/* Apply Discount Modal */}
       {discountOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
           onClick={() => setDiscountOpen(false)}
         >
           <form
@@ -450,15 +457,31 @@ export const SalesPage: React.FC = () => {
               setDiscountOpen(false);
             }}
             onClick={(event) => event.stopPropagation()}
-            className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-800"
+            className="w-full max-w-sm rounded-3xl glass-modern-panel p-6 shadow-2xl space-y-4"
           >
-            <h2 className="text-lg font-black text-slate-900 dark:text-white">Apply Sale Discount</h2>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Discount applies to the complete sale subtotal.
-            </p>
+            <div>
+              <h2 className="text-lg font-black text-slate-900 dark:text-white">Apply Sale Discount</h2>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Discount applies to the complete sale subtotal.
+              </p>
+            </div>
 
-            <label className="mt-5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Discount Amount (₹)
+            {/* Quick Discount Presets */}
+            <div className="flex gap-2">
+              {[50, 100, 200, 500].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setDiscount(preset)}
+                  className="flex-1 py-1.5 rounded-xl glass-ghost-btn text-xs font-mono font-bold hover:border-amber-400"
+                >
+                  ₹{preset}
+                </button>
+              ))}
+            </div>
+
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Custom Amount (₹)
               <input
                 autoFocus
                 type="number"
@@ -466,23 +489,23 @@ export const SalesPage: React.FC = () => {
                 max={subtotal}
                 value={discount || ''}
                 onChange={(e) => setDiscount(Math.max(0, Number(e.target.value || 0)))}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-base font-bold text-slate-900 outline-none focus:border-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="mt-2 w-full rounded-xl glass-modern-input p-3 text-base font-bold text-slate-900 dark:text-white outline-none"
               />
             </label>
 
-            <div className="mt-5 flex gap-3">
+            <div className="flex gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => {
                   setDiscount(0);
                   setDiscountOpen(false);
                 }}
-                className="flex-1 rounded-xl border border-slate-200 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="flex-1 rounded-xl glass-ghost-btn py-3 text-sm font-bold text-slate-700 dark:text-slate-200"
               >
                 Clear
               </button>
-              <button className="flex-1 rounded-xl bg-emerald-500 py-3 text-sm font-bold text-white hover:bg-emerald-600">
-                Apply Discount
+              <button className="flex-1 rounded-xl glass-gold-btn py-3 text-sm font-black text-slate-950">
+                Apply
               </button>
             </div>
           </form>
@@ -491,19 +514,19 @@ export const SalesPage: React.FC = () => {
 
       {/* Sale Receipt Confirmation Modal */}
       {receipt && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-7 text-center shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-800">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 dark:bg-emerald-500/15">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md">
+          <div className="w-full max-w-sm rounded-3xl glass-modern-panel p-7 text-center shadow-2xl space-y-3">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-500">
               <Receipt className="h-8 w-8" />
             </div>
-            <p className="mt-4 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+            <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
               Payment Recorded
             </p>
-            <h2 className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Sale Completed</h2>
-            <p className="mt-3 text-3xl font-black text-slate-900 dark:text-white">{money(receipt.grandTotal)}</p>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white">Sale Completed</h2>
+            <p className="text-3xl font-black text-amber-500 dark:text-amber-300">{money(receipt.grandTotal)}</p>
             <button
               onClick={() => setReceipt(null)}
-              className="mt-6 w-full rounded-xl bg-slate-900 py-3.5 font-bold text-white shadow-md dark:bg-amber-400 dark:text-slate-950"
+              className="mt-4 w-full rounded-xl glass-gold-btn py-3.5 font-black text-slate-950 shadow-md cursor-pointer"
             >
               Start New Sale
             </button>

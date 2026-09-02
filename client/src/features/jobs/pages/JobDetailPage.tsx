@@ -322,23 +322,19 @@ export const JobDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient background aura */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.06)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.05)_0%,transparent_65%)]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] h-[260px] bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.06)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.04)_0%,transparent_70%)]" />
-        <Meteors number={10} />
-      </div>
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-4xl w-full mx-auto px-3 sm:px-6 py-4 pb-32 space-y-3.5">
+      <main className="relative z-10 flex-1 max-w-4xl w-full mx-auto px-3 sm:px-6 py-4 pb-36 sm:pb-40 space-y-3.5">
         {/* ── TOP NAV BAR ── */}
         <div className="flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => navigate('/jobs')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition cursor-pointer text-xs font-bold shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass-ghost-btn text-xs font-bold shadow-2xs"
           >
             <ChevronLeft className="w-4 h-4" />
             <span>Vehicles</span>
@@ -351,8 +347,8 @@ export const JobDetailPage: React.FC = () => {
               onClick={() => setIsPinJobModalOpen(true)}
               className={`p-2 rounded-xl border transition active:scale-90 cursor-pointer ${
                 isPinned
-                  ? 'bg-amber-400/20 border-amber-400/40 text-amber-300 shadow-sm'
-                  : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                  ? 'bg-amber-400/20 border-amber-400/40 text-amber-600 dark:text-amber-300 shadow-2xs'
+                  : 'glass-ghost-btn text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Pin Vehicle"
             >
@@ -363,7 +359,7 @@ export const JobDetailPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
-              className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white active:scale-90 transition cursor-pointer"
+              className="p-2 rounded-xl glass-ghost-btn text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white active:scale-90 transition cursor-pointer"
               title="Vehicle Photo"
             >
               <Camera className="w-3.5 h-3.5" />
@@ -374,7 +370,7 @@ export const JobDetailPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
-                className="p-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-md shadow-amber-400/20 active:scale-90 transition cursor-pointer"
+                className="p-2 rounded-xl glass-gold-btn text-slate-950 shadow-md active:scale-90 transition cursor-pointer"
                 title="Edit Job Card"
               >
                 <Edit2 className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -386,7 +382,7 @@ export const JobDetailPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
-                className="p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 active:scale-90 transition cursor-pointer"
+                className="p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-300 border border-rose-500/30 active:scale-90 transition cursor-pointer"
                 title="Delete Job Card"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -399,23 +395,23 @@ export const JobDetailPage: React.FC = () => {
         <motion.section
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl bg-white/[0.035] backdrop-blur-2xl border border-white/[0.08] shadow-2xl p-4 sm:p-5 space-y-3"
+          className="relative overflow-hidden rounded-3xl glass-modern-card shadow-2xl p-4 sm:p-5 space-y-3"
         >
           {isPinned && <BorderBeam size={220} duration={7} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />}
 
           {/* Vehicle Name, Plate & Ready status */}
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1 min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-black uppercase text-white tracking-tight truncate">
+              <h1 className="text-xl sm:text-2xl font-black uppercase text-slate-900 dark:text-white tracking-tight truncate">
                 {currentJob.vehicleName || 'Vehicle'}
               </h1>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-mono font-black text-amber-300 bg-white/[0.06] border border-white/10 px-2.5 py-0.5 rounded-lg tracking-wider">
+                <span className="text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 border border-amber-400/30 px-2.5 py-0.5 rounded-lg tracking-wider">
                   {currentJob.vehicleNumber}
                 </span>
                 {currentJob.vehicleColor && (
-                  <span className="text-xs font-mono text-slate-400 flex items-center gap-1">
-                    <Palette className="w-3 h-3 text-amber-400" />
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    <Palette className="w-3 h-3 text-amber-500" />
                     {currentJob.vehicleColor}
                   </span>
                 )}
@@ -424,10 +420,10 @@ export const JobDetailPage: React.FC = () => {
 
             <div className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-black uppercase tracking-wider border shrink-0 flex items-center gap-1.5 ${
               isAllCompleted
-                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                : 'bg-amber-400/15 border-amber-400/30 text-amber-300'
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                : 'bg-amber-400/15 border-amber-400/30 text-amber-700 dark:text-amber-300'
             }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isAllCompleted ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${isAllCompleted ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
               <span>{isAllCompleted ? 'Ready for Delivery' : 'In Service'}</span>
             </div>
           </div>
@@ -561,7 +557,7 @@ export const JobDetailPage: React.FC = () => {
         )}
 
         {/* ── LEADERBOARD-STYLE TASK FILTER TABS ── */}
-        <div className="flex gap-1 p-1 bg-white/[0.04] rounded-2xl border border-white/8">
+        <div className="flex gap-1 p-1 bg-white/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-2xs">
           {(
             [
               { key: 'ALL', label: 'All Tasks', count: totalTasks },
@@ -575,7 +571,7 @@ export const JobDetailPage: React.FC = () => {
                 key={key}
                 onClick={() => setStatusFilter(key)}
                 className={`relative flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  isActive ? 'text-slate-900 font-black' : 'text-slate-400 hover:text-white'
+                  isActive ? 'text-slate-950 font-black' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
                 {isActive && (
@@ -588,7 +584,7 @@ export const JobDetailPage: React.FC = () => {
                 <span className="relative z-10">{label}</span>
                 <span
                   className={`relative z-10 text-[9px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
-                    isActive ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
+                    isActive ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   {count}
@@ -598,12 +594,12 @@ export const JobDetailPage: React.FC = () => {
           })}
         </div>
 
-        {/* ── TASKS CHECKLIST (With Technician Avatars, Partner Badges & Logs Sheet) ── */}
+        {/* ── TASKS CHECKLIST ── */}
         <div className="space-y-2">
           {sortedTasks.length === 0 ? (
-            <div className="py-16 text-center rounded-3xl bg-white/95 dark:bg-[#12131F]/90 border border-slate-200/80 dark:border-white/[0.08] space-y-1.5">
-              <p className="text-sm font-bold text-slate-900 dark:text-slate-300">No tasks in this view</p>
-              <p className="text-xs font-mono text-slate-500">All tasks in this category are clear</p>
+            <div className="py-16 text-center rounded-3xl glass-modern-card space-y-1.5">
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-300">No tasks in this view</p>
+              <p className="text-xs font-mono text-slate-500 dark:text-slate-400">All tasks in this category are clear</p>
             </div>
           ) : (
             sortedTasks.map((task: TaskItem) => {
@@ -619,10 +615,10 @@ export const JobDetailPage: React.FC = () => {
                 <motion.div
                   key={taskId}
                   layout
-                  className={`group relative overflow-hidden rounded-2xl p-3.5 sm:p-4 border transition-all duration-200 flex items-center justify-between gap-3 ${
+                  className={`group relative overflow-hidden rounded-2xl p-3.5 sm:p-4 transition-all duration-200 flex items-center justify-between gap-3 ${
                     isCompleted
-                      ? 'bg-slate-50/90 dark:bg-white/[0.02] border-slate-200/70 dark:border-white/[0.05]'
-                      : 'bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border-slate-200/80 dark:border-white/[0.08] hover:border-amber-400/50 shadow-sm'
+                      ? 'glass-modern-card opacity-85 border-emerald-500/20'
+                      : 'glass-modern-card shadow-sm hover:border-amber-400/50'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">

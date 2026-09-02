@@ -349,17 +349,13 @@ export const JobsListPage: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200"
+      className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* ── Soft subtle ambient light (reduced intensity to eliminate eye stress) ── */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.06)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.04)_0%,transparent_65%)]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] h-[260px] bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.06)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.04)_0%,transparent_70%)]" />
-        <Meteors number={10} />
-      </div>
+      {/* ── Soft subtle ambient light ── */}
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
       <Navbar glass />
 
@@ -378,13 +374,13 @@ export const JobsListPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 pb-28 space-y-3">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 pb-36 sm:pb-40 space-y-3">
         {/* ── TOP BAR: Header & New Button ── */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => navigate(-1)}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-xs"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-2xs"
             >
               <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
@@ -401,7 +397,7 @@ export const JobsListPage: React.FC = () => {
           {isAdmin && (
             <button
               onClick={() => navigate('/jobs/create')}
-              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20 hover:opacity-95 active:scale-95 transition cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl glass-gold-btn text-slate-950 font-black text-xs shadow-md active:scale-95 transition cursor-pointer shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New Vehicle</span>
@@ -410,9 +406,9 @@ export const JobsListPage: React.FC = () => {
         </div>
 
         {/* ── STICKY TOP CONTROLS (Tabs & Search/Sort) ── */}
-        <div className="sticky top-0 sm:top-14 z-30 bg-slate-50/90 dark:bg-[#080810]/85 backdrop-blur-2xl py-2 -mx-3 px-3 sm:-mx-6 sm:px-6 space-y-2 border-b border-slate-200/80 dark:border-white/[0.06] shadow-sm dark:shadow-xl dark:shadow-black/40 transition-colors">
-          {/* ── LEADERBOARD-STYLE TABS (Gentle soft amber/gold glow) ── */}
-          <div className="flex gap-1 p-1 bg-white/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/8 shadow-xs">
+        <div className="sticky top-0 sm:top-14 z-30 bg-slate-50/90 dark:bg-[#080811]/90 backdrop-blur-2xl py-2 -mx-3 px-3 sm:-mx-6 sm:px-6 space-y-2 border-b border-slate-200/80 dark:border-white/[0.06] shadow-2xs transition-colors">
+          {/* ── TABS ── */}
+          <div className="flex gap-1 p-1 bg-white/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-2xs">
             {VIEWS.map(({ key, label, count }) => {
               const isActive = jobsView === key;
               return (
@@ -420,7 +416,7 @@ export const JobsListPage: React.FC = () => {
                   key={key}
                   onClick={() => setJobsView(key)}
                   className={`relative flex-1 py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    isActive ? 'text-slate-900 font-black' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    isActive ? 'text-slate-950 font-black' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                   }`}
                 >
                   {isActive && (
@@ -450,15 +446,15 @@ export const JobsListPage: React.FC = () => {
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search vehicle model, reg plate (e.g. KL 01)..."
+                placeholder="Search vehicle model, reg plate..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/80 dark:bg-white/[0.03] backdrop-blur-xl border border-slate-200/80 dark:border-white/10 focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/20 text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition-all shadow-xs"
+                className="w-full pl-9 pr-3 py-2 rounded-xl glass-modern-input text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 outline-none transition-all shadow-2xs"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -469,7 +465,7 @@ export const JobsListPage: React.FC = () => {
             <div className="relative shrink-0" ref={sortRef}>
               <button
                 onClick={() => setIsSortOpen(!isSortOpen)}
-                className="flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl bg-white/80 dark:bg-white/[0.03] backdrop-blur-xl border border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 text-xs font-bold text-slate-700 dark:text-slate-300 transition active:scale-95 cursor-pointer shadow-xs"
+                className="flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl glass-modern-input hover:border-amber-400/50 text-xs font-bold text-slate-700 dark:text-slate-300 transition active:scale-95 cursor-pointer shadow-2xs"
               >
                 <ArrowUpDown className="w-3 h-3 text-slate-400" />
                 <span className="hidden sm:inline">
@@ -485,7 +481,7 @@ export const JobsListPage: React.FC = () => {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -4, scale: 0.96 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-2xl bg-white/95 dark:bg-[#0f0f1e]/98 backdrop-blur-2xl border border-slate-200/90 dark:border-white/12 shadow-2xl shadow-black/15 dark:shadow-black/80 overflow-hidden divide-y divide-slate-100 dark:divide-white/[0.06] p-1"
+                    className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-2xl glass-modern-panel shadow-2xl overflow-hidden divide-y divide-slate-100 dark:divide-white/[0.06] p-1"
                   >
                     {SORT_CONFIG.map((opt) => (
                       <button
@@ -514,13 +510,13 @@ export const JobsListPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ── COMPACT VEHICLE CARDS GRID (Reduced Height) ── */}
+        {/* ── COMPACT VEHICLE CARDS GRID ── */}
         {isLoading && page === 1 ? (
           <JobsListSkeleton />
         ) : filteredJobs.length === 0 ? (
-          <div className="py-16 text-center rounded-3xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
-            <p className="text-sm font-bold text-slate-300">No vehicles found</p>
-            <p className="text-xs font-mono text-slate-500">
+          <div className="py-16 text-center rounded-3xl glass-modern-card space-y-1.5">
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-300">No vehicles found</p>
+            <p className="text-xs font-mono text-slate-500 dark:text-slate-400">
               {searchQuery ? 'Try clearing your search terms' : 'All jobs in this category are clear'}
             </p>
           </div>
@@ -541,7 +537,7 @@ export const JobsListPage: React.FC = () => {
                   whileHover={{ y: -2 }}
                   transition={{ duration: 0.15 }}
                   onClick={() => navigate(`/jobs/${jobId}`)}
-                  className="group relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-amber-400/50 shadow-sm dark:shadow-xl dark:shadow-black/50 p-4 flex flex-col justify-between transition-all duration-200 cursor-pointer"
+                  className="group relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 flex flex-col justify-between transition-all duration-200 cursor-pointer shadow-sm"
                 >
                   {pinned && <BorderBeam size={160} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={0.75} />}
 
@@ -561,7 +557,7 @@ export const JobsListPage: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-mono font-black text-slate-950 dark:text-amber-300 bg-amber-400/20 dark:bg-white/[0.08] px-2 py-0.5 rounded-lg border border-amber-400/30 dark:border-white/10 tracking-wider">
+                          <span className="text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 px-2.5 py-0.5 rounded-lg border border-amber-400/30 tracking-wider">
                             {job.vehicleNumber}
                           </span>
                           {job.vehicleColor && (
@@ -578,7 +574,7 @@ export const JobsListPage: React.FC = () => {
                           onClick={() => setSelectedPinJob(job)}
                           className={`p-1.5 rounded-xl border transition-all active:scale-90 cursor-pointer ${
                             pinned
-                              ? 'bg-amber-400/20 border-amber-400/40 text-amber-600 dark:text-amber-300 shadow-xs'
+                              ? 'bg-amber-400/20 border-amber-400/40 text-amber-600 dark:text-amber-300 shadow-2xs'
                               : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-white'
                           }`}
                           title="Pin vehicle"
@@ -595,7 +591,7 @@ export const JobsListPage: React.FC = () => {
                     </div>
 
                     {/* Progress Bar Beam */}
-                    <div className="space-y-1.5 mt-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.06]">
+                    <div className="space-y-1.5 mt-3 pt-2.5 border-t border-slate-200/60 dark:border-white/[0.06]">
                       <div className="flex items-center justify-between text-[11px] font-mono">
                         <span className="text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px]">
                           Service Progress
@@ -615,17 +611,17 @@ export const JobsListPage: React.FC = () => {
                   </div>
 
                   {/* Card Bottom CTA Strip */}
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs font-mono">
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 truncate">
+                  <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between gap-2 text-xs font-mono">
+                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 truncate min-w-0">
                       <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">
-                        {job.expectedDeliveryDate ? deliveryInfo.label : 'In Garage Service'}
+                      <span className="truncate text-[11px]">
+                        {job.expectedDeliveryDate ? deliveryInfo.shortLabel : 'In Garage'}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold transition-colors shrink-0 group-hover:translate-x-0.5">
-                      <span>View Job Card</span>
-                      <ChevronRight className="w-4 h-4" />
+                    <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold transition-colors shrink-0 group-hover:translate-x-0.5 text-xs">
+                      <span>View Card</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
                     </div>
                   </div>
                 </motion.div>

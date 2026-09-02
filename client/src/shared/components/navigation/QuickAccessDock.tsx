@@ -62,19 +62,24 @@ export const QuickAccessDock: React.FC = () => {
 
   const initialLetter = user?.name ? user.name.trim().charAt(0).toUpperCase() : 'U';
 
+  // Hide dock on public tracker and camera capture pages to give full screen
+  if (currentPath === '/track' || currentPath.endsWith('/photo') || currentPath.endsWith('/capture')) {
+    return null;
+  }
+
   return (
     <aside
       aria-label="Quick Access Menu"
-      className="fixed bottom-0 inset-x-0 z-50 flex justify-center items-center pointer-events-none px-4 pb-[max(1.1rem,env(safe-area-inset-bottom))]"
+      className="fixed bottom-0 inset-x-0 z-40 flex justify-center items-center pointer-events-none px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
     >
       <motion.nav
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="pointer-events-auto relative flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2 rounded-full backdrop-blur-2xl bg-white/85 dark:bg-[rgba(12,14,28,0.75)] border border-slate-200/90 dark:border-white/15 shadow-2xl shadow-black/20 dark:shadow-black/70 transition-colors duration-200"
+        className="pointer-events-auto relative flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-full glass-modern-dock shadow-2xl shadow-black/30 dark:shadow-black/80 transition-colors duration-200"
       >
-        {/* Ambient golden aura behind the glass dock */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500/15 via-yellow-400/10 to-amber-500/15 blur-lg pointer-events-none -z-10" />
+        {/* Ambient subtle warm gold aura behind the glass dock */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-400/5 to-amber-500/10 blur-md pointer-events-none -z-10" />
 
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -87,7 +92,7 @@ export const QuickAccessDock: React.FC = () => {
               className={`relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full transition-all duration-200 active:scale-90 cursor-pointer ${
                 item.isActive
                   ? 'text-slate-950 font-black'
-                  : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/60 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5'
               }`}
             >
               {/* Active Tab Background Capsule with Specular Top Highlight */}
@@ -96,10 +101,10 @@ export const QuickAccessDock: React.FC = () => {
                   layoutId="active-dock-pill"
                   style={{
                     background: 'linear-gradient(135deg, #fde047 0%, #f59e0b 100%)',
-                    boxShadow: '0 4px 20px rgba(251, 191, 36, 0.55), inset 0 1px 1.5px rgba(255, 255, 255, 0.8)',
+                    boxShadow: '0 4px 18px rgba(251, 191, 36, 0.45), inset 0 1px 1.5px rgba(255, 255, 255, 0.75)',
                   }}
                   className="absolute inset-0 rounded-full"
-                  transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
+                  transition={{ type: 'spring', bounce: 0.22, duration: 0.35 }}
                 />
               )}
 
@@ -110,7 +115,7 @@ export const QuickAccessDock: React.FC = () => {
                     className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden flex items-center justify-center font-black text-xs transition-transform ${
                       item.isActive
                         ? 'border-2 border-slate-950 text-slate-950 bg-amber-300'
-                        : 'border border-slate-300 dark:border-white/30 bg-slate-200 dark:bg-white/10 text-slate-800 dark:text-white shadow-xs'
+                        : 'border border-slate-300 dark:border-white/20 bg-slate-200 dark:bg-white/10 text-slate-800 dark:text-white shadow-2xs'
                     }`}
                   >
                     {user.profileImageUrl ? (
@@ -131,7 +136,7 @@ export const QuickAccessDock: React.FC = () => {
                     className={`w-5 h-5 transition-transform ${
                       item.isActive
                         ? 'stroke-[2.5] text-slate-950 scale-105'
-                        : 'stroke-[1.9] text-slate-600 dark:text-slate-300'
+                        : 'stroke-[1.8] text-slate-500 dark:text-slate-400'
                     }`}
                   />
                 ) : null}

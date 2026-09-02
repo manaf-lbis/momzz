@@ -187,23 +187,19 @@ export const CreateJobPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient background aura */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.06)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.05)_0%,transparent_65%)]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] h-[260px] bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.06)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.04)_0%,transparent_70%)]" />
-        <Meteors number={10} />
-      </div>
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-4 pb-32 space-y-4">
+      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-4 pb-36 sm:pb-40 space-y-4">
         {/* Header & Step Indicator */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => (step === 2 ? setStep(1) : navigate('/jobs'))}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-xs"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-2xs"
             >
               <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
@@ -219,7 +215,7 @@ export const CreateJobPage: React.FC = () => {
         </div>
 
         {error && (
-          <div className="p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-mono">
+          <div className="p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs font-mono">
             {error}
           </div>
         )}
@@ -228,29 +224,29 @@ export const CreateJobPage: React.FC = () => {
         {step === 1 ? (
           <div className="space-y-4">
             {/* Vehicle Details Card */}
-            <div className="rounded-3xl bg-white/[0.035] backdrop-blur-2xl border border-white/[0.08] p-4 sm:p-6 shadow-xl space-y-4">
-              <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
-                <Car className="w-4 h-4 text-amber-400" />
+            <div className="rounded-3xl glass-modern-card p-4 sm:p-6 shadow-xl space-y-4">
+              <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <Car className="w-4 h-4 text-amber-500" />
                 Vehicle Specifications
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    Vehicle Model Name *
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                    Vehicle Model / Name *
                   </label>
                   <input
                     type="text"
                     required
                     value={vehicleName}
                     onChange={(e) => setVehicleName(e.target.value)}
-                    placeholder="e.g. Toyota Innova Crysta"
+                    placeholder="e.g. Fortuner / Innova"
                     className={inputStyle}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                     Registration Number Plate *
                   </label>
                   <input
@@ -264,7 +260,7 @@ export const CreateJobPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                     Vehicle Color <span className="text-slate-500">(optional)</span>
                   </label>
                   <input
@@ -277,12 +273,10 @@ export const CreateJobPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    Expected Handover Time <span className="text-slate-500">(optional)</span>
-                  </label>
                   <ModernDateTimePicker
                     value={expectedDeliveryDate}
                     onChange={setExpectedDeliveryDate}
+                    label="Expected Delivery Date & Time (optional)"
                     placeholder="Select delivery time"
                   />
                 </div>
@@ -309,15 +303,15 @@ export const CreateJobPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => camInputRef.current?.click()}
-                    className="flex-1 py-2.5 px-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-200 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    className="flex-1 py-2.5 px-3 rounded-2xl glass-ghost-btn text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
                   >
-                    <Camera className="w-3.5 h-3.5 text-amber-400" />
+                    <Camera className="w-3.5 h-3.5 text-amber-500" />
                     <span>Capture Photo</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex-1 py-2.5 px-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-200 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    className="flex-1 py-2.5 px-3 rounded-2xl glass-ghost-btn text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
                   >
                     <Upload className="w-3.5 h-3.5 text-sky-400" />
                     <span>Upload Image</span>
@@ -327,15 +321,15 @@ export const CreateJobPage: React.FC = () => {
             </div>
 
             {/* Customer Details Card */}
-            <div className="rounded-3xl bg-white/[0.035] backdrop-blur-2xl border border-white/[0.08] p-4 sm:p-6 shadow-xl space-y-4">
-              <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
-                <UserRound className="w-4 h-4 text-amber-400" />
+            <div className="rounded-3xl glass-modern-card p-4 sm:p-6 shadow-xl space-y-4">
+              <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <UserRound className="w-4 h-4 text-amber-500" />
                 Customer Information <span className="text-xs text-slate-500 font-normal">(optional)</span>
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                     Customer Name
                   </label>
                   <input
@@ -348,7 +342,7 @@ export const CreateJobPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                     Mobile Number
                   </label>
                   <input
@@ -362,7 +356,7 @@ export const CreateJobPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                     Email Address
                   </label>
                   <input
@@ -377,11 +371,11 @@ export const CreateJobPage: React.FC = () => {
             </div>
 
             {/* Step 1 CTA */}
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-2 pb-8">
               <button
                 type="button"
                 onClick={goNext}
-                className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-amber-400/20 hover:opacity-95 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3 rounded-2xl glass-gold-btn text-slate-950 font-black text-xs sm:text-sm shadow-lg active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>Continue to Checklist</span>
                 <ChevronRight className="w-4 h-4" />
@@ -390,12 +384,12 @@ export const CreateJobPage: React.FC = () => {
           </div>
         ) : (
           /* STEP 2: Service & Checklist */
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pb-8">
             {/* Catalog Items Search (Left Column) */}
-            <div className="lg:col-span-7 rounded-3xl bg-white/[0.035] backdrop-blur-2xl border border-white/[0.08] p-4 sm:p-5 shadow-xl space-y-3.5">
+            <div className="lg:col-span-7 rounded-3xl glass-modern-card p-4 sm:p-5 shadow-xl space-y-3.5">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
-                  <Wrench className="w-4 h-4 text-amber-400" />
+                <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <Wrench className="w-4 h-4 text-amber-500" />
                   Available Services & Products
                 </h2>
               </div>
@@ -408,12 +402,12 @@ export const CreateJobPage: React.FC = () => {
                   placeholder="Search catalog items..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-bold text-white placeholder-slate-500 outline-none focus:border-amber-400"
+                  className="w-full pl-9 pr-3 py-2 rounded-xl glass-modern-input text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 outline-none"
                 />
               </div>
 
               {/* Filter Tabs */}
-              <div className="flex gap-1 p-1 bg-white/5 rounded-xl border border-white/8">
+              <div className="flex gap-1 p-1 bg-white/60 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
                 {(
                   [
                     { id: 'ALL', label: 'All' },
@@ -426,8 +420,8 @@ export const CreateJobPage: React.FC = () => {
                     onClick={() => setItemFilter(t.id)}
                     className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                       itemFilter === t.id
-                        ? 'bg-amber-400 text-slate-950 font-black'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-amber-400 text-slate-950 font-black shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                     }`}
                   >
                     {t.label}
@@ -442,15 +436,15 @@ export const CreateJobPage: React.FC = () => {
                     key={item.id}
                     type="button"
                     onClick={() => openAddItemModal(item)}
-                    className="w-full p-2.5 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/[0.06] text-left transition flex items-center justify-between gap-2.5 cursor-pointer"
+                    className="w-full p-2.5 rounded-xl bg-white/40 hover:bg-white/70 dark:bg-white/[0.02] dark:hover:bg-white/5 border border-slate-200/80 dark:border-white/[0.06] text-left transition flex items-center justify-between gap-2.5 cursor-pointer"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-white truncate">{item.title}</p>
+                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{item.title}</p>
                       <p className="text-[10px] font-mono text-slate-400 mt-0.5">
                         {item.itemType === 'SERVICE' ? 'Service' : 'Product'} · {money(item.price)}
                       </p>
                     </div>
-                    <span className="w-6 h-6 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center shrink-0">
+                    <span className="w-6 h-6 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-2xs">
                       <Plus className="w-3.5 h-3.5 stroke-[3]" />
                     </span>
                   </button>
@@ -458,22 +452,22 @@ export const CreateJobPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Selected Checklist (Right Column - Dedicated Smooth Scroll) */}
-            <div className="lg:col-span-5 rounded-3xl bg-white/[0.035] backdrop-blur-2xl border border-white/[0.08] p-4 sm:p-5 shadow-xl space-y-3.5 flex flex-col justify-between">
+            {/* Selected Checklist (Right Column) */}
+            <div className="lg:col-span-5 rounded-3xl glass-modern-card p-4 sm:p-5 shadow-xl space-y-3.5 flex flex-col justify-between">
               <div className="space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
-                  <h2 className="text-sm sm:text-base font-black text-white">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
+                  <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
                     Job Card Checklist
                   </h2>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300">
                     {selected.length} items
                   </span>
                 </div>
 
-                {/* ── PROPER SCROLLING CONTAINER ── */}
+                {/* ── SCROLLING CONTAINER ── */}
                 <div className="space-y-2 max-h-[50vh] sm:max-h-[55vh] overflow-y-auto overscroll-contain pr-1 -mr-1">
                   {selected.length === 0 ? (
-                    <div className="py-12 text-center text-xs font-mono text-slate-500 space-y-1">
+                    <div className="py-12 text-center text-xs font-mono text-slate-400 space-y-1">
                       <p>No checklist items added yet</p>
                       <p className="text-[10px]">Select items from catalog on the left</p>
                     </div>
@@ -481,17 +475,17 @@ export const CreateJobPage: React.FC = () => {
                     selected.map((line, idx) => (
                       <div
                         key={`${line.item.id}-${idx}`}
-                        className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-2"
+                        className="p-3 rounded-2xl bg-white/60 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.08] space-y-2"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-white truncate">{line.item.title}</p>
+                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{line.item.title}</p>
                             <p className="text-[10px] font-mono text-slate-400">{money(line.item.price)} each</p>
                           </div>
                           <button
                             type="button"
                             onClick={() => setSelected((prev) => prev.filter((_, i) => i !== idx))}
-                            className="p-1 text-slate-500 hover:text-rose-400 transition cursor-pointer"
+                            className="p-1 text-slate-400 hover:text-rose-500 transition cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -499,25 +493,25 @@ export const CreateJobPage: React.FC = () => {
 
                         {/* Quantity Counter */}
                         <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-0.5">
+                          <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg p-0.5">
                             <button
                               type="button"
                               onClick={() => updateSelectedLine(idx, { quantityUsed: Math.max(1, line.quantityUsed - 1) })}
-                              className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white"
+                              className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
                             >
                               <Minus className="w-3 h-3" />
                             </button>
-                            <span className="w-6 text-center font-mono font-bold text-white text-[11px]">{line.quantityUsed}</span>
+                            <span className="w-6 text-center font-mono font-bold text-slate-900 dark:text-white text-[11px]">{line.quantityUsed}</span>
                             <button
                               type="button"
                               onClick={() => updateSelectedLine(idx, { quantityUsed: line.quantityUsed + 1 })}
-                              className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white"
+                              className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
                           </div>
 
-                          <span className="font-mono font-bold text-amber-300 text-xs">
+                          <span className="font-mono font-bold text-amber-600 dark:text-amber-300 text-xs">
                             {money(line.item.price * line.quantityUsed)}
                           </span>
                         </div>
@@ -528,12 +522,12 @@ export const CreateJobPage: React.FC = () => {
               </div>
 
               {/* Submit Button */}
-              <div className="pt-3 border-t border-white/[0.06] space-y-2">
+              <div className="pt-3 border-t border-slate-200/60 dark:border-white/[0.06] space-y-2">
                 <button
                   type="button"
                   onClick={handleSubmit}
                   disabled={isLoading || !selected.length}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-amber-400/25 hover:opacity-95 active:scale-95 transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full py-3 rounded-2xl glass-gold-btn text-slate-950 font-black text-xs sm:text-sm shadow-lg active:scale-95 transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Check className="w-4 h-4 stroke-[3]" />
                   <span>{isLoading ? 'Creating Job Card...' : 'Create Vehicle Job Card'}</span>

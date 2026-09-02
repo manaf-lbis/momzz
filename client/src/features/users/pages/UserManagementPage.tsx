@@ -200,25 +200,21 @@ export const UserManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
       {/* Subtle ambient light */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.06)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.04)_0%,transparent_65%)]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] h-[260px] bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.06)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.04)_0%,transparent_70%)]" />
-        <Meteors number={10} />
-      </div>
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 pb-32 space-y-4">
+      <main className="relative z-10 flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 pb-36 sm:pb-40 space-y-4">
         {/* Top Header */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => window.history.back()}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-xs"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl glass-ghost-btn flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-2xs"
             >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700 dark:text-slate-300" />
             </button>
             <div>
               <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -233,7 +229,7 @@ export const UserManagementPage: React.FC = () => {
 
         {/* ── METRIC TILES ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div className="p-3 rounded-2xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between shadow-xs">
+          <div className="p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
             <div>
               <p className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Total Staff</p>
               <p className="text-lg font-black text-slate-900 dark:text-white">{rawUsers.length}</p>
@@ -241,7 +237,7 @@ export const UserManagementPage: React.FC = () => {
             <Users className="w-5 h-5 text-amber-500" />
           </div>
 
-          <div className="p-3 rounded-2xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between shadow-xs">
+          <div className="p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
             <div>
               <p className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Live Active</p>
               <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{onlineCount}</p>
@@ -249,7 +245,7 @@ export const UserManagementPage: React.FC = () => {
             <div className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
           </div>
 
-          <div className="p-3 rounded-2xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between shadow-xs">
+          <div className="p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
             <div>
               <p className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Admins</p>
               <p className="text-lg font-black text-purple-600 dark:text-purple-300">{adminCount}</p>
@@ -257,7 +253,7 @@ export const UserManagementPage: React.FC = () => {
             <ShieldCheck className="w-5 h-5 text-purple-500" />
           </div>
 
-          <div className="p-3 rounded-2xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between shadow-xs">
+          <div className="p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
             <div>
               <p className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Mechanics</p>
               <p className="text-lg font-black text-amber-600 dark:text-amber-300">{workerCount}</p>
@@ -276,7 +272,7 @@ export const UserManagementPage: React.FC = () => {
               placeholder="Search staff by name, mobile, role..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] focus:border-amber-400 focus:ring-1 focus:ring-amber-400/20 text-xs font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 outline-none transition shadow-xs"
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl glass-modern-input text-xs font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 outline-none transition shadow-2xs"
             />
             {search && (
               <button
@@ -289,7 +285,7 @@ export const UserManagementPage: React.FC = () => {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-1 p-1 bg-white/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-x-auto shadow-xs">
+          <div className="flex gap-1 p-1 bg-white/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-x-auto scrollbar-hide shadow-2xs">
             {(
               [
                 { id: 'ALL', label: `All (${rawUsers.length})` },
@@ -306,7 +302,7 @@ export const UserManagementPage: React.FC = () => {
                   onClick={() => setRoleFilter(t.id)}
                   className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                     isActive
-                      ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black shadow-md shadow-amber-400/20'
+                      ? 'bg-amber-400 text-slate-950 font-black shadow-md shadow-amber-400/20'
                       : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                   }`}
                 >
@@ -317,14 +313,14 @@ export const UserManagementPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ── CLEAN COMPACT USER CARDS GRID (No Clutter) ── */}
+        {/* ── CLEAN COMPACT USER CARDS GRID ── */}
         {isLoading ? (
           <PageShimmer label="Loading staff roster" cards={6} />
         ) : filteredUsers.length === 0 ? (
-          <div className="py-16 text-center rounded-3xl bg-white/95 dark:bg-[#12131F]/90 border border-slate-200/80 dark:border-white/[0.08] space-y-1.5">
+          <div className="py-16 text-center rounded-3xl glass-modern-card space-y-1.5">
             <UserIcon className="w-8 h-8 text-slate-400 mx-auto" />
-            <p className="text-sm font-bold text-slate-900 dark:text-slate-300">No staff members found</p>
-            <p className="text-xs font-mono text-slate-500">Try adjusting your search or filter</p>
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-300">No staff members found</p>
+            <p className="text-xs font-mono text-slate-500 dark:text-slate-400">Try adjusting your search or filter</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -344,7 +340,7 @@ export const UserManagementPage: React.FC = () => {
                     setIsEditingUser(false);
                     setErrorMsg('');
                   }}
-                  className="group relative overflow-hidden rounded-2xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-amber-400/50 p-3.5 flex flex-col justify-between transition-all duration-200 cursor-pointer shadow-sm dark:shadow-xl dark:shadow-black/50"
+                  className="group relative overflow-hidden rounded-2xl glass-modern-card hover:border-amber-400/50 p-3.5 flex flex-col justify-between transition-all duration-200 cursor-pointer shadow-sm"
                 >
                   <BorderBeam size={140} duration={8} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={0.75} />
 
@@ -415,7 +411,7 @@ export const UserManagementPage: React.FC = () => {
         )}
       </main>
 
-      {/* ── DETAILED STAFF CONTROL & SECURITY MODAL (Opened on click) ── */}
+      {/* ── DETAILED STAFF CONTROL & SECURITY MODAL ── */}
       <AnimatePresence>
         {selectedUser && (
           <div
@@ -426,7 +422,7 @@ export const UserManagementPage: React.FC = () => {
               initial={{ opacity: 0, scale: 0.94, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              className="relative w-full max-w-lg rounded-3xl bg-[#0f0f1e] border border-white/12 shadow-2xl overflow-hidden p-5 sm:p-6 space-y-4 max-h-[88vh] overflow-y-auto"
+              className="relative w-full max-w-lg rounded-3xl glass-modern-panel shadow-2xl overflow-hidden p-5 sm:p-6 space-y-4 max-h-[88vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <BorderBeam size={220} duration={8} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={1} />
@@ -434,7 +430,7 @@ export const UserManagementPage: React.FC = () => {
               {/* Modal Top Header */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-13 h-13 rounded-2xl overflow-hidden bg-slate-800 border border-white/10 flex items-center justify-center font-black text-lg text-white">
+                  <div className="w-13 h-13 rounded-2xl overflow-hidden bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center font-black text-lg text-white">
                     {selectedUser.profileImageUrl ? (
                       <img src={selectedUser.profileImageUrl} alt={selectedUser.name} className="w-full h-full object-cover" />
                     ) : (
@@ -442,17 +438,17 @@ export const UserManagementPage: React.FC = () => {
                     )}
                   </div>
                   <div>
-                    <h2 className="text-base font-black text-white">{selectedUser.name}</h2>
-                    <p className="text-xs font-mono text-slate-400">{selectedUser.mobile || 'No Mobile Registered'}</p>
+                    <h2 className="text-base font-black text-slate-900 dark:text-white">{selectedUser.name}</h2>
+                    <p className="text-xs font-mono text-slate-500 dark:text-slate-400">{selectedUser.mobile || 'No Mobile Registered'}</p>
                     <div className="flex items-center gap-1.5 mt-1">
-                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-amber-400/15 border border-amber-400/30 text-amber-300 uppercase">
+                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300 uppercase">
                         {selectedUser.role}
                       </span>
                       <span
                         className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase ${
                           selectedUser.status === 'BLOCKED'
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                            : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30'
+                            : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                         }`}
                       >
                         {selectedUser.status || 'ACTIVE'}
@@ -464,14 +460,14 @@ export const UserManagementPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedUser(null)}
-                  className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white cursor-pointer"
+                  className="w-8 h-8 rounded-full glass-ghost-btn flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               {errorMsg && (
-                <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-mono">
+                <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs font-mono">
                   {errorMsg}
                 </div>
               )}

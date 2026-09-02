@@ -96,12 +96,9 @@ export const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col justify-between overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200 relative">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col justify-between overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200 relative">
       {/* Ambient background light */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[380px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.12)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.08)_0%,transparent_65%)]" />
-        <Meteors number={12} />
-      </div>
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
       <div className="absolute top-4 right-4 z-50">
         <AnimatedThemeToggle variant="icon-only" />
@@ -132,12 +129,12 @@ export const AuthPage = () => {
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
-          className="relative w-full max-w-sm rounded-3xl bg-white/80 dark:bg-white/[0.035] backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] p-6 shadow-2xl overflow-hidden"
+          className="relative w-full max-w-sm rounded-3xl glass-modern-card p-6 shadow-2xl overflow-hidden"
         >
           <BorderBeam size={180} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
 
           {/* Toggle Switch */}
-          <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 mb-5">
+          <div className="grid grid-cols-2 p-1 bg-white/80 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 mb-5 shadow-2xs">
             <button
               type="button"
               onClick={() => {
@@ -150,7 +147,7 @@ export const AuthPage = () => {
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              LOGIN
+              Sign In
             </button>
             <button
               type="button"
@@ -164,100 +161,83 @@ export const AuthPage = () => {
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              SIGN UP
+              Register
             </button>
           </div>
 
-          {/* Error Notification */}
-          <AnimatePresence>
-            {errorMsg && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2"
-              >
-                <ShieldAlert className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-3.5">
-            {/* Animated Name Field (Signup Only) */}
-            <AnimatePresence>
-              {!isLogin && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <AnimatePresence mode="popLayout">
+              {errorMsg && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0, y: -10 }}
-                  animate={{ opacity: 1, height: 'auto', y: 0 }}
-                  exit={{ opacity: 0, height: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs font-mono flex items-center gap-2"
                 >
-                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      name="name"
-                      required
-                      placeholder="e.g. Raju Kumar"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      className="w-full rounded-xl py-2.5 pl-10 pr-4 text-xs bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-medium outline-none focus:border-amber-400"
-                    />
-                  </div>
+                  <ShieldAlert className="w-4 h-4 shrink-0" />
+                  <span>{errorMsg}</span>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Mobile Field */}
+            {!isLogin && (
+              <div>
+                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="John Doe"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-modern-input text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
-              <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+              <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                 Mobile Number
               </label>
               <div className="relative">
-                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="tel"
                   name="mobile"
-                  required
                   maxLength={10}
-                  placeholder="10-digit mobile number"
                   value={formData.mobile}
                   onChange={handleInputChange}
-                  className="w-full rounded-xl py-2.5 pl-10 pr-4 text-xs bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono outline-none focus:border-amber-400"
+                  placeholder="10-digit mobile"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-modern-input text-xs font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 outline-none"
                 />
               </div>
             </div>
 
-            {/* Password Field */}
             <div>
-              <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+              <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                 Password
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="password"
                   name="password"
-                  required
-                  placeholder="••••••••"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full rounded-xl py-2.5 pl-10 pr-4 text-xs bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white font-mono outline-none focus:border-amber-400"
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-modern-input text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 outline-none"
                 />
               </div>
             </div>
 
-            {/* Submit Button */}
-            <motion.button
-              whileTap={{ scale: 0.97 }}
+            <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-2 bg-gradient-to-r from-amber-400 to-yellow-400 hover:opacity-95 text-slate-950 font-black text-xs py-3 px-4 rounded-xl shadow-lg shadow-amber-400/20 flex items-center justify-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
+              className="w-full mt-2 py-3 rounded-xl glass-gold-btn text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg transition active:scale-[0.98] disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <>
@@ -266,11 +246,11 @@ export const AuthPage = () => {
                 </>
               ) : (
                 <>
-                  <span>{isLogin ? 'LOG IN' : 'CREATE ACCOUNT'}</span>
+                  <span>{isLogin ? 'SIGN IN' : 'CREATE ACCOUNT'}</span>
                   <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                 </>
               )}
-            </motion.button>
+            </button>
           </form>
         </motion.div>
 

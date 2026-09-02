@@ -149,8 +149,7 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
           }}
           onClick={handleCardClick}
           className={cn(
-            'group relative w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between backdrop-blur-2xl transition-all duration-200 shadow-sm dark:shadow-xl dark:shadow-black/50 overflow-hidden',
-            'bg-white/95 dark:bg-[#12131F]/90 border border-slate-200/80 dark:border-white/[0.08] hover:border-amber-400/60 dark:hover:border-amber-400/50'
+            'group relative w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between glass-modern-card transition-all duration-200 shadow-sm overflow-hidden'
           )}
         >
           {currentJob.isPinned && (
@@ -159,7 +158,7 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
 
           <div>
             {/* Top Row: Vehicle Name, Plate, Status & Priority */}
-            <div className="flex items-start justify-between gap-2.5">
+            <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1 space-y-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h4 className="text-sm sm:text-base font-black uppercase tracking-tight truncate text-slate-900 dark:text-white group-hover:text-amber-500 dark:group-hover:text-amber-300 transition-colors">
@@ -171,14 +170,14 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
                     </span>
                   )}
                   {currentJob.isPinned && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[9px] font-mono font-black border border-amber-400/40 shadow-xs">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[9px] font-mono font-black border border-amber-400/40 shadow-2xs">
                       <Sparkles className="w-2.5 h-2.5" /> Pinned
                     </span>
                   )}
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-mono font-black text-slate-950 dark:text-amber-300 bg-amber-400/20 dark:bg-white/[0.08] px-2.5 py-0.5 rounded-lg border border-amber-400/30 dark:border-white/10 tracking-wider">
+                  <span className="text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 px-2.5 py-0.5 rounded-lg border border-amber-400/30 tracking-wider">
                     {currentJob.vehicleNumber}
                   </span>
                   {currentJob.vehicleColor && (
@@ -219,11 +218,11 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
           </div>
 
           {/* Bottom Action Footer */}
-          <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs font-mono">
-            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 truncate">
+          <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-2 text-xs font-mono">
+            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 truncate min-w-0">
               <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="truncate">
-                {currentJob.expectedDeliveryDate ? deliveryInfo.label : 'In Garage Service'}
+              <span className="truncate text-[11px]">
+                {currentJob.expectedDeliveryDate ? deliveryInfo.shortLabel : 'In Garage'}
               </span>
             </div>
 
@@ -236,10 +235,10 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
                   navigate(`/jobs/${currentJob.id}`);
                 }
               }}
-              className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold transition-colors shrink-0 group-hover:translate-x-0.5 cursor-pointer"
+              className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold transition-colors shrink-0 group-hover:translate-x-0.5 cursor-pointer text-xs"
             >
-              <span>View Job Card</span>
-              <ChevronRight className="w-4 h-4" />
+              <span>View Card</span>
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </motion.div>

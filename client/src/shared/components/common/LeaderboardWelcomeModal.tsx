@@ -11,18 +11,7 @@ import { BorderBeam } from '../magicui/BorderBeam';
 const SESSION_KEY = 'podium_welcome_shown_v6';
 
 const triggerModalPopper = () => {
-  try {
-    confetti({
-      particleCount: 35,
-      spread: 60,
-      origin: { y: 0.4 },
-      colors: ['#f59e0b', '#fbbf24', '#fef08a', '#ffffff', '#10b981'],
-      ticks: 160,
-      gravity: 1.1,
-      scalar: 0.85,
-      disableForReducedMotion: true,
-    });
-  } catch (e) {}
+  // Silent without intrusive screen-wide particle clutter
 };
 
 export const LeaderboardWelcomeModal: React.FC = () => {
@@ -81,18 +70,15 @@ export const LeaderboardWelcomeModal: React.FC = () => {
         onClick={handleClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.85, y: 18 }}
+          initial={{ opacity: 0, scale: 0.88, y: 14 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.85, y: 18 }}
+          exit={{ opacity: 0, scale: 0.88, y: 14 }}
           transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-          className="relative w-full max-w-[315px] overflow-hidden rounded-[28px] bg-white/98 dark:bg-slate-900/98 backdrop-blur-2xl border border-amber-400/50 shadow-2xl shadow-amber-500/20 p-4 space-y-3.5 text-center select-none"
+          className="relative w-full max-w-[315px] overflow-hidden rounded-3xl glass-modern-panel shadow-2xl p-4.5 space-y-3.5 text-center select-none"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Animated Golden Radiance Edge Beam */}
-          <BorderBeam size={180} duration={5} colorFrom="#facc15" colorTo="#f59e0b" borderWidth={1.5} />
-
-          {/* Golden Radiant Backdrop */}
-          <div className="pointer-events-none absolute -top-14 left-1/2 -translate-x-1/2 w-44 h-44 rounded-full bg-gradient-to-b from-amber-400/25 to-transparent blur-2xl" />
+          {/* Subtle Radiant Backdrop */}
+          <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 w-44 h-44 rounded-full bg-gradient-to-b from-amber-400/15 to-transparent blur-2xl" />
 
           {/* Close Button */}
           <button
@@ -100,7 +86,7 @@ export const LeaderboardWelcomeModal: React.FC = () => {
             onClick={handleClose}
             className="absolute top-3.5 right-3.5 p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition active:scale-90 cursor-pointer z-20"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
 
           {/* Tagline */}
@@ -109,23 +95,23 @@ export const LeaderboardWelcomeModal: React.FC = () => {
             <span>Monthly Garage Leader</span>
           </div>
 
-          {/* ── #1 Champion Hero Spotlight with Bigger Profile Picture ── */}
+          {/* ── #1 Champion Hero Spotlight ── */}
           <div className="space-y-1.5 pt-0.5">
             <div className="relative inline-block">
-              {/* Floating Animated 3D Crown */}
+              {/* Floating Animated Crown */}
               <motion.div
-                animate={{ y: [0, -4, 0] }}
+                animate={{ y: [0, -3, 0] }}
                 transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-                className="absolute -top-4 left-1/2 -translate-x-1/2 z-20"
+                className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20"
               >
-                <div className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-400/40">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-300 text-slate-950 flex items-center justify-center shadow-md shadow-amber-400/30">
                   <Crown className="w-3.5 h-3.5 fill-current" />
                 </div>
               </motion.div>
 
-              {/* Big Glossy Avatar (80px) */}
-              <div className="w-20 h-20 rounded-2xl p-1 bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-600 shadow-xl shadow-amber-500/25">
-                <div className="w-full h-full rounded-[14px] overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white font-black text-xl">
+              {/* Big Glossy Avatar */}
+              <div className="w-18 h-18 rounded-2xl p-1 bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-600 shadow-lg shadow-amber-500/20">
+                <div className="w-full h-full rounded-[13px] overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white font-black text-lg">
                   {rank1.profileImageUrl ? (
                     <img src={rank1.profileImageUrl} alt={rank1.name} className="w-full h-full object-cover" />
                   ) : (
@@ -135,35 +121,35 @@ export const LeaderboardWelcomeModal: React.FC = () => {
               </div>
 
               {/* Rank 1 Star Badge */}
-              <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-md bg-amber-400 text-slate-950 text-[9px] font-mono font-black flex items-center gap-0.5 shadow-md">
+              <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-md bg-amber-400 text-slate-950 text-[9px] font-mono font-black flex items-center gap-0.5 shadow-xs">
                 <Star className="w-2.5 h-2.5 fill-current" />
                 #1
               </div>
             </div>
 
             <div>
-              <h4 className="text-base font-black text-slate-900 dark:text-white truncate px-2">
+              <h4 className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate px-2">
                 {rank1.name}
               </h4>
-              <p className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-bold">
+              <p className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
                 Top Performer
               </p>
             </div>
 
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300">
-              <Flame className="w-3.5 h-3.5 text-amber-500 fill-current" />
+              <Flame className="w-3 h-3 text-amber-500 fill-current" />
               <span className="text-xs font-mono font-black">
                 <NumberTicker value={(rank1 as any).points || (rank1 as any).taskCount || 0} /> Quality Points
               </span>
             </div>
           </div>
 
-          {/* ── 2nd and 3rd Place Mini Showcase with Avatars ── */}
+          {/* ── 2nd and 3rd Place Mini Showcase ── */}
           {(rank2 || rank3) && (
             <div className="grid grid-cols-2 gap-2 text-left pt-1">
               {/* 2nd Place Silver */}
               {rank2 && (
-                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-white/60 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 flex items-center gap-2">
                   <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-black text-slate-700 dark:text-slate-200 shrink-0">
                     {rank2.profileImageUrl ? (
                       <img src={rank2.profileImageUrl} alt={rank2.name} className="w-full h-full object-cover" />
@@ -187,7 +173,7 @@ export const LeaderboardWelcomeModal: React.FC = () => {
 
               {/* 3rd Place Bronze */}
               {rank3 && (
-                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-white/60 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 flex items-center gap-2">
                   <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-xs font-black text-amber-800 dark:text-amber-300 shrink-0">
                     {rank3.profileImageUrl ? (
                       <img src={rank3.profileImageUrl} alt={rank3.name} className="w-full h-full object-cover" />
@@ -212,11 +198,11 @@ export const LeaderboardWelcomeModal: React.FC = () => {
           )}
 
           {/* ── Actions ── */}
-          <div className="pt-1 space-y-1">
+          <div className="pt-1 space-y-1.5">
             <button
               type="button"
               onClick={handleViewLeaderboard}
-              className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 shadow-md shadow-amber-400/20 active:scale-95 transition cursor-pointer"
+              className="w-full py-2.5 px-3 rounded-xl glass-gold-btn text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer"
             >
               <span>View Leaderboard</span>
               <ChevronRight className="w-3.5 h-3.5" />

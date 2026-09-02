@@ -1,624 +1,522 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+﻿import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { useNavigate, Link } from "react-router-dom";
 import {
-  Activity,
-  ArrowRight,
+  Car,
   CheckCircle2,
   ChevronRight,
-  Clock,
-  Crown,
   Flame,
   History,
   Package,
-  PlusCircle,
+  Plus,
   Search,
   ShieldAlert,
-  ShoppingCart,
+  ShieldCheck,
   Trophy,
   Users,
+  Volume2,
+  VolumeX,
   Wrench,
-} from 'lucide-react';
+  Zap,
+  TrendingUp,
+  Clock,
+  Sparkles,
+  ArrowUpRight,
+} from "lucide-react";
 
-import { useAuth } from '../../../shared/hooks/useAuth';
-import { Navbar } from '../../../shared/components/navbar/Navbar';
-import { useGetJobCardsQuery, useGetJobStatsQuery, JobCardData } from '../../jobs/api/jobApi';
-import { useGetPendingWorkersQuery, useGetAllUsersQuery, useGetLeaderboardQuery } from '../../auth/api/authApi';
-import { useGetCatalogQuery } from '../../catalog/api/catalogApi';
-import { DashboardBentoSkeleton } from '../../../shared/components/common/PageShimmer';
-import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
-import { Meteors } from '../../../shared/components/magicui/Meteors';
-import { IosNotificationStack, StackJobCardItem } from '../../../shared/components/magicui/IosNotificationStack';
-import { GlobalSearchModal } from '../../../shared/components/common/GlobalSearchModal';
-import { TopSearchBar } from '../../../shared/components/common/TopSearchBar';
-
-/* ─── Fade-up entry animation wrapper ─── */
-const FadeUp: React.FC<{ delay?: number; children: React.ReactNode; className?: string }> = ({
-  delay = 0,
-  children,
-  className,
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 12 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.28, delay, ease: 'easeOut' }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-);
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { Navbar } from "../../../shared/components/navbar/Navbar";
+import { useGetJobCardsQuery, useGetJobStatsQuery, JobCardData } from "../../jobs/api/jobApi";
+import { useGetPendingWorkersQuery, useGetAllUsersQuery, useGetLeaderboardQuery } from "../../auth/api/authApi";
+import { useGetCatalogQuery } from "../../catalog/api/catalogApi";
+import { DashboardBentoSkeleton } from "../../../shared/components/common/PageShimmer";
+import { NumberTicker } from "../../../shared/components/magicui/NumberTicker";
+import { GlobalSearchModal } from "../../../shared/components/common/GlobalSearchModal";
+import { isCompletionSoundEnabled, setCompletionSoundEnabled } from "../../../shared/utils/completionSound";
+import { AnimatedThemeToggle } from "../../../shared/components/magicui/AnimatedThemeToggle";
+import { FluidCanvasBackground } from "../../../shared/components/common/FluidCanvasBackground";
 
 export const Dashboard: React.FC = () => {
-  const { user, isAdmin, isApproved } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [searchInputVal, setSearchInputVal] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSoundOn, setIsSoundOn] = useState(isCompletionSoundEnabled());
 
-  const { data: jobsResponse, isLoading: isJobsLoading } = useGetJobCardsQuery();
-  const { data: statsResponse } = useGetJobStatsQuery();
-  const { data: pendingResponse } = useGetPendingWorkersQuery(undefined, { skip: !isAdmin });
-  const { data: usersResponse } = useGetAllUsersQuery(undefined, { skip: !isAdmin });
-  const { data: leaderboardResponse } = useGetLeaderboardQuery();
-  const { data: catalogResponse } = useGetCatalogQuery();
+  const { data: jobsRes, isLoading } = useGetJobCardsQuery();
+  const { data: statsRes }           = useGetJobStatsQuery();
+  const { data: pendingRes }         = useGetPendingWorkersQuery(undefined, { skip: !isAdmin });
+  const { data: usersRes }           = useGetAllUsersQuery(undefined,       { skip: !isAdmin });
+  const { data: lbRes }              = useGetLeaderboardQuery();
+  const { data: catalogRes }         = useGetCatalogQuery();
 
-  const activeJobs: JobCardData[] = Array.isArray(jobsResponse?.data)
-    ? (jobsResponse!.data as unknown as JobCardData[])
-    : ((jobsResponse?.data as any)?.jobs || []);
+  const allJobs: JobCardData[] = Array.isArray(jobsRes?.data)
+    ? (jobsRes!.data as unknown as JobCardData[])
+    : ((jobsRes?.data as any)?.jobs || []);
 
-  const stats = statsResponse?.data;
-  const activeCount = stats?.activeCount ?? activeJobs.filter(
-    (j) => j.status === 'IN_PROGRESS' && j.tasks?.some((t) => t.status === 'OPEN')
+  const stats          = statsRes?.data;
+  const activeCount    = stats?.activeCount ?? allJobs.filter(j => j.status === "IN_PROGRESS").length;
+  const totalCount     = stats?.totalCount  ?? allJobs.length;
+  const completedCount = totalCount - activeCount;
+  const qaCount        = stats?.pendingVerificationCount ?? allJobs.filter(
+    j => !j.verifiedAt && j.tasks?.length > 0 && j.tasks.every(t => t.status === "COMPLETED")
   ).length;
 
-  const totalCount = stats?.totalCount ?? activeJobs.length;
+  const totalAllTasks = allJobs.reduce((s, j) => s + (j.tasks?.length || 0), 0);
+  const totalDone     = stats?.totalCompletedTasks ?? allJobs.reduce((s, j) =>
+    s + (j.tasks?.filter(t => t.status === "COMPLETED").length || 0), 0);
+  const velocity = totalAllTasks > 0 ? Math.round((totalDone / totalAllTasks) * 100) : 0;
 
-  const pendingVerificationCount = stats?.pendingVerificationCount ?? activeJobs.filter(
-    (job) => !job.verifiedAt && job.tasks?.length > 0 && job.tasks.every((task) => task.status === 'COMPLETED')
-  ).length;
+  const pendingWorkers = pendingRes?.data?.length || 0;
+  const totalUsers     = usersRes?.data?.length   || 0;
+  const catalogCount   = catalogRes?.data?.length || 0;
+  const topTech        = lbRes?.data?.[0];
+  const topScore       = (topTech as any)?.totalPoints || 0;
 
-  const totalCompletedTasks = stats?.totalCompletedTasks ?? activeJobs.reduce((acc, job) => {
-    return acc + (job.tasks?.filter((t) => t.status === 'COMPLETED').length || 0);
-  }, 0);
+  const greeting = (() => {
+    const h = new Date().getHours();
+    return h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening";
+  })();
 
-  const pendingWorkersCount = pendingResponse?.data?.length || 0;
-  const totalUsersCount = usersResponse?.data?.length || 0;
-  const catalogItemsCount = catalogResponse?.data?.length || 0;
-
-  // Top technician from real leaderboard
-  const topTech = leaderboardResponse?.data?.[0];
-  const topTechScore = (topTech as any)?.totalPoints || (topTech as any)?.score || 0;
-
-  const currentUserId = user?.id || (user as any)?._id;
-  const stackJobCards: StackJobCardItem[] = activeJobs.map((job) => {
-    const total = job.tasks?.length || 0;
-    const done = (job.tasks || []).filter((t) => t.status === 'COMPLETED').length;
-    const progress = total > 0 ? Math.round((done / total) * 100) : 0;
-    const isJobPinned = !!(
-      job.isPinnedForAll ||
-      (Array.isArray(job.pinnedBy) &&
-        currentUserId &&
-        job.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === currentUserId))
-    );
-    return {
-      id: job.id || job._id!,
-      vehicleName: job.vehicleName || 'Vehicle',
-      vehicleNumber: job.vehicleNumber || '---',
-      vehicleColor: job.vehicleColor,
-      totalTasks: total,
-      completedTasks: done,
-      progressPercent: progress,
-      expectedDeliveryDate: job.expectedDeliveryDate || undefined,
-      isPinned: isJobPinned,
-      createdAt: job.createdAt,
-    };
+  const dateStr = new Date().toLocaleDateString("en-IN", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
   });
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchInputVal.trim()) {
-      setIsSearchModalOpen(true);
-    }
-  };
-
-  if (isJobsLoading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col transition-colors duration-200">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#08090f] text-slate-900 dark:text-white flex flex-col">
         <Navbar glass />
-        <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 pb-28">
+        <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-32">
           <DashboardBentoSkeleton />
         </main>
       </div>
     );
   }
 
+  /* Universal clean modern glass card */
+  const modernCard = [
+    "relative overflow-hidden",
+    "backdrop-blur-2xl backdrop-saturate-150",
+    "bg-white/70 dark:bg-[#10121d]/75",
+    "border border-white/90 dark:border-white/[0.08]",
+    "shadow-[0_4px_24px_-4px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)]",
+    "hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.09)] dark:hover:shadow-[0_12px_40px_-8px_rgba(0,0,0,0.8)]",
+    "rounded-2xl",
+    "transition-all duration-300",
+    "cursor-pointer active:scale-[0.985]",
+  ].join(" ");
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/30 transition-colors duration-200">
-      {/* ── Ambient luxury light aura & Meteors ── */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[420px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.12)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.08)_0%,transparent_65%)]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] h-[300px] bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.08)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.05)_0%,transparent_70%)]" />
-        <Meteors number={12} />
-      </div>
+    <div className="relative min-h-screen bg-[#f8f9fb] dark:bg-[#07080e] text-slate-900 dark:text-white flex flex-col overflow-x-hidden transition-colors duration-300 font-sans">
+
+      {/* ── Fluid Organic Wave Canvas Background ── */}
+      <FluidCanvasBackground />
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 sm:px-5 lg:px-6 py-4 sm:py-6 pb-28 sm:pb-32 space-y-3.5 sm:space-y-4.5">
-        {/* ── TOP ATTACHED GLOBAL SEARCH BAR ── */}
-        <TopSearchBar />
+      <main className="relative z-10 flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-32 flex flex-col gap-4">
 
-        {/* ── GREETING HEADER ── */}
-        <FadeUp delay={0}>
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-xl dark:shadow-2xl dark:shadow-black/60 p-4 sm:p-6 transition-colors">
-            <BorderBeam size={220} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
-            <div className="pointer-events-none absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-bl from-amber-400/15 dark:from-amber-400/12 to-transparent blur-2xl" />
-            
-            <div className="relative z-10 flex items-center justify-between gap-4">
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold uppercase tracking-wider shadow-xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                    Live Garage
-                  </span>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-amber-600 dark:text-amber-400">
-                    {user?.role}
-                  </span>
-                </div>
-                <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                  Hey,{' '}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 dark:from-amber-400 dark:via-yellow-300 dark:to-amber-400 drop-shadow-sm">
-                    {user?.name}
-                  </span>{' '}
-                  👋
-                </h1>
-                <p className="text-[11px] sm:text-xs font-mono text-slate-500 dark:text-slate-400">
-                  {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        {/* ── 1. HEADER (Profile Greeting + Controls) ── */}
+        <header className="flex items-center justify-between gap-3">
+          <Link to="/profile" className="flex items-center gap-3 active:opacity-75 transition group">
+            <div className="relative w-11 h-11 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center font-black text-base text-amber-600 dark:text-amber-400
+                            backdrop-blur-xl bg-white/70 dark:bg-white/[0.08] border border-white/90 dark:border-white/[0.12] shadow-xs">
+              {user?.profileImageUrl
+                ? <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                : user?.name?.charAt(0)?.toUpperCase()}
+              <span className="absolute bottom-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white dark:border-[#07080e]" />
+            </div>
+            <div className="leading-tight">
+              <div className="flex items-center gap-1.5">
+                <p className="text-[10px] font-mono uppercase tracking-widest text-amber-600/80 dark:text-amber-400/80 font-bold">
+                  Good {greeting}
                 </p>
+                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase">{user?.role}</span>
+              </div>
+              <p className="text-[15px] font-black text-slate-900 dark:text-white">
+                {user?.name?.split(" ")[0]}
+              </p>
+            </div>
+          </Link>
+
+          <div className="flex items-center gap-1.5">
+            <span className="hidden sm:inline text-[11px] font-mono text-slate-400 dark:text-slate-500 mr-1">
+              {dateStr}
+            </span>
+            <button
+              onClick={() => { const n = !isSoundOn; setIsSoundOn(n); setCompletionSoundEnabled(n); }}
+              className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition active:scale-95
+                         backdrop-blur-xl bg-white/70 dark:bg-white/[0.07] border border-white/90 dark:border-white/[0.1]
+                         text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400"
+              title={isSoundOn ? "Sound on" : "Sound muted"}
+            >
+              {isSoundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+            <AnimatedThemeToggle variant="icon-only" />
+          </div>
+        </header>
+
+        {/* ── 2. SEARCH PILL (Universal Fast Lookup) ── */}
+        <button
+          onClick={() => setIsSearchOpen(true)}
+          className="w-full flex items-center gap-3 px-4 py-3.5 text-left cursor-pointer transition active:scale-[0.99]
+                     backdrop-blur-2xl bg-white/75 dark:bg-[#10121d]/80
+                     border border-white/90 dark:border-white/[0.08]
+                     rounded-2xl shadow-xs hover:shadow-md hover:border-amber-400/50 dark:hover:border-amber-500/30"
+        >
+          <Search className="w-4 h-4 shrink-0 text-amber-500 dark:text-amber-400" />
+          <span className="text-[13px] font-mono flex-1 truncate text-slate-400 dark:text-slate-500">
+            Search vehicles, plates, jobs, customers…
+          </span>
+          <kbd className="hidden sm:inline text-[10px] px-2 py-0.5 rounded-lg font-mono bg-black/5 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500 border border-black/5 dark:border-white/[0.08]">
+            ⌘K
+          </kbd>
+        </button>
+
+        {/* ── 3. HERO COMMAND CENTER ── */}
+        <section
+          className="relative overflow-hidden rounded-3xl
+                     backdrop-blur-2xl bg-gradient-to-br from-white/85 via-white/70 to-amber-50/40
+                     dark:from-[#111320]/90 dark:via-[#0e101b]/90 dark:to-[#171426]/90
+                     border border-white/95 dark:border-white/[0.1]
+                     shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)]
+                     p-6 sm:p-8"
+        >
+          {/* Subtle top edge glow reflection */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 dark:via-amber-400/30 to-transparent pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+            <div className="flex-1">
+
+              {/* Dynamic Scrolling Marquee Ticker */}
+              {(() => {
+                const chips = [
+                  { text: `LIVE · ${activeCount} Active Bays`, dot: "bg-emerald-400", color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+                  { text: `⚡ ${velocity}% Velocity`, dot: null, color: "text-amber-700 dark:text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+                  { text: `✓ ${totalDone} Tasks Done`, dot: null, color: "text-sky-700 dark:text-sky-400", bg: "bg-sky-500/10 border-sky-500/20" },
+                  ...(qaCount > 0 ? [{ text: `⬡ ${qaCount} QA Ready`, dot: null, color: "text-purple-700 dark:text-purple-300", bg: "bg-purple-500/10 border-purple-500/20" }] : []),
+                  { text: `⊕ ${completedCount} Completed`, dot: null, color: "text-slate-600 dark:text-slate-400", bg: "bg-black/5 dark:bg-white/5 border-black/8 dark:border-white/10" },
+                  { text: `◈ ${totalCount} All Time`, dot: null, color: "text-slate-600 dark:text-slate-400", bg: "bg-black/5 dark:bg-white/5 border-black/8 dark:border-white/10" },
+                ];
+                const doubled = [...chips, ...chips];
+                return (
+                  <div className="overflow-hidden w-full mb-4 -mx-1">
+                    <div className="marquee-track gap-2">
+                      {doubled.map((c, i) => (
+                        <span
+                          key={i}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider border shrink-0 select-none ${c.color} ${c.bg}`}
+                        >
+                          {c.dot && <span className={`w-1.5 h-1.5 rounded-full ${c.dot} animate-ping shrink-0`} />}
+                          {c.text}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Massive Metric Display */}
+              <div className="flex items-end gap-4 mb-3">
+                <span
+                  className="font-black leading-none text-slate-900 dark:text-white tracking-tight"
+                  style={{ fontSize: "clamp(54px,14vw,84px)", fontVariantNumeric: "tabular-nums" }}
+                >
+                  <NumberTicker value={activeCount} />
+                </span>
+                <div className="pb-2">
+                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-snug">Vehicles</p>
+                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-snug">Active in Garage</p>
+                </div>
               </div>
 
-              {/* Stat cluster — desktop */}
-              <div className="hidden sm:flex items-center gap-5 bg-slate-100/90 dark:bg-white/[0.03] backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-3 shrink-0 shadow-sm">
-                <div className="text-center">
-                  <p className="text-2xl font-black text-amber-500 dark:text-amber-400 tabular-nums leading-none">
-                    <NumberTicker value={activeCount} />
-                  </p>
-                  <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mt-0.5">Active</p>
+              {/* Progress Velocity Bar */}
+              <div className="flex items-center gap-3 mb-1">
+                <div className="flex-1 h-2 rounded-full overflow-hidden bg-slate-200/80 dark:bg-white/[0.08]">
+                  <motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-300 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${velocity}%` }}
+                    transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
+                  />
                 </div>
-                <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
-                <div className="text-center">
-                  <p className="text-2xl font-black text-slate-900 dark:text-white tabular-nums leading-none">
-                    <NumberTicker value={totalCount} />
-                  </p>
-                  <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mt-0.5">Total</p>
-                </div>
-                <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
-                <div className="text-center">
-                  <p className="text-2xl font-black text-emerald-500 dark:text-emerald-400 tabular-nums leading-none">
-                    <NumberTicker value={totalCompletedTasks} />
-                  </p>
-                  <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mt-0.5">Done</p>
-                </div>
+                <span className="text-sm font-black font-mono shrink-0 text-amber-600 dark:text-amber-400">
+                  {velocity}%
+                </span>
               </div>
+              <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                {totalDone} of {totalAllTasks} tasks completed · daily turnover
+              </p>
             </div>
 
-            {/* Stat cluster — mobile */}
-            <div className="sm:hidden mt-4 pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-around">
-              <div className="text-center">
-                <p className="text-xl font-black text-amber-500 dark:text-amber-400 tabular-nums"><NumberTicker value={activeCount} /></p>
-                <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Active</p>
-              </div>
-              <div className="w-px h-7 bg-slate-200 dark:bg-white/10" />
-              <div className="text-center">
-                <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums"><NumberTicker value={totalCount} /></p>
-                <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Total</p>
-              </div>
-              <div className="w-px h-7 bg-slate-200 dark:bg-white/10" />
-              <div className="text-center">
-                <p className="text-xl font-black text-emerald-500 dark:text-emerald-400 tabular-nums"><NumberTicker value={totalCompletedTasks} /></p>
-                <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Done</p>
-              </div>
+            {/* Desktop Overview Badges */}
+            <div className="hidden sm:flex flex-col gap-2 shrink-0 w-[130px]">
+              {[
+                { label: "Completed", val: completedCount, col: "text-emerald-700 dark:text-emerald-400" },
+                { label: "Lifetime", val: totalCount, col: "text-amber-600 dark:text-amber-400" },
+              ].map(s => (
+                <div
+                  key={s.label}
+                  className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]"
+                >
+                  <p className={`text-2xl font-black ${s.col}`}>{s.val}</p>
+                  <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">{s.label}</p>
+                </div>
+              ))}
             </div>
           </div>
-        </FadeUp>
 
-        {/* Pending Worker Warning (If Unapproved) */}
-        {!isApproved && !isAdmin && (
-          <FadeUp delay={0.03}>
-            <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-amber-400/15 border border-amber-400/30 backdrop-blur-xl">
-              <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-pulse shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-amber-700 dark:text-amber-300">Account Pending Verification</p>
-                <p className="text-[11px] text-amber-600/90 dark:text-amber-200/70">Awaiting admin authorization to unlock garage actions.</p>
+          {/* Primary Action Button */}
+          <div className="relative z-10 mt-5">
+            <button
+              onClick={() => navigate(isAdmin ? "/jobs/create" : "/jobs")}
+              className="w-full sm:w-auto h-12 px-8 rounded-2xl font-black text-sm flex items-center justify-center gap-2.5
+                         cursor-pointer transition active:scale-[0.97]
+                         bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white
+                         shadow-[0_4px_24px_-2px_rgba(245,158,11,0.5)] border border-amber-400/30"
+            >
+              {isAdmin ? <Plus className="w-4 h-4 stroke-[2.5]" /> : <Wrench className="w-4 h-4 stroke-[2.5]" />}
+              {isAdmin ? "New Vehicle Intake" : "My Assigned Tasks"}
+            </button>
+          </div>
+        </section>
+
+        {/* ── 4. STATS 4-GRID (Clean Modern Micro-Cards) ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Active", value: activeCount, icon: <Car className="w-4 h-4" />, iconBg: "bg-amber-500/15", iconColor: "text-amber-600 dark:text-amber-400", dot: "bg-amber-500" },
+            { label: "Done Today", value: totalDone, icon: <CheckCircle2 className="w-4 h-4" />, iconBg: "bg-emerald-500/15", iconColor: "text-emerald-600 dark:text-emerald-400", dot: "bg-emerald-500" },
+            { label: "QA Pending", value: qaCount, icon: <ShieldCheck className="w-4 h-4" />, iconBg: "bg-purple-500/15", iconColor: "text-purple-600 dark:text-purple-400", dot: "bg-purple-500" },
+            { label: "Velocity", value: velocity, suffix: "%", icon: <TrendingUp className="w-4 h-4" />, iconBg: "bg-sky-500/15", iconColor: "text-sky-600 dark:text-sky-400", dot: "bg-sky-500" },
+          ].map(s => (
+            <div
+              key={s.label}
+              className={`${modernCard} p-4 flex flex-col justify-between min-h-[105px]`}
+            >
+              <div className="flex items-center justify-between">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${s.iconBg} ${s.iconColor}`}>
+                  {s.icon}
+                </div>
+                <span className={`w-2 h-2 rounded-full ${s.dot} opacity-70`} />
+              </div>
+              <div className="pt-2">
+                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  <NumberTicker value={s.value} />{s.suffix}
+                </p>
+                <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold">{s.label}</p>
               </div>
             </div>
-          </FadeUp>
-        )}
+          ))}
+        </div>
 
-        {/* ━━━━━━━━ MASTER BENTO GRID (Mobile-First, 12-Col Responsive) ━━━━━━━━ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4">
+        {/* ── 5. BENTO OPERATIONS HUB (Modular Japanese Bento Grid) ── */}
+        <section>
+          <div className="flex items-center justify-between mb-3 px-0.5">
+            <h2 className="flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              Operations Hub
+            </h2>
+            <span className="text-[10px] font-mono text-slate-400 dark:text-slate-600">Bento Matrix</span>
+          </div>
 
-          {/* ── BENTO 1: LIVE WORKFLOW HERO (Col 12 on mobile, Col 8 on desktop) ── */}
-          <FadeUp delay={0.05} className="col-span-1 sm:col-span-2 lg:col-span-8">
-            <div className="group relative overflow-hidden rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-amber-400/50 shadow-xl dark:shadow-2xl dark:shadow-black/40 transition-all duration-300 p-4 sm:p-5 flex flex-col justify-between min-h-[280px] sm:min-h-[300px]">
-              <BorderBeam size={220} duration={9} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
-              
-              {/* Header */}
-              <div className="flex items-center justify-between gap-3 shrink-0 mb-3 z-10">
-                <div
-                  className="flex items-center gap-2.5 cursor-pointer"
-                  onClick={() => navigate('/jobs')}
-                >
-                  <div className="w-9 h-9 rounded-2xl bg-amber-400/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:bg-amber-400 group-hover:text-slate-950 transition-all duration-300 shadow-xs">
-                    <Activity className="w-4.5 h-4.5" />
+          <div
+            className="grid grid-cols-2 md:grid-cols-4 gap-3"
+            style={{ gridAutoRows: "minmax(145px,auto)" }}
+          >
+
+            {/* Tile 1: QA Sign-Off (2 cols) */}
+            <div
+              onClick={() => navigate("/jobs", { state: { view: "verify" } })}
+              className={`col-span-2 md:col-span-2 ${modernCard} p-5 flex flex-col justify-between
+                          hover:border-purple-400/50 dark:hover:border-purple-400/40`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-purple-500/15 text-purple-600 dark:text-purple-400 shadow-xs">
+                    <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
-                      Live Vehicle Workflow
-                    </h2>
-                    <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                      Active garage bays • Swipe cards or tap to open
-                    </p>
+                    <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight">QA Sign-Off</p>
+                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Supervisor inspection</p>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => navigate('/jobs')}
-                  className="flex items-center gap-1 text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 border border-amber-400/30 px-3 py-1 rounded-xl bg-amber-400/10 hover:bg-amber-400/20 transition-colors shrink-0 cursor-pointer active:scale-95"
-                >
-                  <span>All ({activeCount})</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Stack Carousel or Empty State */}
-              <div className="flex-1 flex flex-col justify-center overflow-hidden z-10 my-1">
-                {stackJobCards.length > 0 ? (
-                  <IosNotificationStack jobs={stackJobCards} />
+                {qaCount > 0 ? (
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-black bg-purple-500 text-white animate-pulse shadow-sm">
+                    {qaCount} Ready
+                  </span>
                 ) : (
-                  <div className="text-center py-8 space-y-2">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 mx-auto flex items-center justify-center">
-                      <CheckCircle2 className="w-6 h-6" />
-                    </div>
-                    <p className="text-sm font-bold text-slate-800 dark:text-zinc-200">All Bays Clear</p>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono">No active vehicles currently in workshop</p>
-                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                    All Passed
+                  </span>
                 )}
               </div>
 
-              {/* Bottom Quick Jump Bar */}
-              <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs font-mono z-10">
-                <span className="text-slate-500 dark:text-slate-400 text-[11px]">
-                  Real-time status synced
+              {/* Interactive preview indicators */}
+              <div className="flex items-center gap-2 pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
+                <span className="text-[10px] font-mono text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-md font-semibold">
+                  Mechanical
                 </span>
-                <span
-                  onClick={() => navigate('/jobs')}
-                  className="text-amber-600 dark:text-amber-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
-                >
-                  Manage active list <ArrowRight className="w-3 h-3" />
+                <span className="text-[10px] font-mono text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-md font-semibold">
+                  Cosmetic
                 </span>
+                <span className="text-[10px] font-mono text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-md font-semibold">
+                  Delivery Sign
+                </span>
+                <ArrowUpRight className="w-4 h-4 text-purple-500 ml-auto" />
               </div>
             </div>
-          </FadeUp>
 
-          {/* ── BENTO 2: ACTION STATION (Col 12 on mobile, Col 4 on desktop) ── */}
-          <FadeUp delay={0.08} className="col-span-1 sm:col-span-2 lg:col-span-4">
-            <div className="h-full flex flex-col justify-between gap-2.5 sm:gap-3">
-              
-              {/* Primary Intake Button */}
-              {isAdmin ? (
-                <div
-                  onClick={() => navigate('/jobs/create')}
-                  className="group relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-amber-400 via-amber-400 to-yellow-500 text-slate-950 shadow-lg shadow-amber-400/20 hover:shadow-amber-400/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer flex items-center justify-between"
-                >
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-mono font-black uppercase tracking-wider bg-black/15 px-2 py-0.5 rounded-full inline-block">
-                      Intake Wizard
-                    </span>
-                    <h3 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-1.5">
-                      New Job Card
-                    </h3>
-                    <p className="text-xs font-medium opacity-90">Vehicle registration & service tasks</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-2xl bg-slate-950 text-amber-400 flex items-center justify-center shrink-0 shadow-md group-hover:scale-110 transition-transform">
-                    <PlusCircle className="w-5 h-5 stroke-[2.5]" />
-                  </div>
+            {/* Tile 2: Leaderboard (1 col) */}
+            <div
+              onClick={() => navigate("/leaderboard")}
+              className={`col-span-1 md:col-span-1 ${modernCard} p-4 flex flex-col justify-between
+                          hover:border-amber-400/50 dark:hover:border-amber-400/40`}
+            >
+              <div className="flex items-start justify-between gap-1">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs">
+                  <Trophy className="w-4 h-4" />
                 </div>
-              ) : (
-                <div
-                  onClick={() => navigate('/jobs')}
-                  className="group relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-amber-400 via-amber-400 to-yellow-500 text-slate-950 shadow-lg shadow-amber-400/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer flex items-center justify-between"
-                >
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-mono font-black uppercase tracking-wider bg-black/15 px-2 py-0.5 rounded-full inline-block">
-                      Technician Queue
-                    </span>
-                    <h3 className="text-base sm:text-lg font-black tracking-tight">My Active Tasks</h3>
-                    <p className="text-xs font-medium opacity-90">{activeCount} vehicles in garage</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-2xl bg-slate-950 text-amber-400 flex items-center justify-center shrink-0 shadow-md group-hover:scale-110 transition-transform">
-                    <Wrench className="w-5 h-5" />
-                  </div>
-                </div>
-              )}
+                <span className="px-2 py-0.5 rounded-md text-[9px] font-mono font-black bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                  {topScore} QP
+                </span>
+              </div>
+              <div className="pt-2">
+                <p className="text-[13px] font-black text-slate-900 dark:text-white truncate">Leaderboard</p>
+                <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                  🏆 #{1} {topTech?.name?.split(" ")[0] || "Technician"}
+                </p>
+              </div>
+            </div>
 
-              {/* POS Billing Card */}
-              <div
-                onClick={() => navigate('/sales')}
-                className="group relative overflow-hidden rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-emerald-400/50 shadow-sm hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer flex items-center justify-between"
-              >
+            {/* Tile 3: Work Activity Logs (1 col) */}
+            <div
+              onClick={() => navigate("/work-logs")}
+              className={`col-span-1 md:col-span-1 ${modernCard} p-4 flex flex-col justify-between
+                          hover:border-rose-400/50 dark:hover:border-rose-400/40`}
+            >
+              <div className="flex items-start justify-between gap-1">
+                <div className="w-9 h-9 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-xs">
+                  <Flame className="w-4 h-4" />
+                </div>
+                <span className="px-2 py-0.5 rounded-md text-[9px] font-mono font-black bg-rose-500/15 text-rose-700 dark:text-rose-400">
+                  {totalDone} Logged
+                </span>
+              </div>
+              <div className="pt-2">
+                <p className="text-[13px] font-black text-slate-900 dark:text-white truncate">Work Logs</p>
+                <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                  Live task activity
+                </p>
+              </div>
+            </div>
+
+            {/* Tile 4: Inventory (2 cols) */}
+            <div
+              onClick={() => navigate("/inventory")}
+              className={`col-span-2 md:col-span-2 ${modernCard} p-5 flex flex-col justify-between
+                          hover:border-sky-400/50 dark:hover:border-sky-400/40`}
+            >
+              <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors shadow-2xs">
-                    <ShoppingCart className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white">Counter POS Billing</h3>
-                    <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">Direct parts & counter sales</p>
-                  </div>
-                </div>
-                <div className="w-7 h-7 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </div>
-
-              {/* QA Verification Pass */}
-              <div
-                onClick={() => navigate('/jobs', { state: { view: 'verify' } })}
-                className="group relative overflow-hidden rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-purple-400/50 shadow-sm hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:bg-purple-500 group-hover:text-white transition-colors shadow-2xs">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-black text-slate-900 dark:text-white">QA Quality Check</h3>
-                      {pendingVerificationCount > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-purple-500 text-white text-[9px] font-mono font-black animate-pulse">
-                          {pendingVerificationCount} Ready
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">Final inspection & vehicle signoff</p>
-                  </div>
-                </div>
-                <div className="w-7 h-7 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-purple-500 transition-colors">
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </div>
-
-            </div>
-          </FadeUp>
-
-          {/* ── BENTO 3: TOP TECHNICIAN SPOTLIGHT (Col 12 on mobile, Col 4 on desktop) ── */}
-          <FadeUp delay={0.1} className="col-span-1 sm:col-span-1 lg:col-span-4">
-            <div
-              onClick={() => navigate('/leaderboard')}
-              className="group relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-amber-400/50 shadow-sm hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[170px]"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-400/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs">
-                    <Trophy className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                      <Crown className="w-3 h-3 text-amber-500" /> #1 Top Performer
-                    </span>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white truncate">
-                      {topTech?.name || 'Top Technician'}
-                    </h3>
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300 text-xs font-mono font-black">
-                  <NumberTicker value={topTechScore} /> pts
-                </span>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-500 dark:text-slate-400 text-[11px]">
-                  Daily workshop standings
-                </span>
-                <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1">
-                  View Podium <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </div>
-            </div>
-          </FadeUp>
-
-          {/* ── BENTO 4: LIVE WORK ACTIVITY (Col 12 on mobile, Col 4 on desktop) ── */}
-          <FadeUp delay={0.12} className="col-span-1 sm:col-span-1 lg:col-span-4">
-            <div
-              onClick={() => navigate('/work-logs')}
-              className="group relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-rose-400/50 shadow-sm hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[170px]"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-xs">
-                    <Flame className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                      Live Stream
-                    </span>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                      Work Ledger
-                    </h3>
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs font-mono font-black">
-                  <NumberTicker value={totalCompletedTasks} /> Done
-                </span>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-500 dark:text-slate-400 text-[11px]">
-                  Chronological task activity
-                </span>
-                <span className="text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1">
-                  Open Stream <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </div>
-            </div>
-          </FadeUp>
-
-          {/* ── BENTO 5: INVENTORY & STOCK (Col 12 on mobile, Col 4 on desktop) ── */}
-          <FadeUp delay={0.14} className="col-span-1 sm:col-span-2 lg:col-span-4">
-            <div
-              onClick={() => navigate('/inventory')}
-              className="group relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-blue-400/50 shadow-sm hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[170px]"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-xs">
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-sky-500/15 text-sky-600 dark:text-sky-400 shadow-xs">
                     <Package className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                      Catalog & Parts
-                    </span>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                      Garage Inventory
-                    </h3>
+                    <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight">Parts Inventory</p>
+                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Catalog & stock levels</p>
                   </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-xs font-mono font-black">
-                  <NumberTicker value={catalogItemsCount} /> Items
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-black bg-sky-500/15 text-sky-700 dark:text-sky-400">
+                  {catalogCount} items
                 </span>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-500 dark:text-slate-400 text-[11px]">
-                  Products & service list
+              <div className="flex items-center gap-2 pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
+                <span className="text-[10px] font-mono text-sky-700 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-md font-semibold">
+                  Spares
                 </span>
-                <span className="text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
-                  Manage Parts <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                <span className="text-[10px] font-mono text-sky-700 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-md font-semibold">
+                  Consumables
                 </span>
+                <span className="text-[10px] font-mono text-sky-700 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-md font-semibold">
+                  Supplies
+                </span>
+                <ArrowUpRight className="w-4 h-4 text-sky-500 ml-auto" />
               </div>
             </div>
-          </FadeUp>
 
-          {/* ── BENTO 6: LIFETIME VEHICLE ARCHIVES (Full 12 cols) ── */}
-          <FadeUp delay={0.16} className="col-span-1 sm:col-span-2 lg:col-span-12">
+            {/* Tile 5: Vehicle Archives (2 cols) */}
             <div
-              className="group relative overflow-hidden rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-cyan-400/50 shadow-sm transition-all duration-300 p-4 sm:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+              onClick={() => navigate("/jobs", { state: { view: "all" } })}
+              className={`col-span-2 md:col-span-2 ${modernCard} p-5 flex flex-col justify-between
+                          hover:border-teal-400/50 dark:hover:border-teal-400/40`}
             >
-              <div
-                className="flex items-center gap-3.5 cursor-pointer min-w-0"
-                onClick={() => navigate('/jobs', { state: { view: 'all' } })}
-              >
-                <div className="w-11 h-11 rounded-2xl bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 flex items-center justify-center group-hover:bg-cyan-500 group-hover:text-slate-950 transition-colors shrink-0 shadow-xs">
-                  <History className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">
-                      Vehicle Archives & History
-                    </h3>
-                    <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 text-[10px] font-mono font-bold">
-                      <NumberTicker value={totalCount} /> Total
-                    </span>
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-teal-500/15 text-teal-600 dark:text-teal-400 shadow-xs">
+                    <History className="w-5 h-5" />
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                    Look up past vehicle services, customer histories, and warranty logs
-                  </p>
+                  <div>
+                    <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight">Lifetime Archives</p>
+                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Service histories & bills</p>
+                  </div>
                 </div>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-black bg-teal-500/15 text-teal-700 dark:text-teal-400">
+                  {totalCount} vehicles
+                </span>
               </div>
 
-              {/* Instant Search Bar inside Archive Card */}
-              <form
-                onSubmit={handleSearchSubmit}
-                className="flex items-center gap-2 w-full md:w-auto shrink-0"
-              >
-                <div className="relative flex-1 md:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchInputVal}
-                    onChange={(e) => setSearchInputVal(e.target.value)}
-                    placeholder="Search plate number..."
-                    className="w-full pl-9 pr-3 py-2 text-xs font-mono rounded-xl bg-slate-100/90 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 transition"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsSearchModalOpen(true)}
-                  className="px-3.5 py-2 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-xs font-mono font-bold rounded-xl transition cursor-pointer active:scale-95 shrink-0"
-                >
-                  Search
-                </button>
-              </form>
+              <div className="flex items-center gap-2 pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
+                <span className="text-[10px] font-mono text-teal-700 dark:text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-md font-semibold">
+                  Past Invoices
+                </span>
+                <span className="text-[10px] font-mono text-teal-700 dark:text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-md font-semibold">
+                  Customer History
+                </span>
+                <ArrowUpRight className="w-4 h-4 text-teal-500 ml-auto" />
+              </div>
             </div>
-          </FadeUp>
 
-          {/* ── BENTO 7: ADMIN STAFF APPROVALS (Only shown if pending > 0 or for Admin team) ── */}
-          {isAdmin && (
-            <FadeUp delay={0.18} className="col-span-1 sm:col-span-2 lg:col-span-12">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {/* Staff Matrix */}
+          </div>
+        </section>
+
+        {/* ── 6. ADMIN CONTROL TILES ── */}
+        {isAdmin && (
+          <section>
+            <h2 className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-widest mb-3 text-slate-400 dark:text-slate-500">
+              <Clock className="w-3 h-3 text-amber-500" />
+              Admin Controls
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "Staff Roster", sub: `${totalUsers} mechanics registered`, icon: <Users className="w-4 h-4 text-amber-600 dark:text-amber-400" />, bg: "bg-amber-500/15", path: "/admin/users", hover: "hover:border-amber-400/50 dark:hover:border-amber-400/30" },
+                { label: "Approvals", sub: pendingWorkers > 0 ? `${pendingWorkers} pending requests` : "All cleared", icon: <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400" />, bg: "bg-rose-500/15", path: "/admin/approvals", hover: "hover:border-rose-400/50 dark:hover:border-rose-400/30" },
+              ].map(a => (
                 <div
-                  onClick={() => navigate('/admin/users')}
-                  className="group relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-purple-400/50 shadow-sm hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer flex items-center justify-between"
+                  key={a.label}
+                  onClick={() => navigate(a.path)}
+                  className={`${modernCard} p-4 flex items-center gap-3.5 ${a.hover}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:bg-purple-500 group-hover:text-white transition-colors shadow-2xs">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-black text-slate-900 dark:text-white">Staff Matrix</h3>
-                      <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                        <NumberTicker value={totalUsersCount} /> Registered mechanics & staff
-                      </p>
-                    </div>
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${a.bg}`}>
+                    {a.icon}
                   </div>
-                  <div className="w-7 h-7 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-purple-500 transition-colors">
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-black text-slate-900 dark:text-white truncate">{a.label}</p>
+                    <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate">{a.sub}</p>
                   </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 ml-auto shrink-0" />
                 </div>
+              ))}
+            </div>
+          </section>
+        )}
 
-                {/* Technician Approvals Queue */}
-                <div
-                  onClick={() => navigate('/admin/approvals')}
-                  className={`group relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border shadow-sm hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 cursor-pointer flex items-center justify-between ${
-                    pendingWorkersCount > 0
-                      ? 'border-rose-500/50 bg-rose-500/[0.04]'
-                      : 'border-slate-200/80 dark:border-white/[0.08] hover:border-rose-400/40'
-                  }`}
-                >
-                  {pendingWorkersCount > 0 && <BorderBeam size={160} duration={4} colorFrom="#ef4444" colorTo="#f97316" borderWidth={1.5} />}
-                  <div className="flex items-center gap-3 z-10">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-colors shadow-2xs ${
-                      pendingWorkersCount > 0
-                        ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25'
-                        : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 group-hover:bg-rose-500 group-hover:text-white'
-                    }`}>
-                      <ShieldAlert className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-black text-slate-900 dark:text-white">Approvals Queue</h3>
-                        {pendingWorkersCount > 0 && (
-                          <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-mono font-black animate-pulse">
-                            {pendingWorkersCount} Pending
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">Authorize new mechanic signups</p>
-                    </div>
-                  </div>
-                  <div className="w-7 h-7 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-rose-500 transition-colors z-10">
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-              </div>
-            </FadeUp>
-          )}
-
-        </div>
       </main>
 
-      {/* Global Search Modal */}
-      <GlobalSearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} />
+      <GlobalSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </div>
   );
 };

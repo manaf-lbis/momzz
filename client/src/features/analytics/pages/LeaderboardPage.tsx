@@ -122,8 +122,8 @@ const Avatar: React.FC<{
 const PodiumIcon: React.FC<{ rank: number }> = ({ rank }) => {
   if (rank === 1)
     return (
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 text-slate-900 flex items-center justify-center shadow-lg shadow-amber-500/40">
-        <Crown className="w-4 h-4 fill-current" />
+      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 text-slate-950 flex items-center justify-center shadow-md shadow-amber-500/40 text-xs font-black ring-1 ring-amber-300">
+        1
       </div>
     );
   if (rank === 2)
@@ -589,58 +589,52 @@ export const LeaderboardPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/30 transition-colors duration-200">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/30 transition-colors duration-200">
       {/* ── Background ── */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[420px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.10)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.08)_0%,transparent_65%)]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] h-[300px] bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.08)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.05)_0%,transparent_70%)]" />
-        <Meteors number={12} />
-      </div>
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
       <Navbar glass />
 
-      {/* ── Page content ── */}
-      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-32">
-
-        {/* ── TOP BAR ── */}
-        <div className="flex items-center justify-between mb-4 sm:mb-5">
-          <button
-            onClick={() => navigate(-1)}
-            className="w-9 h-9 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-xs"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-
-          <div className="text-center">
-            <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white">Leaderboard</h1>
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 flex items-center justify-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
-              {timeLabel}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400/15 border border-amber-400/30 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300 shrink-0 shadow-xs">
-            <Clock className="w-3.5 h-3.5" />
-            {timeRemaining}
+      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-4 pb-36 sm:pb-40">
+        {/* ── HEADER ── */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => navigate(-1)}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl glass-ghost-btn flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-2xs"
+            >
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700 dark:text-slate-300" />
+            </button>
+            <div>
+              <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                Workshop Leaderboard
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300">
+                  {timeLabel}
+                </span>
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                {timeRemaining} · Earn QP per completed checklist task
+              </p>
+            </div>
           </div>
         </div>
 
         {/* ── TIMEFRAME TABS ── */}
-        <div className="flex gap-1 p-1 bg-white/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 mb-4 sm:mb-5 shadow-xs">
+        <div className="flex gap-1 p-1 bg-white/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 mb-4 shadow-2xs">
           {TABS.map(({ key, label }) => {
             const isActive = timeframe === key;
             return (
               <button
                 key={key}
-                onClick={() => { setTimeframe(key); firePop(); }}
-                className={`relative flex-1 py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
+                onClick={() => setTimeframe(key)}
+                className={`relative flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 ${
                   isActive ? 'text-slate-950 font-black' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
                 {isActive && (
                   <motion.div
-                    layoutId="tab-active"
-                    className="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 rounded-xl shadow-md shadow-amber-500/25"
+                    layoutId="leaderboard-tab"
+                    className="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 rounded-xl shadow-md shadow-amber-500/20"
                     transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
                   />
                 )}
@@ -655,7 +649,7 @@ export const LeaderboardPage: React.FC = () => {
           key={`standing-${timeframe}`}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl p-4 sm:p-5 mb-5 shadow-sm dark:shadow-xl dark:shadow-black/50"
+          className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 mb-5 shadow-sm"
         >
           <BorderBeam size={180} duration={7} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
           <div className="flex items-center gap-3.5">

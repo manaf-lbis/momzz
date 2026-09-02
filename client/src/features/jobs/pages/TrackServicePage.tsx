@@ -100,12 +100,9 @@ export const TrackServicePage: React.FC = () => {
   }, [jobs.length]);
 
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white px-3 sm:px-4 py-6 sm:py-10 flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200 relative">
+    <main className="min-h-screen glass-canvas text-slate-900 dark:text-white px-3 sm:px-4 py-6 sm:py-10 flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200 relative pb-20">
       {/* Ambient background aura */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[380px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.12)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.08)_0%,transparent_65%)]" />
-        <Meteors number={12} />
-      </div>
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
       <div className="absolute top-4 right-4 z-50">
         <AnimatedThemeToggle variant="icon-only" />
@@ -133,7 +130,7 @@ export const TrackServicePage: React.FC = () => {
         </header>
 
         {/* Search Bento Card */}
-        <section className="relative overflow-hidden rounded-3xl bg-white/80 dark:bg-white/[0.035] backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] p-5 sm:p-6 shadow-xl space-y-3.5">
+        <section className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 shadow-xl space-y-3.5">
           <BorderBeam size={180} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
 
           <div>
@@ -146,7 +143,7 @@ export const TrackServicePage: React.FC = () => {
                 value={vehicleNumber}
                 onChange={(e) => setVehicleNumber(formatRegistration(e.target.value))}
                 placeholder="e.g. KL 01 AB 1234"
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-sm font-mono uppercase font-bold text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-amber-400"
+                className="w-full pl-10 pr-4 py-3 rounded-xl glass-modern-input text-sm font-mono uppercase font-bold text-slate-900 dark:text-white placeholder-slate-400 outline-none"
               />
             </div>
           </div>
@@ -161,7 +158,7 @@ export const TrackServicePage: React.FC = () => {
                 value={contact}
                 onChange={(e) => setContact(e.target.value)}
                 placeholder="e.g. 9876543210"
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-amber-400"
+                className="w-full pl-10 pr-4 py-3 rounded-xl glass-modern-input text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none"
               />
             </div>
           </div>
@@ -169,7 +166,7 @@ export const TrackServicePage: React.FC = () => {
           <button
             disabled={loading || !vehicleNumber || !contact}
             onClick={search}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider transition active:scale-[0.98] shadow-lg shadow-amber-400/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+            className="w-full py-3.5 rounded-xl glass-gold-btn text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider transition active:scale-[0.98] shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             <span>{loading ? 'Searching Garage Records...' : 'Check Live Status'}</span>
@@ -196,7 +193,7 @@ export const TrackServicePage: React.FC = () => {
               key={job.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white/80 dark:bg-white/[0.035] backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-xl space-y-5 overflow-hidden relative"
+              className="glass-modern-card rounded-3xl p-5 sm:p-6 shadow-xl space-y-5 overflow-hidden relative"
             >
               {/* Top Row: Vehicle Header */}
               <div className="flex items-start justify-between gap-3">

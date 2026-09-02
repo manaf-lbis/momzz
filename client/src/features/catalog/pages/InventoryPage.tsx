@@ -55,19 +55,17 @@ export const InventoryPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient background aura */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.08)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.06)_0%,transparent_65%)]" />
-      </div>
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 lg:px-8 pb-32 space-y-4">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 lg:px-8 pb-36 sm:pb-40 space-y-4">
         {/* Page Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-600 dark:text-amber-400 border border-amber-400/30 shadow-xs">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-600 dark:text-amber-400 border border-amber-400/30 shadow-2xs">
               <Tag className="h-5 w-5" />
             </div>
             <div>
@@ -85,7 +83,7 @@ export const InventoryPage: React.FC = () => {
             {isAdmin && lowStockItems.length > 0 && (
               <button
                 onClick={() => setIsLowStockModalOpen(true)}
-                className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-red-500 px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-red-500/20 transition hover:bg-red-600 active:scale-[0.98] animate-pulse cursor-pointer"
+                className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-rose-500 px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-md transition hover:bg-rose-600 active:scale-[0.98] animate-pulse cursor-pointer"
               >
                 <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Low Stock</span>
@@ -99,7 +97,7 @@ export const InventoryPage: React.FC = () => {
             {isAdmin && (
               <button
                 onClick={() => navigate('/inventory/new')}
-                className="inline-flex shrink-0 items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 px-3.5 py-2 text-xs sm:text-sm font-black text-slate-950 shadow-md shadow-amber-400/20 transition hover:opacity-95 active:scale-[0.98] cursor-pointer"
+                className="inline-flex shrink-0 items-center justify-center gap-1.5 sm:gap-2 rounded-xl glass-gold-btn px-3.5 py-2 text-xs sm:text-sm font-black text-slate-950 shadow-md transition active:scale-[0.98] cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span>Add Item</span>
@@ -109,7 +107,7 @@ export const InventoryPage: React.FC = () => {
         </div>
 
         {/* Search + Type Filter */}
-        <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#12131F]/90 p-3 shadow-sm backdrop-blur-2xl">
+        <div className="rounded-2xl sm:rounded-3xl glass-modern-card p-3 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             {/* Search */}
             <div className="relative flex-1">
@@ -119,12 +117,12 @@ export const InventoryPage: React.FC = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search products or services..."
-                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 py-2.5 pl-10 pr-9 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-amber-400 dark:text-white dark:placeholder:text-slate-500 font-mono"
+                className="w-full rounded-xl glass-modern-input py-2.5 pl-10 pr-9 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 outline-none transition dark:text-white font-mono"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -132,14 +130,14 @@ export const InventoryPage: React.FC = () => {
             </div>
 
             {/* Type Filter Tabs */}
-            <div className="flex shrink-0 items-center gap-1 rounded-xl bg-slate-100 dark:bg-white/5 p-1">
+            <div className="flex shrink-0 items-center gap-1 rounded-xl bg-white/60 dark:bg-white/5 p-1 border border-slate-200/80 dark:border-white/10">
               {(['ALL', 'PRODUCT', 'SERVICE'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setTypeFilter(tab)}
                   className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
                     typeFilter === tab
-                      ? 'bg-amber-400 text-slate-950 shadow-xs font-black'
+                      ? 'bg-amber-400 text-slate-950 shadow-2xs font-black'
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
                   }`}
                 >
@@ -157,8 +155,8 @@ export const InventoryPage: React.FC = () => {
               onClick={() => setCategoryFilter('')}
               className={`shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
                 categoryFilter === ''
-                  ? 'bg-amber-400 text-slate-950 shadow-sm font-black'
-                  : 'bg-white/95 dark:bg-[#12131F]/90 border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-300 hover:border-amber-400 hover:text-amber-500'
+                  ? 'bg-amber-400 text-slate-950 shadow-2xs font-black'
+                  : 'glass-ghost-btn text-slate-600 dark:text-slate-300 hover:text-amber-500'
               }`}
             >
               All Categories
@@ -169,8 +167,8 @@ export const InventoryPage: React.FC = () => {
                 onClick={() => setCategoryFilter(cat.id || cat._id)}
                 className={`shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
                   categoryFilter === (cat.id || cat._id)
-                    ? 'bg-amber-400 text-slate-950 shadow-sm font-black'
-                    : 'bg-white/95 dark:bg-[#12131F]/90 border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-300 hover:border-amber-400 hover:text-amber-500'
+                    ? 'bg-amber-400 text-slate-950 shadow-2xs font-black'
+                    : 'glass-ghost-btn text-slate-600 dark:text-slate-300 hover:text-amber-500'
                 }`}
               >
                 {cat.name}
@@ -185,15 +183,15 @@ export const InventoryPage: React.FC = () => {
             {[...Array(10)].map((_, i) => (
               <div
                 key={i}
-                className="relative flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#12131F]/90 p-3 shadow-xs"
+                className="relative flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-3 shadow-2xs"
               >
-                <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-200 dark:bg-white/5 animate-pulse" />
+                <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-200/60 dark:bg-white/5 animate-pulse" />
                 <div className="mt-3 space-y-2">
-                  <div className="h-3 w-16 rounded bg-slate-200 dark:bg-white/5 animate-pulse" />
-                  <div className="h-4 w-3/4 rounded bg-slate-200 dark:bg-white/5 animate-pulse" />
+                  <div className="h-3 w-16 rounded bg-slate-200/60 dark:bg-white/5 animate-pulse" />
+                  <div className="h-4 w-3/4 rounded bg-slate-200/60 dark:bg-white/5 animate-pulse" />
                   <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/5">
-                    <div className="h-5 w-14 rounded bg-slate-200 dark:bg-white/5 animate-pulse" />
-                    <div className="h-4 w-12 rounded-full bg-slate-200 dark:bg-white/5 animate-pulse" />
+                    <div className="h-5 w-14 rounded bg-slate-200/60 dark:bg-white/5 animate-pulse" />
+                    <div className="h-4 w-12 rounded-full bg-slate-200/60 dark:bg-white/5 animate-pulse" />
                   </div>
                 </div>
               </div>
@@ -211,7 +209,7 @@ export const InventoryPage: React.FC = () => {
                 <Link
                   key={item.id}
                   to={`/inventory/${item.id}`}
-                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#12131F]/90 p-3 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-amber-400/60 hover:shadow-xl hover:shadow-amber-500/10"
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-3 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-amber-400/60 hover:shadow-xl"
                 >
                   {/* Image */}
                   <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">

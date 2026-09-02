@@ -150,17 +150,13 @@ export const ProfilePage: React.FC = () => {
     : 'Recent';
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient background aura */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.08)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.05)_0%,transparent_65%)]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] h-[260px] bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.06)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.04)_0%,transparent_70%)]" />
-        <Meteors number={10} />
-      </div>
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-5 pb-32 space-y-5">
+      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-5 pb-36 sm:pb-40 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -178,7 +174,7 @@ export const ProfilePage: React.FC = () => {
           {/* ── LEFT COLUMN: Identity & Quick Toggles ── */}
           <div className="lg:col-span-5 space-y-4">
             {/* Identity Card */}
-            <section className="relative overflow-hidden rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] p-5 shadow-xl space-y-4 transition-colors">
+            <section className="relative overflow-hidden rounded-3xl glass-modern-card p-5 shadow-xl space-y-4 transition-colors">
               <BorderBeam size={180} duration={8} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={0.75} />
 
               <div className="flex flex-col items-center text-center space-y-3">
@@ -198,7 +194,7 @@ export const ProfilePage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => profileImageInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 flex items-center justify-center shadow-lg active:scale-90 transition cursor-pointer"
+                    className="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full glass-gold-btn text-slate-950 flex items-center justify-center shadow-lg active:scale-90 transition cursor-pointer"
                     title="Update photo"
                   >
                     <Camera className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -211,7 +207,7 @@ export const ProfilePage: React.FC = () => {
                     {currentUser?.name || 'Technician'}
                   </h2>
                   <div className="flex items-center justify-center gap-2 mt-1">
-                    <span className="px-2 py-0.5 rounded-md bg-amber-400/15 text-amber-600 dark:text-amber-300 font-mono font-black text-[10px] uppercase tracking-wider border border-amber-400/30">
+                    <span className="px-2 py-0.5 rounded-md bg-amber-400/15 text-amber-700 dark:text-amber-300 font-mono font-black text-[10px] uppercase tracking-wider border border-amber-400/30">
                       {currentUser?.role || 'WORKER'}
                     </span>
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
@@ -229,14 +225,14 @@ export const ProfilePage: React.FC = () => {
               <div className="pt-3 border-t border-slate-200/80 dark:border-white/[0.06] grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setIsPasswordModalOpen(true)}
-                  className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 border border-slate-200 dark:border-white/10 cursor-pointer"
+                  className="py-2 px-3 rounded-xl glass-ghost-btn text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-2xs"
                 >
                   <KeyRound className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
                   <span>Security</span>
                 </button>
                 <button
                   onClick={() => setIsLogoutModalOpen(true)}
-                  className="py-2 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 border border-rose-500/30 cursor-pointer"
+                  className="py-2 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 border border-rose-500/30 cursor-pointer shadow-2xs"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Logout</span>
@@ -253,8 +249,8 @@ export const ProfilePage: React.FC = () => {
             </section>
 
             {/* Appearance, Audio & App Preferences */}
-            <section className="rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-xl overflow-hidden divide-y divide-slate-200/60 dark:divide-white/[0.06] transition-colors">
-              {/* MagicUI Style Theme Switcher for Mobile & Desktop */}
+            <section className="rounded-3xl glass-modern-card shadow-xl overflow-hidden divide-y divide-slate-200/60 dark:divide-white/[0.06] transition-colors">
+              {/* MagicUI Style Theme Switcher */}
               <AnimatedThemeToggle variant="large-card" />
 
               {/* Sound FX Toggle */}
