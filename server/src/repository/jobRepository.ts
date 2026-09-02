@@ -397,13 +397,27 @@ export class JobRepository {
       .populate('inventoryItem', 'title thumbnailUrl itemType stockQuantity');
   }
 
-  async addTaskToJob(jobCardId: string, title: string): Promise<ITask> {
+  async addCustomTask(jobCardId: string, data: { title: string; itemType?: 'PRODUCT' | 'SERVICE'; unitPrice?: number; quantityUsed?: number; discountAmount?: number }): Promise<ITask> {
+    const quantity = Math.max(1, data.quantityUsed || 1);
+    const unitPrice = data.unitPrice !== undefined ? Number(data.unitPrice) : 0;
+    const discount = Number(data.discountAmount || 0);
+    const finalPrice = Math.max(0, unitPrice * quantity - discount);
     const newTask = await Task.create({
       jobCardId,
-      title: title.trim(),
+      title: data.title.trim(),
+      itemType: data.itemType || 'SERVICE',
+      quantityUsed: quantity,
+      stockTracked: false,
+      unitPrice,
+      discountAmount: discount,
+      finalPrice,
     });
     await JobCard.findByIdAndUpdate(jobCardId, { $set: { status: 'IN_PROGRESS', verifiedBy: null, verifiedAt: null } });
     return newTask;
+  }
+
+  async addTaskToJob(jobCardId: string, title: string): Promise<ITask> {
+    return this.addCustomTask(jobCardId, { title });
   }
 
   async addInventoryTask(jobCardId: string, itemId: string, quantityUsed: number, discountAmount: number): Promise<ITask> {

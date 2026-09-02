@@ -98,6 +98,17 @@ export const createJobWithTasks = async (req: Request, res: Response) => {
         continue;
       }
 
+      if (task?.isCustomOnly || task?.customTitle || (!task?.itemId && (task?.title || task?.item?.title))) {
+        createdTasks.push(await jobRepository.addCustomTask(newJob._id.toString(), {
+          title: task.customTitle || task.title || task.item?.title || 'Custom Item',
+          itemType: task.itemType === 'SERVICE' ? 'SERVICE' : 'PRODUCT',
+          unitPrice: task.unitPrice || task.price || 0,
+          quantityUsed: Number(task.quantityUsed || 1),
+          discountAmount: Number(task.discountAmount || 0),
+        }));
+        continue;
+      }
+
       if (!task?.itemId) throw new Error('Each selected inventory item needs an item id.');
       createdTasks.push(await jobRepository.addInventoryTask(
         newJob._id.toString(),
@@ -472,7 +483,7 @@ export const verifyJobCard = async (req: Request, res: Response) => {
 export const addTaskToJob = async (req: Request, res: Response) => {
   try {
     const { jobCardId } = req.params;
-    const { title } = req.body;
+    const { title, itemType, unitPrice, quantityUsed, discountAmount } = req.body;
 
     if (!title || !title.trim()) {
       return sendError(res, 'Task title is required.', 400);
@@ -483,7 +494,13 @@ export const addTaskToJob = async (req: Request, res: Response) => {
       return sendError(res, 'Job card not found.', 404);
     }
 
-    const newTask = await jobRepository.addTaskToJob(jobCardId, title);
+    const newTask = await jobRepository.addCustomTask(jobCardId, {
+      title: title.trim(),
+      itemType: itemType === 'PRODUCT' ? 'PRODUCT' : 'SERVICE',
+      unitPrice: unitPrice !== undefined ? Number(unitPrice) : 0,
+      quantityUsed: quantityUsed !== undefined ? Number(quantityUsed) : 1,
+      discountAmount: discountAmount !== undefined ? Number(discountAmount) : 0,
+    });
 
     const formattedTask = {
       ...newTask.toObject(),

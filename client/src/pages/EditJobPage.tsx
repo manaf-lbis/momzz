@@ -17,6 +17,7 @@ import {
   Wrench,
   X,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '../components/navbar/Navbar';
@@ -273,7 +274,7 @@ export const EditJobPage: React.FC = () => {
       const newItemsToAdd = selected.filter((s) => !s.id);
       for (const newLine of newItemsToAdd) {
         try {
-          if (newLine.item.id && newLine.item.price !== undefined) {
+          if (newLine.item.id && !newLine.item.id.startsWith('custom-')) {
             await addInventoryTask({
               jobCardId,
               itemId: newLine.item.id,
@@ -284,6 +285,10 @@ export const EditJobPage: React.FC = () => {
             await addTask({
               jobCardId,
               title: newLine.item.title,
+              itemType: newLine.item.itemType || 'SERVICE',
+              unitPrice: newLine.item.price || 0,
+              quantityUsed: newLine.quantityUsed,
+              discountAmount: newLine.discountAmount,
             }).unwrap();
           }
         } catch (e) {
@@ -297,6 +302,33 @@ export const EditJobPage: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleAddJustForThisJob = (type: 'PRODUCT' | 'SERVICE') => {
+    const title = query.trim();
+    if (!title) return;
+    const newItem: SelectedLine['item'] = {
+      id: `custom-${Date.now()}`,
+      _id: `custom-${Date.now()}`,
+      title,
+      price: 0,
+      itemType: type,
+      thumbnailUrl: '',
+      stockQuantity: 0,
+      trackStock: false,
+      isAvailable: true,
+      images: [],
+      category: { id: '', _id: '', name: 'One-Time Task', type: 'BOTH' },
+    };
+    setSelected((prev) => [
+      ...prev,
+      {
+        item: newItem,
+        quantityUsed: 1,
+        discountAmount: 0,
+      },
+    ]);
+    setQuery('');
   };
 
   const noExactMatch =
@@ -659,69 +691,118 @@ export const EditJobPage: React.FC = () => {
 
                 {/* Custom Item Quick Add & Duplicate Guard */}
                 {noExactMatch && (
-                  <div className="rounded-xl sm:rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 p-3 sm:p-4 dark:border-amber-500/30 dark:bg-amber-400/5">
-                    {nearDuplicates.length > 0 ? (
-                      <div className="space-y-2">
+                  <div className="mt-3 rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 p-3.5 sm:p-4 dark:border-amber-500/30 dark:bg-amber-400/5 space-y-3">
+                    {nearDuplicates.length > 0 && (
+                      <div className="p-3 rounded-xl bg-amber-100/70 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/20 space-y-2">
                         <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-300">
                           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
                           <b className="text-xs sm:text-sm font-bold">
                             Similar item found: “{nearDuplicates[0].item.title}”
                           </b>
                         </div>
-                        <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-400">
-                          An item with a very similar name already exists. Avoid creating duplicate items!
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                          An item with a very similar name already exists in your catalog.
                         </p>
                         <div className="pt-1 flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
-                            onClick={() => openAddItemModal(nearDuplicates[0].item)}
+                            onClick={() => {
+                              openAddItemModal(nearDuplicates[0].item);
+                              setQuery('');
+                            }}
                             className="inline-flex items-center gap-1.5 rounded-lg sm:rounded-xl bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition active:scale-95"
                           >
                             <Plus className="h-3.5 w-3.5" />
                             Select Existing “{nearDuplicates[0].item.title}”
                           </button>
-                          <button
-                            type="button"
-                            disabled={isQuickAdding}
-                            onClick={async () => {
-                              try {
-                                const response = await quickAdd({ title: query.trim() }).unwrap();
-                                openAddItemModal(response.data);
-                              } catch (err: any) {
-                                setError(err?.data?.message || 'Could not add custom service.');
-                              }
-                            }}
-                            className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline"
-                          >
-                            {isQuickAdding ? 'Adding...' : 'Add as new item anyway'}
-                          </button>
                         </div>
                       </div>
-                    ) : (
-                      <>
-                        <b className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                          Can’t find “{query.trim()}”?
-                        </b>
-                        <p className="mt-0.5 text-[11px] sm:text-xs text-slate-600 dark:text-slate-400">
-                          Add a custom service on the fly; details can be refined later.
-                        </p>
+                    )}
+
+                    <div className="pb-1 border-b border-amber-200/60 dark:border-amber-500/20">
+                      <b className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white block">
+                        Item not found in catalog: <span className="text-amber-600 dark:text-amber-400 font-mono">“{query.trim()}”</span>
+                      </b>
+                      <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-400">
+                        Choose how you would like to add this item:
+                      </p>
+                    </div>
+
+                    {/* Option 1: Master Catalog (Permanent) */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
+                        <PackagePlus className="w-3 h-3 text-amber-500" />
+                        Option 1 · Save to Catalog (Permanent)
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
                         <button
+                          type="button"
                           disabled={isQuickAdding}
                           onClick={async () => {
                             try {
-                              const response = await quickAdd({ title: query.trim() }).unwrap();
+                              const response = await quickAdd({
+                                title: query.trim(),
+                                itemType: 'PRODUCT',
+                              }).unwrap();
                               openAddItemModal(response.data);
+                              setQuery('');
                             } catch (err: any) {
-                              setError(err?.data?.message || 'Could not add custom service.');
+                              setError(err?.data?.message || 'Could not add product.');
                             }
                           }}
-                          className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg sm:rounded-xl bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-50"
+                          className="p-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 disabled:opacity-50"
                         >
                           <PackagePlus className="h-3.5 w-3.5" />
-                          {isQuickAdding ? 'Adding...' : 'Add Custom Service'}
+                          <span>Save as Product</span>
                         </button>
-                      </>
-                    )}
+                        <button
+                          type="button"
+                          disabled={isQuickAdding}
+                          onClick={async () => {
+                            try {
+                              const response = await quickAdd({
+                                title: query.trim(),
+                                itemType: 'SERVICE',
+                              }).unwrap();
+                              openAddItemModal(response.data);
+                              setQuery('');
+                            } catch (err: any) {
+                              setError(err?.data?.message || 'Could not add service.');
+                            }
+                          }}
+                          className="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+                        >
+                          <Wrench className="h-3.5 w-3.5 text-amber-500" />
+                          <span>Save as Service</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Option 2: Just for this job (One-time) */}
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-purple-500" />
+                        Option 2 · Just for This Job (One-Time)
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleAddJustForThisJob('PRODUCT')}
+                          className="p-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 border border-purple-300 dark:border-purple-500/30 text-purple-800 dark:text-purple-300 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>One-Time Product</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAddJustForThisJob('SERVICE')}
+                          className="p-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 border border-purple-300 dark:border-purple-500/30 text-purple-800 dark:text-purple-300 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>One-Time Service</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -752,12 +833,19 @@ export const EditJobPage: React.FC = () => {
                       className="rounded-xl sm:rounded-2xl border border-slate-200/80 bg-slate-50/50 p-2.5 sm:p-3 dark:border-slate-800 dark:bg-slate-800/50"
                     >
                       <div className="flex gap-2">
-                        <div className="min-w-0 flex-1">
-                          <b className="block truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                            {line.item.title}
-                          </b>
-                          <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
-                            {money(line.item.price || 0)} each
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <b className="truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                              {line.item.title}
+                            </b>
+                            {line.item.id?.startsWith('custom-') && (
+                              <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-500/30">
+                                Just this job
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 block">
+                            {line.item.itemType === 'SERVICE' ? 'Service' : 'Product'} · {money(line.item.price || 0)} each
                           </span>
                         </div>
                         <button
@@ -795,6 +883,7 @@ export const EditJobPage: React.FC = () => {
                           </button>
                         </div>
 
+                        {/* Rate / Price Input */}
                         <div className="relative">
                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">
                             ₹
@@ -802,21 +891,21 @@ export const EditJobPage: React.FC = () => {
                           <input
                             type="number"
                             min="0"
-                            max={(line.item.price || 0) * line.quantityUsed}
-                            value={line.discountAmount || ''}
-                            onChange={(e) =>
+                            value={line.item.price || ''}
+                            onChange={(e) => {
+                              const val = Math.max(0, Number(e.target.value || 0));
                               updateSelectedLine(index, {
-                                discountAmount: Math.max(0, Number(e.target.value || 0)),
-                              })
-                            }
-                            placeholder="Discount"
+                                item: { ...line.item, price: val } as any,
+                              });
+                            }}
+                            placeholder="Price"
                             className="w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white py-1.5 pl-5 pr-2 text-xs font-bold text-slate-900 outline-none focus:border-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                           />
                         </div>
                       </div>
 
                       <p className="mt-2 text-right text-xs font-black text-emerald-600 dark:text-emerald-400">
-                        {money(Math.max(0, (line.item.price || 0) * line.quantityUsed - line.discountAmount))}
+                        {money(Math.max(0, (line.item.price || 0) * line.quantityUsed - (line.discountAmount || 0)))}
                       </p>
                     </article>
                   ))

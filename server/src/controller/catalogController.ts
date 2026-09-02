@@ -107,13 +107,19 @@ export const quickAddCatalogItem = async (req: Request, res: Response) => {
       );
     }
 
-    const category = (await catalogRepository.getCategories())[0];
+    const itemType = req.body.itemType === 'SERVICE' ? 'SERVICE' : 'PRODUCT';
+    const categories = await catalogRepository.getCategories();
+    const category = categories.find((c) => c.type === itemType || c.type === 'BOTH') || categories[0];
+
+    const price = req.body.price !== undefined ? Number(req.body.price) : 0;
+    const stockQuantity = req.body.stockQuantity !== undefined ? Number(req.body.stockQuantity) : 0;
+
     const item = await catalogRepository.createItem({
       title,
       category: category._id,
-      itemType: 'PRODUCT',
-      price: 0,
-      stockQuantity: 0,
+      itemType,
+      price,
+      stockQuantity,
       trackStock: false,
       images: [],
       thumbnailUrl: '',
