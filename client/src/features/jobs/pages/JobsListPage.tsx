@@ -5,6 +5,7 @@ import { useGetJobCardsQuery, useGetJobStatsQuery, useToggleJobPinMutation, JobC
 
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PinJobModal } from '../../../shared/components/jobCard/PinJobModal';
+import { MagicTabs } from '../../../shared/components/magicui/MagicTabs';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import {
@@ -21,7 +22,11 @@ import {
   ChevronDown,
   ChevronRight,
   Pin,
+  Globe,
   X,
+  Car,
+  History,
+  ArrowUpRight,
 } from 'lucide-react';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { PageShimmer, JobsListSkeleton } from '../../../shared/components/common/PageShimmer';
@@ -143,13 +148,20 @@ export const JobsListPage: React.FC = () => {
   const pendingCount = stats?.pendingVerificationCount ?? 0;
   const allCount = stats?.totalCount ?? 0;
 
+  const isMatchingUserId = (p: any, targetId: any): boolean => {
+    if (!p || !targetId) return false;
+    const pStr = typeof p === 'string' ? p : p?._id ? p._id.toString() : p?.id ? p.id.toString() : p.toString();
+    const targetStr = typeof targetId === 'string' ? targetId : targetId?._id ? targetId._id.toString() : targetId?.id ? targetId.id.toString() : targetId.toString();
+    return pStr.trim().toLowerCase() === targetStr.trim().toLowerCase();
+  };
+
   const isJobPinnedForMe = (job: JobCardData) => {
     if (!currentUserId) return false;
     const opt = optimisticPins[job.id || job._id!];
     if (opt !== undefined) return opt.pinnedByMe;
     return (
       Array.isArray(job.pinnedBy) &&
-      job.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === currentUserId)
+      job.pinnedBy.some((p: any) => isMatchingUserId(p, currentUserId))
     );
   };
 
@@ -374,13 +386,14 @@ export const JobsListPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 pb-36 sm:pb-40 space-y-3">
+      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* ── TOP BAR: Header & New Button ── */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/dashboard')}
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-2xs"
+              title="Back to Dashboard"
             >
               <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
@@ -405,39 +418,15 @@ export const JobsListPage: React.FC = () => {
           )}
         </div>
 
-        {/* ── STICKY TOP CONTROLS (Tabs & Search/Sort) ── */}
-        <div className="sticky top-0 sm:top-14 z-30 bg-slate-50/90 dark:bg-[#080811]/90 backdrop-blur-2xl py-2 -mx-3 px-3 sm:-mx-6 sm:px-6 space-y-2 border-b border-slate-200/80 dark:border-white/[0.06] shadow-2xs transition-colors">
+        {/* ── TOP CONTROLS (Tabs & Search/Sort) ── */}
+        <div className="space-y-2.5 py-1 bg-transparent">
           {/* ── TABS ── */}
-          <div className="flex gap-1 p-1 bg-white/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-2xs">
-            {VIEWS.map(({ key, label, count }) => {
-              const isActive = jobsView === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setJobsView(key)}
-                  className={`relative flex-1 py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    isActive ? 'text-slate-950 font-black' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                  }`}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="jobs-view-tab"
-                      className="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 rounded-xl shadow-md shadow-amber-500/20"
-                      transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
-                    />
-                  )}
-                  <span className="relative z-10">{label}</span>
-                  <span
-                    className={`relative z-10 text-[9px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
-                      isActive ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-300'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <MagicTabs
+            items={VIEWS}
+            activeKey={jobsView}
+            onChange={(key) => setJobsView(key as JobsView)}
+            layoutId="jobs-view-tab"
+          />
 
           {/* ── SEARCH & SORT CONTROLS ── */}
           <div className="flex items-center gap-2">
@@ -528,65 +517,81 @@ export const JobsListPage: React.FC = () => {
               const completedTasks = (job.tasks || []).filter((t) => t.status === 'COMPLETED').length;
               const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
               const isReady = totalTasks > 0 && completedTasks === totalTasks;
-              const deliveryInfo = getDeliveryStatusInfo(job.expectedDeliveryDate, isReady);
               const pinned = isJobPinned(job);
+              const isPinnedForAll = Boolean(job.isPinnedForAll);
+              const isPinnedForMe = isJobPinnedForMe(job);
 
               return (
                 <motion.div
                   key={jobId}
-                  whileHover={{ y: -2 }}
-                  transition={{ duration: 0.15 }}
+                  whileHover={{ y: -3 }}
+                  transition={{ duration: 0.18 }}
                   onClick={() => navigate(`/jobs/${jobId}`)}
-                  className="group relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 flex flex-col justify-between transition-all duration-200 cursor-pointer shadow-sm"
+                  className="group relative overflow-hidden rounded-2xl glass-modern-card p-4 sm:p-5 flex flex-col justify-between cursor-pointer"
                 >
                   {pinned && <BorderBeam size={160} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={0.75} />}
 
                   <div>
-                    {/* Top Row: Model Title, Reg Plate & Action Badges */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h3 className="text-sm sm:text-base font-black uppercase text-slate-900 dark:text-white tracking-tight truncate group-hover:text-amber-500 dark:group-hover:text-amber-300 transition-colors">
-                            {job.vehicleName || 'Vehicle'}
-                          </h3>
-                          {isReady && (
-                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" /> Ready
-                            </span>
-                          )}
-                        </div>
+                    {/* Top Row: Vehicle Icon/Photo + Name & Badges */}
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        {job.thumbnailUrl ? (
+                          <img
+                            src={job.thumbnailUrl}
+                            alt=""
+                            className="w-11 h-11 rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-white/10"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-xs shrink-0">
+                            <Car className="w-5 h-5" />
+                          </div>
+                        )}
 
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 px-2.5 py-0.5 rounded-lg border border-amber-400/30 tracking-wider">
-                            {job.vehicleNumber}
-                          </span>
-                          {job.vehicleColor && (
-                            <span className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate">
-                              • {job.vehicleColor}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h3 className="text-sm sm:text-base font-black uppercase text-slate-900 dark:text-white tracking-tight truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                              {job.vehicleName || 'Vehicle'}
+                            </h3>
+                            {isReady && (
+                              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" /> Ready
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            <span className="text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/30 tracking-wider">
+                              {job.vehicleNumber}
                             </span>
-                          )}
+                            {job.vehicleColor && (
+                              <span className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
+                                <span>•</span>
+                                <span>{job.vehicleColor}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Pin button & Delivery pill */}
+                      {/* Pin button */}
                       <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => setSelectedPinJob(job)}
                           className={`p-1.5 rounded-xl border transition-all active:scale-90 cursor-pointer ${
                             pinned
-                              ? 'bg-amber-400/20 border-amber-400/40 text-amber-600 dark:text-amber-300 shadow-2xs'
+                              ? isPinnedForAll
+                                ? 'bg-amber-500/20 border-amber-500/40 text-amber-600 dark:text-amber-300 shadow-2xs'
+                                : 'bg-yellow-400/20 border-yellow-400/40 text-yellow-700 dark:text-yellow-300 shadow-2xs'
                               : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-white'
                           }`}
-                          title="Pin vehicle"
+                          title={pinned ? (isPinnedForAll ? 'Pinned for Entire Garage' : 'Pinned for You') : 'Pin vehicle'}
                         >
-                          <Pin className={`w-3.5 h-3.5 ${pinned ? 'fill-current' : ''}`} />
+                          {isPinnedForAll ? (
+                            <Globe className="w-3.5 h-3.5 stroke-[2.2]" />
+                          ) : (
+                            <Pin className={`w-3.5 h-3.5 ${pinned ? 'fill-current' : ''}`} />
+                          )}
                         </button>
-
-                        {job.expectedDeliveryDate && (
-                          <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-xl border ${deliveryInfo.badgeClass}`}>
-                            {deliveryInfo.shortLabel}
-                          </span>
-                        )}
                       </div>
                     </div>
 
@@ -610,18 +615,11 @@ export const JobsListPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Card Bottom CTA Strip */}
-                  <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between gap-2 text-xs font-mono">
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 truncate min-w-0">
-                      <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate text-[11px]">
-                        {job.expectedDeliveryDate ? deliveryInfo.shortLabel : 'In Garage'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold transition-colors shrink-0 group-hover:translate-x-0.5 text-xs">
-                      <span>View Card</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                  {/* Card Bottom: View Details Action */}
+                  <div className="mt-3 pt-2 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center justify-end">
+                    <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold transition-colors text-xs">
+                      <span>View Details</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                     </div>
                   </div>
                 </motion.div>

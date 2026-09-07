@@ -11,7 +11,7 @@ export const catalogApi = apiSlice.injectEndpoints({ endpoints: (builder) => ({
   getCatalog: builder.query<{ success: boolean; data: CatalogItem[] }, { q?: string; itemType?: string; category?: string } | void>({ query: (filters) => ({ url: '/catalog/items', params: filters || {} }), providesTags: ['Catalog'] }),
   getCatalogItem: builder.query<{ success: boolean; data: CatalogItem }, string>({ query: (id) => `/catalog/items/${id}`, providesTags: ['Catalog'] }),
   createCatalogItem: builder.mutation<{ success: boolean; data: CatalogItem }, CatalogItemPayload>({ query: (body) => ({ url: '/catalog/items', method: 'POST', body }), invalidatesTags: ['Catalog'] }),
-  quickAddCatalogItem: builder.mutation<{ success: boolean; data: CatalogItem }, { title: string }>({ query: (body) => ({ url: '/catalog/items/quick-add', method: 'POST', body }), invalidatesTags: ['Catalog'] }),
+  quickAddCatalogItem: builder.mutation<{ success: boolean; data: CatalogItem }, { title: string; itemType?: CatalogItemType; price?: number }>({ query: (body) => ({ url: '/catalog/items/quick-add', method: 'POST', body }), invalidatesTags: ['Catalog'] }),
   updateCatalogItem: builder.mutation<{ success: boolean; data: CatalogItem }, { id: string; body: Partial<CatalogItemPayload> }>({ query: ({ id, body }) => ({ url: `/catalog/items/${id}`, method: 'PATCH', body }), invalidatesTags: ['Catalog'] }),
   deleteCatalogItem: builder.mutation<{ success: boolean }, string>({ query: (id) => ({ url: `/catalog/items/${id}`, method: 'DELETE' }), invalidatesTags: ['Catalog'] }),
   uploadCatalogImage: builder.mutation<{ success: boolean; data: { url: string } }, { image: string }>({ query: (body) => ({ url: '/catalog/upload', method: 'POST', body }) }),

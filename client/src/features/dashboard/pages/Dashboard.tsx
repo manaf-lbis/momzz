@@ -1,9 +1,10 @@
-﻿import React, { useState } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Car,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Flame,
   History,
@@ -22,6 +23,9 @@ import {
   Clock,
   Sparkles,
   ArrowUpRight,
+  Pin,
+  Globe,
+  User,
 } from "lucide-react";
 
 import { useAuth } from "../../../shared/hooks/useAuth";
@@ -35,15 +39,48 @@ import { GlobalSearchModal } from "../../../shared/components/common/GlobalSearc
 import { isCompletionSoundEnabled, setCompletionSoundEnabled } from "../../../shared/utils/completionSound";
 import { AnimatedThemeToggle } from "../../../shared/components/magicui/AnimatedThemeToggle";
 import { FluidCanvasBackground } from "../../../shared/components/common/FluidCanvasBackground";
+import { BorderBeam } from "../../../shared/components/magicui/BorderBeam";
 
 export const Dashboard: React.FC = () => {
   const { user, isAdmin } = useAuth();
+  const currentUserId = user?.id || (user as any)?._id;
   const navigate = useNavigate();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSoundOn, setIsSoundOn] = useState(isCompletionSoundEnabled());
+  const [heroSlide, setHeroSlide] = useState(0);
+  const [pinnedIndex, setPinnedIndex] = useState(0);
+  const [isCarouselHovered, setIsCarouselHovered] = useState(false);
+  const [isPinnedHovered, setIsPinnedHovered] = useState(false);
 
-  const { data: jobsRes, isLoading } = useGetJobCardsQuery();
-  const { data: statsRes }           = useGetJobStatsQuery();
+  useEffect(() => {
+    if (isCarouselHovered) return;
+    const interval = setInterval(() => {
+      setHeroSlide((prev) => (prev + 1) % 4);
+    }, 5500);
+    return () => clearInterval(interval);
+  }, [isCarouselHovered]);
+
+  const isMatchingUserId = (p: any, targetId: any): boolean => {
+    if (!p || !targetId) return false;
+    const pStr = typeof p === 'string'
+      ? p
+      : p?._id
+      ? p._id.toString()
+      : p?.id
+      ? p.id.toString()
+      : p.toString();
+    const targetStr = typeof targetId === 'string'
+      ? targetId
+      : targetId?._id
+      ? targetId._id.toString()
+      : targetId?.id
+      ? targetId.id.toString()
+      : targetId.toString();
+    return pStr.trim().toLowerCase() === targetStr.trim().toLowerCase();
+  };
+
+  const { data: jobsRes, isLoading } = useGetJobCardsQuery(undefined, { refetchOnMountOrArgChange: true });
+  const { data: statsRes }           = useGetJobStatsQuery(undefined, { refetchOnMountOrArgChange: true });
   const { data: pendingRes }         = useGetPendingWorkersQuery(undefined, { skip: !isAdmin });
   const { data: usersRes }           = useGetAllUsersQuery(undefined,       { skip: !isAdmin });
   const { data: lbRes }              = useGetLeaderboardQuery();
@@ -52,6 +89,25 @@ export const Dashboard: React.FC = () => {
   const allJobs: JobCardData[] = Array.isArray(jobsRes?.data)
     ? (jobsRes!.data as unknown as JobCardData[])
     : ((jobsRes?.data as any)?.jobs || []);
+
+  const pinnedJobs = useMemo(() => {
+    return allJobs.filter((job) => {
+      const isPinnedForAll = Boolean(job.isPinnedForAll);
+      const isPinnedForMe =
+        Array.isArray(job.pinnedBy) &&
+        job.pinnedBy.some((p: any) => isMatchingUserId(p, currentUserId));
+      const isPinned = Boolean((job as any).isPinned);
+      return isPinnedForAll || isPinnedForMe || isPinned;
+    });
+  }, [allJobs, currentUserId]);
+
+  useEffect(() => {
+    if (pinnedJobs.length <= 1 || isPinnedHovered) return;
+    const interval = setInterval(() => {
+      setPinnedIndex((prev) => (prev + 1) % pinnedJobs.length);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [pinnedJobs.length, isPinnedHovered]);
 
   const stats          = statsRes?.data;
   const activeCount    = stats?.activeCount ?? allJobs.filter(j => j.status === "IN_PROGRESS").length;
@@ -87,35 +143,25 @@ export const Dashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-[#08090f] text-slate-900 dark:text-white flex flex-col">
         <Navbar glass />
-        <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-32">
+        <main className="app-container flex-1 py-6 pb-32">
           <DashboardBentoSkeleton />
         </main>
       </div>
     );
   }
 
-  /* Universal clean modern glass card */
-  const modernCard = [
-    "relative overflow-hidden",
-    "backdrop-blur-2xl backdrop-saturate-150",
-    "bg-white/70 dark:bg-[#10121d]/75",
-    "border border-white/90 dark:border-white/[0.08]",
-    "shadow-[0_4px_24px_-4px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)]",
-    "hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.09)] dark:hover:shadow-[0_12px_40px_-8px_rgba(0,0,0,0.8)]",
-    "rounded-2xl",
-    "transition-all duration-300",
-    "cursor-pointer active:scale-[0.985]",
-  ].join(" ");
+  /* Universal clean frosted glass card matching No vehicles found empty card */
+  const modernCard = "glass-modern-card rounded-2xl overflow-hidden cursor-pointer active:scale-[0.985]";
 
   return (
-    <div className="relative min-h-screen bg-[#f8f9fb] dark:bg-[#07080e] text-slate-900 dark:text-white flex flex-col overflow-x-hidden transition-colors duration-300 font-sans">
+    <div className="relative min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col overflow-x-hidden transition-colors duration-300 font-sans">
 
       {/* ── Fluid Organic Wave Canvas Background ── */}
       <FluidCanvasBackground />
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-32 flex flex-col gap-4">
+      <main className="app-container relative z-10 flex-1 pt-5 pb-32 md:pb-16 flex flex-col gap-4">
 
         {/* ── 1. HEADER (Profile Greeting + Controls) ── */}
         <header className="flex items-center justify-between gap-3">
@@ -162,9 +208,7 @@ export const Dashboard: React.FC = () => {
         <button
           onClick={() => setIsSearchOpen(true)}
           className="w-full flex items-center gap-3 px-4 py-3.5 text-left cursor-pointer transition active:scale-[0.99]
-                     backdrop-blur-2xl bg-white/75 dark:bg-[#10121d]/80
-                     border border-white/90 dark:border-white/[0.08]
-                     rounded-2xl shadow-xs hover:shadow-md hover:border-amber-400/50 dark:hover:border-amber-500/30"
+                     glass-modern-card rounded-2xl shadow-xs hover:shadow-md hover:border-amber-400/50 dark:hover:border-amber-500/30"
         >
           <Search className="w-4 h-4 shrink-0 text-amber-500 dark:text-amber-400" />
           <span className="text-[13px] font-mono flex-1 truncate text-slate-400 dark:text-slate-500">
@@ -175,141 +219,469 @@ export const Dashboard: React.FC = () => {
           </kbd>
         </button>
 
-        {/* ── 3. HERO COMMAND CENTER ── */}
+        {/* ── 3. HERO COMMAND CENTER (Interactive Carousel - Luxury Frosted Head Card) ── */}
         <section
-          className="relative overflow-hidden rounded-3xl
-                     backdrop-blur-2xl bg-gradient-to-br from-white/85 via-white/70 to-amber-50/40
-                     dark:from-[#111320]/90 dark:via-[#0e101b]/90 dark:to-[#171426]/90
-                     border border-white/95 dark:border-white/[0.1]
-                     shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)]
-                     p-6 sm:p-8"
+          onMouseEnter={() => setIsCarouselHovered(true)}
+          onMouseLeave={() => setIsCarouselHovered(false)}
+          className="glass-head-card relative overflow-hidden rounded-3xl p-5 sm:p-7 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)]"
         >
           {/* Subtle top edge glow reflection */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 dark:via-amber-400/30 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/70 dark:via-amber-400/50 to-transparent pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
-            <div className="flex-1">
+          {/* Internal ambient luxury glowing light orbs */}
+          <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-amber-500/10 dark:bg-amber-400/[0.08] blur-3xl pointer-events-none" />
+          <div className="absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-cyan-500/10 dark:bg-cyan-400/[0.06] blur-3xl pointer-events-none" />
 
-              {/* Dynamic Scrolling Marquee Ticker */}
-              {(() => {
-                const chips = [
-                  { text: `LIVE · ${activeCount} Active Bays`, dot: "bg-emerald-400", color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-                  { text: `⚡ ${velocity}% Velocity`, dot: null, color: "text-amber-700 dark:text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
-                  { text: `✓ ${totalDone} Tasks Done`, dot: null, color: "text-sky-700 dark:text-sky-400", bg: "bg-sky-500/10 border-sky-500/20" },
-                  ...(qaCount > 0 ? [{ text: `⬡ ${qaCount} QA Ready`, dot: null, color: "text-purple-700 dark:text-purple-300", bg: "bg-purple-500/10 border-purple-500/20" }] : []),
-                  { text: `⊕ ${completedCount} Completed`, dot: null, color: "text-slate-600 dark:text-slate-400", bg: "bg-black/5 dark:bg-white/5 border-black/8 dark:border-white/10" },
-                  { text: `◈ ${totalCount} All Time`, dot: null, color: "text-slate-600 dark:text-slate-400", bg: "bg-black/5 dark:bg-white/5 border-black/8 dark:border-white/10" },
-                ];
-                const doubled = [...chips, ...chips];
-                return (
-                  <div className="overflow-hidden w-full mb-4 -mx-1">
-                    <div className="marquee-track gap-2">
-                      {doubled.map((c, i) => (
-                        <span
-                          key={i}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider border shrink-0 select-none ${c.color} ${c.bg}`}
-                        >
-                          {c.dot && <span className={`w-1.5 h-1.5 rounded-full ${c.dot} animate-ping shrink-0`} />}
-                          {c.text}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+          {/* Active border beam */}
+          <BorderBeam size={280} duration={8} colorFrom="#f59e0b" colorTo="#fbbf24" borderWidth={1.2} />
 
-              {/* Massive Metric Display */}
-              <div className="flex items-end gap-4 mb-3">
-                <span
-                  className="font-black leading-none text-slate-900 dark:text-white tracking-tight"
-                  style={{ fontSize: "clamp(54px,14vw,84px)", fontVariantNumeric: "tabular-nums" }}
-                >
-                  <NumberTicker value={activeCount} />
-                </span>
-                <div className="pb-2">
-                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-snug">Vehicles</p>
-                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-snug">Active in Garage</p>
-                </div>
-              </div>
-
-              {/* Progress Velocity Bar */}
-              <div className="flex items-center gap-3 mb-1">
-                <div className="flex-1 h-2 rounded-full overflow-hidden bg-slate-200/80 dark:bg-white/[0.08]">
-                  <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-300 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${velocity}%` }}
-                    transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
-                  />
-                </div>
-                <span className="text-sm font-black font-mono shrink-0 text-amber-600 dark:text-amber-400">
-                  {velocity}%
-                </span>
-              </div>
-              <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                {totalDone} of {totalAllTasks} tasks completed · daily turnover
-              </p>
+          {/* Carousel Header Controls & Slide Indicators */}
+          <div className="relative z-10 flex items-center justify-between gap-3 mb-3.5">
+            {/* Slide Pagination Dots */}
+            <div className="flex items-center gap-1.5">
+              {[0, 1, 2, 3].map((idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setHeroSlide(idx)}
+                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    heroSlide === idx
+                      ? "w-7 bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                      : "w-2 bg-slate-300 dark:bg-white/20 hover:bg-slate-400 dark:hover:bg-white/40"
+                  }`}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
             </div>
 
-            {/* Desktop Overview Badges */}
-            <div className="hidden sm:flex flex-col gap-2 shrink-0 w-[130px]">
-              {[
-                { label: "Completed", val: completedCount, col: "text-emerald-700 dark:text-emerald-400" },
-                { label: "Lifetime", val: totalCount, col: "text-amber-600 dark:text-amber-400" },
-              ].map(s => (
-                <div
-                  key={s.label}
-                  className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]"
-                >
-                  <p className={`text-2xl font-black ${s.col}`}>{s.val}</p>
-                  <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">{s.label}</p>
-                </div>
-              ))}
+            {/* Prev / Next Arrows */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setHeroSlide((prev) => (prev === 0 ? 3 : prev - 1))}
+                className="w-7 h-7 rounded-lg flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition active:scale-90 cursor-pointer"
+                title="Previous Slide"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setHeroSlide((prev) => (prev + 1) % 4)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition active:scale-90 cursor-pointer"
+                title="Next Slide"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
-          {/* Primary Action Button */}
-          <div className="relative z-10 mt-5">
-            <button
-              onClick={() => navigate(isAdmin ? "/jobs/create" : "/jobs")}
-              className="w-full sm:w-auto h-12 px-8 rounded-2xl font-black text-sm flex items-center justify-center gap-2.5
-                         cursor-pointer transition active:scale-[0.97]
-                         bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white
-                         shadow-[0_4px_24px_-2px_rgba(245,158,11,0.5)] border border-amber-400/30"
-            >
-              {isAdmin ? <Plus className="w-4 h-4 stroke-[2.5]" /> : <Wrench className="w-4 h-4 stroke-[2.5]" />}
-              {isAdmin ? "New Vehicle Intake" : "My Assigned Tasks"}
-            </button>
+          {/* Carousel Slide Content */}
+          <div className="relative z-10 min-h-[145px] flex items-center">
+            <AnimatePresence mode="wait">
+              {/* Slide 0: Live Garage Flow */}
+              {heroSlide === 0 && (
+                <motion.div
+                  key="slide-0-flow"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        Live Garage Flow
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+                        ⚡ {velocity}% Velocity
+                      </span>
+                    </div>
+
+                    <div className="flex items-end gap-3.5 mb-2.5">
+                      <span
+                        className="font-black leading-none text-slate-900 dark:text-white tracking-tight"
+                        style={{ fontSize: "clamp(44px,10vw,68px)", fontVariantNumeric: "tabular-nums" }}
+                      >
+                        <NumberTicker value={activeCount} />
+                      </span>
+                      <div className="pb-1">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight">Active Vehicles</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">currently in service bays</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 mb-1 max-w-md">
+                      <div className="flex-1 h-2 rounded-full overflow-hidden bg-slate-200/80 dark:bg-white/[0.08]">
+                        <motion.div
+                          className="h-full rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-300 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${velocity}%` }}
+                          transition={{ duration: 0.8, ease: "easeOut" }}
+                        />
+                      </div>
+                      <span className="text-xs font-black font-mono shrink-0 text-amber-600 dark:text-amber-400">
+                        {velocity}%
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                      {totalDone} of {totalAllTasks} tasks completed · daily turnover
+                    </p>
+                  </div>
+
+                  <div className="hidden sm:flex flex-col gap-2 shrink-0 w-[130px]">
+                    <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
+                      <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{completedCount}</p>
+                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Completed</p>
+                    </div>
+                    <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
+                      <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{totalCount}</p>
+                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Lifetime</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Slide 1: Quality Control & QA */}
+              {heroSlide === 1 && (
+                <motion.div
+                  key="slide-1-qa"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        Quality Control & QA
+                      </span>
+                      {qaCount > 0 && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+                          {qaCount} Awaiting Sign-Off
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-end gap-3.5 mb-2.5">
+                      <span
+                        className="font-black leading-none text-purple-600 dark:text-purple-400 tracking-tight"
+                        style={{ fontSize: "clamp(44px,10vw,68px)", fontVariantNumeric: "tabular-nums" }}
+                      >
+                        <NumberTicker value={qaCount} />
+                      </span>
+                      <div className="pb-1">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight">QA Ready Vehicles</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">all tasks complete, ready for manager verify</p>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
+                      Ensure 100% inspection accuracy before customer delivery. Instant technician time log stamps and quality audits.
+                    </p>
+                  </div>
+
+                  <div className="hidden sm:flex flex-col gap-2 shrink-0 w-[130px]">
+                    <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
+                      <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{qaCount}</p>
+                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">QA Pending</p>
+                    </div>
+                    <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
+                      <p className="text-2xl font-black text-sky-600 dark:text-sky-400">{totalDone}</p>
+                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Done Today</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Slide 2: Garage Leaderboard */}
+              {heroSlide === 2 && (
+                <motion.div
+                  key="slide-2-lb"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+                        <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                        Garage Leaderboard
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+                        {totalUsers} Staff Members
+                      </span>
+                    </div>
+
+                    <div className="flex items-end gap-3.5 mb-2.5">
+                      <span
+                        className="font-black leading-none text-amber-500 dark:text-amber-400 tracking-tight"
+                        style={{ fontSize: "clamp(44px,10vw,68px)", fontVariantNumeric: "tabular-nums" }}
+                      >
+                        <NumberTicker value={topScore} />
+                      </span>
+                      <div className="pb-1">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                          {topTech ? (topTech as any).name : 'Top Technician'}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">leading technician points this month</p>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
+                      Recognizing top garage mechanics with live task points, real-time speed bonuses, and technician rankings.
+                    </p>
+                  </div>
+
+                  <div className="hidden sm:flex flex-col gap-2 shrink-0 w-[130px]">
+                    <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
+                      <p className="text-2xl font-black text-amber-500 dark:text-amber-400">{topScore}</p>
+                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Top Points</p>
+                    </div>
+                    <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
+                      <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{totalUsers}</p>
+                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Active Staff</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Slide 3: Inventory & Master Catalog */}
+              {heroSlide === 3 && (
+                <motion.div
+                  key="slide-3-inv"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-sky-500/10 border border-sky-500/20 text-sky-700 dark:text-sky-400">
+                        <Package className="w-3.5 h-3.5" />
+                        Inventory & Services
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+                        Fast Job Card Sync
+                      </span>
+                    </div>
+
+                    <div className="flex items-end gap-3.5 mb-2.5">
+                      <span
+                        className="font-black leading-none text-sky-600 dark:text-sky-400 tracking-tight"
+                        style={{ fontSize: "clamp(44px,10vw,68px)", fontVariantNumeric: "tabular-nums" }}
+                      >
+                        <NumberTicker value={catalogCount} />
+                      </span>
+                      <div className="pb-1">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight">Catalog Items</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">products, parts & labor service items</p>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
+                      Instant price calculation, stock depletion warning, and seamless custom checklist addition on any job card.
+                    </p>
+                  </div>
+
+                  <div className="hidden sm:flex flex-col gap-2 shrink-0 w-[130px]">
+                    <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
+                      <p className="text-2xl font-black text-sky-600 dark:text-sky-400">{catalogCount}</p>
+                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">In Catalog</p>
+                    </div>
+                    <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
+                      <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{totalCount}</p>
+                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Jobs Served</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </section>
 
-        {/* ── 4. STATS 4-GRID (Clean Modern Micro-Cards) ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Active", value: activeCount, icon: <Car className="w-4 h-4" />, iconBg: "bg-amber-500/15", iconColor: "text-amber-600 dark:text-amber-400", dot: "bg-amber-500" },
-            { label: "Done Today", value: totalDone, icon: <CheckCircle2 className="w-4 h-4" />, iconBg: "bg-emerald-500/15", iconColor: "text-emerald-600 dark:text-emerald-400", dot: "bg-emerald-500" },
-            { label: "QA Pending", value: qaCount, icon: <ShieldCheck className="w-4 h-4" />, iconBg: "bg-purple-500/15", iconColor: "text-purple-600 dark:text-purple-400", dot: "bg-purple-500" },
-            { label: "Velocity", value: velocity, suffix: "%", icon: <TrendingUp className="w-4 h-4" />, iconBg: "bg-sky-500/15", iconColor: "text-sky-600 dark:text-sky-400", dot: "bg-sky-500" },
-          ].map(s => (
-            <div
-              key={s.label}
-              className={`${modernCard} p-4 flex flex-col justify-between min-h-[105px]`}
-            >
-              <div className="flex items-center justify-between">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${s.iconBg} ${s.iconColor}`}>
-                  {s.icon}
+        {/* ── 4. PINNED PRIORITY VEHICLE ── */}
+        <section
+          onMouseEnter={() => setIsPinnedHovered(true)}
+          onMouseLeave={() => setIsPinnedHovered(false)}
+        >
+          <div className="flex items-center justify-between mb-3 px-0.5">
+            <div className="flex items-center gap-2">
+              <h2 className="flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500/30" />
+                Priority Vehicle
+              </h2>
+              {pinnedJobs.length > 1 && (
+                <div className="flex items-center gap-1.5 ml-1">
+                  {/* Slide Indicators like stats card on top */}
+                  <div className="flex items-center gap-1 mr-1">
+                    {pinnedJobs.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPinnedIndex(idx);
+                        }}
+                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                          pinnedIndex === idx
+                            ? "w-5 bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                            : "w-1.5 bg-slate-300 dark:bg-white/20 hover:bg-slate-400 dark:hover:bg-white/40"
+                        }`}
+                        aria-label={`Go to pinned vehicle ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPinnedIndex((prev) => (prev === 0 ? pinnedJobs.length - 1 : prev - 1));
+                    }}
+                    className="w-5 h-5 rounded-md flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition cursor-pointer"
+                    title="Previous Pinned Vehicle"
+                  >
+                    <ChevronLeft className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPinnedIndex((prev) => (prev + 1) % pinnedJobs.length);
+                    }}
+                    className="w-5 h-5 rounded-md flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition cursor-pointer"
+                    title="Next Pinned Vehicle"
+                  >
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
                 </div>
-                <span className={`w-2 h-2 rounded-full ${s.dot} opacity-70`} />
-              </div>
-              <div className="pt-2">
-                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  <NumberTicker value={s.value} />{s.suffix}
-                </p>
-                <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold">{s.label}</p>
-              </div>
+              )}
             </div>
-          ))}
-        </div>
+
+            <button
+              onClick={() => navigate('/jobs')}
+              className="text-[11px] font-mono text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-1 transition"
+            >
+              <span>View all</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          {pinnedJobs.length > 0 ? (
+            (() => {
+              const curPinned = pinnedJobs[pinnedIndex % pinnedJobs.length];
+              const tasks = curPinned?.tasks || [];
+              const completedTasks = tasks.filter((t: any) => t.status === 'COMPLETED').length;
+              const totalJobTasks = tasks.length;
+              const jobProgress = totalJobTasks > 0 ? Math.round((completedTasks / totalJobTasks) * 100) : 0;
+              const jobId = curPinned.id || curPinned._id;
+
+              const isPinnedForAll = Boolean(curPinned.isPinnedForAll);
+              const pinnedArray = Array.isArray(curPinned.pinnedBy) ? curPinned.pinnedBy : [];
+              const isPinnedForMe = pinnedArray.some((p: any) => isMatchingUserId(p, currentUserId));
+
+              let pinnerDisplay = '';
+              if (isPinnedForAll) {
+                const adminName = curPinned.createdBy?.name ? curPinned.createdBy.name.split(' ')[0] : 'Admin';
+                pinnerDisplay = `Garage Admin (${adminName})`;
+              } else if (isPinnedForMe) {
+                pinnerDisplay = 'You';
+              } else if (pinnedArray.length > 0) {
+                const first: any = pinnedArray[0];
+                pinnerDisplay = typeof first === 'object' && first?.name ? first.name.split(' ')[0] : 'Staff';
+              } else {
+                pinnerDisplay = 'Staff';
+              }
+
+              return (
+                <div style={{ perspective: 1200 }}>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={`pinned-${jobId}`}
+                      initial={{ opacity: 0, rotateX: -60, scale: 0.96 }}
+                      animate={{ opacity: 1, rotateX: 0, scale: 1 }}
+                      exit={{ opacity: 0, rotateX: 60, scale: 0.96 }}
+                      transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+                      style={{ transformStyle: 'preserve-3d' }}
+                      onClick={() => navigate(`/jobs/${jobId}`)}
+                      className={`${modernCard} p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:border-amber-400/50 dark:hover:border-amber-400/40`}
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        {curPinned.thumbnailUrl ? (
+                          <img
+                            src={curPinned.thumbnailUrl}
+                            alt=""
+                            className="w-10 h-10 rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-white/10"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-xs shrink-0">
+                            <Car className="w-5 h-5" />
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight truncate">
+                              {curPinned.vehicleName}
+                            </p>
+                            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-400/15 text-amber-700 dark:text-amber-300">
+                              {curPinned.vehicleNumber}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10">
+                              {isPinnedForAll ? (
+                                <Globe className="w-2.5 h-2.5 text-amber-500" />
+                              ) : (
+                                <Pin className="w-2.5 h-2.5 text-amber-500 fill-current" />
+                              )}
+                              <span>{isPinnedForAll ? 'Garage Pin' : 'Personal Pin'}</span>
+                            </span>
+                          </div>
+
+                          <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-1 truncate">
+                            Pinned by {pinnerDisplay} • {curPinned.customerName ? `Client: ${curPinned.customerName}` : 'In Service Bay'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar & Arrow */}
+                      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-white/[0.06]">
+                        <div className="space-y-1 sm:text-right">
+                          <div className="flex items-center sm:justify-end gap-1.5 text-[11px] font-mono">
+                            <span className="font-bold text-amber-600 dark:text-amber-400">{jobProgress}%</span>
+                            <span className="text-slate-400">({completedTasks}/{totalJobTasks} tasks)</span>
+                          </div>
+                          <div className="w-28 sm:w-32 h-1.5 rounded-full overflow-hidden bg-slate-200 dark:bg-white/10">
+                            <div
+                              className="h-full rounded-full bg-amber-500"
+                              style={{ width: `${jobProgress}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                          <ArrowUpRight className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              );
+            })()
+          ) : (
+            <div
+              onClick={() => navigate('/jobs')}
+              className={`${modernCard} p-4 text-center py-5 space-y-1 hover:border-amber-400/50 dark:hover:border-amber-400/40`}
+            >
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No Pinned Priority Vehicles</p>
+              <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                Pin critical vehicle jobs to monitor them here.
+              </p>
+            </div>
+          )}
+        </section>
+
+
 
         {/* ── 5. BENTO OPERATIONS HUB (Modular Japanese Bento Grid) ── */}
         <section>
@@ -326,7 +698,45 @@ export const Dashboard: React.FC = () => {
             style={{ gridAutoRows: "minmax(145px,auto)" }}
           >
 
-            {/* Tile 1: QA Sign-Off (2 cols) */}
+            {/* Tile 1: Active Vehicles Listing Quick Access (2 cols) */}
+            <div
+              onClick={() => navigate("/jobs")}
+              className={`col-span-2 md:col-span-2 ${modernCard} p-5 flex flex-col justify-between
+                          hover:border-amber-400/50 dark:hover:border-amber-400/40`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-xs">
+                    <Car className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight">Active Vehicles</p>
+                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Service bays & queue</p>
+                  </div>
+                </div>
+
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {activeCount} In Bay
+                </span>
+              </div>
+
+              {/* Interactive quick filter chips */}
+              <div className="flex items-center gap-2 pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
+                <span className="text-[10px] font-mono text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md font-semibold">
+                  All Bays
+                </span>
+                <span className="text-[10px] font-mono text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md font-semibold">
+                  In Progress
+                </span>
+                <span className="text-[10px] font-mono text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md font-semibold">
+                  Work Cards
+                </span>
+                <ArrowUpRight className="w-4 h-4 text-amber-500 ml-auto" />
+              </div>
+            </div>
+
+            {/* Tile 2: QA Sign-Off (2 cols) */}
             <div
               onClick={() => navigate("/jobs", { state: { view: "verify" } })}
               className={`col-span-2 md:col-span-2 ${modernCard} p-5 flex flex-col justify-between

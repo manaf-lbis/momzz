@@ -166,7 +166,7 @@ export const AddInventoryItemPage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="relative z-10 mx-auto max-w-3xl w-full px-3 sm:px-6 py-4 pb-32">
+      <main className="app-container relative z-10 flex-1 py-4 pb-32">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button

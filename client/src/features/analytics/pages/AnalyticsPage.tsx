@@ -122,7 +122,7 @@ export const AnalyticsPage: React.FC = () => {
   const TIMEFRAMES: Timeframe[] = ['today', 'week', 'month', 'year'];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient aura */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.1)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.06)_0%,transparent_65%)]" />
@@ -131,7 +131,7 @@ export const AnalyticsPage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 pb-32 space-y-4">
+      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -184,7 +184,7 @@ export const AnalyticsPage: React.FC = () => {
         {/* Bento Stat Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Card 1: Completed Tasks */}
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] p-4 sm:p-5 shadow-sm flex items-center gap-3.5">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <CheckCircle2 className="w-5 h-5" />
             </div>
@@ -202,7 +202,7 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Card 2: Active Technicians or Personal Tasks */}
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] p-4 sm:p-5 shadow-sm flex items-center gap-3.5">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
               <Users className="w-5 h-5" />
             </div>
@@ -220,7 +220,7 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Card 3: Average Speed */}
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] p-4 sm:p-5 shadow-sm flex items-center gap-3.5">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-2xl bg-sky-500/10 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
               <Zap className="w-5 h-5" />
             </div>
@@ -241,7 +241,7 @@ export const AnalyticsPage: React.FC = () => {
         {/* Main Bento Split */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Leaderboard Bento Card (4 cols) */}
-          <div className="lg:col-span-5 relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex flex-col justify-between">
+          <div className="lg:col-span-5 relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card flex flex-col justify-between">
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-white/5">
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-amber-500" />
@@ -314,7 +314,7 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Activity Log Bento Card (7 cols) */}
-          <div className="lg:col-span-7 relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex flex-col justify-between">
+          <div className="lg:col-span-7 relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card flex flex-col justify-between">
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-white/5">
               <div className="flex items-center gap-2">
                 <Flame className="w-4 h-4 text-orange-500" />

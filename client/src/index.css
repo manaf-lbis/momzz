@@ -40,48 +40,96 @@
   }
 }
 
+@layer components {
+  /* Universal responsive page container for identical device width across all pages */
+  .app-container {
+    width: 100%;
+    max-width: 80rem; /* 1280px / max-w-7xl */
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  @media (min-width: 640px) {
+    .app-container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .app-container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+}
+
 /* ──────────────────────────────────────────────
    GLASS CANVAS (page background utility)
 ────────────────────────────────────────────── */
 .glass-canvas {
   position: relative;
   min-height: 100vh;
-  background-color: #f6f5f2;
+  background-color: transparent;
 }
 .dark .glass-canvas {
-  background-color: #090a12;
+  background-color: transparent;
 }
 
 /* ──────────────────────────────────────────────
-   GLASS CARDS — used across all pages
-   Light: white/80 with backdrop blur
-   Dark:  white/4 with backdrop blur
+   FROSTED GLASS CARDS — Universal Global Style
+   Authentic frosted glass matching the empty state
+   card with blur, saturation, and ambient glow.
 ────────────────────────────────────────────── */
-.glass-modern-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.06);
-  transition: all 0.2s ease-out;
+.glass-modern-card,
+.frosted-glass-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.dark .glass-modern-card {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.6);
+.dark .glass-modern-card,
+.dark .frosted-glass-card {
+  background: rgba(255, 255, 255, 0.038);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.5);
 }
 
-.glass-modern-card:hover {
-  border-color: rgba(201, 168, 76, 0.4);
-  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.1);
+.glass-modern-card:hover,
+.frosted-glass-card:hover {
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 10px 36px -4px rgba(245, 158, 11, 0.12);
 }
 
-.dark .glass-modern-card:hover {
-  border-color: rgba(201, 168, 76, 0.25);
-  box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.8);
+.dark .glass-modern-card:hover,
+.dark .frosted-glass-card:hover {
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 14px 44px -8px rgba(0, 0, 0, 0.75), 0 0 24px -2px rgba(245, 158, 11, 0.18);
+}
+
+/* Luxury Frosted Head Card for Command Center & Hero Sections */
+.glass-head-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.72) 60%, rgba(254, 243, 199, 0.35) 100%);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 12px 40px -6px rgba(0, 0, 0, 0.07);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .glass-head-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.025) 50%, rgba(245, 158, 11, 0.045) 100%);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 14px 48px -10px rgba(0, 0, 0, 0.65), 0 0 30px -4px rgba(245, 158, 11, 0.12);
 }
 
 /* ──────────────────────────────────────────────

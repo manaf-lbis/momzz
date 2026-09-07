@@ -26,7 +26,7 @@ export const UnapprovedWorkerHome: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col justify-between transition-colors duration-200">
       <Navbar />
       
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
+      <main className="app-container flex-1 flex items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-md bg-white dark:bg-zinc-900 border border-amber-400/30 dark:border-yellow-500/30 rounded-2xl p-6 sm:p-8 text-center space-y-6 shadow-xl dark:shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-yellow-400"></div>
 

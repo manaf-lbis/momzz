@@ -121,7 +121,7 @@ export const MechanicHome: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors duration-200">
       <Navbar />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="app-container relative z-10 flex-1 py-6 pb-36 sm:pb-40 md:pb-16 space-y-6">
         {/* SECTION 1: GARAGE HUB BANNER */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-4">
           <div className="flex items-center gap-3">

@@ -267,7 +267,7 @@ export const SalesPage: React.FC = () => {
     <div className="flex h-screen flex-col glass-canvas overflow-hidden text-slate-900 dark:text-white">
       <Navbar glass />
 
-      <main className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1">
+      <main className="app-container flex min-h-0 w-full flex-1">
         {/* Catalog Section */}
         <section className="flex min-w-0 flex-1 flex-col">
           {/* Header & Filter Controls */}

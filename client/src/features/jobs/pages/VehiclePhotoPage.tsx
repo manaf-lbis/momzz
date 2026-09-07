@@ -236,7 +236,7 @@ export const VehiclePhotoPage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-4xl w-full mx-auto px-3 sm:px-6 py-4 pb-32 space-y-4">
+      <main className="app-container relative z-10 flex-1 py-4 pb-32 space-y-4">
         {/* Page Top Header */}
         <div className="flex items-center justify-between gap-3 p-4 bg-white/80 dark:bg-white/[0.035] backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl sm:rounded-3xl shadow-sm">
           <div className="flex items-center gap-3 min-w-0">

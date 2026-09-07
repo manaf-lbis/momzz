@@ -17,6 +17,7 @@ import { useAuth } from '../../../shared/hooks/useAuth';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { ConfirmationModal } from '../../../shared/components/common/ConfirmationModal';
 import { PinJobModal } from '../../../shared/components/jobCard/PinJobModal';
+import { MagicTabs } from '../../../shared/components/magicui/MagicTabs';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../../../shared/utils/confetti';
@@ -43,6 +44,11 @@ import {
   Sparkles,
   UserPlus,
   AlertTriangle,
+  Car,
+  Globe,
+  ShieldCheck,
+  Mail,
+  Wrench,
 } from 'lucide-react';
 import { getDeliveryStatusInfo } from '../../../shared/utils/dateUtils';
 import { ProgressBarBeam } from '../../../shared/components/magicui/AnimatedBeam';
@@ -65,6 +71,7 @@ export const JobDetailPage: React.FC = () => {
   const { user, isAdmin } = useAuth();
 
   const [errorMessage, setErrorMessage] = useState('');
+  const [activeDetailView, setActiveDetailView] = useState<'CHECKLIST' | 'ACTIONS'>('CHECKLIST');
   const [statusFilter, setStatusFilter] = useState<TaskFilterType>('ALL');
   const [activityTask, setActivityTask] = useState<TaskItem | null>(null);
 
@@ -132,11 +139,20 @@ export const JobDetailPage: React.FC = () => {
   const progressPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
   const isAllCompleted = totalTasks > 0 && completedCount === totalTasks;
 
+  const isMatchingUserId = (p: any, targetId: any): boolean => {
+    if (!p || !targetId) return false;
+    const pStr = typeof p === 'string' ? p : p?._id ? p._id.toString() : p?.id ? p.id.toString() : p.toString();
+    const targetStr = typeof targetId === 'string' ? targetId : targetId?._id ? targetId._id.toString() : targetId?.id ? targetId.id.toString() : targetId.toString();
+    return pStr.trim().toLowerCase() === targetStr.trim().toLowerCase();
+  };
+
   const isJobPinnedForMe =
     Array.isArray(currentJob?.pinnedBy) &&
-    currentJob.pinnedBy.some((p: any) => (typeof p === 'string' ? p : p.id || p._id) === currentUserId);
+    currentJob.pinnedBy.some((p: any) => isMatchingUserId(p, currentUserId));
   const isJobPinnedForAll = !!currentJob?.isPinnedForAll;
   const isPinned = isJobPinnedForAll || isJobPinnedForMe;
+
+  const deliveryInfo = getDeliveryStatusInfo(currentJob?.expectedDeliveryDate, isAllCompleted);
 
   const filteredTasks = tasks.filter((t: TaskItem) => {
     if (statusFilter === 'PENDING') return t.status === 'OPEN';
@@ -283,9 +299,9 @@ export const JobDetailPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col transition-colors duration-200">
+      <div className="min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col transition-colors duration-200">
         <Navbar glass />
-        <main className="relative z-10 flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 pb-32">
+        <main className="app-container relative z-10 flex-1 py-6 pb-32">
           <div className="space-y-4">
             <div className="h-48 rounded-3xl bg-slate-200/60 dark:bg-white/[0.03] animate-pulse" />
             <div className="h-12 rounded-2xl bg-slate-200/60 dark:bg-white/[0.03] animate-pulse" />
@@ -298,10 +314,10 @@ export const JobDetailPage: React.FC = () => {
 
   if (isError || !currentJob) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col transition-colors duration-200">
+      <div className="min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col transition-colors duration-200">
         <Navbar glass />
-        <main className="relative z-10 flex-1 max-w-md w-full mx-auto px-4 py-20 text-center space-y-4">
-          <div className="relative overflow-hidden rounded-3xl bg-white/80 dark:bg-white/[0.035] backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] p-8 shadow-xl space-y-3">
+        <main className="app-container relative z-10 flex-1 py-20 text-center space-y-4">
+          <div className="max-w-md mx-auto relative overflow-hidden rounded-3xl bg-white/80 dark:bg-white/[0.035] backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] p-8 shadow-xl space-y-3">
             <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
             <h2 className="text-base sm:text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">
               Job Card Not Found
@@ -328,41 +344,55 @@ export const JobDetailPage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-4xl w-full mx-auto px-3 sm:px-6 py-4 pb-36 sm:pb-40 space-y-3.5">
-        {/* ── TOP NAV BAR ── */}
+      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
+        {/* ── TOP NAV / ACTION BAR ── */}
         <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/jobs')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass-ghost-btn text-xs font-bold shadow-2xs"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Vehicles</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/jobs')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass-ghost-btn text-xs font-bold shadow-2xs hover:scale-[1.02] active:scale-95 transition cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Vehicles</span>
+            </button>
+            <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-slate-400">
+              <span>/</span>
+              <span className="font-bold text-slate-700 dark:text-slate-300">{currentJob.vehicleNumber}</span>
+            </div>
+          </div>
 
           <div className="flex items-center gap-1.5">
             {/* Pin Action */}
             <button
               type="button"
               onClick={() => setIsPinJobModalOpen(true)}
-              className={`p-2 rounded-xl border transition active:scale-90 cursor-pointer ${
+              className={`p-2 rounded-xl border transition active:scale-90 cursor-pointer flex items-center gap-1.5 ${
                 isPinned
-                  ? 'bg-amber-400/20 border-amber-400/40 text-amber-600 dark:text-amber-300 shadow-2xs'
+                  ? 'bg-amber-400/20 border-amber-400/40 text-amber-700 dark:text-amber-300 shadow-2xs'
                   : 'glass-ghost-btn text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
-              title="Pin Vehicle"
+              title="Pin Priority / Garage Global Pin"
             >
-              <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-current' : ''}`} />
+              {isJobPinnedForAll ? (
+                <Globe className="w-3.5 h-3.5 text-amber-500" />
+              ) : (
+                <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-current text-amber-500' : ''}`} />
+              )}
+              <span className="text-[11px] font-mono font-bold hidden md:inline">
+                {isJobPinnedForAll ? 'Garage Pin' : isJobPinnedForMe ? 'Pinned' : 'Pin'}
+              </span>
             </button>
 
             {/* Photo Action */}
             <button
               type="button"
               onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
-              className="p-2 rounded-xl glass-ghost-btn text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white active:scale-90 transition cursor-pointer"
-              title="Vehicle Photo"
+              className="p-2 rounded-xl glass-ghost-btn text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white active:scale-90 transition cursor-pointer flex items-center gap-1.5"
+              title="Vehicle Inspection Photos"
             >
               <Camera className="w-3.5 h-3.5" />
+              <span className="text-[11px] font-mono font-bold hidden md:inline">Photos</span>
             </button>
 
             {/* Edit Action (Admin) */}
@@ -370,10 +400,11 @@ export const JobDetailPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
-                className="p-2 rounded-xl glass-gold-btn text-slate-950 shadow-md active:scale-90 transition cursor-pointer"
+                className="p-2 rounded-xl glass-gold-btn text-slate-950 shadow-md active:scale-90 transition cursor-pointer flex items-center gap-1.5"
                 title="Edit Job Card"
               >
                 <Edit2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span className="text-[11px] font-mono font-black hidden md:inline">Edit</span>
               </button>
             )}
 
@@ -391,348 +422,543 @@ export const JobDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ── VEHICLE HERO CARD ── */}
-        <motion.section
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl glass-modern-card shadow-2xl p-4 sm:p-5 space-y-3"
-        >
+        {/* ── VEHICLE HERO COMMAND CENTER (Luxury Frosted Head Card) ── */}
+        <section className="glass-head-card relative overflow-hidden rounded-3xl p-5 sm:p-6 space-y-4 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)]">
+          {/* Subtle top edge glow reflection */}
+          <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/70 dark:via-amber-400/50 to-transparent pointer-events-none" />
+
+          {/* Internal ambient luxury glowing light orbs */}
+          <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-amber-500/10 dark:bg-amber-400/[0.08] blur-3xl pointer-events-none" />
+          <div className="absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-cyan-500/10 dark:bg-cyan-400/[0.06] blur-3xl pointer-events-none" />
+
           {isPinned && <BorderBeam size={220} duration={7} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />}
 
-          {/* Vehicle Name, Plate & Ready status */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1 min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-black uppercase text-slate-900 dark:text-white tracking-tight truncate">
-                {currentJob.vehicleName || 'Vehicle'}
-              </h1>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 border border-amber-400/30 px-2.5 py-0.5 rounded-lg tracking-wider">
-                  {currentJob.vehicleNumber}
+          {/* Top Row: Plate, Color & Status */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs sm:text-sm font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 border border-amber-400/40 px-3 py-1 rounded-xl tracking-wider shadow-xs">
+                {currentJob.vehicleNumber}
+              </span>
+
+              {currentJob.vehicleColor && (
+                <span className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+                  <Palette className="w-3 h-3 text-amber-500" />
+                  <span>{currentJob.vehicleColor}</span>
                 </span>
-                {currentJob.vehicleColor && (
-                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                    <Palette className="w-3 h-3 text-amber-500" />
-                    {currentJob.vehicleColor}
-                  </span>
-                )}
-              </div>
+              )}
             </div>
 
-            <div className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-black uppercase tracking-wider border shrink-0 flex items-center gap-1.5 ${
-              isAllCompleted
-                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                : 'bg-amber-400/15 border-amber-400/30 text-amber-700 dark:text-amber-300'
-            }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isAllCompleted ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
-              <span>{isAllCompleted ? 'Ready for Delivery' : 'In Service'}</span>
+            <div
+              className={`px-3 py-1 rounded-xl text-[10px] sm:text-xs font-mono font-black uppercase tracking-wider border shrink-0 flex items-center gap-1.5 ${
+                isAllCompleted
+                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-amber-400/15 border-amber-400/30 text-amber-800 dark:text-amber-300'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${isAllCompleted ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' : 'bg-amber-400 animate-pulse'}`} />
+              <span>{isAllCompleted ? 'Ready for Delivery' : 'In Service Bay'}</span>
             </div>
           </div>
 
-          {/* Progress Bar Beam */}
-          <div className="space-y-1 pt-1">
+          {/* Vehicle Title & Artwork/Icon */}
+          <div className="flex items-center gap-3.5">
+            {currentJob.thumbnailUrl ? (
+              <img
+                src={currentJob.thumbnailUrl}
+                alt={currentJob.vehicleName}
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border border-slate-200 dark:border-white/10 shrink-0 shadow-sm"
+              />
+            ) : (
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-400/20 shadow-xs shrink-0">
+                <Car className="w-6 h-6 sm:w-7 sm:h-7" />
+              </div>
+            )}
+
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
+                {currentJob.vehicleName || 'Vehicle Service'}
+              </h1>
+              <p className="text-xs font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+                Active Vehicle Record • {totalTasks} Operations
+              </p>
+            </div>
+          </div>
+
+          {/* Clean Progress Meter */}
+          <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-slate-400 font-bold">
+              <span className="text-slate-500 dark:text-slate-400 font-bold">
                 {completedCount} of {totalTasks} tasks completed
               </span>
-              <span className={`font-black ${isAllCompleted ? 'text-emerald-400' : 'text-amber-300'}`}>
+              <span className={`font-black text-sm ${isAllCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                 {progressPercent}%
               </span>
             </div>
             <ProgressBarBeam progress={progressPercent} />
           </div>
+        </section>
 
-          {/* Expandable Specs Accordion Button */}
-          <button
-            type="button"
-            onClick={() => setIsExpandedHeader((prev) => !prev)}
-            className="w-full py-1.5 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/[0.06] text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 hover:text-white flex items-center justify-center gap-1.5 transition cursor-pointer"
+        {/* ── DETAIL VIEW SUBPAGE SWITCHER (Universal MagicTabs) ── */}
+        <MagicTabs
+          items={[
+            {
+              key: 'CHECKLIST',
+              label: 'Service Checklist',
+              count: `${completedCount}/${totalTasks}`,
+              icon: <Wrench className="w-3.5 h-3.5" />,
+            },
+            {
+              key: 'ACTIONS',
+              label: 'Client & Actions',
+              icon: <UserIcon className="w-3.5 h-3.5" />,
+            },
+          ]}
+          activeKey={activeDetailView}
+          onChange={(key) => setActiveDetailView(key as 'CHECKLIST' | 'ACTIONS')}
+          layoutId="job-detail-main-tab"
+        />
+
+        {/* ── CONDITIONAL SUBPAGE CONTENT ── */}
+        {activeDetailView === 'ACTIONS' ? (
+          /* ── SUBPAGE 2: CLIENT & VEHICLE ACTIONS ── */
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            <span>{isExpandedHeader ? 'Hide Specs' : 'View Customer & Delivery Specs'}</span>
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpandedHeader ? 'rotate-180' : ''}`} />
-          </button>
+            {/* Client & Fast Communications Hub */}
+            <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-4">
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 dark:via-amber-400/20 to-transparent pointer-events-none" />
 
-          {/* Expandable Details Drawer */}
-          <AnimatePresence>
-            {isExpandedHeader && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-2 pt-2 border-t border-white/[0.06]"
-              >
-                {/* Customer Contact Row */}
-                {(currentJob.customerName || currentJob.customerMobile) && (
-                  <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <UserIcon className="w-4 h-4 text-amber-400 shrink-0" />
-                      <div>
-                        <p className="text-[10px] font-mono uppercase text-slate-500">Customer</p>
-                        <p className="text-xs font-bold text-white">{currentJob.customerName || 'Walk-in Customer'}</p>
-                      </div>
-                    </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-400/20 shadow-xs">
+                    <UserIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+                      Client Contact Info
+                    </h3>
+                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Direct Contact & Communications</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">
+                  {currentJob.customerMobile ? 'Verified' : 'Walk-in'}
+                </span>
+              </div>
 
-                    {currentJob.customerMobile && (
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={`tel:${currentJob.customerMobile}`}
-                          className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[11px] font-bold flex items-center gap-1"
-                        >
-                          <Phone className="w-3 h-3 text-emerald-400" />
-                          <span>{currentJob.customerMobile}</span>
-                        </a>
-                        <a
-                          href={`https://wa.me/${currentJob.customerMobile.replace(/[^0-9]/g, '')}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[11px] font-bold flex items-center gap-1"
-                        >
-                          <MessageCircle className="w-3 h-3 text-emerald-400" />
-                          <span>WhatsApp</span>
-                        </a>
-                      </div>
-                    )}
+              {/* Client Profile Box */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05] space-y-2.5">
+                <div>
+                  <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Client Name</p>
+                  <p className="text-base font-black text-slate-900 dark:text-white">
+                    {currentJob.customerName || 'Walk-in Customer'}
+                  </p>
+                </div>
+                {currentJob.customerMobile && (
+                  <div>
+                    <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Mobile Phone</p>
+                    <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300">
+                      {currentJob.customerMobile}
+                    </p>
                   </div>
                 )}
+                {currentJob.customerEmail && (
+                  <div>
+                    <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Email Address</p>
+                    <p className="text-sm font-mono text-slate-700 dark:text-slate-300">
+                      {currentJob.customerEmail}
+                    </p>
+                  </div>
+                )}
+              </div>
 
-                {/* Timeline & Delivery */}
+              {/* 1-Click Fast Actions: WhatsApp, Call, Email */}
+              <div className="space-y-2 pt-1">
+                <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">1-Click Actions</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-                    <p className="text-[10px] font-mono uppercase text-slate-500">Duration in Garage</p>
-                    <p className="text-xs font-bold text-slate-300 mt-0.5 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-amber-400" />
-                      {getGarageDuration()}
+                  {currentJob.customerMobile && (
+                    <>
+                      <a
+                        href={`https://wa.me/${currentJob.customerMobile.replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
+                      >
+                        <MessageCircle className="w-4 h-4 text-emerald-500" />
+                        <span>WhatsApp</span>
+                      </a>
+
+                      <a
+                        href={`tel:${currentJob.customerMobile}`}
+                        className="py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
+                      >
+                        <Phone className="w-4 h-4 text-emerald-500" />
+                        <span>Call</span>
+                      </a>
+                    </>
+                  )}
+
+                  {currentJob.customerEmail && (
+                    <a
+                      href={`mailto:${currentJob.customerEmail}`}
+                      className="py-2.5 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-700 dark:text-sky-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
+                    >
+                      <Mail className="w-4 h-4 text-sky-500" />
+                      <span>Email</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Handover & Vehicle Management Hub */}
+            <div className="space-y-4">
+              {/* Delivery & Timeline Card */}
+              <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-3">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 dark:via-amber-400/20 to-transparent pointer-events-none" />
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-400/20 shadow-xs">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+                      Timeline & Delivery
+                    </h3>
+                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Service Bay Duration</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05]">
+                    <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Garage Duration</p>
+                    <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-white mt-0.5 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-500" />
+                      <span>{getGarageDuration()}</span>
                     </p>
                   </div>
 
-                  {currentJob.expectedDeliveryDate && (
-                    <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-                      <p className="text-[10px] font-mono uppercase text-slate-500">Expected Delivery</p>
-                      <p className="text-xs font-bold text-slate-300 mt-0.5 flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                        {new Date(currentJob.expectedDeliveryDate).toLocaleDateString('en-IN', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05]">
+                    <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Target Handover</p>
+                    <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-white mt-0.5 truncate">
+                      {currentJob.expectedDeliveryDate
+                        ? new Date(currentJob.expectedDeliveryDate).toLocaleDateString('en-IN', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Not specified'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vehicle Operational Actions */}
+              <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-3">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 dark:via-amber-400/20 to-transparent pointer-events-none" />
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-400/20 shadow-xs">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+                      Vehicle Actions
+                    </h3>
+                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Inspections & Controls</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
+                    className="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 font-mono text-xs font-bold flex items-center justify-between transition active:scale-95 cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-amber-500" />
+                      <span>Vehicle Inspection Photos</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">View / Upload →</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsPinJobModalOpen(true)}
+                    className="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 font-mono text-xs font-bold flex items-center justify-between transition active:scale-95 cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Pin className="w-4 h-4 text-amber-500" />
+                      <span>Pin Priority Configuration</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {isJobPinnedForAll ? 'Garage Pin' : isJobPinnedForMe ? 'Priority Pin' : 'Configure →'}
+                    </span>
+                  </button>
+
+                  {isAdmin && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
+                        className="w-full py-2.5 px-3 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/30 text-amber-800 dark:text-amber-300 font-mono text-xs font-bold flex items-center justify-between transition active:scale-95 cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Edit2 className="w-4 h-4 text-amber-500" />
+                          <span>Edit Vehicle & Job Information</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400">Admin Only →</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
+                        className="w-full py-2.5 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-600 dark:text-rose-300 font-mono text-xs font-bold flex items-center justify-between transition active:scale-95 cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Trash2 className="w-4 h-4 text-rose-500" />
+                          <span>Delete Vehicle Job Card</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-rose-500">Permanent →</span>
+                      </button>
+                    </>
                   )}
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.section>
-
-        {/* ── VERIFIED STATUS BANNER ── */}
-        {currentJob.verifiedAt && (
-          <div className="p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-bold shrink-0">
-              <CheckCircle2 className="w-4.5 h-4.5" />
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-black text-emerald-300 font-mono uppercase">Quality Assurance Passed</p>
-              <p className="text-[11px] text-emerald-200/80">Vehicle is verified and cleared for customer handover.</p>
-            </div>
-          </div>
-        )}
-
-        {/* ── QA SIGN-OFF BUTTON ── */}
-        {isAllCompleted && !currentJob.verifiedAt && isAdmin && (
-          <button
-            type="button"
-            onClick={handleVerify}
-            disabled={isVerifying}
-            className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/25 hover:opacity-95 active:scale-[0.98] transition cursor-pointer flex items-center justify-center gap-2"
-          >
-            {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4.5 h-4.5" />}
-            <span>Sign-off & Verify Vehicle</span>
-          </button>
-        )}
-
-        {errorMessage && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-mono">
-            {errorMessage}
-          </div>
-        )}
-
-        {/* ── LEADERBOARD-STYLE TASK FILTER TABS ── */}
-        <div className="flex gap-1 p-1 bg-white/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-2xs">
-          {(
-            [
-              { key: 'ALL', label: 'All Tasks', count: totalTasks },
-              { key: 'PENDING', label: 'In Progress', count: totalTasks - completedCount },
-              { key: 'COMPLETED', label: 'Completed', count: completedCount },
-            ] as const
-          ).map(({ key, label, count }) => {
-            const isActive = statusFilter === key;
-            return (
-              <button
-                key={key}
-                onClick={() => setStatusFilter(key)}
-                className={`relative flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  isActive ? 'text-slate-950 font-black' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="task-filter-tab"
-                    className="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 rounded-xl shadow-md shadow-amber-500/20"
-                    transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
-                  />
-                )}
-                <span className="relative z-10">{label}</span>
-                <span
-                  className={`relative z-10 text-[9px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
-                    isActive ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-300'
-                  }`}
-                >
-                  {count}
+          </motion.div>
+        ) : (
+          /* ── SUBPAGE 1: SERVICE CHECKLIST (WORKBENCH) ── */
+          <div className="space-y-3.5">
+            {/* QA Verification Banner / Sign-off Button */}
+            {currentJob.verifiedAt ? (
+              <div className="p-4 rounded-3xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center font-bold shrink-0 shadow-sm shadow-emerald-500/30">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-300 font-mono uppercase tracking-tight">
+                      Quality Assurance Passed & Signed Off
+                    </p>
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-200/80 truncate">
+                      Vehicle is verified and cleared for customer handover
+                      {currentJob.verifiedBy?.name ? ` by ${currentJob.verifiedBy.name}` : ''}.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-300 px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-500/30 shrink-0 hidden sm:inline">
+                  Verified
                 </span>
-              </button>
-            );
-          })}
-        </div>
+              </div>
+            ) : isAllCompleted && isAdmin ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-4 rounded-3xl bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-emerald-500/15 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center font-bold shrink-0 shadow-md shadow-emerald-500/25">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-300 uppercase tracking-tight">
+                      All Service Operations Complete
+                    </p>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                      Ready for Quality Assurance inspection and manager sign-off.
+                    </p>
+                  </div>
+                </div>
 
-        {/* ── TASKS CHECKLIST ── */}
-        <div className="space-y-2">
-          {sortedTasks.length === 0 ? (
-            <div className="py-16 text-center rounded-3xl glass-modern-card space-y-1.5">
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-300">No tasks in this view</p>
-              <p className="text-xs font-mono text-slate-500 dark:text-slate-400">All tasks in this category are clear</p>
-            </div>
-          ) : (
-            sortedTasks.map((task: TaskItem) => {
-              const taskId = task.id || task._id!;
-              const isCompleted = task.status === 'COMPLETED';
-              const isPinnedTask = optimisticPins[taskId] !== undefined ? optimisticPins[taskId] : !!task.isPinned;
-              const isUpdating = updatingTaskId === taskId;
-              const completedUser = task.completedBy;
-              const partners = task.partners || [];
-              const isShared = task.isShared && partners.length > 0;
-
-              return (
-                <motion.div
-                  key={taskId}
-                  layout
-                  className={`group relative overflow-hidden rounded-2xl p-3.5 sm:p-4 transition-all duration-200 flex items-center justify-between gap-3 ${
-                    isCompleted
-                      ? 'glass-modern-card opacity-85 border-emerald-500/20'
-                      : 'glass-modern-card shadow-sm hover:border-amber-400/50'
-                  }`}
+                <button
+                  type="button"
+                  onClick={handleVerify}
+                  disabled={isVerifying}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 shrink-0"
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {/* Status Checkbox Button */}
-                    <button
-                      type="button"
-                      disabled={isUpdating}
-                      onClick={() => promptTaskStatusChange(task)}
-                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl border flex items-center justify-center transition active:scale-90 cursor-pointer shrink-0 ${
-                        isCompleted
-                          ? 'bg-emerald-500 border-emerald-500 text-slate-950 shadow-xs'
-                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/20 text-transparent hover:border-amber-400 hover:text-amber-500'
-                      }`}
-                    >
-                      {isUpdating ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
-                      ) : (
-                        <Check className="w-4 h-4 stroke-[3]" />
-                      )}
-                    </button>
+                  {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <span>Sign-off QA Inspection</span>
+                </button>
+              </motion.div>
+            ) : null}
 
-                    {/* Task Title & Worker Avatars / Shared Team */}
-                    <div
-                      className="min-w-0 flex-1 cursor-pointer"
-                      onClick={() => setActivityTask(task)}
-                    >
-                      <h4
-                        className={`text-xs sm:text-sm font-bold truncate ${
-                          isCompleted ? 'line-through text-slate-400 dark:text-slate-400' : 'text-slate-900 dark:text-white'
+            {errorMessage && (
+              <div className="p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs font-mono flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Service Operations Workbench */}
+            <section className="space-y-3 pt-1">
+              {/* Section Header with Tabs */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm sm:text-base font-black uppercase text-slate-900 dark:text-white tracking-tight">
+                    Service Operations
+                  </h2>
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-amber-400/20 text-amber-700 dark:text-amber-300 border border-amber-400/30">
+                    {totalTasks}
+                  </span>
+                </div>
+
+                {/* Filter Tabs */}
+                <MagicTabs
+                  items={[
+                    { key: 'ALL', label: 'All Operations', count: totalTasks },
+                    { key: 'PENDING', label: 'In Progress', count: totalTasks - completedCount },
+                    { key: 'COMPLETED', label: 'Completed', count: completedCount },
+                  ]}
+                  activeKey={statusFilter}
+                  onChange={(key) => setStatusFilter(key as TaskFilterType)}
+                  layoutId="task-filter-tab"
+                  size="sm"
+                />
+              </div>
+
+              {/* Tasks Cards Deck */}
+              <div className="space-y-2">
+                {sortedTasks.length === 0 ? (
+                  <div className="py-14 text-center rounded-3xl glass-modern-card p-6 space-y-1.5">
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-300">No tasks in this view</p>
+                    <p className="text-xs font-mono text-slate-500 dark:text-slate-400">All tasks in this category are clear</p>
+                  </div>
+                ) : (
+                  sortedTasks.map((task: TaskItem) => {
+                    const taskId = task.id || task._id!;
+                    const isCompleted = task.status === 'COMPLETED';
+                    const isPinnedTask = optimisticPins[taskId] !== undefined ? optimisticPins[taskId] : !!task.isPinned;
+                    const isUpdating = updatingTaskId === taskId;
+                    const completedUser = task.completedBy;
+                    const partners = task.partners || [];
+                    const isShared = task.isShared && partners.length > 0;
+
+                    return (
+                      <motion.div
+                        key={taskId}
+                        layout
+                        className={`group relative overflow-hidden rounded-2xl p-3.5 sm:p-4 transition-all duration-200 flex items-center justify-between gap-3 glass-modern-card ${
+                          isCompleted ? 'border-emerald-500/30 opacity-90' : ''
                         }`}
                       >
-                        {task.title}
-                      </h4>
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          {/* Status Checkbox Button */}
+                          <button
+                            type="button"
+                            disabled={isUpdating}
+                            onClick={() => promptTaskStatusChange(task)}
+                            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition active:scale-90 cursor-pointer shrink-0 ${
+                              isCompleted
+                                ? 'bg-emerald-500 border-emerald-500 text-slate-950 shadow-xs'
+                                : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/20 text-transparent hover:border-amber-400 hover:text-amber-500'
+                            }`}
+                          >
+                            {isUpdating ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                            ) : (
+                              <Check className="w-4 h-4 stroke-[3]" />
+                            )}
+                          </button>
 
-                      {/* Completed Details: Avatar + Shared Partner Team */}
-                      {isCompleted && completedUser && (
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          {/* Avatars Stack */}
-                          <div className="flex items-center -space-x-1.5 shrink-0">
-                            {/* Primary Worker Avatar */}
-                            <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-800 border-2 border-white dark:border-[#080810] flex items-center justify-center text-[9px] font-bold text-emerald-300 shadow-xs">
-                              {completedUser.profileImageUrl ? (
-                                <img src={completedUser.profileImageUrl} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                completedUser.name.charAt(0).toUpperCase()
-                              )}
-                            </div>
-                            {/* Shared Partner Avatars */}
-                            {partners.map((p: any, pIdx: number) => (
-                              <div
-                                key={p.id || p._id || pIdx}
-                                className="w-5 h-5 rounded-full overflow-hidden bg-amber-900 border-2 border-white dark:border-[#080810] flex items-center justify-center text-[9px] font-bold text-amber-300 shadow-xs"
-                                title={p.name}
-                              >
-                                {p.profileImageUrl ? (
-                                  <img src={p.profileImageUrl} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  (p.name || 'W').charAt(0).toUpperCase()
+                          {/* Task Title & Worker Avatars / Shared Team */}
+                          <div
+                            className="min-w-0 flex-1 cursor-pointer"
+                            onClick={() => setActivityTask(task)}
+                          >
+                            <h4
+                              className={`text-xs sm:text-sm font-bold truncate ${
+                                isCompleted ? 'line-through text-slate-400 dark:text-slate-400' : 'text-slate-900 dark:text-white'
+                              }`}
+                            >
+                              {task.title}
+                            </h4>
+
+                            {/* Completed Details: Avatar + Shared Partner Team */}
+                            {isCompleted && completedUser && (
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {/* Avatars Stack */}
+                                <div className="flex items-center -space-x-1.5 shrink-0">
+                                  {/* Primary Worker Avatar */}
+                                  <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-800 border-2 border-white dark:border-[#080810] flex items-center justify-center text-[9px] font-bold text-emerald-300 shadow-xs">
+                                    {completedUser.profileImageUrl ? (
+                                      <img src={completedUser.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      completedUser.name.charAt(0).toUpperCase()
+                                    )}
+                                  </div>
+                                  {/* Shared Partner Avatars */}
+                                  {partners.map((p: any, pIdx: number) => (
+                                    <div
+                                      key={p.id || p._id || pIdx}
+                                      className="w-5 h-5 rounded-full overflow-hidden bg-amber-900 border-2 border-white dark:border-[#080810] flex items-center justify-center text-[9px] font-bold text-amber-300 shadow-xs"
+                                      title={p.name}
+                                    >
+                                      {p.profileImageUrl ? (
+                                        <img src={p.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                                      ) : (
+                                        (p.name || 'W').charAt(0).toUpperCase()
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Technician Names & Split Share */}
+                                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold truncate">
+                                  {completedUser.name}
+                                  {isShared ? ` & ${partners.map((p: any) => p.name).join(', ')}` : ''}
+                                </span>
+
+                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-amber-600 dark:text-amber-300">
+                                  {isShared ? `${(1 / (1 + partners.length)).toFixed(2)} pts each` : '1.0 pt'}
+                                </span>
+
+                                {task.completedAt && (
+                                  <span className="text-[9px] font-mono text-slate-400 truncate">
+                                    • {formatTaskDateTime(task.completedAt)}
+                                  </span>
                                 )}
                               </div>
-                            ))}
+                            )}
                           </div>
-
-                          {/* Technician Names & Split Share */}
-                          <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold truncate">
-                            {completedUser.name}
-                            {isShared ? ` & ${partners.map((p: any) => p.name).join(', ')}` : ''}
-                          </span>
-
-                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-amber-600 dark:text-amber-300">
-                            {isShared ? `${(1 / (1 + partners.length)).toFixed(2)} pts each` : '1.0 pt'}
-                          </span>
-
-                          {task.completedAt && (
-                            <span className="text-[9px] font-mono text-slate-400 truncate">
-                              • {formatTaskDateTime(task.completedAt)}
-                            </span>
-                          )}
                         </div>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Right Task Actions */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {/* View Logs / Audit Icon */}
-                    <button
-                      type="button"
-                      onClick={() => setActivityTask(task)}
-                      className="p-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition active:scale-90 cursor-pointer"
-                      title="View Task Audit Logs"
-                    >
-                      <History className="w-3.5 h-3.5" />
-                    </button>
+                        {/* Right Task Actions */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {/* View Logs / Audit Icon */}
+                          <button
+                            type="button"
+                            onClick={() => setActivityTask(task)}
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition active:scale-90 cursor-pointer"
+                            title="View Task Audit Logs"
+                          >
+                            <History className="w-3.5 h-3.5" />
+                          </button>
 
-                    {/* Pin Task */}
-                    <button
-                      type="button"
-                      onClick={() => handleToggleTaskPin(taskId, isPinnedTask)}
-                      className={`p-1.5 rounded-lg border transition active:scale-90 cursor-pointer ${
-                        isPinnedTask
-                          ? 'bg-amber-400/20 border-amber-400/40 text-amber-600 dark:text-amber-300'
-                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-white'
-                      }`}
-                      title="Pin task to top"
-                    >
-                      <Pin className={`w-3 h-3 ${isPinnedTask ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-                </motion.div>
-              );
-            })
-          )}
-        </div>
+                          {/* Pin Task */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleTaskPin(taskId, isPinnedTask)}
+                            className={`p-1.5 rounded-lg border transition active:scale-90 cursor-pointer ${
+                              isPinnedTask
+                                ? 'bg-amber-400/20 border-amber-400/40 text-amber-600 dark:text-amber-300'
+                                : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-white'
+                            }`}
+                            title="Pin task to top"
+                          >
+                            <Pin className={`w-3 h-3 ${isPinnedTask ? 'fill-current' : ''}`} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+          </div>
+        )}
       </main>
 
       {/* ── TASK ACTIVITY LOGS MODAL (Clean, Modern & Minimal) ── */}

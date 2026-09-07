@@ -60,9 +60,9 @@ export const TopSearchBar: React.FC<TopSearchBarProps> = ({
     <div ref={containerRef} className={`relative w-full z-40 ${className}`}>
       {/* ── Search Input Box ── */}
       <div
-        className={`relative flex items-center gap-2.5 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border transition-all duration-300 shadow-sm ${
+        className={`relative flex items-center gap-2.5 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl glass-modern-card border transition-all duration-300 shadow-sm ${
           isFocused
-            ? 'border-amber-500 dark:border-amber-400/80 ring-2 ring-amber-400/20 bg-white dark:bg-[#181a2b] shadow-amber-500/10'
+            ? 'border-amber-500 dark:border-amber-400/80 ring-2 ring-amber-400/20 shadow-amber-500/10'
             : 'border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/20'
         }`}
       >
@@ -94,7 +94,7 @@ export const TopSearchBar: React.FC<TopSearchBarProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl bg-white/98 dark:bg-[#12131F]/98 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-2xl shadow-black/20 dark:shadow-black/80 overflow-hidden divide-y divide-slate-100 dark:divide-white/[0.06] max-h-[65vh] overflow-y-auto"
+            className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl glass-modern-card shadow-2xl shadow-black/20 dark:shadow-black/80 overflow-hidden divide-y divide-slate-100 dark:divide-white/[0.06] max-h-[65vh] overflow-y-auto"
           >
             <div className="px-3.5 py-2 bg-slate-50 dark:bg-white/[0.02] text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
               <span>Matching Vehicles ({matchingJobs.length})</span>

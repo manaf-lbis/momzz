@@ -32,7 +32,7 @@ export const Navbar: React.FC<{ glass?: boolean }> = ({ glass = false }) => {
             : 'bg-white/85 dark:bg-[#080811]/85 border-slate-200/80 dark:border-white/10 shadow-2xs'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="app-container">
           <div className="flex items-center justify-between h-13 sm:h-14">
             {/* Logo & Brand */}
             <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group">

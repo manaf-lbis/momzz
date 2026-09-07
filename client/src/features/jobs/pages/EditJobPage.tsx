@@ -17,6 +17,7 @@ import {
   Wrench,
   X,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
@@ -38,7 +39,20 @@ import { ModernDateTimePicker } from '../../../shared/components/common/ModernDa
 
 type SelectedLine = {
   id?: string;
-  item: CatalogItem;
+  item:
+    | CatalogItem
+    | {
+        id: string;
+        _id?: string;
+        title: string;
+        price: number;
+        itemType: 'PRODUCT' | 'SERVICE';
+        isCustomOnly?: boolean;
+        thumbnailUrl?: string;
+        stockQuantity?: number;
+        trackStock?: boolean;
+        category?: { id: string; _id: string; name: string; type: 'BOTH' };
+      };
   quantityUsed: number;
   discountAmount: number;
 };
@@ -51,7 +65,7 @@ const money = (value: number) =>
   }).format(value);
 
 const inputStyle =
-  'w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 sm:px-3.5 sm:py-3 text-xs sm:text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 hover:border-zinc-300 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/15 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:border-zinc-600 dark:focus:border-amber-400';
+  'w-full rounded-xl glass-modern-input px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-900 dark:text-white outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20';
 
 export const EditJobPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -273,7 +287,7 @@ export const EditJobPage: React.FC = () => {
       const newItemsToAdd = selected.filter((s) => !s.id);
       for (const newLine of newItemsToAdd) {
         try {
-          if (newLine.item.id && newLine.item.price !== undefined) {
+          if (newLine.item.id && !newLine.item.id.startsWith('custom-')) {
             await addInventoryTask({
               jobCardId,
               itemId: newLine.item.id,
@@ -284,6 +298,10 @@ export const EditJobPage: React.FC = () => {
             await addTask({
               jobCardId,
               title: newLine.item.title,
+              itemType: newLine.item.itemType || 'SERVICE',
+              unitPrice: newLine.item.price || 0,
+              quantityUsed: newLine.quantityUsed,
+              discountAmount: newLine.discountAmount,
             }).unwrap();
           }
         } catch (e) {
@@ -297,6 +315,31 @@ export const EditJobPage: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleAddJustForThisJob = (type: 'PRODUCT' | 'SERVICE') => {
+    const title = query.trim();
+    if (!title) return;
+    const newItem: SelectedLine['item'] = {
+      id: `custom-${Date.now()}`,
+      _id: `custom-${Date.now()}`,
+      title,
+      price: 0,
+      itemType: type,
+      thumbnailUrl: '',
+      stockQuantity: 0,
+      trackStock: false,
+      category: { id: '', _id: '', name: 'One-Time Task', type: 'BOTH' },
+    };
+    setSelected((prev) => [
+      ...prev,
+      {
+        item: newItem,
+        quantityUsed: 1,
+        discountAmount: 0,
+      },
+    ]);
+    setQuery('');
   };
 
   const noExactMatch =
@@ -339,7 +382,7 @@ export const EditJobPage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="w-full max-w-[1140px] mx-auto px-3 py-4 sm:px-6 sm:py-8 overflow-x-hidden">
+      <main className="app-container relative z-10 flex-1 py-4 sm:py-8 pb-36 sm:pb-40 md:pb-16 overflow-x-hidden">
         {/* Page Top Controls */}
         <header className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
           <button
@@ -572,10 +615,11 @@ export const EditJobPage: React.FC = () => {
 
               {/* Search Bar */}
               <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
+                  type="text"
                   autoFocus
-                  className={`${inputStyle} pl-9 sm:pl-10 pr-8 sm:pr-9`}
+                  className="w-full pl-10 pr-9 py-2.5 rounded-xl glass-modern-input text-xs sm:text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none transition"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search catalog by name or code..."
@@ -583,15 +627,15 @@ export const EditJobPage: React.FC = () => {
                 {query && (
                   <button
                     onClick={() => setQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-0.5"
                   >
-                    <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
 
               {/* Filter Tabs */}
-              <div className="flex gap-1.5 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+              <div className="flex gap-1 p-1 bg-white/60 dark:bg-white/5 rounded-xl border border-slate-200/80 dark:border-white/10">
                 {(
                   [
                     { id: 'ALL', label: 'All Items' },
@@ -602,10 +646,10 @@ export const EditJobPage: React.FC = () => {
                   <button
                     key={t.id}
                     onClick={() => setItemFilter(t.id)}
-                    className={`flex-1 rounded-lg py-1.5 text-[11px] sm:text-xs font-bold transition ${
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                       itemFilter === t.id
-                        ? 'bg-white text-slate-900 shadow-xs dark:bg-amber-400 dark:text-slate-950'
-                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                        ? 'bg-amber-400 text-slate-950 font-black shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                     }`}
                   >
                     {t.label}
@@ -614,20 +658,19 @@ export const EditJobPage: React.FC = () => {
               </div>
 
               {/* Results List */}
-              <div className="space-y-2 max-h-[320px] sm:max-h-[440px] overflow-y-auto pr-1 -mr-1">
+              <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
                 {isFetching && !results.length && (
                   <div className="space-y-2">
-                    {[...Array(4)].map((_, i) => (
+                    {[...Array(3)].map((_, i) => (
                       <div
                         key={i}
-                        className="flex w-full items-center gap-3 rounded-xl sm:rounded-2xl border border-slate-200/80 p-2.5 sm:p-3 dark:border-slate-800"
+                        className="flex w-full items-center gap-3 rounded-2xl glass-modern-card p-3 animate-pulse"
                       >
-                        <div className="h-10 w-12 sm:h-12 sm:w-14 rounded-lg sm:rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
                         <div className="flex-1 space-y-1.5">
-                          <div className="h-3.5 w-3/4 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
-                          <div className="h-3 w-1/2 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                          <div className="h-3 w-3/4 rounded bg-slate-200 dark:bg-white/10" />
+                          <div className="h-2.5 w-1/2 rounded bg-slate-200 dark:bg-white/5" />
                         </div>
-                        <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg sm:rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                        <div className="h-7 w-7 rounded-xl bg-slate-200 dark:bg-white/10" />
                       </div>
                     ))}
                   </div>
@@ -636,201 +679,240 @@ export const EditJobPage: React.FC = () => {
                 {results.map((item) => (
                   <button
                     key={item.id}
+                    type="button"
                     onClick={() => openAddItemModal(item)}
-                    className="flex w-full items-center gap-2.5 sm:gap-3 rounded-xl sm:rounded-2xl border border-slate-200/80 p-2.5 sm:p-3 text-left transition hover:border-amber-400 hover:bg-amber-50/30 dark:border-slate-800 dark:hover:border-amber-400/50 dark:hover:bg-amber-400/5"
+                    className="w-full p-3 rounded-2xl glass-modern-card text-left transition flex items-center justify-between gap-3 cursor-pointer hover:border-amber-400/50 active:scale-[0.99]"
                   >
-                    {item.thumbnailUrl ? (
-                      <img src={item.thumbnailUrl} alt="" className="h-10 w-12 sm:h-12 sm:w-14 rounded-lg sm:rounded-xl object-cover shrink-0" />
-                    ) : (
-                      <span className="flex h-10 w-12 sm:h-12 sm:w-14 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
-                        <Wrench className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </span>
-                    )}
-
-                    <span className="min-w-0 flex-1">
-                      <b className="block truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                        {item.title}
-                      </b>
-                      <small className="mt-0.5 block text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
-                        {item.itemType === 'SERVICE' ? 'Service Item' : `${item.stockQuantity} in stock`} ·{' '}
-                        {money(item.price)}
-                      </small>
-                    </span>
-
-                    <span className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-emerald-500 text-white shadow-sm">
-                      <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">{item.title}</p>
+                      <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                        {item.itemType === 'SERVICE' ? 'Service Item' : `${item.stockQuantity} in stock`} · {money(item.price)}
+                      </p>
+                    </div>
+                    <span className="w-7 h-7 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-sm font-black">
+                      <Plus className="w-3.5 h-3.5 stroke-[3]" />
                     </span>
                   </button>
                 ))}
 
                 {/* Custom Item Quick Add & Duplicate Guard */}
                 {noExactMatch && (
-                  <div className="rounded-xl sm:rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 p-3 sm:p-4 dark:border-amber-500/30 dark:bg-amber-400/5">
-                    {nearDuplicates.length > 0 ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-300">
-                          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
-                          <b className="text-xs sm:text-sm font-bold">
-                            Similar item found: “{nearDuplicates[0].item.title}”
-                          </b>
+                  <div className="mt-3 rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 border-dashed border-amber-400/50 space-y-3.5">
+                    {nearDuplicates.length > 0 && (
+                      <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+                          <span className="text-xs font-bold">Similar catalog item exists: “{nearDuplicates[0].item.title}”</span>
                         </div>
-                        <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-400">
-                          An item with a very similar name already exists. Avoid creating duplicate items!
-                        </p>
-                        <div className="pt-1 flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => openAddItemModal(nearDuplicates[0].item)}
-                            className="inline-flex items-center gap-1.5 rounded-lg sm:rounded-xl bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition active:scale-95"
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                            Select Existing “{nearDuplicates[0].item.title}”
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isQuickAdding}
-                            onClick={async () => {
-                              try {
-                                const response = await quickAdd({ title: query.trim() }).unwrap();
-                                openAddItemModal(response.data);
-                              } catch (err: any) {
-                                setError(err?.data?.message || 'Could not add custom service.');
-                              }
+                            onClick={() => {
+                              openAddItemModal(nearDuplicates[0].item);
+                              setQuery('');
                             }}
-                            className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline"
+                            className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
                           >
-                            {isQuickAdding ? 'Adding...' : 'Add as new item anyway'}
+                            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                            Select Existing “{nearDuplicates[0].item.title}”
                           </button>
                         </div>
                       </div>
-                    ) : (
-                      <>
-                        <b className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                          Can’t find “{query.trim()}”?
-                        </b>
-                        <p className="mt-0.5 text-[11px] sm:text-xs text-slate-600 dark:text-slate-400">
-                          Add a custom service on the fly; details can be refined later.
-                        </p>
+                    )}
+
+                    <div className="pb-1 border-b border-slate-200/80 dark:border-white/10">
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                        Item not found in catalog: <span className="text-amber-500 font-mono">“{query.trim()}”</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Choose how you would like to add this item:
+                      </p>
+                    </div>
+
+                    {/* Option 1: Master Catalog (Permanent) */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
+                        <PackagePlus className="w-3 h-3 text-amber-500" />
+                        Option 1 · Save to Catalog (Permanent)
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
                         <button
+                          type="button"
                           disabled={isQuickAdding}
                           onClick={async () => {
                             try {
-                              const response = await quickAdd({ title: query.trim() }).unwrap();
+                              const response = await quickAdd({ title: query.trim(), itemType: 'PRODUCT' }).unwrap();
                               openAddItemModal(response.data);
+                              setQuery('');
                             } catch (err: any) {
-                              setError(err?.data?.message || 'Could not add custom service.');
+                              setError(err?.data?.message || 'Could not add product.');
                             }
                           }}
-                          className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg sm:rounded-xl bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-50"
+                          className="p-2.5 rounded-xl glass-gold-btn text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
                         >
-                          <PackagePlus className="h-3.5 w-3.5" />
-                          {isQuickAdding ? 'Adding...' : 'Add Custom Service'}
+                          <PackagePlus className="w-3.5 h-3.5" />
+                          <span>Save as Product</span>
                         </button>
-                      </>
-                    )}
+                        <button
+                          type="button"
+                          disabled={isQuickAdding}
+                          onClick={async () => {
+                            try {
+                              const response = await quickAdd({ title: query.trim(), itemType: 'SERVICE' }).unwrap();
+                              openAddItemModal(response.data);
+                              setQuery('');
+                            } catch (err: any) {
+                              setError(err?.data?.message || 'Could not add service.');
+                            }
+                          }}
+                          className="p-2.5 rounded-xl glass-ghost-btn text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+                        >
+                          <Wrench className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Save as Service</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Option 2: Just for this job (One-time) */}
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-purple-500" />
+                        Option 2 · Just for This Job (One-Time)
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleAddJustForThisJob('PRODUCT')}
+                          className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 border border-purple-200 dark:border-purple-500/30 text-purple-800 dark:text-purple-300 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>One-Time Product</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAddJustForThisJob('SERVICE')}
+                          className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 border border-purple-200 dark:border-purple-500/30 text-purple-800 dark:text-purple-300 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>One-Time Service</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Selected Checklist Summary Right Column */}
-            <aside className="w-full lg:col-span-5 flex flex-col rounded-2xl sm:rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
-              <div className="flex items-center justify-between border-b border-slate-100 p-4 sm:p-5 dark:border-slate-800">
-                <div>
-                  <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                    Job Card Checklist
-                  </h2>
-                  <p className="mt-0.5 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
-                    Review assigned tasks and pricing.
-                  </p>
-                </div>
-                <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] sm:text-xs font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                  {selected.length} items
-                </span>
-              </div>
-
-              {/* Selected Items List */}
-              <div className="flex-1 space-y-2 overflow-y-auto p-3 sm:p-4 max-h-[280px] sm:max-h-[360px]">
-                {selected.length ? (
-                  selected.map((line, index) => (
-                    <article
-                      key={`${line.item.id}-${index}`}
-                      className="rounded-xl sm:rounded-2xl border border-slate-200/80 bg-slate-50/50 p-2.5 sm:p-3 dark:border-slate-800 dark:bg-slate-800/50"
-                    >
-                      <div className="flex gap-2">
-                        <div className="min-w-0 flex-1">
-                          <b className="block truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                            {line.item.title}
-                          </b>
-                          <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
-                            {money(line.item.price || 0)} each
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => setSelected((lines) => lines.filter((_, i) => i !== index))}
-                          className="text-red-500 hover:text-red-600 dark:text-red-400 p-1"
-                        >
-                          <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        </button>
-                      </div>
-
-                      <div className="mt-2.5 grid grid-cols-2 gap-2">
-                        <div className="flex items-center justify-between rounded-lg sm:rounded-xl bg-white p-1 border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
-                          <button
-                            onClick={() =>
-                              updateSelectedLine(index, {
-                                quantityUsed: Math.max(1, line.quantityUsed - 1),
-                              })
-                            }
-                            className="p-1 text-slate-600 dark:text-slate-300"
-                          >
-                            <Minus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                          </button>
-                          <b className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                            {line.quantityUsed}
-                          </b>
-                          <button
-                            onClick={() =>
-                              updateSelectedLine(index, {
-                                quantityUsed: line.quantityUsed + 1,
-                              })
-                            }
-                            className="p-1 text-slate-600 dark:text-slate-300"
-                          >
-                            <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                          </button>
-                        </div>
-
-                        <div className="relative">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">
-                            ₹
-                          </span>
-                          <input
-                            type="number"
-                            min="0"
-                            max={(line.item.price || 0) * line.quantityUsed}
-                            value={line.discountAmount || ''}
-                            onChange={(e) =>
-                              updateSelectedLine(index, {
-                                discountAmount: Math.max(0, Number(e.target.value || 0)),
-                              })
-                            }
-                            placeholder="Discount"
-                            className="w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white py-1.5 pl-5 pr-2 text-xs font-bold text-slate-900 outline-none focus:border-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                          />
-                        </div>
-                      </div>
-
-                      <p className="mt-2 text-right text-xs font-black text-emerald-600 dark:text-emerald-400">
-                        {money(Math.max(0, (line.item.price || 0) * line.quantityUsed - line.discountAmount))}
-                      </p>
-                    </article>
-                  ))
-                ) : (
-                  <div className="flex h-full min-h-36 items-center justify-center text-center text-xs text-slate-400 dark:text-slate-500">
-                    Selected services and products will appear here.
+            <aside className="w-full lg:col-span-5 flex flex-col rounded-3xl glass-modern-card p-4 sm:p-5 shadow-xl space-y-3.5 justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
+                  <div>
+                    <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                      Job Card Checklist
+                    </h2>
+                    <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      Review assigned tasks and pricing.
+                    </p>
                   </div>
-                )}
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300">
+                    {selected.length} items
+                  </span>
+                </div>
+
+                {/* Selected Items List */}
+                <div className="space-y-2 max-h-[50vh] sm:max-h-[55vh] overflow-y-auto overscroll-contain pr-1 -mr-1">
+                  {selected.length ? (
+                    selected.map((line, index) => (
+                      <article
+                        key={`${line.item.id}-${index}`}
+                        className="p-3 rounded-2xl glass-modern-card space-y-2.5"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <b className="truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                                {line.item.title}
+                              </b>
+                              {line.item.id?.startsWith('custom-') && (
+                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                                  Just this job
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 block">
+                              {line.item.itemType === 'SERVICE' ? 'Service' : 'Product'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => setSelected((lines) => lines.filter((_, i) => i !== index))}
+                            className="p-1 text-slate-400 hover:text-rose-500 transition cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Quantity Counter & Rate Input */}
+                        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60 dark:border-white/[0.04]">
+                          <div className="flex items-center gap-2">
+                            {/* Quantity Controls */}
+                            <div className="flex items-center gap-1 bg-white/60 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-lg p-0.5">
+                              <button
+                                onClick={() =>
+                                  updateSelectedLine(index, {
+                                    quantityUsed: Math.max(1, line.quantityUsed - 1),
+                                  })
+                                }
+                                className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <b className="w-6 text-center font-mono font-bold text-slate-900 dark:text-white text-[11px]">
+                                {line.quantityUsed}
+                              </b>
+                              <button
+                                onClick={() =>
+                                  updateSelectedLine(index, {
+                                    quantityUsed: line.quantityUsed + 1,
+                                  })
+                                }
+                                className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+
+                            {/* Rate / Price Input */}
+                            <div className="flex items-center gap-1 bg-white/60 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-lg px-2 py-0.5">
+                              <span className="text-[10px] font-mono text-slate-400">₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={line.item.price || ''}
+                                placeholder="0"
+                                onChange={(e) => {
+                                  const val = Math.max(0, Number(e.target.value) || 0);
+                                  updateSelectedLine(index, {
+                                    item: { ...line.item, price: val } as any,
+                                  });
+                                }}
+                                className="w-14 bg-transparent text-right font-mono font-bold text-xs text-slate-900 dark:text-white outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <p className="text-right font-mono font-bold text-amber-600 dark:text-amber-300 text-xs">
+                            {money(Math.max(0, (line.item.price || 0) * line.quantityUsed - (line.discountAmount || 0)))}
+                          </p>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <div className="flex h-full min-h-36 items-center justify-center text-center text-xs text-slate-400 dark:text-slate-500">
+                      Selected services and products will appear here.
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Price Calculation & Save Button */}

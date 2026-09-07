@@ -15,6 +15,7 @@ const AdminApproval = lazy(() => import('../features/users/pages/AdminApproval')
 const HomePage = lazy(() => import('../features/home/pages/HomePage').then((m) => ({ default: m.HomePage })));
 const ProfilePage = lazy(() => import('../features/users/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const UserManagementPage = lazy(() => import('../features/users/pages/UserManagementPage').then((m) => ({ default: m.UserManagementPage })));
+const StaffDetailPage = lazy(() => import('../features/users/pages/StaffDetailPage').then((m) => ({ default: m.StaffDetailPage })));
 const AnalyticsPage = lazy(() => import('../features/analytics/pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
 const LeaderboardPage = lazy(() => import('../features/analytics/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const WorkLogsPage = lazy(() => import('../features/jobs/pages/WorkLogsPage').then((m) => ({ default: m.WorkLogsPage })));
@@ -45,7 +46,10 @@ export const AppRoutes: React.FC = () => {
               <Route path="/admin/approvals" element={<AdminApproval />} />
               <Route path="/approvals" element={<AdminApproval />} />
               <Route path="/admin/users" element={<UserManagementPage />} />
+              <Route path="/admin/users/:id" element={<StaffDetailPage />} />
               <Route path="/users" element={<UserManagementPage />} />
+              <Route path="/users/:id" element={<StaffDetailPage />} />
+              <Route path="/staff/:id" element={<StaffDetailPage />} />
               <Route path="/jobs/create" element={<CreateJobPage />} />
               <Route path="/jobs/edit/:id" element={<EditJobPage />} />
               <Route path="/inventory/new" element={<AddInventoryItemPage />} />

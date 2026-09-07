@@ -34,7 +34,18 @@ import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 
 type SelectedLine = {
-  item: CatalogItem;
+  item:
+    | CatalogItem
+    | {
+        id: string;
+        title: string;
+        price: number;
+        itemType: 'PRODUCT' | 'SERVICE';
+        isCustomOnly?: boolean;
+        thumbnailUrl?: string;
+        stockQuantity?: number;
+        trackStock?: boolean;
+      };
   quantityUsed: number;
   discountAmount: number;
 };
@@ -47,7 +58,7 @@ const money = (value: number) =>
   }).format(value);
 
 const inputStyle =
-  'w-full rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm text-white outline-none transition placeholder:text-slate-500 hover:border-white/20 focus:border-amber-400/70 focus:ring-2 focus:ring-amber-400/20';
+  'w-full rounded-xl glass-modern-input px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-900 dark:text-white outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20';
 
 export const CreateJobPage: React.FC = () => {
   const navigate = useNavigate();
@@ -124,6 +135,12 @@ export const CreateJobPage: React.FC = () => {
     );
   }, [query, data]);
 
+  const noExactMatch =
+    Boolean(query.trim()) &&
+    !results.some(
+      (item) => item.title.trim().toLowerCase() === query.trim().toLowerCase()
+    );
+
   const formatRegistration = (value: string) =>
     value
       .toUpperCase()
@@ -141,7 +158,7 @@ export const CreateJobPage: React.FC = () => {
     setStep(2);
   };
 
-  const openAddItemModal = (item: CatalogItem) => {
+  const openAddItemModal = (item: CatalogItem | SelectedLine['item']) => {
     const existingIndex = selected.findIndex((s) => s.item.id === item.id);
     if (existingIndex > -1) {
       setSelected((prev) =>
@@ -150,6 +167,23 @@ export const CreateJobPage: React.FC = () => {
     } else {
       setSelected((prev) => [...prev, { item, quantityUsed: 1, discountAmount: 0 }]);
     }
+  };
+
+  const handleAddJustForThisJob = (type: 'PRODUCT' | 'SERVICE') => {
+    const title = query.trim();
+    if (!title) return;
+    const newItem: SelectedLine['item'] = {
+      id: `custom-${Date.now()}`,
+      title,
+      price: 0,
+      itemType: type,
+      isCustomOnly: true,
+      thumbnailUrl: '',
+      stockQuantity: 0,
+      trackStock: false,
+    };
+    setSelected((prev) => [...prev, { item: newItem, quantityUsed: 1, discountAmount: 0 }]);
+    setQuery('');
   };
 
   const updateSelectedLine = (index: number, changes: Partial<SelectedLine>) => {
@@ -173,11 +207,22 @@ export const CreateJobPage: React.FC = () => {
         customerName: customerName.trim() || undefined,
         customerMobile: customerMobile.trim() || undefined,
         customerEmail: customerEmail.trim() || undefined,
-        tasks: selected.map((line) => ({
-          itemId: line.item.id,
-          quantityUsed: line.quantityUsed,
-          discountAmount: line.discountAmount,
-        })),
+        tasks: selected.map((line) => {
+          if ('isCustomOnly' in line.item && line.item.isCustomOnly) {
+            return {
+              customTitle: line.item.title,
+              itemType: line.item.itemType,
+              unitPrice: line.item.price || 0,
+              quantityUsed: line.quantityUsed,
+              discountAmount: line.discountAmount,
+            };
+          }
+          return {
+            itemId: line.item.id,
+            quantityUsed: line.quantityUsed,
+            discountAmount: line.discountAmount,
+          };
+        }),
       }).unwrap();
 
       navigate(`/jobs/${response.data.id || response.data._id}`);
@@ -193,7 +238,7 @@ export const CreateJobPage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-4 pb-36 sm:pb-40 space-y-4">
+      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* Header & Step Indicator */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -396,14 +441,23 @@ export const CreateJobPage: React.FC = () => {
 
               {/* Search Bar */}
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Search catalog items..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-xl glass-modern-input text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 outline-none"
+                  className="w-full pl-10 pr-9 py-2.5 rounded-xl glass-modern-input text-xs sm:text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none transition"
                 />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => setQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               {/* Filter Tabs */}
@@ -430,25 +484,148 @@ export const CreateJobPage: React.FC = () => {
               </div>
 
               {/* Results List */}
-              <div className="space-y-1.5 max-h-[45vh] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
+                {isFetching && !results.length && (
+                  <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex w-full items-center gap-3 rounded-2xl glass-modern-card p-3 animate-pulse"
+                      >
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-3 w-3/4 rounded bg-slate-200 dark:bg-white/10" />
+                          <div className="h-2.5 w-1/2 rounded bg-slate-200 dark:bg-white/5" />
+                        </div>
+                        <div className="h-7 w-7 rounded-xl bg-slate-200 dark:bg-white/10" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {results.map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => openAddItemModal(item)}
-                    className="w-full p-2.5 rounded-xl bg-white/40 hover:bg-white/70 dark:bg-white/[0.02] dark:hover:bg-white/5 border border-slate-200/80 dark:border-white/[0.06] text-left transition flex items-center justify-between gap-2.5 cursor-pointer"
+                    className="w-full p-3 rounded-2xl glass-modern-card text-left transition flex items-center justify-between gap-3 cursor-pointer hover:border-amber-400/50 active:scale-[0.99]"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{item.title}</p>
-                      <p className="text-[10px] font-mono text-slate-400 mt-0.5">
-                        {item.itemType === 'SERVICE' ? 'Service' : 'Product'} · {money(item.price)}
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">{item.title}</p>
+                      <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                        {item.itemType === 'SERVICE' ? 'Service' : `${item.stockQuantity} in stock`} · {money(item.price)}
                       </p>
                     </div>
-                    <span className="w-6 h-6 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-2xs">
+                    <span className="w-7 h-7 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-sm font-black">
                       <Plus className="w-3.5 h-3.5 stroke-[3]" />
                     </span>
                   </button>
                 ))}
+
+                {/* Custom Item Quick Add & Duplicate Guard */}
+                {noExactMatch && (
+                  <div className="mt-3 rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 border-dashed border-amber-400/50 space-y-3.5">
+                    {nearDuplicates.length > 0 && (
+                      <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+                          <span className="text-xs font-bold">Similar catalog item exists: “{nearDuplicates[0].item.title}”</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              openAddItemModal(nearDuplicates[0].item);
+                              setQuery('');
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
+                          >
+                            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                            Select Existing “{nearDuplicates[0].item.title}”
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pb-1 border-b border-slate-200/80 dark:border-white/10">
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                        Item not found in catalog: <span className="text-amber-500 font-mono">“{query.trim()}”</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Choose how you would like to add this item:
+                      </p>
+                    </div>
+
+                    {/* Option 1: Master Catalog (Permanent) */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
+                        <PackagePlus className="w-3 h-3 text-amber-500" />
+                        Option 1 · Save to Catalog (Permanent)
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          disabled={isQuickAdding}
+                          onClick={async () => {
+                            try {
+                              const response = await quickAdd({ title: query.trim(), itemType: 'PRODUCT' }).unwrap();
+                              openAddItemModal(response.data);
+                              setQuery('');
+                            } catch (err: any) {
+                              setError(err?.data?.message || 'Could not add product.');
+                            }
+                          }}
+                          className="p-2.5 rounded-xl glass-gold-btn text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+                        >
+                          <PackagePlus className="w-3.5 h-3.5" />
+                          <span>Save as Product</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isQuickAdding}
+                          onClick={async () => {
+                            try {
+                              const response = await quickAdd({ title: query.trim(), itemType: 'SERVICE' }).unwrap();
+                              openAddItemModal(response.data);
+                              setQuery('');
+                            } catch (err: any) {
+                              setError(err?.data?.message || 'Could not add service.');
+                            }
+                          }}
+                          className="p-2.5 rounded-xl glass-ghost-btn text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+                        >
+                          <Wrench className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Save as Service</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Option 2: Just for this job (One-time) */}
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-purple-500" />
+                        Option 2 · Just for This Job (One-Time)
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleAddJustForThisJob('PRODUCT')}
+                          className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 border border-purple-200 dark:border-purple-500/30 text-purple-800 dark:text-purple-300 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>One-Time Product</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAddJustForThisJob('SERVICE')}
+                          className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 border border-purple-200 dark:border-purple-500/30 text-purple-800 dark:text-purple-300 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>One-Time Service</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -475,12 +652,21 @@ export const CreateJobPage: React.FC = () => {
                     selected.map((line, idx) => (
                       <div
                         key={`${line.item.id}-${idx}`}
-                        className="p-3 rounded-2xl bg-white/60 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.08] space-y-2"
+                        className="p-3 rounded-2xl glass-modern-card space-y-2.5"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{line.item.title}</p>
-                            <p className="text-[10px] font-mono text-slate-400">{money(line.item.price)} each</p>
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">{line.item.title}</p>
+                              {'isCustomOnly' in line.item && line.item.isCustomOnly && (
+                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                                  Just this job
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                              {line.item.itemType === 'SERVICE' ? 'Service' : 'Product'}
+                            </p>
                           </div>
                           <button
                             type="button"
@@ -491,28 +677,49 @@ export const CreateJobPage: React.FC = () => {
                           </button>
                         </div>
 
-                        {/* Quantity Counter */}
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg p-0.5">
-                            <button
-                              type="button"
-                              onClick={() => updateSelectedLine(idx, { quantityUsed: Math.max(1, line.quantityUsed - 1) })}
-                              className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-                            <span className="w-6 text-center font-mono font-bold text-slate-900 dark:text-white text-[11px]">{line.quantityUsed}</span>
-                            <button
-                              type="button"
-                              onClick={() => updateSelectedLine(idx, { quantityUsed: line.quantityUsed + 1 })}
-                              className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
+                        {/* Quantity Counter & Rate Input */}
+                        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60 dark:border-white/[0.04]">
+                          <div className="flex items-center gap-2">
+                            {/* Quantity Controls */}
+                            <div className="flex items-center gap-1 bg-white/60 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-lg p-0.5">
+                              <button
+                                type="button"
+                                onClick={() => updateSelectedLine(idx, { quantityUsed: Math.max(1, line.quantityUsed - 1) })}
+                                className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="w-6 text-center font-mono font-bold text-slate-900 dark:text-white text-[11px]">{line.quantityUsed}</span>
+                              <button
+                                type="button"
+                                onClick={() => updateSelectedLine(idx, { quantityUsed: line.quantityUsed + 1 })}
+                                className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+
+                            {/* Price / Rate input */}
+                            <div className="flex items-center gap-1 bg-white/60 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-lg px-2 py-0.5">
+                              <span className="text-[10px] font-mono text-slate-400">₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={line.item.price || ''}
+                                placeholder="0"
+                                onChange={(e) => {
+                                  const val = Math.max(0, Number(e.target.value) || 0);
+                                  updateSelectedLine(idx, {
+                                    item: { ...line.item, price: val } as any,
+                                  });
+                                }}
+                                className="w-14 bg-transparent text-right font-mono font-bold text-xs text-slate-900 dark:text-white outline-none"
+                              />
+                            </div>
                           </div>
 
                           <span className="font-mono font-bold text-amber-600 dark:text-amber-300 text-xs">
-                            {money(line.item.price * line.quantityUsed)}
+                            {money((line.item.price || 0) * line.quantityUsed)}
                           </span>
                         </div>
                       </div>

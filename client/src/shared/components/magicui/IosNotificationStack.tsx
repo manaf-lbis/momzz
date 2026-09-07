@@ -97,7 +97,7 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
 
   if (total === 0) {
     return (
-      <div className="w-full h-32 flex flex-col items-center justify-center text-center p-3 rounded-2xl bg-white/95 dark:bg-[#12131F]/90 border border-slate-200/80 dark:border-white/[0.08]">
+      <div className="w-full h-32 flex flex-col items-center justify-center text-center p-3 rounded-2xl glass-modern-card">
         <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center mb-1">
           <CheckCircle2 className="w-4.5 h-4.5" />
         </div>

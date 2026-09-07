@@ -156,7 +156,7 @@ export const ProfilePage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-5 pb-36 sm:pb-40 space-y-5">
+      <main className="app-container relative z-10 flex-1 py-5 pb-36 sm:pb-40 md:pb-16 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -299,7 +299,7 @@ export const ProfilePage: React.FC = () => {
 
           {/* ── RIGHT COLUMN: Modules & Hotline ── */}
           <div className="lg:col-span-7 space-y-4">
-            <section className="rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-xl p-4 sm:p-5 space-y-3.5 transition-colors">
+            <section className="rounded-3xl glass-modern-card shadow-xl p-4 sm:p-5 space-y-3.5 transition-colors">
               <div className="pb-2 border-b border-slate-200/80 dark:border-white/[0.06]">
                 <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
                   Workshop Operations & Modules
@@ -422,7 +422,7 @@ export const ProfilePage: React.FC = () => {
             </section>
 
             {/* Support Hotline Banner */}
-            <section className="rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] p-4 shadow-xl flex items-center justify-between gap-3 transition-colors">
+            <section className="rounded-3xl glass-modern-card p-4 shadow-xl flex items-center justify-between gap-3 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 flex items-center justify-center shrink-0">
                   <Phone className="w-4.5 h-4.5" />

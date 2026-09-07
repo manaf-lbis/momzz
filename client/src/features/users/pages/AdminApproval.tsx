@@ -26,7 +26,7 @@ export const AdminApproval: React.FC = () => {
   const pendingWorkers = data?.data || [];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient background light */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(239,68,68,0.06)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(239,68,68,0.04)_0%,transparent_65%)]" />
@@ -35,7 +35,7 @@ export const AdminApproval: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-4 pb-32 space-y-4">
+      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* Top Header */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -73,7 +73,7 @@ export const AdminApproval: React.FC = () => {
             Failed to retrieve pending registrations.
           </div>
         ) : pendingWorkers.length === 0 ? (
-          <div className="py-16 text-center rounded-3xl bg-white/95 dark:bg-[#12131F]/90 border border-slate-200/80 dark:border-white/[0.08] space-y-2">
+          <div className="py-16 text-center rounded-3xl glass-modern-card space-y-2">
             <UserCheck className="w-9 h-9 text-emerald-500 mx-auto" />
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-300">
               All Registrations Cleared
@@ -91,7 +91,7 @@ export const AdminApproval: React.FC = () => {
                   key={workerId}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="group relative overflow-hidden rounded-2xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] p-4 shadow-sm dark:shadow-xl dark:shadow-black/50 space-y-3 flex flex-col justify-between"
+                  className="group relative overflow-hidden rounded-2xl glass-modern-card p-4 space-y-3 flex flex-col justify-between"
                 >
                   <BorderBeam size={160} duration={6} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
 

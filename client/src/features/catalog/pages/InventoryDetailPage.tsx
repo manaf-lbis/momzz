@@ -231,7 +231,7 @@ export const InventoryDetailPage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="relative z-10 mx-auto max-w-[1200px] w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-32">
+      <main className="app-container relative z-10 flex-1 py-4 sm:py-8 pb-32">
         {/* Back Link */}
         <button
           onClick={() => navigate('/inventory')}

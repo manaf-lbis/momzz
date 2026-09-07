@@ -595,7 +595,7 @@ export const LeaderboardPage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-4 pb-36 sm:pb-40">
+      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16">
         {/* ── HEADER ── */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
@@ -686,7 +686,7 @@ export const LeaderboardPage: React.FC = () => {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.06 }}
-                className="relative overflow-hidden rounded-3xl bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm dark:shadow-xl dark:shadow-black/50 pt-10 pb-6 px-4 sm:px-6 lg:px-5 h-full"
+                className="relative overflow-hidden rounded-3xl glass-modern-card pt-10 pb-6 px-4 sm:px-6 lg:px-5 h-full"
               >
                 <BorderBeam size={280} duration={12} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={1} />
 
@@ -790,7 +790,7 @@ export const LeaderboardPage: React.FC = () => {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.12 }}
-                className="rounded-3xl overflow-hidden border border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#12131F]/90 backdrop-blur-2xl shadow-sm dark:shadow-xl dark:shadow-black/50 h-full p-4 sm:p-5 space-y-2"
+                className="rounded-3xl overflow-hidden glass-modern-card h-full p-4 sm:p-5 space-y-2"
               >
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">

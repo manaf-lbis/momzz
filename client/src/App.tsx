@@ -10,6 +10,7 @@ import { Footer } from './shared/components/common/Footer';
 import { LeaderboardWelcomeModal } from './shared/components/common/LeaderboardWelcomeModal';
 import { QuickAccessDock } from './shared/components/navigation/QuickAccessDock';
 import { KineticSplash } from './shared/components/common/KineticSplash';
+import { ModernAppBackground } from './shared/components/common/FluidCanvasBackground';
 
 // Show splash once per browser session (clears on tab close)
 const SPLASH_KEY = 'momzz_splash_v1';
@@ -30,6 +31,7 @@ export const App: React.FC = () => {
       <ThemeProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <SocketProvider>
+            <ModernAppBackground />
             <LeaderboardWelcomeModal />
             <AppRoutes />
             <Footer />

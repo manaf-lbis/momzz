@@ -82,7 +82,18 @@ export interface CreateJobRequest {
   customerEmail?: string;
   thumbnailUrl?: string;
   expectedDeliveryDate?: string | null;
-  tasks: Array<string | { itemId: string; quantityUsed: number; discountAmount?: number }>;
+  tasks: Array<
+    | string
+    | {
+        itemId?: string;
+        customTitle?: string;
+        title?: string;
+        itemType?: 'PRODUCT' | 'SERVICE';
+        unitPrice?: number;
+        quantityUsed: number;
+        discountAmount?: number;
+      }
+  >;
 }
 
 
@@ -161,12 +172,12 @@ export const jobApi = apiSlice.injectEndpoints({
 
     addTask: builder.mutation<
       { success: boolean; data: TaskItem },
-      { jobCardId: string; title: string }
+      { jobCardId: string; title: string; itemType?: 'PRODUCT' | 'SERVICE'; unitPrice?: number; quantityUsed?: number; discountAmount?: number }
     >({
-      query: ({ jobCardId, title }) => ({
+      query: ({ jobCardId, ...body }) => ({
         url: `/jobs/${jobCardId}/tasks`,
         method: 'POST',
-        body: { title },
+        body,
       }),
       // Socket handles live update
     }),

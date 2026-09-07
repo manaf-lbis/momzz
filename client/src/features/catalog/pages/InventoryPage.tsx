@@ -61,7 +61,7 @@ export const InventoryPage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 lg:px-8 pb-36 sm:pb-40 space-y-4">
+      <main className="app-container relative z-10 flex-1 py-6 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* Page Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
           <div className="flex items-center gap-3">

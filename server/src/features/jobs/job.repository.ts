@@ -48,6 +48,7 @@ export class JobRepository {
     return await JobCard.find({ isDeleted: { $ne: true } })
       .populate('verifiedBy', 'name mobile role')
       .populate('createdBy', 'name mobile role profileImageUrl')
+      .populate('pinnedBy', 'name role profileImageUrl')
       .sort({ isPinnedForAll: -1, status: -1, createdAt: -1 });
   }
 
@@ -61,6 +62,7 @@ export class JobRepository {
     })
       .populate('verifiedBy', 'name mobile role')
       .populate('createdBy', 'name mobile role profileImageUrl')
+      .populate('pinnedBy', 'name role profileImageUrl')
       .sort({ isPinnedForAll: -1, status: -1, createdAt: -1 });
   }
 
@@ -163,6 +165,7 @@ export class JobRepository {
       JobCard.find(query)
         .populate('verifiedBy', 'name mobile role')
         .populate('createdBy', 'name mobile role profileImageUrl')
+        .populate('pinnedBy', 'name role profileImageUrl')
         .sort(sortConfig)
         .skip(skip)
         .limit(limit),
@@ -221,7 +224,8 @@ export class JobRepository {
     }
     return await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } })
       .populate('verifiedBy', 'name mobile role')
-      .populate('createdBy', 'name mobile role profileImageUrl');
+      .populate('createdBy', 'name mobile role profileImageUrl')
+      .populate('pinnedBy', 'name role profileImageUrl');
   }
 
   async updateJobThumbnail(jobCardId: string, publicId: string): Promise<IJobCard | null> {
@@ -231,7 +235,8 @@ export class JobRepository {
       { new: true }
     )
       .populate('verifiedBy', 'name mobile role')
-      .populate('createdBy', 'name mobile role profileImageUrl');
+      .populate('createdBy', 'name mobile role profileImageUrl')
+      .populate('pinnedBy', 'name role profileImageUrl');
   }
 
   async togglePinJobCard(jobCardId: string, userId: string, mode: 'ALL' | 'ME'): Promise<IJobCard | null> {
@@ -255,7 +260,8 @@ export class JobRepository {
 
     return await JobCard.findById(jobCardId)
       .populate('verifiedBy', 'name mobile role')
-      .populate('createdBy', 'name mobile role profileImageUrl');
+      .populate('createdBy', 'name mobile role profileImageUrl')
+      .populate('pinnedBy', 'name role profileImageUrl');
   }
 
   async updateJobCard(jobCardId: string, data: Partial<Pick<IJobCard, 'vehicleName' | 'vehicleNumber' | 'vehicleColor' | 'customerName' | 'customerMobile' | 'customerEmail' | 'expectedDeliveryDate'>>) {
