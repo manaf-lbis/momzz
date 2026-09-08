@@ -89,7 +89,6 @@ export const UserManagementPage: React.FC = () => {
         {/* Top Header */}
         <PageHeader
           backTo="/dashboard"
-          backLabel="Dashboard"
           title="Staff Roster & Telemetry"
           count={rawUsers.length}
         />

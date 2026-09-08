@@ -136,7 +136,6 @@ export const AnalyticsPage: React.FC = () => {
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         <PageHeader
           backTo="/dashboard"
-          backLabel="Dashboard"
           title="Workshop Analytics"
           description="Performance insights, throughput, and rankings"
           actions={

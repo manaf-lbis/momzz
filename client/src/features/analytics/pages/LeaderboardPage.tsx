@@ -601,7 +601,6 @@ export const LeaderboardPage: React.FC = () => {
         {/* ── HEADER ── */}
         <PageHeader
           backTo="/dashboard"
-          backLabel="Back"
           title="Workshop Leaderboard"
           description={`${timeRemaining} · Earn QP per completed checklist task`}
         />

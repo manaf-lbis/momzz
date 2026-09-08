@@ -13,6 +13,7 @@ import {
   Sparkles,
   ArrowRight,
   ChevronLeft,
+  AlertTriangle,
   Loader2,
 } from 'lucide-react';
 import { formatDeliveryDate, getDeliveryStatusInfo } from '../../../shared/utils/dateUtils';
@@ -252,14 +253,24 @@ export const TrackServicePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Delivery ETA info */}
               {job.expectedDeliveryDate && deliveryInfo && (
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-between text-xs font-mono">
+                <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-mono ${
+                  deliveryInfo.isOverdue
+                    ? 'bg-rose-500/10 border-rose-500/30'
+                    : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10'
+                }`}>
                   <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-amber-500" /> Expected Delivery
+                    {deliveryInfo.isOverdue ? (
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 stroke-[2.5]" />
+                    ) : (
+                      <Clock className="w-3.5 h-3.5 text-amber-500" />
+                    )}
+                    <span>{deliveryInfo.isOverdue ? 'Overdue Delivery' : 'Expected Delivery'}</span>
                   </span>
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    {formatDeliveryDate(job.expectedDeliveryDate)}
+                  <span className={`font-bold ${deliveryInfo.isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
+                    {deliveryInfo.isOverdue
+                      ? `${deliveryInfo.shortLabel} (${formatDeliveryDate(job.expectedDeliveryDate)})`
+                      : formatDeliveryDate(job.expectedDeliveryDate)}
                   </span>
                 </div>
               )}

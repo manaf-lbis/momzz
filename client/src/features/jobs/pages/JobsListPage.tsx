@@ -17,6 +17,7 @@ import {
   Clock,
   Search,
   Plus,
+  AlertTriangle,
   Loader2,
   Sparkles,
   ArrowUpDown,
@@ -392,7 +393,6 @@ export const JobsListPage: React.FC = () => {
         {/* ── TOP BAR: Header & New Button ── */}
         <PageHeader
           backTo="/dashboard"
-          backLabel="Dashboard"
           title="Active Vehicles"
           count={filteredJobs.length}
           actions={
@@ -512,6 +512,8 @@ export const JobsListPage: React.FC = () => {
               const isPinnedForAll = Boolean(job.isPinnedForAll);
               const isPinnedForMe = isJobPinnedForMe(job);
 
+              const deliveryInfo = getDeliveryStatusInfo(job.expectedDeliveryDate, isReady);
+
               return (
                 <motion.div
                   key={jobId}
@@ -546,6 +548,22 @@ export const JobsListPage: React.FC = () => {
                             {isReady && (
                               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                                 <CheckCircle2 className="w-3 h-3" /> Ready
+                              </span>
+                            )}
+                            {job.expectedDeliveryDate && (
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border ${
+                                  deliveryInfo.isOverdue
+                                    ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/40 animate-pulse shadow-xs'
+                                    : deliveryInfo.badgeClass
+                                }`}
+                              >
+                                {deliveryInfo.isOverdue ? (
+                                  <AlertTriangle className="w-3 h-3 text-rose-500 shrink-0 stroke-[2.5]" />
+                                ) : (
+                                  <Clock className="w-3 h-3 shrink-0" />
+                                )}
+                                <span>{deliveryInfo.shortLabel}</span>
                               </span>
                             )}
                           </div>

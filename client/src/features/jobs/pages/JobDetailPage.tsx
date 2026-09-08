@@ -18,6 +18,7 @@ import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { ConfirmationModal } from '../../../shared/components/common/ConfirmationModal';
 import { PinJobModal } from '../../../shared/components/jobCard/PinJobModal';
 import { BackButton } from '../../../shared/components/common/BackButton';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { MagicTabs } from '../../../shared/components/magicui/MagicTabs';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
@@ -348,16 +349,12 @@ export const JobDetailPage: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* ── TOP NAV / ACTION BAR ── */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <BackButton to="/jobs" label="Vehicles" />
-            <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-slate-400">
-              <span>/</span>
-              <span className="font-bold text-slate-700 dark:text-slate-300">{currentJob.vehicleNumber}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5">
+        <PageHeader
+          backTo="/jobs"
+          title={currentJob.vehicleName || 'Vehicle'}
+          count={currentJob.vehicleNumber}
+          actions={
+            <div className="flex items-center gap-1.5">
             {/* Pin Action */}
             <button
               type="button"
@@ -415,7 +412,8 @@ export const JobDetailPage: React.FC = () => {
               </button>
             )}
           </div>
-        </div>
+        }
+      />
 
         {/* ── VEHICLE HERO COMMAND CENTER (Luxury Frosted Head Card) ── */}
         <section className="glass-head-card relative overflow-hidden rounded-3xl p-5 sm:p-6 space-y-4 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)]">
@@ -443,15 +441,24 @@ export const JobDetailPage: React.FC = () => {
               )}
             </div>
 
-            <div
-              className={`px-3 py-1 rounded-xl text-[10px] sm:text-xs font-mono font-black uppercase tracking-wider border shrink-0 flex items-center gap-1.5 ${
-                isAllCompleted
-                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
-                  : 'bg-amber-400/15 border-amber-400/30 text-amber-800 dark:text-amber-300'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${isAllCompleted ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' : 'bg-amber-400 animate-pulse'}`} />
-              <span>{isAllCompleted ? 'Ready for Delivery' : 'In Service Bay'}</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              {deliveryInfo.isOverdue && (
+                <span className="text-[10px] sm:text-xs font-mono font-black text-rose-600 dark:text-rose-400 bg-rose-500/15 border border-rose-500/30 px-2.5 py-1 rounded-xl flex items-center gap-1.5 animate-pulse">
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 stroke-[2.5]" />
+                  <span>Overdue ({deliveryInfo.shortLabel})</span>
+                </span>
+              )}
+
+              <div
+                className={`px-3 py-1 rounded-xl text-[10px] sm:text-xs font-mono font-black uppercase tracking-wider border shrink-0 flex items-center gap-1.5 ${
+                  isAllCompleted
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                    : 'bg-amber-400/15 border-amber-400/30 text-amber-800 dark:text-amber-300'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${isAllCompleted ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' : 'bg-amber-400 animate-pulse'}`} />
+                <span>{isAllCompleted ? 'Ready for Delivery' : 'In Service Bay'}</span>
+              </div>
             </div>
           </div>
 
@@ -634,9 +641,23 @@ export const JobDetailPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05]">
-                    <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Target Handover</p>
-                    <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-white mt-0.5 truncate">
+                  <div className={`p-3 rounded-xl border ${
+                    deliveryInfo.isOverdue
+                      ? 'bg-rose-500/10 border-rose-500/30'
+                      : 'bg-slate-50 dark:bg-white/[0.025] border-slate-200/70 dark:border-white/[0.05]'
+                  }`}>
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Target Handover</p>
+                      {deliveryInfo.isOverdue && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[10px] font-mono font-bold animate-pulse">
+                          <AlertTriangle className="w-3 h-3 text-rose-500 stroke-[2.5]" />
+                          <span>Overdue</span>
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-xs sm:text-sm font-black mt-0.5 truncate ${
+                      deliveryInfo.isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'
+                    }`}>
                       {currentJob.expectedDeliveryDate
                         ? new Date(currentJob.expectedDeliveryDate).toLocaleDateString('en-IN', {
                             month: 'short',

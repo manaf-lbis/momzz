@@ -95,7 +95,6 @@ export const InventoryPage: React.FC = () => {
         {/* Page Header Component with seamless BackButton & parenthesis count */}
         <PageHeader
           backTo="/dashboard"
-          backLabel="Dashboard"
           title="Parts & Catalog"
           count={items.length}
           description="Manage inventory spares and workshop service items"

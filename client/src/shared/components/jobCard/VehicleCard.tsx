@@ -146,8 +146,18 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
                   {job.vehicleNumber}
                 </span>
                 {job.expectedDeliveryDate && (
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border ${deliveryInfo.badgeClass}`}>
-                    <Clock className="w-3 h-3 shrink-0" />
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border ${
+                      deliveryInfo.isOverdue
+                        ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/40 animate-pulse shadow-xs'
+                        : deliveryInfo.badgeClass
+                    }`}
+                  >
+                    {deliveryInfo.isOverdue ? (
+                      <AlertTriangle className="w-3 h-3 text-rose-500 shrink-0 stroke-[2.5]" />
+                    ) : (
+                      <Clock className="w-3 h-3 shrink-0" />
+                    )}
                     <span>{deliveryInfo.shortLabel}</span>
                   </span>
                 )}

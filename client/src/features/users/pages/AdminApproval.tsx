@@ -41,7 +41,6 @@ export const AdminApproval: React.FC = () => {
         {/* Top Header */}
         <PageHeader
           backTo="/profile"
-          backLabel="Profile"
           title="Staff Approvals"
           count={pendingWorkers.length}
           actions={

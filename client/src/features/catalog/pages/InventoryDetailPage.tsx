@@ -221,7 +221,6 @@ export const InventoryDetailPage: React.FC = () => {
         {/* Page Header */}
         <PageHeader
           backTo="/inventory"
-          backLabel="Inventory"
           title={item.title}
           description={
             item.category?.name

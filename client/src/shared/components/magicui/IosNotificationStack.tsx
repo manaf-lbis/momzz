@@ -7,6 +7,7 @@ import {
   Sparkles,
   CheckCircle2,
   Clock,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ProgressBarBeam } from './AnimatedBeam';
@@ -190,8 +191,20 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
 
               {/* Delivery Info Badge */}
               {currentJob.expectedDeliveryDate && (
-                <span className={cn('text-[10px] font-mono font-bold px-2.5 py-1 rounded-xl border shrink-0', deliveryInfo.badgeClass)}>
-                  {deliveryInfo.shortLabel}
+                <span
+                  className={cn(
+                    'text-[10px] font-mono font-bold px-2.5 py-1 rounded-xl border shrink-0 inline-flex items-center gap-1.5',
+                    deliveryInfo.isOverdue
+                      ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/40 animate-pulse shadow-xs shadow-rose-500/10'
+                      : deliveryInfo.badgeClass
+                  )}
+                >
+                  {deliveryInfo.isOverdue ? (
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 stroke-[2.5]" />
+                  ) : (
+                    <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                  )}
+                  <span>{deliveryInfo.shortLabel}</span>
                 </span>
               )}
             </div>
@@ -220,8 +233,12 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
           {/* Bottom Action Footer */}
           <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-2 text-xs font-mono">
             <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 truncate min-w-0">
-              <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="truncate text-[11px]">
+              {deliveryInfo.isOverdue ? (
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 stroke-[2.5]" />
+              ) : (
+                <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              )}
+              <span className={cn('truncate text-[11px]', deliveryInfo.isOverdue && 'text-rose-600 dark:text-rose-400 font-bold')}>
                 {currentJob.expectedDeliveryDate ? deliveryInfo.shortLabel : 'In Garage'}
               </span>
             </div>

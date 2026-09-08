@@ -214,7 +214,6 @@ export const WorkLogsPage: React.FC = () => {
         {/* ── Top Header & Navigation ── */}
         <PageHeader
           backTo="/dashboard"
-          backLabel="Back"
           title="Work Logs & History"
           description="Live chronological ledger of garage tasks and technician operations."
           actions={

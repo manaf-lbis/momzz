@@ -157,7 +157,6 @@ export const AddInventoryItemPage: React.FC = () => {
         {/* Page Header with BackButton */}
         <PageHeader
           backTo="/inventory"
-          backLabel="Inventory"
           title="Add New Item"
           description="Create a product or workshop service in the catalog"
         />
