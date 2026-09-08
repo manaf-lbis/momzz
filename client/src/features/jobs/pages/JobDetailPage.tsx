@@ -17,6 +17,7 @@ import { useAuth } from '../../../shared/hooks/useAuth';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { ConfirmationModal } from '../../../shared/components/common/ConfirmationModal';
 import { PinJobModal } from '../../../shared/components/jobCard/PinJobModal';
+import { BackButton } from '../../../shared/components/common/BackButton';
 import { MagicTabs } from '../../../shared/components/magicui/MagicTabs';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
@@ -349,14 +350,7 @@ export const JobDetailPage: React.FC = () => {
         {/* ── TOP NAV / ACTION BAR ── */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => navigate('/jobs')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass-ghost-btn text-xs font-bold shadow-2xs hover:scale-[1.02] active:scale-95 transition cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Vehicles</span>
-            </button>
+            <BackButton to="/jobs" label="Vehicles" />
             <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-slate-400">
               <span>/</span>
               <span className="font-bold text-slate-700 dark:text-slate-300">{currentJob.vehicleNumber}</span>

@@ -23,6 +23,7 @@ import {
   Car,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { BackButton } from '../../../shared/components/common/BackButton';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { useCreateJobMutation } from '../../jobs/api/jobApi';
 import { CatalogItem, useGetCatalogQuery, useQuickAddCatalogItemMutation } from '../../catalog/api/catalogApi';
@@ -241,13 +242,11 @@ export const CreateJobPage: React.FC = () => {
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* Header & Step Indicator */}
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <button
+          <div className="flex items-center gap-3">
+            <BackButton
               onClick={() => (step === 2 ? setStep(1) : navigate('/jobs'))}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-2xs"
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
+              label={step === 2 ? 'Step 1' : 'Vehicles'}
+            />
             <div>
               <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 {step === 1 ? 'Intake & Vehicle Registration' : 'Job Checklist & Parts'}

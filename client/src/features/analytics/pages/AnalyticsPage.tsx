@@ -18,6 +18,7 @@ import { useAuth } from '../../../shared/hooks/useAuth';
 import { useGetJobCardsQuery, JobCardData } from '../../jobs/api/jobApi';
 import { useGetLeaderboardQuery } from '../../auth/api/authApi';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
+import { BackButton } from '../../../shared/components/common/BackButton';
 import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
@@ -134,13 +135,8 @@ export const AnalyticsPage: React.FC = () => {
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-xs"
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
+          <div className="flex items-center gap-3">
+            <BackButton to="/dashboard" label="Dashboard" />
             <div>
               <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-amber-500" />

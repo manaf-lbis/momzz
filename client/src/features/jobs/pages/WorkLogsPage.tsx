@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { useGetJobCardsQuery, JobCardData } from '../../jobs/api/jobApi';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
+import { BackButton } from '../../../shared/components/common/BackButton';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
 
 type Timeframe = 'day' | 'week' | 'month' | 'year' | 'all';
@@ -212,13 +213,7 @@ export const WorkLogsPage: React.FC = () => {
         {/* ── Top Header & Navigation ── */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-ghost-btn text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition active:scale-95 shadow-xs"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back</span>
-            </button>
+            <BackButton to="/dashboard" label="Back" />
 
             <span className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 glass-ghost-btn px-3 py-1 rounded-full shadow-xs">
               {periodLabel}

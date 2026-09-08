@@ -20,6 +20,7 @@ import { useAuth } from '../../../shared/hooks/useAuth';
 import { useGetLeaderboardQuery } from '../../auth/api/authApi';
 import { useGetJobCardsQuery, JobCardData, TaskItem } from '../../jobs/api/jobApi';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
+import { BackButton } from '../../../shared/components/common/BackButton';
 import confetti from 'canvas-confetti';
 import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
@@ -598,13 +599,8 @@ export const LeaderboardPage: React.FC = () => {
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16">
         {/* ── HEADER ── */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => navigate(-1)}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl glass-ghost-btn flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-2xs"
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700 dark:text-slate-300" />
-            </button>
+          <div className="flex items-center gap-3">
+            <BackButton to="/dashboard" label="Back" />
             <div>
               <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 Workshop Leaderboard

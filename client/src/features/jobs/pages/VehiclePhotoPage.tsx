@@ -22,6 +22,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
+import { BackButton } from '../../../shared/components/common/BackButton';
 import { useGetJobCardsQuery, useGetJobCardByIdQuery, useUploadJobImageMutation, JobCardData } from '../../jobs/api/jobApi';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
@@ -240,14 +241,7 @@ export const VehiclePhotoPage: React.FC = () => {
         {/* Page Top Header */}
         <div className="flex items-center justify-between gap-3 p-4 bg-white/80 dark:bg-white/[0.035] backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl sm:rounded-3xl shadow-sm">
           <div className="flex items-center gap-3 min-w-0">
-            <button
-              type="button"
-              onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}`)}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition shrink-0"
-              title="Back to Job Card"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
+            <BackButton to={`/jobs/${currentJob.id || currentJob._id}`} label="Job Card" />
 
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">

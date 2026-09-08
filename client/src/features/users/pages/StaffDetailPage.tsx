@@ -24,6 +24,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
+import { BackButton } from '../../../shared/components/common/BackButton';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
@@ -383,15 +384,7 @@ export const StaffDetailPage: React.FC = () => {
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* ── 1. TOP NAVIGATION & BREADCRUMB ── */}
         <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/users')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass-ghost-btn text-xs font-bold shadow-2xs hover:border-amber-400/50 cursor-pointer active:scale-95 transition"
-            title="Back to Staff Roster"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Staff Roster</span>
-          </button>
+          <BackButton to="/users" label="Staff Roster" />
 
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">

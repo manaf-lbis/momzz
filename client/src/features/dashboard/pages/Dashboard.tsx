@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -49,8 +49,10 @@ export const Dashboard: React.FC = () => {
   const [isSoundOn, setIsSoundOn] = useState(isCompletionSoundEnabled());
   const [heroSlide, setHeroSlide] = useState(0);
   const [pinnedIndex, setPinnedIndex] = useState(0);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right'>('left');
   const [isCarouselHovered, setIsCarouselHovered] = useState(false);
   const [isPinnedHovered, setIsPinnedHovered] = useState(false);
+  const isDraggingRef = useRef(false);
 
   useEffect(() => {
     if (isCarouselHovered) return;
@@ -101,13 +103,25 @@ export const Dashboard: React.FC = () => {
     });
   }, [allJobs, currentUserId]);
 
+  const handleNextPinned = useCallback(() => {
+    if (pinnedJobs.length <= 1) return;
+    setSwipeDirection('left');
+    setPinnedIndex((prev) => (prev + 1) % pinnedJobs.length);
+  }, [pinnedJobs.length]);
+
+  const handlePrevPinned = useCallback(() => {
+    if (pinnedJobs.length <= 1) return;
+    setSwipeDirection('right');
+    setPinnedIndex((prev) => (prev === 0 ? pinnedJobs.length - 1 : prev - 1));
+  }, [pinnedJobs.length]);
+
   useEffect(() => {
     if (pinnedJobs.length <= 1 || isPinnedHovered) return;
     const interval = setInterval(() => {
-      setPinnedIndex((prev) => (prev + 1) % pinnedJobs.length);
+      handleNextPinned();
     }, 4500);
     return () => clearInterval(interval);
-  }, [pinnedJobs.length, isPinnedHovered]);
+  }, [pinnedJobs.length, isPinnedHovered, handleNextPinned]);
 
   const stats          = statsRes?.data;
   const activeCount    = stats?.activeCount ?? allJobs.filter(j => j.status === "IN_PROGRESS").length;
@@ -219,7 +233,227 @@ export const Dashboard: React.FC = () => {
           </kbd>
         </button>
 
-        {/* ── 3. HERO COMMAND CENTER (Interactive Carousel - Luxury Frosted Head Card) ── */}
+        {/* ── 3. PINNED PRIORITY VEHICLE (Top Spotlight with Swipe Gestures) ── */}
+        <section
+          onMouseEnter={() => setIsPinnedHovered(true)}
+          onMouseLeave={() => setIsPinnedHovered(false)}
+        >
+          <div className="flex items-center justify-between mb-3 px-0.5">
+            <div className="flex items-center gap-2">
+              <h2 className="flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500/30" />
+                Priority Vehicle
+              </h2>
+              {pinnedJobs.length > 1 && (
+                <div className="flex items-center gap-1.5 ml-1">
+                  {/* Slide Indicators */}
+                  <div className="flex items-center gap-1 mr-1">
+                    {pinnedJobs.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSwipeDirection(idx > pinnedIndex ? 'left' : 'right');
+                          setPinnedIndex(idx);
+                        }}
+                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                          pinnedIndex === idx
+                            ? "w-5 bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                            : "w-1.5 bg-slate-300 dark:bg-white/20 hover:bg-slate-400 dark:hover:bg-white/40"
+                        }`}
+                        aria-label={`Go to pinned vehicle ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePrevPinned();
+                    }}
+                    className="w-5 h-5 rounded-md flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition cursor-pointer active:scale-90"
+                    title="Previous Pinned Vehicle"
+                  >
+                    <ChevronLeft className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNextPinned();
+                    }}
+                    className="w-5 h-5 rounded-md flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition cursor-pointer active:scale-90"
+                    title="Next Pinned Vehicle"
+                  >
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+
+                  <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 hidden sm:inline ml-1">
+                    Swipe left/right
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => navigate('/jobs')}
+              className="text-[11px] font-mono text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-1 transition"
+            >
+              <span>View all</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          {pinnedJobs.length > 0 ? (
+            (() => {
+              const curPinned = pinnedJobs[pinnedIndex % pinnedJobs.length];
+              const tasks = curPinned?.tasks || [];
+              const completedTasks = tasks.filter((t: any) => t.status === 'COMPLETED').length;
+              const totalJobTasks = tasks.length;
+              const jobProgress = totalJobTasks > 0 ? Math.round((completedTasks / totalJobTasks) * 100) : 0;
+              const jobId = curPinned.id || curPinned._id;
+
+              const isPinnedForAll = Boolean(curPinned.isPinnedForAll);
+              const pinnedArray = Array.isArray(curPinned.pinnedBy) ? curPinned.pinnedBy : [];
+              const isPinnedForMe = pinnedArray.some((p: any) => isMatchingUserId(p, currentUserId));
+
+              let pinnerDisplay = '';
+              if (isPinnedForAll) {
+                const adminName = curPinned.createdBy?.name ? curPinned.createdBy.name.split(' ')[0] : 'Admin';
+                pinnerDisplay = `Garage Admin (${adminName})`;
+              } else if (isPinnedForMe) {
+                pinnerDisplay = 'You';
+              } else if (pinnedArray.length > 0) {
+                const first: any = pinnedArray[0];
+                pinnerDisplay = typeof first === 'object' && first?.name ? first.name.split(' ')[0] : 'Staff';
+              } else {
+                pinnerDisplay = 'Staff';
+              }
+
+              return (
+                <div style={{ perspective: 1200 }}>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={`pinned-${jobId}`}
+                      drag={pinnedJobs.length > 1 ? "x" : false}
+                      dragConstraints={{ left: 0, right: 0 }}
+                      dragElastic={0.2}
+                      onDragStart={() => {
+                        isDraggingRef.current = true;
+                      }}
+                      onDragEnd={(_, info) => {
+                        const swipeThreshold = 40;
+                        const velocityThreshold = 250;
+                        if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+                          handleNextPinned();
+                        } else if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
+                          handlePrevPinned();
+                        }
+                        setTimeout(() => {
+                          isDraggingRef.current = false;
+                        }, 100);
+                      }}
+                      initial={{
+                        opacity: 0,
+                        x: swipeDirection === 'left' ? 40 : -40,
+                        rotateY: swipeDirection === 'left' ? 15 : -15,
+                        scale: 0.97,
+                      }}
+                      animate={{
+                        opacity: 1,
+                        x: 0,
+                        rotateY: 0,
+                        scale: 1,
+                      }}
+                      exit={{
+                        opacity: 0,
+                        x: swipeDirection === 'left' ? -40 : 40,
+                        rotateY: swipeDirection === 'left' ? -15 : 15,
+                        scale: 0.97,
+                      }}
+                      transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+                      style={{ transformStyle: 'preserve-3d', touchAction: 'pan-y' }}
+                      onClick={() => {
+                        if (!isDraggingRef.current) {
+                          navigate(`/jobs/${jobId}`);
+                        }
+                      }}
+                      className={`${modernCard} p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:border-amber-400/50 dark:hover:border-amber-400/40 cursor-grab active:cursor-grabbing select-none`}
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        {curPinned.thumbnailUrl ? (
+                          <img
+                            src={curPinned.thumbnailUrl}
+                            alt=""
+                            className="w-10 h-10 rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-white/10 pointer-events-none"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-xs shrink-0 pointer-events-none">
+                            <Car className="w-5 h-5" />
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight truncate">
+                              {curPinned.vehicleName}
+                            </p>
+                            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-400/15 text-amber-700 dark:text-amber-300">
+                              {curPinned.vehicleNumber}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10">
+                              {isPinnedForAll ? (
+                                <Globe className="w-2.5 h-2.5 text-amber-500" />
+                              ) : (
+                                <Pin className="w-2.5 h-2.5 text-amber-500 fill-current" />
+                              )}
+                              <span>{isPinnedForAll ? 'Garage Pin' : 'Personal Pin'}</span>
+                            </span>
+                          </div>
+
+                          <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-1 truncate">
+                            Pinned by {pinnerDisplay} • {curPinned.customerName ? `Client: ${curPinned.customerName}` : 'In Service Bay'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar & Arrow */}
+                      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-white/[0.06]">
+                        <div className="space-y-1 sm:text-right">
+                          <div className="flex items-center sm:justify-end gap-1.5 text-[11px] font-mono">
+                            <span className="font-bold text-amber-600 dark:text-amber-400">{jobProgress}%</span>
+                            <span className="text-slate-400">({completedTasks}/{totalJobTasks} tasks)</span>
+                          </div>
+                          <div className="w-28 sm:w-32 h-1.5 rounded-full overflow-hidden bg-slate-200 dark:bg-white/10">
+                            <div
+                              className="h-full rounded-full bg-amber-500"
+                              style={{ width: `${jobProgress}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                          <ArrowUpRight className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              );
+            })()
+          ) : (
+            <div
+              onClick={() => navigate('/jobs')}
+              className={`${modernCard} p-4 text-center py-5 space-y-1 hover:border-amber-400/50 dark:hover:border-amber-400/40`}
+            >
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No Pinned Priority Vehicles</p>
+              <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                Pin critical vehicle jobs to monitor them here.
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* ── 4. HERO COMMAND CENTER (Interactive Carousel - Luxury Frosted Head Card / Stats Card) ── */}
         <section
           onMouseEnter={() => setIsCarouselHovered(true)}
           onMouseLeave={() => setIsCarouselHovered(false)}
@@ -501,184 +735,6 @@ export const Dashboard: React.FC = () => {
               )}
             </AnimatePresence>
           </div>
-        </section>
-
-        {/* ── 4. PINNED PRIORITY VEHICLE ── */}
-        <section
-          onMouseEnter={() => setIsPinnedHovered(true)}
-          onMouseLeave={() => setIsPinnedHovered(false)}
-        >
-          <div className="flex items-center justify-between mb-3 px-0.5">
-            <div className="flex items-center gap-2">
-              <h2 className="flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500/30" />
-                Priority Vehicle
-              </h2>
-              {pinnedJobs.length > 1 && (
-                <div className="flex items-center gap-1.5 ml-1">
-                  {/* Slide Indicators like stats card on top */}
-                  <div className="flex items-center gap-1 mr-1">
-                    {pinnedJobs.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPinnedIndex(idx);
-                        }}
-                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                          pinnedIndex === idx
-                            ? "w-5 bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"
-                            : "w-1.5 bg-slate-300 dark:bg-white/20 hover:bg-slate-400 dark:hover:bg-white/40"
-                        }`}
-                        aria-label={`Go to pinned vehicle ${idx + 1}`}
-                      />
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPinnedIndex((prev) => (prev === 0 ? pinnedJobs.length - 1 : prev - 1));
-                    }}
-                    className="w-5 h-5 rounded-md flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition cursor-pointer"
-                    title="Previous Pinned Vehicle"
-                  >
-                    <ChevronLeft className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPinnedIndex((prev) => (prev + 1) % pinnedJobs.length);
-                    }}
-                    className="w-5 h-5 rounded-md flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition cursor-pointer"
-                    title="Next Pinned Vehicle"
-                  >
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => navigate('/jobs')}
-              className="text-[11px] font-mono text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-1 transition"
-            >
-              <span>View all</span>
-              <ArrowUpRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          {pinnedJobs.length > 0 ? (
-            (() => {
-              const curPinned = pinnedJobs[pinnedIndex % pinnedJobs.length];
-              const tasks = curPinned?.tasks || [];
-              const completedTasks = tasks.filter((t: any) => t.status === 'COMPLETED').length;
-              const totalJobTasks = tasks.length;
-              const jobProgress = totalJobTasks > 0 ? Math.round((completedTasks / totalJobTasks) * 100) : 0;
-              const jobId = curPinned.id || curPinned._id;
-
-              const isPinnedForAll = Boolean(curPinned.isPinnedForAll);
-              const pinnedArray = Array.isArray(curPinned.pinnedBy) ? curPinned.pinnedBy : [];
-              const isPinnedForMe = pinnedArray.some((p: any) => isMatchingUserId(p, currentUserId));
-
-              let pinnerDisplay = '';
-              if (isPinnedForAll) {
-                const adminName = curPinned.createdBy?.name ? curPinned.createdBy.name.split(' ')[0] : 'Admin';
-                pinnerDisplay = `Garage Admin (${adminName})`;
-              } else if (isPinnedForMe) {
-                pinnerDisplay = 'You';
-              } else if (pinnedArray.length > 0) {
-                const first: any = pinnedArray[0];
-                pinnerDisplay = typeof first === 'object' && first?.name ? first.name.split(' ')[0] : 'Staff';
-              } else {
-                pinnerDisplay = 'Staff';
-              }
-
-              return (
-                <div style={{ perspective: 1200 }}>
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.div
-                      key={`pinned-${jobId}`}
-                      initial={{ opacity: 0, rotateX: -60, scale: 0.96 }}
-                      animate={{ opacity: 1, rotateX: 0, scale: 1 }}
-                      exit={{ opacity: 0, rotateX: 60, scale: 0.96 }}
-                      transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-                      style={{ transformStyle: 'preserve-3d' }}
-                      onClick={() => navigate(`/jobs/${jobId}`)}
-                      className={`${modernCard} p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:border-amber-400/50 dark:hover:border-amber-400/40`}
-                    >
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        {curPinned.thumbnailUrl ? (
-                          <img
-                            src={curPinned.thumbnailUrl}
-                            alt=""
-                            className="w-10 h-10 rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-white/10"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-xs shrink-0">
-                            <Car className="w-5 h-5" />
-                          </div>
-                        )}
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight truncate">
-                              {curPinned.vehicleName}
-                            </p>
-                            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-400/15 text-amber-700 dark:text-amber-300">
-                              {curPinned.vehicleNumber}
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10">
-                              {isPinnedForAll ? (
-                                <Globe className="w-2.5 h-2.5 text-amber-500" />
-                              ) : (
-                                <Pin className="w-2.5 h-2.5 text-amber-500 fill-current" />
-                              )}
-                              <span>{isPinnedForAll ? 'Garage Pin' : 'Personal Pin'}</span>
-                            </span>
-                          </div>
-
-                          <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-1 truncate">
-                            Pinned by {pinnerDisplay} • {curPinned.customerName ? `Client: ${curPinned.customerName}` : 'In Service Bay'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Progress Bar & Arrow */}
-                      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-white/[0.06]">
-                        <div className="space-y-1 sm:text-right">
-                          <div className="flex items-center sm:justify-end gap-1.5 text-[11px] font-mono">
-                            <span className="font-bold text-amber-600 dark:text-amber-400">{jobProgress}%</span>
-                            <span className="text-slate-400">({completedTasks}/{totalJobTasks} tasks)</span>
-                          </div>
-                          <div className="w-28 sm:w-32 h-1.5 rounded-full overflow-hidden bg-slate-200 dark:bg-white/10">
-                            <div
-                              className="h-full rounded-full bg-amber-500"
-                              style={{ width: `${jobProgress}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                          <ArrowUpRight className="w-4 h-4" />
-                        </div>
-                      </div>
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-              );
-            })()
-          ) : (
-            <div
-              onClick={() => navigate('/jobs')}
-              className={`${modernCard} p-4 text-center py-5 space-y-1 hover:border-amber-400/50 dark:hover:border-amber-400/40`}
-            >
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No Pinned Priority Vehicles</p>
-              <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                Pin critical vehicle jobs to monitor them here.
-              </p>
-            </div>
-          )}
         </section>
 
 
