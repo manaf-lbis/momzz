@@ -211,20 +211,25 @@
 }
 
 /* ──────────────────────────────────────────────
-   TOP HEADER
+   TOP HEADER & STICKY PAGE HEADERS — Universal Glassmorphic Header
 ────────────────────────────────────────────── */
-.glass-modern-header {
-  background: rgba(246, 245, 242, 0.92) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+.glass-modern-header,
+.frosted-glass-header {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.72) 100%) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85) !important;
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.05), inset 0 -1px 0 0 rgba(255, 255, 255, 0.9) !important;
 }
 
-.dark .glass-modern-header {
-  background: rgba(9, 10, 18, 0.92) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+.dark .glass-modern-header,
+.dark .frosted-glass-header {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.035) 50%, rgba(245, 158, 11, 0.02) 100%), rgba(8, 9, 18, 0.78) !important;
+  backdrop-filter: blur(24px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.55), inset 0 -1px 0 0 rgba(255, 255, 255, 0.14) !important;
 }
 
 /* ──────────────────────────────────────────────
