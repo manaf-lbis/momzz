@@ -654,6 +654,42 @@ export const JobDetailPage: React.FC = () => {
                       </p>
                     </div>
                   )}
+
+                  {/* Divider */}
+                  <div className="border-t border-slate-200/60 dark:border-white/[0.06]" />
+
+                  {/* Created By */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Card Created By</p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-white mt-0.5 truncate">
+                        {currentJob.createdBy?.name || 'Unknown'}
+                      </p>
+                      {currentJob.createdAt && (
+                        <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+                          {formatTaskDateTime(currentJob.createdAt)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="shrink-0 flex flex-col items-end gap-1.5">
+                      {currentJob.createdBy?.profileImageUrl ? (
+                        <img
+                          src={currentJob.createdBy.profileImageUrl}
+                          alt={currentJob.createdBy.name}
+                          className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-white/10"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 flex items-center justify-center">
+                          <UserIcon className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                        </div>
+                      )}
+                      {currentJob.createdBy?.role && (
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-400/15 border border-amber-400/20 text-amber-700 dark:text-amber-400">
+                          {currentJob.createdBy.role}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* 1-Click Fast Actions: WhatsApp, Call, Email */}
