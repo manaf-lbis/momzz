@@ -48,7 +48,6 @@ import {
   Sparkles,
   UserPlus,
   AlertTriangle,
-  Car,
   Globe,
   ShieldCheck,
   Mail,
@@ -468,26 +467,11 @@ export const JobDetailPage: React.FC = () => {
               </div>
             )}
 
-            {/* Row 2 — Avatar + Vehicle Name + Ops */}
-            <div className="flex items-center gap-3 pt-0.5">
-              <div className="relative shrink-0">
-                {currentJob.thumbnailUrl ? (
-                  <img
-                    src={currentJob.thumbnailUrl}
-                    alt={currentJob.vehicleName}
-                    className="w-11 h-11 rounded-2xl object-cover border border-slate-200/80 dark:border-white/10 shadow-sm"
-                  />
-                ) : (
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-400/20">
-                    <Car className="w-5 h-5" />
-                  </div>
-                )}
-                {isPinned && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center shadow-xs border border-white dark:border-slate-900 text-[8px]">
-                    📌
-                  </span>
-                )}
-              </div>
+            {/* Row 2 — Vehicle Name + Ops */}
+            <div className="flex items-center gap-2 pt-0.5">
+              {isPinned && (
+                <span className="text-base leading-none shrink-0">📌</span>
+              )}
               <div className="min-w-0 flex-1">
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
                   {currentJob.vehicleName || 'Vehicle Service'}
