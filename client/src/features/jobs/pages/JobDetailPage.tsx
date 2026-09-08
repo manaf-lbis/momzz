@@ -24,6 +24,7 @@ import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../../../sh
 import { playCompletionSound, playReopenSound } from '../../../shared/utils/completionSound';
 import {
   ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Clock,
   Trash2,
@@ -656,76 +657,169 @@ export const JobDetailPage: React.FC = () => {
               </div>
 
               {/* Vehicle Operational Actions */}
-              <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-3">
+              <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-4">
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 dark:via-amber-400/20 to-transparent pointer-events-none" />
 
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-400/20 shadow-xs">
-                    <Sparkles className="w-5 h-5" />
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-400/20 shadow-xs">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+                        Vehicle Actions
+                      </h3>
+                      <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                        Inspections & Controls
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
-                      Vehicle Actions
-                    </h3>
-                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Inspections & Controls</p>
-                  </div>
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-600 dark:text-amber-400">
+                    Workshop Hub
+                  </span>
                 </div>
 
-                <div className="space-y-2">
+                {/* Actions Bento Stack */}
+                <div className="space-y-2.5">
+                  {/* 1. Vehicle Inspection Photos */}
                   <button
                     type="button"
                     onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
-                    className="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 font-mono text-xs font-bold flex items-center justify-between transition active:scale-95 cursor-pointer"
+                    className="group w-full p-3.5 rounded-2xl bg-slate-50/80 hover:bg-slate-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.07] hover:border-amber-400/40 dark:hover:border-amber-400/40 transition-all duration-200 text-left flex items-center justify-between gap-3 cursor-pointer shadow-2xs active:scale-[0.985]"
                   >
-                    <span className="flex items-center gap-2">
-                      <Camera className="w-4 h-4 text-amber-500" />
-                      <span>Vehicle Inspection Photos</span>
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">View / Upload →</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-400/30 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+                        <Camera className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-500 dark:group-hover:text-amber-300 transition-colors truncate">
+                          Vehicle Inspection Photos
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                          {currentJob.thumbnailUrl ? 'Photo attached • Studio ready' : 'Capture & upload multi-angle photos'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-lg bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-700 dark:text-amber-300 group-hover:bg-amber-400 group-hover:text-slate-950 transition-colors flex items-center gap-1">
+                        <span>Studio</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </span>
+                    </div>
                   </button>
 
+                  {/* 2. Pin Priority Configuration */}
                   <button
                     type="button"
                     onClick={() => setIsPinJobModalOpen(true)}
-                    className="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 font-mono text-xs font-bold flex items-center justify-between transition active:scale-95 cursor-pointer"
+                    className="group w-full p-3.5 rounded-2xl bg-slate-50/80 hover:bg-slate-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.07] hover:border-amber-400/40 dark:hover:border-amber-400/40 transition-all duration-200 text-left flex items-center justify-between gap-3 cursor-pointer shadow-2xs active:scale-[0.985]"
                   >
-                    <span className="flex items-center gap-2">
-                      <Pin className="w-4 h-4 text-amber-500" />
-                      <span>Pin Priority Configuration</span>
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      {isJobPinnedForAll ? 'Garage Pin' : isJobPinnedForMe ? 'Priority Pin' : 'Configure →'}
-                    </span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs ${
+                        isJobPinnedForAll
+                          ? 'bg-amber-400/20 text-amber-400 border border-amber-400/40'
+                          : isJobPinnedForMe
+                          ? 'bg-yellow-400/20 text-yellow-400 border border-yellow-400/40'
+                          : 'bg-slate-500/15 text-slate-400 border border-slate-500/20'
+                      }`}>
+                        <Pin className={`w-5 h-5 ${isPinned ? 'fill-current' : ''}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-500 dark:group-hover:text-amber-300 transition-colors truncate">
+                          Pin Priority Configuration
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                          {isJobPinnedForAll
+                            ? 'Highlighted across all garage screens'
+                            : isJobPinnedForMe
+                            ? 'Pinned to your active technician view'
+                            : 'Standard queue • Tap to spotlight'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`text-[10px] font-mono font-bold px-2 py-1 rounded-lg border flex items-center gap-1 transition-colors ${
+                        isJobPinnedForAll
+                          ? 'bg-amber-400/15 border-amber-400/30 text-amber-700 dark:text-amber-300'
+                          : isJobPinnedForMe
+                          ? 'bg-yellow-400/15 border-yellow-400/30 text-yellow-700 dark:text-yellow-300'
+                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
+                      }`}>
+                        <span>{isJobPinnedForAll ? 'Garage Pin' : isJobPinnedForMe ? 'Priority Pin' : 'Configure'}</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </span>
+                    </div>
                   </button>
 
+                  {/* 3. Edit Vehicle & Job Information (Admin Only) */}
                   {isAdmin && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
-                        className="w-full py-2.5 px-3 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/30 text-amber-800 dark:text-amber-300 font-mono text-xs font-bold flex items-center justify-between transition active:scale-95 cursor-pointer"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Edit2 className="w-4 h-4 text-amber-500" />
-                          <span>Edit Vehicle & Job Information</span>
-                        </span>
-                        <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400">Admin Only →</span>
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
+                      className="group w-full p-3.5 rounded-2xl bg-slate-50/80 hover:bg-slate-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.07] hover:border-sky-400/40 dark:hover:border-sky-400/40 transition-all duration-200 text-left flex items-center justify-between gap-3 cursor-pointer shadow-2xs active:scale-[0.985]"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-500 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+                          <Edit2 className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-sky-500 dark:group-hover:text-sky-300 transition-colors truncate">
+                              Edit Vehicle & Job Specs
+                            </h4>
+                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 uppercase">
+                              Admin
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                            Update plate, color, client & delivery target
+                          </p>
+                        </div>
+                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
-                        className="w-full py-2.5 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-600 dark:text-rose-300 font-mono text-xs font-bold flex items-center justify-between transition active:scale-95 cursor-pointer"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Trash2 className="w-4 h-4 text-rose-500" />
-                          <span>Delete Vehicle Job Card</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-lg bg-sky-500/10 dark:bg-sky-500/15 border border-sky-500/20 text-sky-600 dark:text-sky-300 group-hover:bg-sky-500 group-hover:text-white transition-colors flex items-center gap-1">
+                          <span>Edit</span>
+                          <ChevronRight className="w-3 h-3" />
                         </span>
-                        <span className="text-[10px] font-mono text-rose-500">Permanent →</span>
-                      </button>
-                    </>
+                      </div>
+                    </button>
                   )}
                 </div>
+
+                {/* 4. Danger Zone: Delete Vehicle Job Card (Admin Only) */}
+                {isAdmin && (
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-white/[0.06]">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
+                      className="group w-full p-3 rounded-2xl bg-rose-500/[0.05] hover:bg-rose-500/[0.12] border border-rose-500/20 hover:border-rose-500/40 transition-all duration-200 text-left flex items-center justify-between gap-3 cursor-pointer shadow-2xs active:scale-[0.985]"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/25 text-rose-500 dark:text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+                          <Trash2 className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400 transition-colors truncate">
+                            Delete Vehicle Job Card
+                          </h4>
+                          <p className="text-[10px] font-mono text-rose-500/70 dark:text-rose-400/60 truncate">
+                            Permanent removal • Cannot be undone
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0">
+                        <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-300 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                          Delete
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
