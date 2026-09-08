@@ -419,105 +419,94 @@ export const JobDetailPage: React.FC = () => {
         }
       />
 
-        {/* ── VEHICLE HERO COMMAND CENTER (Luxury Frosted Head Card) ── */}
-        <section className="glass-head-card relative overflow-hidden rounded-3xl p-4 sm:p-6 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)] space-y-4">
-          {/* Subtle top edge glow reflection */}
+        {/* ── VEHICLE HERO COMMAND CENTER ── */}
+        <section className="glass-head-card relative overflow-hidden rounded-3xl p-4 sm:p-5 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)]">
+          {/* Top edge accent */}
           <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/70 dark:via-amber-400/50 to-transparent pointer-events-none" />
 
-          {/* Internal ambient luxury glowing light orbs */}
+          {/* Ambient orbs */}
           <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-amber-500/10 dark:bg-amber-400/[0.08] blur-3xl pointer-events-none" />
           <div className="absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-cyan-500/10 dark:bg-cyan-400/[0.06] blur-3xl pointer-events-none" />
 
           {isPinned && <BorderBeam size={220} duration={7} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />}
 
-          {/* Top Block: Vehicle Identification & Operational Status */}
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-            {/* Left: Avatar + Vehicle Info + Registration & Color */}
-            <div className="flex items-center gap-3.5 min-w-0">
-              {/* Thumbnail / Vehicle Avatar */}
+          <div className="relative z-10 space-y-3">
+
+            {/* Row 1 — Plate & Color */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 border border-amber-400/40 px-3 py-1 rounded-xl tracking-wider">
+                {currentJob.vehicleNumber}
+              </span>
+              {currentJob.vehicleColor && (
+                <span className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+                  <Palette className="w-3 h-3 text-amber-500 shrink-0" />
+                  <span className="capitalize">{currentJob.vehicleColor}</span>
+                </span>
+              )}
+            </div>
+
+            {/* Row 2 — Overdue + Status */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {deliveryInfo.isOverdue && (
+                <span className="text-xs font-mono font-black text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-xl flex items-center gap-1.5 animate-pulse">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 stroke-[2.5]" />
+                  Overdue ({deliveryInfo.shortLabel})
+                </span>
+              )}
+              <div className={`px-3 py-1 rounded-xl text-xs font-mono font-black uppercase tracking-wider border flex items-center gap-1.5 ${
+                isAllCompleted
+                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-amber-400/15 border-amber-400/30 text-amber-800 dark:text-amber-300'
+              }`}>
+                <span className={`w-2 h-2 rounded-full shrink-0 ${isAllCompleted ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
+                {isAllCompleted
+                  ? (currentJob.verifiedAt ? 'Verified • Handover Ready' : 'Ready for Sign-Off')
+                  : 'In Service Bay • In Progress'}
+              </div>
+            </div>
+
+            {/* Row 3 — Avatar + Vehicle Name */}
+            <div className="flex items-center gap-3">
               <div className="relative shrink-0">
                 {currentJob.thumbnailUrl ? (
                   <img
                     src={currentJob.thumbnailUrl}
                     alt={currentJob.vehicleName}
-                    className="w-13 h-13 sm:w-16 sm:h-16 rounded-2xl object-cover border border-slate-200/80 dark:border-white/10 shadow-sm"
+                    className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl object-cover border border-slate-200/80 dark:border-white/10 shadow-sm"
                   />
                 ) : (
-                  <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-amber-400/20 to-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-400/30 shadow-xs">
-                    <Car className="w-7 h-7 sm:w-8 sm:h-8" />
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-400/20 shadow-xs">
+                    <Car className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
                   </div>
                 )}
                 {isPinned && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-bold flex items-center justify-center shadow-xs border border-white dark:border-slate-900 text-[10px]">
+                  <span className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-amber-400 text-slate-950 font-bold flex items-center justify-center shadow-xs border border-white dark:border-slate-900 text-[9px]">
                     📌
                   </span>
                 )}
               </div>
-
-              {/* Text & Specs */}
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0">
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
                   {currentJob.vehicleName || 'Vehicle Service'}
                 </h1>
-
-                {/* Subtitle Pills: Plate, Color & Ops */}
-                <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
-                  <span className="text-[11px] sm:text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 border border-amber-400/40 px-2.5 py-0.5 rounded-lg tracking-wider shadow-2xs">
-                    {currentJob.vehicleNumber}
-                  </span>
-
-                  {currentJob.vehicleColor && (
-                    <span className="text-[11px] font-mono font-semibold text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                      <Palette className="w-3 h-3 text-amber-500 shrink-0" />
-                      <span className="capitalize">{currentJob.vehicleColor}</span>
-                    </span>
-                  )}
-
-                  <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 hidden sm:inline">
-                    • {totalTasks} Operations
-                  </span>
-                </div>
+                <p className="text-xs font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+                  Active Vehicle Record • {totalTasks} Operations
+                </p>
               </div>
             </div>
 
-            {/* Right: Operational Status Badges */}
-            <div className="flex items-center gap-2 self-start sm:self-center flex-wrap shrink-0">
-              {deliveryInfo.isOverdue && (
-                <span className="text-[10px] sm:text-xs font-mono font-black text-rose-600 dark:text-rose-400 bg-rose-500/15 border border-rose-500/30 px-2.5 py-1 rounded-xl flex items-center gap-1.5 animate-pulse shrink-0">
-                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 stroke-[2.5]" />
-                  <span>Overdue ({deliveryInfo.shortLabel})</span>
+            {/* Row 4 — Progress */}
+            <div className="pt-2.5 border-t border-slate-200/60 dark:border-white/[0.07] space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-slate-500 dark:text-slate-400 font-semibold">
+                  {completedCount} of {totalTasks} tasks completed
                 </span>
-              )}
-
-              <div
-                className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-mono font-black uppercase tracking-wider border shrink-0 flex items-center gap-2 shadow-2xs ${
-                  isAllCompleted
-                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
-                    : 'bg-amber-400/15 border-amber-400/30 text-amber-800 dark:text-amber-300'
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${isAllCompleted ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' : 'bg-amber-400 animate-pulse'}`} />
-                <span>
-                  {isAllCompleted
-                    ? (currentJob.verifiedAt ? 'Verified • Handover Ready' : 'Ready for Sign-Off')
-                    : 'In Service Bay • In Progress'}
+                <span className={`font-black text-sm ${isAllCompleted ? 'text-emerald-500 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {progressPercent}%
                 </span>
               </div>
+              <ProgressBarBeam progress={progressPercent} />
             </div>
-          </div>
-
-          {/* Bottom Progress Metrics Section */}
-          <div className="relative z-10 pt-3 border-t border-slate-200/60 dark:border-white/[0.06] space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1.5">
-                <span>{completedCount} of {totalTasks} tasks completed</span>
-                <span className="sm:hidden text-slate-400 dark:text-slate-600 font-normal">• {totalTasks} Ops</span>
-              </span>
-              <span className={`font-black text-xs sm:text-sm ${isAllCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                {progressPercent}%
-              </span>
-            </div>
-            <ProgressBarBeam progress={progressPercent} />
           </div>
         </section>
 
