@@ -328,7 +328,7 @@ export const InventoryPage: React.FC = () => {
                 key={i}
                 className="rounded-2xl sm:rounded-3xl glass-modern-card p-3 sm:p-4 flex gap-3.5 items-center animate-pulse"
               >
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-slate-200/60 dark:bg-white/5 shrink-0" />
+                <div className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 aspect-square rounded-2xl bg-slate-200/60 dark:bg-white/5" />
                 <div className="flex-1 space-y-2">
                   <div className="h-3 w-1/3 rounded bg-slate-200/60 dark:bg-white/5" />
                   <div className="h-4 w-3/4 rounded bg-slate-200/60 dark:bg-white/5" />
@@ -374,8 +374,8 @@ export const InventoryPage: React.FC = () => {
                       : ''
                   }`}
                 >
-                  {/* -- LEFT SIDE: PART IMAGE / THUMBNAIL -- */}
-                  <div className="relative w-22 h-22 sm:w-26 sm:h-26 rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10 shrink-0 self-center">
+                  {/* -- LEFT SIDE: PART IMAGE / THUMBNAIL (Fixed Square Size) -- */}
+                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10 self-center">
                     {item.thumbnailUrl ? (
                       <img
                         src={item.thumbnailUrl}
