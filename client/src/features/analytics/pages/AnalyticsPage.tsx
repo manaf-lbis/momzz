@@ -127,8 +127,7 @@ export const AnalyticsPage: React.FC = () => {
     <div className="min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col overflow-x-clip selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient aura */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.1)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.06)_0%,transparent_65%)]" />
-        <Meteors number={10} />
+        <Meteors number={6} />
       </div>
 
       <Navbar glass />

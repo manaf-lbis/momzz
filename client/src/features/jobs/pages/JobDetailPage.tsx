@@ -422,9 +422,6 @@ export const JobDetailPage: React.FC = () => {
         <section className="glass-head-card relative overflow-hidden rounded-3xl p-4 sm:p-5 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)]">
           {/* Top edge accent */}
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 dark:via-amber-400/40 to-transparent pointer-events-none" />
-          {/* Ambient orbs */}
-          <div className="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-amber-500/[0.08] dark:bg-amber-400/[0.07] blur-3xl pointer-events-none" />
-          <div className="absolute -left-16 -bottom-16 w-56 h-56 rounded-full bg-cyan-500/[0.07] dark:bg-cyan-400/[0.05] blur-3xl pointer-events-none" />
           {isPinned && <BorderBeam size={220} duration={7} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />}
 
           <div className="relative z-10 space-y-2.5">

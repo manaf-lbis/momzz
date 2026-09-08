@@ -470,10 +470,6 @@ export const Dashboard: React.FC = () => {
           {/* Subtle top edge glow reflection */}
           <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/70 dark:via-amber-400/50 to-transparent pointer-events-none" />
 
-          {/* Internal ambient luxury glowing light orbs */}
-          <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-amber-500/10 dark:bg-amber-400/[0.08] blur-3xl pointer-events-none" />
-          <div className="absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-cyan-500/10 dark:bg-cyan-400/[0.06] blur-3xl pointer-events-none" />
-
           {/* Active border beam */}
           <BorderBeam size={280} duration={8} colorFrom="#f59e0b" colorTo="#fbbf24" borderWidth={1.2} />
 

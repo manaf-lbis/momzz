@@ -228,48 +228,10 @@
 }
 
 /* ──────────────────────────────────────────────
-   AMBIENT GLOW — decorative background glows
+   AMBIENT GLOW — handled globally by ModernAppBackground
 ────────────────────────────────────────────── */
 .glass-ambient-glow {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  overflow: hidden;
-}
-
-.glass-ambient-glow::before {
-  content: "";
-  position: absolute;
-  top: -10%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 120%;
-  height: 400px;
-  background: radial-gradient(ellipse at top, rgba(201, 168, 76, 0.08) 0%, rgba(99, 102, 241, 0.04) 45%, transparent 70%);
-  filter: blur(80px);
-}
-
-.glass-ambient-glow::after {
-  content: "";
-  position: absolute;
-  bottom: -10%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  height: 320px;
-  background: radial-gradient(ellipse at bottom, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
-  filter: blur(80px);
-}
-
-.dark .glass-ambient-glow::before {
-  background: radial-gradient(ellipse at top, rgba(201, 168, 76, 0.06) 0%, rgba(99, 102, 241, 0.03) 45%, transparent 70%);
-  filter: blur(90px);
-}
-
-.dark .glass-ambient-glow::after {
-  background: radial-gradient(ellipse at bottom, rgba(99, 102, 241, 0.04) 0%, transparent 70%);
-  filter: blur(90px);
+  display: none !important;
 }
 
 /* ──────────────────────────────────────────────
