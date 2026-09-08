@@ -373,7 +373,7 @@ export const EditJobPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-clip selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient background aura */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.06)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.05)_0%,transparent_65%)]" />
@@ -382,9 +382,9 @@ export const EditJobPage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="app-container relative z-10 flex-1 py-4 sm:py-8 pb-36 sm:pb-40 md:pb-16 overflow-x-hidden">
+      <main className="app-container relative z-10 flex-1 py-4 sm:py-8 pb-36 sm:pb-40 md:pb-16 overflow-x-clip">
         {/* Page Top Controls */}
-        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 -mt-4 pt-3 pb-3 mb-2 backdrop-blur-2xl bg-white/85 dark:bg-[#070812]/85 border-b border-slate-200/70 dark:border-white/10 flex items-center justify-between gap-3 shadow-2xs transition-all">
+        <header className="sticky top-0 sm:top-14 z-30 py-2 mb-2 bg-transparent flex items-center justify-between gap-3 transition-all">
           <button
             onClick={() => (step === 2 ? setStep(1) : navigate(`/jobs/${id}`))}
             className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 transition hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400"

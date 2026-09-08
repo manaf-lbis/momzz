@@ -28,7 +28,7 @@ export const AdminApproval: React.FC = () => {
   const pendingWorkers = data?.data || [];
 
   return (
-    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-clip selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient background light */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(239,68,68,0.06)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(239,68,68,0.04)_0%,transparent_65%)]" />
