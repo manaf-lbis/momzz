@@ -178,7 +178,7 @@ export const Dashboard: React.FC = () => {
       <main className="app-container relative z-10 flex-1 pt-5 pb-32 md:pb-16 flex flex-col gap-4">
 
         {/* ── 1. HEADER (Profile Greeting + Controls) ── */}
-        <header className="flex items-center justify-between gap-3">
+        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 py-3 -mt-2 backdrop-blur-2xl bg-white/85 dark:bg-[#070812]/85 border-b border-slate-200/70 dark:border-white/10 flex items-center justify-between gap-3 shadow-2xs transition-all">
           <Link to="/profile" className="flex items-center gap-3 active:opacity-75 transition group">
             <div className="relative w-11 h-11 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center font-black text-base text-amber-600 dark:text-amber-400
                             backdrop-blur-xl bg-white/70 dark:bg-white/[0.08] border border-white/90 dark:border-white/[0.12] shadow-xs">

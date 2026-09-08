@@ -41,20 +41,42 @@ export const Dock = React.forwardRef<HTMLDivElement, DockProps>(
       });
     };
 
+    const handleMouseMove = (e: React.MouseEvent) => {
+      mouseX.set(e.clientX);
+    };
+
+    const handleMouseLeave = () => {
+      mouseX.set(Infinity);
+    };
+
+    const handleTouch = (e: React.TouchEvent) => {
+      if (e.touches && e.touches[0]) {
+        mouseX.set(e.touches[0].clientX);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      setTimeout(() => mouseX.set(Infinity), 150);
+    };
+
     return (
       <motion.div
         ref={ref}
-        onMouseMove={(e) => mouseX.set(e.clientX)}
-        onMouseLeave={() => mouseX.set(Infinity)}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouch}
+        onTouchMove={handleTouch}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         {...props}
         className={cn(
-          'mx-auto w-max flex items-center gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl border p-1.5 sm:p-2 backdrop-blur-2xl transition-all select-none',
+          'mx-auto w-max max-w-[96vw] flex items-center gap-1 sm:gap-2 rounded-2xl sm:rounded-3xl border p-1 sm:p-2 backdrop-blur-2xl transition-all select-none touch-manipulation',
           {
             'items-start': direction === 'top',
             'items-center': direction === 'middle',
             'items-end': direction === 'bottom',
           },
-          'bg-white/85 dark:bg-[#0c0d18]/85 border-slate-200/90 dark:border-white/10 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.15)] dark:shadow-[0_16px_50px_-8px_rgba(0,0,0,0.8)] ring-1 ring-black/5 dark:ring-white/[0.06]',
+          'bg-white/90 dark:bg-[#0c0d18]/90 border-slate-200/90 dark:border-white/10 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.15)] dark:shadow-[0_16px_50px_-8px_rgba(0,0,0,0.8)] ring-1 ring-black/5 dark:ring-white/[0.06]',
           className
         )}
       >
@@ -89,7 +111,7 @@ export const DockIcon = ({
   title,
   active,
 }: PropsWithChildren<DockIconProps>) => {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLButtonElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
   const defaultMouseX = useMotionValue(Infinity);
@@ -112,13 +134,25 @@ export const DockIcon = ({
     damping: 14,
   });
 
+  // Only show tooltips on devices with true hover pointers (desktop mice)
+  // This completely prevents mobile browsers from trapping taps into hover states (which causes double-click requirement)
+  const handleMouseEnter = () => {
+    if (typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      setIsHovered(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
+
   return (
     <div
-      className="relative flex items-center justify-center"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className="relative flex items-center justify-center touch-manipulation"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      {/* Tooltip Popup */}
+      {/* Desktop Tooltip Popup */}
       <AnimatePresence>
         {isHovered && title && (
           <motion.div
@@ -134,27 +168,28 @@ export const DockIcon = ({
         )}
       </AnimatePresence>
 
-      <motion.div
+      <motion.button
         ref={ref}
+        type="button"
         style={{ width, height: width }}
         onClick={onClick}
         className={cn(
-          'relative flex aspect-square cursor-pointer items-center justify-center rounded-xl sm:rounded-2xl p-2 transition-colors duration-150',
+          'relative flex aspect-square cursor-pointer items-center justify-center rounded-xl sm:rounded-2xl p-2 transition-colors duration-150 touch-manipulation select-none outline-none focus:outline-none',
           active
-            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-md shadow-slate-900/25 dark:shadow-white/15 ring-1 ring-black/10 dark:ring-white/20'
-            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/90 dark:hover:bg-white/[0.08] hover:text-slate-900 dark:hover:text-white',
+            ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/35 ring-1 ring-amber-400/60 font-black'
+            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/90 dark:hover:bg-white/[0.08] hover:text-slate-900 dark:hover:text-white active:bg-slate-200/80 dark:active:bg-white/15',
           className
         )}
-        whileTap={{ scale: 0.9 }}
+        whileTap={{ scale: 0.84 }}
       >
         {children}
         {active && (
           <motion.span
             layoutId="dock-active-dot"
-            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.9)]"
+            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.9)]"
           />
         )}
-      </motion.div>
+      </motion.button>
     </div>
   );
 };

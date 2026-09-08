@@ -44,17 +44,22 @@ export const SlideToSignoff: React.FC<SlideToSignoffProps> = ({
   // Background fill glow as slider moves
   const progressWidth = useTransform(x, [0, maxDrag], [0, maxDrag + 44]);
 
+  const handleTrigger = async () => {
+    if (isLoading || isVerified || hasTriggered) return;
+    setHasTriggered(true);
+    try {
+      await onSignoff();
+    } catch (e) {
+      setHasTriggered(false);
+    }
+  };
+
   const handleDragEnd = async (_: any, info: any) => {
     if (isLoading || isVerified || hasTriggered) return;
 
     // Trigger if dragged over 70% of max distance
     if (info.offset.x >= maxDrag * 0.7) {
-      setHasTriggered(true);
-      try {
-        await onSignoff();
-      } catch (e) {
-        setHasTriggered(false);
-      }
+      handleTrigger();
     }
   };
 
@@ -64,7 +69,7 @@ export const SlideToSignoff: React.FC<SlideToSignoffProps> = ({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className={`fixed bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-40 w-[92vw] max-w-[360px] ${className}`}
+      className={`fixed bottom-20 sm:bottom-22 left-1/2 -translate-x-1/2 z-40 w-[92vw] max-w-[360px] ${className}`}
     >
       <div
         ref={containerRef}
@@ -121,8 +126,9 @@ export const SlideToSignoff: React.FC<SlideToSignoffProps> = ({
             dragElastic={0.05}
             dragSnapToOrigin={!hasTriggered && !isLoading}
             onDragEnd={handleDragEnd}
+            onClick={handleTrigger}
             style={{ x }}
-            whileTap={{ scale: 0.96 }}
+            whileTap={{ scale: 0.94 }}
             className="w-11 h-11 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-slate-950 flex items-center justify-center font-black shadow-lg shadow-amber-400/50 cursor-grab active:cursor-grabbing z-10 shrink-0 touch-none"
           >
             {isLoading || hasTriggered ? (

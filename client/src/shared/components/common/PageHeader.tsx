@@ -65,8 +65,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   );
 
   return (
-    <div
-      className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 ${className}`}
+    <header
+      className={`sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 py-3 mb-4 backdrop-blur-2xl bg-white/85 dark:bg-[#070812]/85 border-b border-slate-200/70 dark:border-white/10 transition-all flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between shadow-2xs ${className}`}
     >
       <div className="min-w-0">
         {hasBack ? (
@@ -120,7 +120,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           {children}
         </div>
       )}
-    </div>
+    </header>
   );
 };
 
