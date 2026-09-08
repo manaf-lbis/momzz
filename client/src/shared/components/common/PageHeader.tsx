@@ -66,47 +66,50 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   return (
     <header
-      className={`sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 py-3 mb-4 backdrop-blur-2xl bg-white/85 dark:bg-[#070812]/85 border-b border-slate-200/70 dark:border-white/10 transition-all flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between shadow-2xs ${className}`}
+      className={`sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-3 pb-3 mb-3 backdrop-blur-2xl bg-white/85 dark:bg-[#070812]/85 border-b border-slate-200/70 dark:border-white/10 transition-all flex flex-row items-center justify-between gap-2 sm:gap-4 shadow-2xs ${className}`}
     >
-      <div className="min-w-0">
-        {hasBack ? (
-          <button
-            type="button"
-            onClick={handleBack}
-            className="group inline-flex items-center gap-2.5 sm:gap-3 text-left transition-colors cursor-pointer select-none active:scale-[0.99] text-slate-900 dark:text-white"
-            aria-label="Go back"
-          >
-            <ArrowLeft
-              className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-200 group-hover:-translate-x-1.5 stroke-[2.5] text-slate-600 dark:text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 shrink-0"
-            />
+      {/* Left side: Back Button + Title + optional subtitle */}
+      <div className="min-w-0 flex-1 flex flex-col justify-center">
+        <div className="min-w-0 flex items-center">
+          {hasBack ? (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="group inline-flex items-center gap-2 sm:gap-2.5 text-left transition-colors cursor-pointer select-none active:scale-[0.98] text-slate-900 dark:text-white min-w-0 max-w-full"
+              aria-label="Go back"
+            >
+              <ArrowLeft
+                className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200 group-hover:-translate-x-1 stroke-[2.5] text-slate-600 dark:text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 shrink-0"
+              />
 
-            {icon && (
-              <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-600 dark:text-amber-400 border border-amber-400/25 shadow-2xs">
-                {icon}
-              </div>
-            )}
+              {icon && (
+                <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-amber-400/15 text-amber-600 dark:text-amber-400 border border-amber-400/25 shadow-2xs">
+                  {icon}
+                </div>
+              )}
 
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2 min-w-0 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-              {titleContent}
-            </h1>
-          </button>
-        ) : (
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            {icon && (
-              <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-600 dark:text-amber-400 border border-amber-400/25 shadow-2xs">
-                {icon}
-              </div>
-            )}
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2 min-w-0">
-              {titleContent}
-            </h1>
-          </div>
-        )}
+              <h1 className="text-base sm:text-xl md:text-2xl font-black tracking-tight min-w-0 truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                {titleContent}
+              </h1>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 max-w-full">
+              {icon && (
+                <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-amber-400/15 text-amber-600 dark:text-amber-400 border border-amber-400/25 shadow-2xs">
+                  {icon}
+                </div>
+              )}
+              <h1 className="text-base sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white min-w-0 truncate">
+                {titleContent}
+              </h1>
+            </div>
+          )}
+        </div>
 
         {description && (
           <p
-            className={`text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium truncate sm:whitespace-normal mt-1 ${
-              hasBack ? 'pl-7.5 sm:pl-9' : ''
+            className={`text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5 ${
+              hasBack ? 'pl-6 sm:pl-7.5' : ''
             }`}
           >
             {description}
@@ -114,8 +117,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         )}
       </div>
 
+      {/* Right side: Essential Action Buttons (ALWAYS ON SAME LINE) */}
       {(actions || children) && (
-        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {actions}
           {children}
         </div>
