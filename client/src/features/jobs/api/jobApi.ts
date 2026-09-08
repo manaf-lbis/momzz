@@ -68,7 +68,7 @@ export interface JobCardData {
   pinnedBy?: string[] | { id?: string; _id?: string; name?: string }[];
   createdAt: string;
   updatedAt: string;
-  verifiedBy?: { name: string };
+  verifiedBy?: { id?: string; _id?: string; name: string; mobile?: string; role?: string; profileImageUrl?: string };
   verifiedAt?: string;
   tasks: TaskItem[];
 }

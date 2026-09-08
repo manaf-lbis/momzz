@@ -22,6 +22,7 @@ import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { MagicTabs } from '../../../shared/components/magicui/MagicTabs';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
+import { SlideToSignoff } from '../components/SlideToSignoff';
 import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../../../shared/utils/confetti';
 import { playCompletionSound, playReopenSound } from '../../../shared/utils/completionSound';
 import {
@@ -283,8 +284,11 @@ export const JobDetailPage: React.FC = () => {
     if (!currentJob) return;
     try {
       await verifyJobCard({ jobCardId: currentJob.id || currentJob._id! }).unwrap();
+      playCompletionSound();
+      triggerVehicleReadyConfetti();
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Unable to verify this job card.');
+      throw err;
     }
   };
 
@@ -528,66 +532,131 @@ export const JobDetailPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            {/* Client & Fast Communications Hub */}
-            <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-4">
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 dark:via-amber-400/20 to-transparent pointer-events-none" />
+            {/* Left Column: QA Verification Log + Client Contact */}
+            <div className="space-y-4">
+              {/* QA Sign-off Audit & Verification Log */}
+              <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-3.5">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/40 dark:via-emerald-400/20 to-transparent pointer-events-none" />
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-400/20 shadow-xs">
-                    <UserIcon className="w-5 h-5" />
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+                      QA Sign-Off Audit
+                    </h3>
+                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                      Inspection & Clearance Log
+                    </p>
                   </div>
+                  <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${
+                    currentJob.verifiedAt
+                      ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                      : isAllCompleted
+                      ? 'bg-amber-400/15 border-amber-400/30 text-amber-600 dark:text-amber-400 animate-pulse'
+                      : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
+                  }`}>
+                    {currentJob.verifiedAt ? 'QA Verified' : isAllCompleted ? 'Ready for Sign-Off' : 'In Progress'}
+                  </span>
+                </div>
+
+                {currentJob.verifiedAt ? (
+                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-mono uppercase text-emerald-700 dark:text-emerald-300 font-bold">
+                          Verified & Signed Off By
+                        </p>
+                        <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5 flex items-center gap-2">
+                          <span>{currentJob.verifiedBy?.name || 'Authorized Supervisor'}</span>
+                          {currentJob.verifiedBy?.role && (
+                            <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 uppercase">
+                              {currentJob.verifiedBy.role}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[10px] font-mono uppercase text-emerald-700 dark:text-emerald-300 font-bold">
+                          Timestamp
+                        </p>
+                        <p className="text-xs sm:text-sm font-mono font-bold text-slate-800 dark:text-white mt-0.5">
+                          {formatTaskDateTime(currentJob.verifiedAt)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>Checklist fully inspected and vehicle cleared for customer handover.</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05] space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                      <span>Operations Status</span>
+                      <span className="font-mono text-amber-500 font-black">{completedCount} / {totalTasks} Tasks</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {isAllCompleted
+                        ? 'All operations completed. Use the slide button docked below to sign off QA inspection.'
+                        : 'Complete all checklist operations to enable QA sign-off and vehicle handover.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Client & Fast Communications Hub */}
+              <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-4">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 dark:via-amber-400/20 to-transparent pointer-events-none" />
+
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
                   <div>
                     <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
                       Client Contact Info
                     </h3>
                     <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Direct Contact & Communications</p>
                   </div>
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">
+                    {currentJob.customerMobile ? 'Verified' : 'Walk-in'}
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">
-                  {currentJob.customerMobile ? 'Verified' : 'Walk-in'}
-                </span>
-              </div>
 
-              {/* Client Profile Box */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05] space-y-2.5">
-                <div>
-                  <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Client Name</p>
-                  <p className="text-base font-black text-slate-900 dark:text-white">
-                    {currentJob.customerName || 'Walk-in Customer'}
-                  </p>
-                </div>
-                {currentJob.customerMobile && (
+                {/* Client Profile Box */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05] space-y-2.5">
                   <div>
-                    <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Mobile Phone</p>
-                    <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300">
-                      {currentJob.customerMobile}
+                    <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Client Name</p>
+                    <p className="text-base font-black text-slate-900 dark:text-white">
+                      {currentJob.customerName || 'Walk-in Customer'}
                     </p>
                   </div>
-                )}
-                {currentJob.customerEmail && (
-                  <div>
-                    <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Email Address</p>
-                    <p className="text-sm font-mono text-slate-700 dark:text-slate-300">
-                      {currentJob.customerEmail}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* 1-Click Fast Actions: WhatsApp, Call, Email */}
-              <div className="space-y-2 pt-1">
-                <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">1-Click Actions</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {currentJob.customerMobile && (
-                    <>
+                    <div>
+                      <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Mobile Phone</p>
+                      <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300">
+                        {currentJob.customerMobile}
+                      </p>
+                    </div>
+                  )}
+                  {currentJob.customerEmail && (
+                    <div>
+                      <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Email Address</p>
+                      <p className="text-sm font-mono text-slate-700 dark:text-slate-300 truncate">
+                        {currentJob.customerEmail}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* 1-Click Fast Actions: WhatsApp, Call, Email */}
+                <div className="space-y-2 pt-1">
+                  <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">1-Click Fast Actions</p>
+                  {currentJob.customerMobile && (
+                    <div className="grid grid-cols-2 gap-2">
                       <a
                         href={`https://wa.me/${currentJob.customerMobile.replace(/[^0-9]/g, '')}`}
                         target="_blank"
                         rel="noreferrer"
                         className="py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
                       >
-                        <MessageCircle className="w-4 h-4 text-emerald-500" />
+                        <MessageCircle className="w-4 h-4 text-emerald-500 shrink-0" />
                         <span>WhatsApp</span>
                       </a>
 
@@ -595,41 +664,41 @@ export const JobDetailPage: React.FC = () => {
                         href={`tel:${currentJob.customerMobile}`}
                         className="py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
                       >
-                        <Phone className="w-4 h-4 text-emerald-500" />
+                        <Phone className="w-4 h-4 text-emerald-500 shrink-0" />
                         <span>Call</span>
                       </a>
-                    </>
+                    </div>
                   )}
 
                   {currentJob.customerEmail && (
                     <a
                       href={`mailto:${currentJob.customerEmail}`}
-                      className="py-2.5 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-700 dark:text-sky-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-700 dark:text-sky-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
                     >
-                      <Mail className="w-4 h-4 text-sky-500" />
-                      <span>Email</span>
+                      <Mail className="w-4 h-4 text-sky-500 shrink-0" />
+                      <span className="truncate">Email {currentJob.customerEmail}</span>
                     </a>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Handover & Vehicle Management Hub */}
+            {/* Right Column: Handover & Vehicle Management Hub */}
             <div className="space-y-4">
               {/* Delivery & Timeline Card */}
               <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-3">
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 dark:via-amber-400/20 to-transparent pointer-events-none" />
 
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-400/20 shadow-xs">
-                    <Calendar className="w-5 h-5" />
-                  </div>
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
                   <div>
                     <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
                       Timeline & Delivery
                     </h3>
                     <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Service Bay Duration</p>
                   </div>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-600 dark:text-amber-400">
+                    Schedule
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -676,19 +745,14 @@ export const JobDetailPage: React.FC = () => {
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 dark:via-amber-400/20 to-transparent pointer-events-none" />
 
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-400/20 shadow-xs">
-                      <Sparkles className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
-                        Vehicle Actions
-                      </h3>
-                      <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                        Inspections & Controls
-                      </p>
-                    </div>
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+                      Vehicle Actions
+                    </h3>
+                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                      Inspections & Controls
+                    </p>
                   </div>
                   <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-600 dark:text-amber-400">
                     Workshop Hub
@@ -1446,6 +1510,18 @@ export const JobDetailPage: React.FC = () => {
           onTogglePin={handleToggleJobPin}
         />
       )}
+
+      {/* ── SLIDE TO SIGNOFF PILL DOCK (Fixed Bottom) ── */}
+      <AnimatePresence>
+        {isAllCompleted && !currentJob.verifiedAt && (
+          <SlideToSignoff
+            onSignoff={handleVerify}
+            isLoading={isVerifying}
+            isVerified={Boolean(currentJob.verifiedAt)}
+            verifierName={currentJob.verifiedBy?.name}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -32,7 +32,7 @@ router.post('/create', adminMiddleware, createJobWithTasks);
 router.patch('/tasks/:taskId/status', validateRequest({ body: setTaskStatusSchema }), setTaskStatus);
 router.patch('/tasks/:taskId/pin', toggleTaskPin);
 router.patch('/:jobCardId/pin', validateRequest({ body: toggleJobPinSchema }), toggleJobPin);
-router.patch('/:jobCardId/verify', adminMiddleware, verifyJobCard);
+router.patch('/:jobCardId/verify', verifyJobCard);
 
 router.patch('/:jobCardId/image', uploadJobImage);
 router.patch('/:jobCardId', adminMiddleware, updateJobCard);

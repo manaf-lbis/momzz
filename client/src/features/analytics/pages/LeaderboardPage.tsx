@@ -265,10 +265,11 @@ const TaskHistoryPanel: React.FC<{
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 60 }}
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-        className="relative w-full sm:max-w-lg sm:rounded-[28px] rounded-t-[28px] bg-[#0f0f1e] border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full sm:max-w-lg sm:rounded-[32px] rounded-t-[32px] bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-2xl border border-slate-700/60 dark:border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col"
         style={{ maxHeight: '90vh' }}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent pointer-events-none" />
         <BorderBeam size={220} duration={7} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={1} />
 
         {/* Header */}
@@ -676,11 +677,20 @@ export const LeaderboardPage: React.FC = () => {
               >
                 <BorderBeam size={280} duration={12} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={1} />
 
-                {/* Label */}
-                <div className="absolute top-3.5 left-1/2 -translate-x-1/2">
+                {/* Label & Spotlight Action */}
+                <div className="absolute top-3.5 inset-x-4 flex items-center justify-between pointer-events-auto">
                   <span className="flex items-center gap-1 text-[10px] font-mono font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest whitespace-nowrap">
                     <Trophy className="w-3.5 h-3.5" /> Podium
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-top-performers-modal'))}
+                    className="flex items-center gap-1 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300 bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/30 px-2 py-0.5 rounded-lg transition active:scale-95 cursor-pointer shadow-2xs"
+                    title="Open Top Performers Spotlight Modal"
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <span>Spotlight</span>
+                  </button>
                 </div>
 
                 {/* Gold glow behind #1 */}
