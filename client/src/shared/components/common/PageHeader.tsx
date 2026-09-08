@@ -66,7 +66,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   return (
     <header
-      className={`sticky top-0 sm:top-14 z-30 py-2 mb-2 bg-transparent transition-all flex flex-row items-center justify-between gap-2 sm:gap-4 ${className}`}
+      className={`sticky top-0 sm:top-14 z-30 py-2.5 px-3.5 sm:px-5 mb-3 rounded-2xl sm:rounded-3xl glass-modern-card transition-all flex flex-row items-center justify-between gap-2 sm:gap-4 ${className}`}
     >
       {/* Left side: Back Button + Title + optional subtitle */}
       <div className="min-w-0 flex-1 flex flex-col justify-center">

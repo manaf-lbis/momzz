@@ -1,15 +1,15 @@
 import React from 'react';
 
 /**
- * Clean, fixed glassmorphic application background.
- * - Stays 100% stationary (does NOT scroll with page content).
- * - Clean, subtle geometric micro-dot grid pattern.
- * - Soft, understated ambient tone without harsh or glaring neon orbs.
+ * Minimal, standard, clean glassmorphic background.
+ * - 100% stationary (fixed to viewport, never scrolls).
+ * - Minimal, subtle, clean uniform technical grid.
+ * - Calm, distraction-free neutral canvas.
  */
 export const FluidCanvasBackground: React.FC = () => {
   return (
     <div
-      className="fixed inset-0 pointer-events-none select-none -z-10 overflow-hidden bg-[#f4f5f8] dark:bg-[#070810] transition-colors duration-300"
+      className="fixed inset-0 pointer-events-none select-none -z-10 overflow-hidden bg-[#f4f5f8] dark:bg-[#080912] transition-colors duration-300"
       style={{
         position: 'fixed',
         top: 0,
@@ -20,69 +20,33 @@ export const FluidCanvasBackground: React.FC = () => {
       }}
       aria-hidden="true"
     >
-      {/* ── 1. Automotive Blueprint / Technical Fine Grid Pattern (Fixed) ── */}
+      {/* ── Minimal Standard Clean Grid (Fixed) ── */}
       <div
-        className="absolute inset-0 opacity-40 dark:opacity-25 pointer-events-none"
+        className="absolute inset-0 opacity-30 dark:opacity-18 pointer-events-none"
         style={{
           backgroundImage: `
             linear-gradient(to right, currentColor 1px, transparent 1px),
             linear-gradient(to bottom, currentColor 1px, transparent 1px)
           `,
-          backgroundSize: '40px 40px',
-          maskImage:
-            'radial-gradient(ellipse 90% 85% at 50% 45%, black 50%, transparent 95%)',
-          WebkitMaskImage:
-            'radial-gradient(ellipse 90% 85% at 50% 45%, black 50%, transparent 95%)',
+          backgroundSize: '36px 36px',
         }}
       />
 
-      {/* ── 2. Subtle Micro Carbon Diagonal Mesh ── */}
+      {/* ── Very subtle, minimal warm ambient breath at top ── */}
       <div
-        className="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none"
+        className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] rounded-full pointer-events-none opacity-20 dark:opacity-10"
         style={{
-          backgroundImage: `
-            repeating-linear-gradient(45deg, currentColor 0, currentColor 1px, transparent 0, transparent 8px)
-          `,
+          background: 'radial-gradient(ellipse at center, rgba(245, 158, 11, 0.15) 0%, transparent 70%)',
+          filter: 'blur(90px)',
         }}
       />
 
-      {/* ── 3. Moody Ambient Light Gradients (Provides depth for frosted glass cards to blur) ── */}
-      {/* Warm Golden Glow at Top Center */}
-      <div
-        className="absolute -top-32 left-1/2 -translate-x-1/2 w-[900px] h-[550px] rounded-full pointer-events-none opacity-45 dark:opacity-28"
-        style={{
-          background:
-            'radial-gradient(ellipse at center, rgba(245, 158, 11, 0.45) 0%, rgba(217, 119, 6, 0.15) 50%, transparent 75%)',
-          filter: 'blur(100px)',
-        }}
-      />
-
-      {/* Deep Indigo/Violet Accent on Left */}
-      <div
-        className="absolute top-1/3 -left-32 w-[650px] h-[650px] rounded-full pointer-events-none opacity-35 dark:opacity-20"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, rgba(79, 70, 229, 0.1) 50%, transparent 70%)',
-          filter: 'blur(110px)',
-        }}
-      />
-
-      {/* Subtle Cyan/Teal Accent on Bottom Right */}
-      <div
-        className="absolute bottom-10 -right-32 w-[600px] h-[600px] rounded-full pointer-events-none opacity-30 dark:opacity-15"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(20, 184, 166, 0.3) 0%, transparent 70%)',
-          filter: 'blur(110px)',
-        }}
-      />
-
-      {/* ── 4. Edge Vignette ── */}
+      {/* ── Soft Neutral Corner Vignette ── */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse 95% 85% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.4) 100%)',
+            'radial-gradient(ellipse 90% 80% at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.25) 100%)',
         }}
       />
     </div>

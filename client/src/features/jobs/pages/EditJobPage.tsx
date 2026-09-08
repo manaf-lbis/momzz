@@ -381,7 +381,7 @@ export const EditJobPage: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 py-4 sm:py-8 pb-36 sm:pb-40 md:pb-16 overflow-x-clip">
         {/* Page Top Controls */}
-        <header className="sticky top-0 sm:top-14 z-30 py-2 mb-2 bg-transparent flex items-center justify-between gap-3 transition-all">
+        <header className="sticky top-0 sm:top-14 z-30 py-2.5 px-3.5 sm:px-5 mb-3 rounded-2xl sm:rounded-3xl glass-modern-card flex items-center justify-between gap-3 transition-all">
           <button
             onClick={() => (step === 2 ? setStep(1) : navigate(`/jobs/${id}`))}
             className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 transition hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400"
