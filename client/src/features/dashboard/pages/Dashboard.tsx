@@ -316,15 +316,23 @@ export const Dashboard: React.FC = () => {
               const pinnedArray = Array.isArray(curPinned.pinnedBy) ? curPinned.pinnedBy : [];
               const isPinnedForMe = pinnedArray.some((p: any) => isMatchingUserId(p, currentUserId));
 
+              const pinnerNames: string[] = [];
+              if (isPinnedForMe) {
+                pinnerNames.push('You');
+              }
+              pinnedArray.forEach((p: any) => {
+                if (!isMatchingUserId(p, currentUserId)) {
+                  if (typeof p === 'object' && p?.name) {
+                    pinnerNames.push(p.name.split(' ')[0]);
+                  }
+                }
+              });
+
               let pinnerDisplay = '';
-              if (isPinnedForAll) {
-                const adminName = curPinned.createdBy?.name ? curPinned.createdBy.name.split(' ')[0] : 'Admin';
-                pinnerDisplay = `Garage Admin (${adminName})`;
-              } else if (isPinnedForMe) {
-                pinnerDisplay = 'You';
-              } else if (pinnedArray.length > 0) {
-                const first: any = pinnedArray[0];
-                pinnerDisplay = typeof first === 'object' && first?.name ? first.name.split(' ')[0] : 'Staff';
+              if (pinnerNames.length > 0) {
+                pinnerDisplay = pinnerNames.join(', ');
+              } else if (isPinnedForAll) {
+                pinnerDisplay = 'Garage Priority';
               } else {
                 pinnerDisplay = 'Staff';
               }
@@ -411,7 +419,7 @@ export const Dashboard: React.FC = () => {
                           </div>
 
                           <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-1 truncate">
-                            Pinned by {pinnerDisplay} • {curPinned.customerName ? `Client: ${curPinned.customerName}` : 'In Service Bay'}
+                            {pinnerDisplay === 'Garage Priority' ? 'Garage Priority' : `Pinned by ${pinnerDisplay}`} • {curPinned.customerName ? `Client: ${curPinned.customerName}` : 'In Service Bay'}
                           </p>
                         </div>
                       </div>

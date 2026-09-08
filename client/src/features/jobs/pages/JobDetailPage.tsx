@@ -468,18 +468,13 @@ export const JobDetailPage: React.FC = () => {
             )}
 
             {/* Row 2 — Vehicle Name + Ops */}
-            <div className="flex items-center gap-2 pt-0.5">
-              {isPinned && (
-                <span className="text-base leading-none shrink-0">📌</span>
-              )}
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
-                  {currentJob.vehicleName || 'Vehicle Service'}
-                </h1>
-                <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
-                  {totalTasks > 0 ? `${totalTasks} operations` : 'No operations yet'}
-                </p>
-              </div>
+            <div className="pt-0.5 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
+                {currentJob.vehicleName || 'Vehicle Service'}
+              </h1>
+              <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+                {totalTasks > 0 ? `${totalTasks} operations` : 'No operations yet'}
+              </p>
             </div>
 
             {/* Row 3 — Progress */}

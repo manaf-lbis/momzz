@@ -62,7 +62,7 @@ export const QuickAccessDock: React.FC = () => {
             <Home
               className={`w-5 h-5 transition-transform ${
                 isHomeActive
-                  ? 'text-amber-500 dark:text-amber-400 stroke-[2.4]'
+                  ? 'text-slate-950 dark:text-slate-950 stroke-[2.4]'
                   : 'text-slate-600 dark:text-slate-300 group-hover:scale-110'
               }`}
             />
@@ -77,7 +77,7 @@ export const QuickAccessDock: React.FC = () => {
             <Car
               className={`w-5 h-5 transition-transform ${
                 isVehiclesActive
-                  ? 'text-amber-500 dark:text-amber-400 stroke-[2.4]'
+                  ? 'text-slate-950 dark:text-slate-950 stroke-[2.4]'
                   : 'text-slate-600 dark:text-slate-300 group-hover:scale-110'
               }`}
             />
@@ -92,7 +92,7 @@ export const QuickAccessDock: React.FC = () => {
             <Clock
               className={`w-5 h-5 transition-transform ${
                 isLogsActive
-                  ? 'text-amber-500 dark:text-amber-400 stroke-[2.4]'
+                  ? 'text-slate-950 dark:text-slate-950 stroke-[2.4]'
                   : 'text-slate-600 dark:text-slate-300 group-hover:scale-110'
               }`}
             />
@@ -107,7 +107,7 @@ export const QuickAccessDock: React.FC = () => {
             <Package
               className={`w-5 h-5 transition-transform ${
                 isInventoryActive
-                  ? 'text-amber-500 dark:text-amber-400 stroke-[2.4]'
+                  ? 'text-slate-950 dark:text-slate-950 stroke-[2.4]'
                   : 'text-slate-600 dark:text-slate-300 group-hover:scale-110'
               }`}
             />
@@ -122,7 +122,7 @@ export const QuickAccessDock: React.FC = () => {
             <Trophy
               className={`w-5 h-5 transition-transform ${
                 isLeaderboardActive
-                  ? 'text-amber-500 dark:text-amber-400 stroke-[2.4]'
+                  ? 'text-slate-950 dark:text-slate-950 stroke-[2.4]'
                   : 'text-slate-600 dark:text-slate-300 group-hover:scale-110'
               }`}
             />

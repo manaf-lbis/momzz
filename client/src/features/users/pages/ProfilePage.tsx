@@ -36,6 +36,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -156,18 +157,13 @@ export const ProfilePage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="app-container relative z-10 flex-1 py-5 pb-36 sm:pb-40 md:pb-16 space-y-5">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              Profile & Preferences
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Account settings, theme appearance, audio and garage access
-            </p>
-          </div>
-        </div>
+      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
+        {/* Header with seamless Back Button */}
+        <PageHeader
+          backTo="/dashboard"
+          title="Profile & Preferences"
+          description="Account settings, theme appearance, audio and garage access"
+        />
 
         {/* 2-Column Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">

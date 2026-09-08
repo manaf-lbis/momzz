@@ -23,9 +23,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Outfit', 'sans-serif'],
+        sans: ['"BankGothic Md BT Medium"', '"BankGothic Md BT"', '"Bank Gothic"', 'BankGothic', 'Outfit', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
-        display: ['Montserrat', 'Outfit', 'sans-serif'],
+        display: ['"BankGothic Md BT Medium"', '"BankGothic Md BT"', '"Bank Gothic"', 'BankGothic', 'Montserrat', 'Outfit', 'sans-serif'],
       },
       colors: {
         void: {
