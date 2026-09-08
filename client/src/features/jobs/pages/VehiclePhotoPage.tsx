@@ -238,7 +238,7 @@ export const VehiclePhotoPage: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 py-4 pb-32 space-y-4">
         {/* Page Top Header */}
-        <div className="flex items-center justify-between gap-3 p-4 bg-white/80 dark:bg-white/[0.035] backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl sm:rounded-3xl shadow-sm">
+        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-3.5 pb-3.5 mb-3 backdrop-blur-2xl bg-white/85 dark:bg-[#070812]/85 border-b border-slate-200/70 dark:border-white/10 flex items-center justify-between gap-3 shadow-2xs transition-all">
           <div className="flex items-center gap-3 min-w-0">
             <BackButton to={`/jobs/${currentJob.id || currentJob._id}`} label="Job Card" />
 
@@ -283,7 +283,7 @@ export const VehiclePhotoPage: React.FC = () => {
               )}
             </button>
           )}
-        </div>
+        </header>
 
         {/* Hidden File Input */}
         <input

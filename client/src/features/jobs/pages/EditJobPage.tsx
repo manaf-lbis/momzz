@@ -379,31 +379,28 @@ export const EditJobPage: React.FC = () => {
 
       <Navbar glass />
 
-      <main className="app-container relative z-10 flex-1 py-4 sm:py-8 pb-36 sm:pb-40 md:pb-16 overflow-x-clip">
-        {/* Page Top Controls */}
-        <header className="sticky top-0 sm:top-14 z-30 py-2.5 px-3.5 sm:px-5 mb-3 rounded-2xl sm:rounded-3xl glass-modern-card flex items-center justify-between gap-3 transition-all">
-          <button
-            onClick={() => (step === 2 ? setStep(1) : navigate(`/jobs/${id}`))}
-            className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 transition hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400"
-          >
-            <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span>Back to Job Details</span>
-          </button>
+      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 overflow-x-clip">
+        {/* Page Top Header */}
+        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-3.5 pb-3.5 mb-3 backdrop-blur-2xl bg-white/80 dark:bg-[#080912]/85 border-b border-slate-200/60 dark:border-white/[0.08] shadow-xs flex items-center justify-between gap-3 transition-all">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => (step === 2 ? setStep(1) : navigate(`/jobs/${id}`))}
+              className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-600 hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400 transition-colors shrink-0 cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4 stroke-[2.5]" />
+              <span className="hidden sm:inline">Back to Job Details</span>
+            </button>
+            <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 shrink-0 hidden sm:block" />
+            <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white truncate">
+              Edit Job Card
+            </h1>
+          </div>
 
-          <span className="rounded-full bg-slate-200/80 px-3 py-1 text-[11px] sm:text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          <span className="rounded-full bg-amber-400/15 border border-amber-400/30 px-2.5 py-0.5 text-[10px] sm:text-xs font-mono font-bold text-amber-700 dark:text-amber-300 shrink-0">
             Step {step} of 2
           </span>
         </header>
-
-        {/* Page Title */}
-        <div className="mb-4 sm:mb-6">
-          <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-            Garage Workspace
-          </p>
-          <h1 className="mt-0.5 text-xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-            Edit Job Card
-          </h1>
-        </div>
 
         {/* Progress Navigation Tabs */}
         <nav className="mb-6 sm:mb-8 flex gap-2 sm:gap-3" aria-label="Create job progress">
