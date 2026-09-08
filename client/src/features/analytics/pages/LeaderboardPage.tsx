@@ -21,6 +21,7 @@ import { useGetLeaderboardQuery } from '../../auth/api/authApi';
 import { useGetJobCardsQuery, JobCardData, TaskItem } from '../../jobs/api/jobApi';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 import confetti from 'canvas-confetti';
 import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
@@ -598,22 +599,12 @@ export const LeaderboardPage: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16">
         {/* ── HEADER ── */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <BackButton to="/dashboard" label="Back" />
-            <div>
-              <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                Workshop Leaderboard
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300">
-                  {timeLabel}
-                </span>
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                {timeRemaining} · Earn QP per completed checklist task
-              </p>
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          backTo="/dashboard"
+          backLabel="Back"
+          title="Workshop Leaderboard"
+          description={`${timeRemaining} · Earn QP per completed checklist task`}
+        />
 
         {/* ── TIMEFRAME TABS ── */}
         <div className="flex gap-1 p-1 bg-white/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 mb-4 shadow-2xs">

@@ -19,6 +19,7 @@ import { useGetJobCardsQuery, JobCardData } from '../../jobs/api/jobApi';
 import { useGetLeaderboardQuery } from '../../auth/api/authApi';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
@@ -133,49 +134,36 @@ export const AnalyticsPage: React.FC = () => {
       <Navbar glass />
 
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <BackButton to="/dashboard" label="Dashboard" />
-            <div>
-              <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-amber-500" />
-                Workshop Analytics
-              </h1>
-              <p className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                Performance insights, throughput, and rankings
-              </p>
+        <PageHeader
+          backTo="/dashboard"
+          backLabel="Dashboard"
+          title="Workshop Analytics"
+          description="Performance insights, throughput, and rankings"
+          actions={
+            <div className="flex items-center gap-1 p-1 bg-white/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-xs self-start sm:self-auto backdrop-blur-xl">
+              {TIMEFRAMES.map((tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setTimeframe(tf)}
+                  className={`relative px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
+                    timeframe === tf
+                      ? 'text-slate-950 font-black'
+                      : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                  }`}
+                >
+                  {timeframe === tf && (
+                    <motion.div
+                      layoutId="analytics-tf-pill"
+                      className="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 rounded-xl shadow-[0_2px_8px_rgba(245,158,11,0.25)]"
+                      transition={{ type: 'spring', bounce: 0.18, duration: 0.36 }}
+                    />
+                  )}
+                  <span className="relative z-10">{tf}</span>
+                </button>
+              ))}
             </div>
-          </div>
-
-          {/* Timeframe Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-white/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-xs self-start sm:self-auto backdrop-blur-xl">
-            {TIMEFRAMES.map((tf) => (
-              <button
-                key={tf}
-                onClick={() => setTimeframe(tf)}
-                className={`relative px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
-                  timeframe === tf
-                    ? 'text-slate-950 font-black'
-                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                }`}
-              >
-                {timeframe === tf && (
-                  <motion.div
-                    layoutId="analytics-tf-pill"
-                    style={{
-                      background: 'linear-gradient(135deg, #fde047 0%, #f59e0b 100%)',
-                      boxShadow: '0 2px 10px rgba(251, 191, 36, 0.4)',
-                    }}
-                    className="absolute inset-0 rounded-xl"
-                    transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
-                  />
-                )}
-                <span className="relative z-10">{tf}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+          }
+        />
 
         {/* Bento Stat Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

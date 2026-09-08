@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   ImagePlus,
@@ -15,12 +14,11 @@ import {
   X,
   Plus,
   Minus,
-  CheckCircle2,
-  Clock,
-  Layers,
+  Edit3,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 import {
   useDeleteCatalogItemMutation,
   useGetCatalogItemQuery,
@@ -28,8 +26,6 @@ import {
 } from '../../catalog/api/catalogApi';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { ImageCropperModal } from '../../../shared/components/common/ImageCropperModal';
-import { Meteors } from '../../../shared/components/magicui/Meteors';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 
 const money = (value: number) =>
   new Intl.NumberFormat('en-IN', {
@@ -37,9 +33,6 @@ const money = (value: number) =>
     currency: 'INR',
     maximumFractionDigits: 0,
   }).format(value);
-
-const inputStyle =
-  'w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/15 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-amber-400';
 
 const slideVariants = {
   enter: (direction: number) => ({
@@ -94,7 +87,6 @@ export const InventoryDetailPage: React.FC = () => {
         stockQuantity: item.stockQuantity || 0,
         minimumStockQuantity: item.minimumStockQuantity || 0,
       });
-      // Sync edit images from item
       const rawImgs = item.images?.filter(Boolean) || [];
       const allImgs = rawImgs.length ? rawImgs : item.thumbnailUrl ? [item.thumbnailUrl] : [];
       setEditImages(allImgs);
@@ -105,11 +97,12 @@ export const InventoryDetailPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A]">
-        <Navbar />
+      <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col">
+        <div className="glass-ambient-glow" aria-hidden="true" />
+        <Navbar glass />
         <div className="flex flex-col items-center justify-center py-32 text-slate-500 dark:text-slate-400">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-amber-400 border-t-transparent mb-4" />
-          <p className="text-sm font-medium">Loading catalog details...</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400 border-t-transparent mb-4" />
+          <p className="text-xs sm:text-sm font-medium">Loading catalog details...</p>
         </div>
       </div>
     );
@@ -117,21 +110,22 @@ export const InventoryDetailPage: React.FC = () => {
 
   if (!item) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A]">
-        <Navbar />
+      <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col">
+        <div className="glass-ambient-glow" aria-hidden="true" />
+        <Navbar glass />
         <div className="mx-auto max-w-md px-4 py-24 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-100 text-red-500 dark:bg-red-500/15 dark:text-red-400">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl glass-modern-card text-rose-500 mb-4">
             <Package className="h-8 w-8" />
           </div>
-          <h2 className="mt-4 text-xl font-black text-slate-900 dark:text-white">Item Not Found</h2>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            The item you are looking for does not exist or was deleted.
+          <h2 className="text-lg font-black text-slate-900 dark:text-white">Item Not Found</h2>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            The item you are looking for does not exist or has been deleted.
           </p>
           <button
+            type="button"
             onClick={() => navigate('/inventory')}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-bold text-white shadow-md dark:bg-amber-400 dark:text-slate-950"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl glass-gold-btn px-4 py-2 text-xs font-bold text-slate-950 active:scale-95 transition"
           >
-            <ArrowLeft className="h-4 w-4" />
             Back to Inventory
           </button>
         </div>
@@ -139,10 +133,8 @@ export const InventoryDetailPage: React.FC = () => {
     );
   }
 
-  // Handle product images
   const rawImages = item.images?.filter(Boolean) || [];
   const images = rawImages.length ? rawImages : item.thumbnailUrl ? [item.thumbnailUrl] : [];
-
   const imageIndex = Math.abs(page % (images.length || 1));
 
   const paginate = (newDirection: number) => {
@@ -185,10 +177,7 @@ export const InventoryDetailPage: React.FC = () => {
   };
 
   const handleCropComplete = (cropped: string) => {
-    setEditImages((prev) => {
-      const next = [...prev, cropped];
-      return next;
-    });
+    setEditImages((prev) => [...prev, cropped]);
     setCropSource(null);
   };
 
@@ -222,32 +211,80 @@ export const InventoryDetailPage: React.FC = () => {
     (item.stockQuantity || 0) <= (item.minimumStockQuantity || 0);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient background aura */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.08)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.05)_0%,transparent_65%)]" />
-        <Meteors number={10} />
-      </div>
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
       <Navbar glass />
 
-      <main className="app-container relative z-10 flex-1 py-4 sm:py-8 pb-32">
-        {/* Back Link */}
-        <button
-          onClick={() => navigate('/inventory')}
-          className="group mb-4 sm:mb-6 inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-500 transition hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400 cursor-pointer active:scale-95"
-        >
-          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-          <span>Back to Inventory</span>
-        </button>
+      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
+        {/* Page Header */}
+        <PageHeader
+          backTo="/inventory"
+          backLabel="Inventory"
+          title={item.title}
+          description={
+            item.category?.name
+              ? `${item.itemType === 'SERVICE' ? 'Service Item' : 'Inventory Spare'} · ${item.category.name}`
+              : item.itemType === 'SERVICE'
+              ? 'Workshop Service'
+              : 'Inventory Spare'
+          }
+          actions={
+            isAdmin && (
+              <div className="flex items-center gap-2">
+                {isEditing ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(false)}
+                      className="px-3 py-1.5 rounded-xl glass-ghost-btn text-xs font-bold text-slate-700 dark:text-slate-300 active:scale-95 transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSaving || !draft.title.trim()}
+                      onClick={handleSave}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-gold-btn text-xs font-black text-slate-950 shadow-md active:scale-95 transition disabled:opacity-50 cursor-pointer"
+                    >
+                      <Save className="h-3.5 w-3.5" />
+                      {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-gold-btn text-xs font-black text-slate-950 shadow-md active:scale-95 transition cursor-pointer"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                      <span>Edit Item</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isDeleting}
+                      onClick={handleDelete}
+                      className="p-1.5 sm:p-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 active:scale-95 transition cursor-pointer"
+                      title="Delete Item"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+            )
+          }
+        />
 
-        {/* Details Layout */}
-        <div className="grid gap-6 lg:grid-cols-12">
-          {/* Left Column: Touch & Swipe Image Carousel */}
-          <div className="lg:col-span-6 space-y-4">
-            <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              {/* Animated Carousel Stage with Drag/Swipe Support */}
-              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800 select-none">
+        {/* Bento Grid Content */}
+        <div className="grid gap-4 lg:grid-cols-12">
+          {/* Left Column: Media Stage & Gallery */}
+          <div className="lg:col-span-6 space-y-3">
+            <div className="relative overflow-hidden rounded-3xl glass-modern-card p-2.5">
+              {/* Animated Carousel Stage with Swipe */}
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-slate-100/70 dark:bg-white/[0.03] border border-slate-200/40 dark:border-white/5 select-none">
                 {images.length > 0 ? (
                   <AnimatePresence initial={false} custom={direction}>
                     <motion.img
@@ -279,34 +316,40 @@ export const InventoryDetailPage: React.FC = () => {
                     />
                   </AnimatePresence>
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-amber-500">
+                  <div className="flex h-full w-full items-center justify-center">
                     {item.itemType === 'SERVICE' ? (
-                      <Wrench className="h-16 w-16 stroke-[1.5]" />
+                      <Wrench className="h-16 w-16 stroke-[1.5] text-violet-500/70 dark:text-violet-400/70" />
                     ) : (
-                      <Package className="h-16 w-16 stroke-[1.5]" />
+                      <Package className="h-16 w-16 stroke-[1.5] text-amber-500/70 dark:text-amber-400/70" />
                     )}
                   </div>
                 )}
 
-                {/* Badges Overlay */}
+                {/* Top Overlay Chips */}
                 <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
                   <span
-                    className={`rounded-lg px-2.5 py-1 text-xs font-black uppercase tracking-wider backdrop-blur-md shadow-xs ${
+                    className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wider backdrop-blur-md shadow-xs ${
                       item.itemType === 'SERVICE'
-                        ? 'bg-violet-600/90 text-white'
-                        : 'bg-amber-400/90 text-slate-950'
+                        ? 'bg-violet-600/80 text-white'
+                        : 'bg-amber-400/80 text-slate-950'
                     }`}
                   >
                     {item.itemType}
                   </span>
+                  {isLowStock && (
+                    <span className="rounded-lg bg-rose-500/90 text-white px-2 py-1 text-[10px] font-black uppercase backdrop-blur-md animate-pulse">
+                      Low Stock
+                    </span>
+                  )}
                 </div>
 
                 {/* Lightbox Trigger */}
                 {images.length > 0 && (
                   <button
+                    type="button"
                     onClick={() => setIsLightboxOpen(true)}
-                    className="absolute right-3 top-3 z-10 rounded-xl bg-slate-950/60 p-2 text-white backdrop-blur-md transition hover:bg-slate-950/80"
-                    title="Fullscreen View"
+                    className="absolute right-3 top-3 z-10 rounded-xl bg-slate-950/60 p-2 text-white backdrop-blur-md transition hover:bg-slate-950/80 cursor-pointer"
+                    title="Fullscreen"
                   >
                     <Maximize2 className="h-4 w-4" />
                   </button>
@@ -316,28 +359,31 @@ export const InventoryDetailPage: React.FC = () => {
                 {images.length > 1 && (
                   <>
                     <button
+                      type="button"
                       onClick={() => paginate(-1)}
-                      aria-label="Previous image"
-                      className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-slate-950/60 p-2.5 text-white backdrop-blur-md transition hover:bg-slate-950/80 active:scale-95"
+                      aria-label="Previous"
+                      className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-slate-950/60 p-2 text-white backdrop-blur-md hover:bg-slate-950/80 active:scale-95 cursor-pointer"
                     >
-                      <ChevronLeft className="h-5 w-5" />
+                      <ChevronLeft className="h-4 w-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => paginate(1)}
-                      aria-label="Next image"
-                      className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-slate-950/60 p-2.5 text-white backdrop-blur-md transition hover:bg-slate-950/80 active:scale-95"
+                      aria-label="Next"
+                      className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-slate-950/60 p-2 text-white backdrop-blur-md hover:bg-slate-950/80 active:scale-95 cursor-pointer"
                     >
-                      <ChevronRight className="h-5 w-5" />
+                      <ChevronRight className="h-4 w-4" />
                     </button>
 
-                    {/* Counter Dots */}
-                    <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-slate-950/70 px-3 py-1.5 backdrop-blur-md">
+                    {/* Pagination Dots */}
+                    <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-slate-950/60 px-2.5 py-1 backdrop-blur-md">
                       {images.map((_, idx) => (
                         <button
                           key={idx}
+                          type="button"
                           onClick={() => setPage([idx, idx > imageIndex ? 1 : -1])}
-                          className={`h-2 rounded-full transition-all ${
-                            imageIndex === idx ? 'w-5 bg-amber-400' : 'w-2 bg-white/50 hover:bg-white'
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            imageIndex === idx ? 'w-4 bg-amber-400' : 'w-1.5 bg-white/50 hover:bg-white'
                           }`}
                         />
                       ))}
@@ -346,12 +392,12 @@ export const InventoryDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Thumbnails Row / Image Edit Section */}
+              {/* Thumbnails Row / Gallery Edit */}
               {isAdmin && isEditing ? (
                 <div className="p-2 pt-3 space-y-2">
                   <div className="flex flex-wrap gap-2">
                     {editImages.map((img, idx) => (
-                      <div key={img + idx} className="group relative h-16 w-20 shrink-0">
+                      <div key={img + idx} className="group relative h-14 w-16 shrink-0">
                         <div
                           className={`h-full w-full overflow-hidden rounded-xl border-2 transition-all ${
                             editThumbnailIndex === idx
@@ -361,15 +407,14 @@ export const InventoryDetailPage: React.FC = () => {
                         >
                           <img src={img} alt={`Photo ${idx + 1}`} className="h-full w-full object-cover" />
                         </div>
-                        {/* Controls */}
-                        <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition bg-slate-950/40 rounded-xl">
+                        <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition bg-slate-950/50 rounded-xl">
                           <button
                             type="button"
                             title="Set as thumbnail"
                             onClick={() => setEditThumbnailIndex(idx)}
-                            className="h-6 w-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow"
+                            className="h-5 w-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow"
                           >
-                            <Star className="h-3 w-3" />
+                            <Star className="h-2.5 w-2.5" />
                           </button>
                           <button
                             type="button"
@@ -377,29 +422,24 @@ export const InventoryDetailPage: React.FC = () => {
                             onClick={() => {
                               setEditImages((prev) => {
                                 const next = prev.filter((_, i) => i !== idx);
-                                if (editThumbnailIndex >= next.length) setEditThumbnailIndex(Math.max(0, next.length - 1));
+                                if (editThumbnailIndex >= next.length)
+                                  setEditThumbnailIndex(Math.max(0, next.length - 1));
                                 return next;
                               });
                             }}
-                            className="h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow"
+                            className="h-5 w-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-2.5 w-2.5" />
                           </button>
                         </div>
-                        {editThumbnailIndex === idx && (
-                          <div className="absolute left-1 top-1 rounded bg-amber-400 px-1 py-0.5">
-                            <Star className="h-2.5 w-2.5 fill-slate-950 text-slate-950" />
-                          </div>
-                        )}
                       </div>
                     ))}
-                    {/* Add Photo button */}
                     <button
                       type="button"
                       onClick={() => imageFileInputRef.current?.click()}
-                      className="h-16 w-20 shrink-0 rounded-xl border-2 border-dashed border-amber-400/60 bg-amber-50 dark:bg-amber-400/5 flex items-center justify-center text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-400/10 transition"
+                      className="h-14 w-16 shrink-0 rounded-xl border border-dashed border-amber-400/50 bg-amber-400/10 flex items-center justify-center text-amber-500 hover:bg-amber-400/20 transition cursor-pointer"
                     >
-                      <ImagePlus className="h-5 w-5" />
+                      <ImagePlus className="h-4 w-4" />
                     </button>
                     <input
                       ref={imageFileInputRef}
@@ -409,18 +449,21 @@ export const InventoryDetailPage: React.FC = () => {
                       className="hidden"
                     />
                   </div>
-                  <p className="text-[10px] text-slate-400">Hover image and tap ⭐ to set thumbnail, 🗑 to remove.</p>
+                  <p className="text-[10px] text-slate-400">
+                    Hover image and tap ⭐ to set thumbnail, 🗑 to remove.
+                  </p>
                 </div>
               ) : (
                 images.length > 1 && (
-                  <div className="flex gap-2.5 overflow-x-auto p-2 pt-3">
+                  <div className="flex gap-2 overflow-x-auto p-2 pt-2.5 no-scrollbar">
                     {images.map((img, idx) => (
                       <button
                         key={img + idx}
+                        type="button"
                         onClick={() => setPage([idx, idx > imageIndex ? 1 : -1])}
-                        className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+                        className={`relative h-12 w-16 shrink-0 overflow-hidden rounded-xl border transition-all cursor-pointer ${
                           imageIndex === idx
-                            ? 'border-amber-400 shadow-md ring-2 ring-amber-400/30'
+                            ? 'border-amber-400 shadow-md ring-2 ring-amber-400/25'
                             : 'border-transparent opacity-60 hover:opacity-100'
                         }`}
                       >
@@ -433,135 +476,121 @@ export const InventoryDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Column: Integrated Info & Simplified Price */}
-          <div className="lg:col-span-6 space-y-6">
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-6">
-              {/* Header Title & Integrated Price Header */}
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Tag className="h-3.5 w-3.5 text-amber-500" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                      {item.category?.name || 'General'}
+          {/* Right Column: Information & Edit Bento */}
+          <div className="lg:col-span-6 space-y-4">
+            <div className="rounded-3xl glass-modern-card p-5 space-y-5">
+              {/* Header Price Banner */}
+              {isEditing ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                      Item Title
+                    </label>
+                    <input
+                      type="text"
+                      value={draft.title}
+                      onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                      className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                      Selling Price (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={draft.price}
+                      onChange={(e) => setDraft({ ...draft, price: Number(e.target.value) })}
+                      className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
+                    />
+                  </div>
+                  {item.itemType === 'PRODUCT' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Stock Quantity
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={draft.stockQuantity}
+                          onChange={(e) => setDraft({ ...draft, stockQuantity: Number(e.target.value) })}
+                          className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Low Stock Alert At
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={draft.minimumStockQuantity}
+                          onChange={(e) => setDraft({ ...draft, minimumStockQuantity: Number(e.target.value) })}
+                          className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={draft.description}
+                      onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                      className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none resize-none"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 border-b border-slate-200/50 pb-4 dark:border-white/10">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 block mb-0.5">
+                      Selling Price
+                    </span>
+                    <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                      {money(item.price)}
+                    </h2>
+                  </div>
+
+                  <div className="sm:text-right">
+                    <span
+                      className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                        item.itemType === 'SERVICE'
+                          ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400'
+                          : isLowStock
+                          ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                          : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                      }`}
+                    >
+                      {item.itemType === 'SERVICE'
+                        ? 'Workshop Service'
+                        : isLowStock
+                        ? `Low Stock (${item.stockQuantity})`
+                        : `${item.stockQuantity} In Stock`}
                     </span>
                   </div>
-
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-bold ${
-                      item.itemType === 'SERVICE'
-                        ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300'
-                        : isLowStock
-                        ? 'animate-pulse bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300'
-                        : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-                    }`}
-                  >
-                    {item.itemType === 'SERVICE'
-                      ? 'Service Item'
-                      : isLowStock
-                      ? `Low Stock (${item.stockQuantity})`
-                      : `${item.stockQuantity} In Stock`}
-                  </span>
                 </div>
-
-                {/* Simplified Title & Price Line */}
-                {isEditing ? (
-                  <div className="mt-4 space-y-3">
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        Item Title
-                      </label>
-                      <input
-                        type="text"
-                        value={draft.title}
-                        onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                        className={inputStyle}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        Selling Price (₹)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={draft.price}
-                        onChange={(e) => setDraft({ ...draft, price: Number(e.target.value) })}
-                        className={inputStyle}
-                      />
-                    </div>
-                    {item.itemType === 'PRODUCT' && (
-                      <>
-                        <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            Stock Quantity
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={draft.stockQuantity}
-                            onChange={(e) => setDraft({ ...draft, stockQuantity: Number(e.target.value) })}
-                            className={inputStyle}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            Low Stock Threshold
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={draft.minimumStockQuantity}
-                            onChange={(e) => setDraft({ ...draft, minimumStockQuantity: Number(e.target.value) })}
-                            className={inputStyle}
-                          />
-                          <p className="mt-1 text-[10px] text-slate-400">Alert when stock falls below this.</p>
-                        </div>
-                      </>
-                    )}
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        Description
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={draft.description}
-                        onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                        className={`${inputStyle} resize-none`}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-3 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 border-b border-slate-100 pb-5 dark:border-slate-800">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                      {item.title}
-                    </h1>
-                    <div className="sm:text-right flex items-baseline gap-2 sm:block">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block sm:mb-0.5">
-                        Selling Price
-                      </span>
-                      <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                        {money(item.price)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* Description */}
               {!isEditing && (
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                     Description
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                    {item.description || 'No description available for this item.'}
+                  <p className="text-xs sm:text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                    {item.description || 'No detailed description available for this item.'}
                   </p>
                 </div>
               )}
 
-              {/* Quick Specs / Details Row */}
+              {/* Quick Specs Grid */}
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <div className="rounded-2xl bg-white/40 dark:bg-white/[0.02] p-3 border border-slate-200/50 dark:border-white/5">
                   <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
                     Item Code
                   </span>
@@ -570,82 +599,45 @@ export const InventoryDetailPage: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <div className="rounded-2xl bg-white/40 dark:bg-white/[0.02] p-3 border border-slate-200/50 dark:border-white/5">
                   <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
                     Classification
                   </span>
-                  <span className="font-bold text-slate-900 dark:text-white">{item.itemType}</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {item.itemType === 'SERVICE' ? 'Service' : 'Physical Product'}
+                  </span>
                 </div>
               </div>
 
-              {/* Quick Stock Adjuster (Admin Only) */}
+              {/* Stock Stepper (Admin Only for physical products) */}
               {isAdmin && item.itemType === 'PRODUCT' && !isEditing && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/30">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-white/40 dark:bg-white/[0.02] p-3.5 border border-slate-200/50 dark:border-white/5">
                   <div>
-                    <b className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                      Adjust Stock
-                    </b>
-                    <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
-                      Currently {item.stockQuantity} available
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                      Quick Stock Adjustment
+                    </span>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Currently {item.stockQuantity} units available
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={() => handleStockAdjust(-1)}
-                      className="inline-flex flex-1 sm:flex-none justify-center items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                      className="inline-flex items-center justify-center gap-1 rounded-xl glass-ghost-btn px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 active:scale-95 transition cursor-pointer"
                     >
-                      <Minus className="h-3.5 w-3.5" />
-                      1 Stock
+                      <Minus className="h-3 w-3" />
+                      <span>1 Unit</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleStockAdjust(1)}
-                      className="inline-flex flex-1 sm:flex-none justify-center items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-600 active:scale-95"
+                      className="inline-flex items-center justify-center gap-1 rounded-xl glass-gold-btn px-3 py-1.5 text-xs font-black text-slate-950 active:scale-95 transition cursor-pointer"
                     >
-                      <Plus className="h-3.5 w-3.5" />
-                      1 Stock
+                      <Plus className="h-3 w-3 stroke-[2.5]" />
+                      <span>1 Unit</span>
                     </button>
                   </div>
-                </div>
-              )}
-
-              {/* Admin Actions */}
-              {isAdmin && (
-                <div className="flex gap-2.5 sm:gap-3 border-t border-slate-100 pt-4 sm:pt-5 dark:border-slate-800">
-                  {isEditing ? (
-                    <>
-                      <button
-                        onClick={() => setIsEditing(false)}
-                        className="flex-1 rounded-xl border border-slate-200 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        disabled={isSaving || !draft.title.trim()}
-                        onClick={handleSave}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-emerald-600 disabled:opacity-50"
-                      >
-                        <Save className="h-4 w-4" />
-                        {isSaving ? 'Saving...' : 'Save Changes'}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="flex-1 rounded-xl bg-slate-900 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-slate-800 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300"
-                      >
-                        Edit Item
-                      </button>
-                      <button
-                        disabled={isDeleting}
-                        onClick={handleDelete}
-                        className="flex items-center justify-center rounded-xl bg-red-50 px-4 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
-                        title="Archive Item"
-                      >
-                        <Trash2 className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
-                      </button>
-                    </>
-                  )}
                 </div>
               )}
             </div>
@@ -656,17 +648,17 @@ export const InventoryDetailPage: React.FC = () => {
       {/* Lightbox / Fullscreen Modal */}
       {isLightboxOpen && images.length > 0 && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md"
           onClick={() => setIsLightboxOpen(false)}
         >
           <button
+            type="button"
             onClick={() => setIsLightboxOpen(false)}
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2.5 text-white backdrop-blur-md hover:bg-white/20"
-            aria-label="Close Lightbox"
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-2.5 text-white backdrop-blur-md hover:bg-white/20 transition cursor-pointer"
+            aria-label="Close"
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5" />
           </button>
-
           <div className="relative max-h-[85vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
             <img
               src={images[imageIndex]}
@@ -677,7 +669,7 @@ export const InventoryDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Landscape Image Cropper */}
+      {/* Landscape Image Cropper Modal */}
       {cropSource && (
         <ImageCropperModal
           isOpen={!!cropSource}
@@ -691,3 +683,5 @@ export const InventoryDetailPage: React.FC = () => {
     </div>
   );
 };
+
+export default InventoryDetailPage;

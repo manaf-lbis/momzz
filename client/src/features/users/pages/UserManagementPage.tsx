@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
 import { useGetAllUsersQuery } from '../../auth/api/authApi';
 import { User } from '../../auth/store/authSlice';
@@ -86,19 +87,12 @@ export const UserManagementPage: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* Top Header */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <BackButton to="/dashboard" label="Dashboard" />
-            <div>
-              <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                Staff Roster & Telemetry
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-amber-600 dark:text-amber-300/90">
-                  <NumberTicker value={rawUsers.length} /> Staff
-                </span>
-              </h1>
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          backTo="/dashboard"
+          backLabel="Dashboard"
+          title="Staff Roster & Telemetry"
+          count={rawUsers.length}
+        />
 
         {/* ── METRIC TILES ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">

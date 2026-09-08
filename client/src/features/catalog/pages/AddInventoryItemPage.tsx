@@ -1,13 +1,10 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
-  ArrowLeft,
-  CheckCircle2,
   FolderPlus,
   ImagePlus,
   Package,
   Plus,
-  Save,
   Star,
   Trash2,
   Wrench,
@@ -15,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 import {
   useCreateCatalogItemMutation,
   useCreateCategoryMutation,
@@ -23,16 +21,9 @@ import {
 } from '../../catalog/api/catalogApi';
 import { ImageCropperModal } from '../../../shared/components/common/ImageCropperModal';
 import { findDuplicateCandidates } from '../../../shared/utils/searchAlgorithm';
-import { Meteors } from '../../../shared/components/magicui/Meteors';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 
-const money = (value: number) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
-
-const inputStyle =
-  'w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/15 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-amber-400';
-
-const labelStyle = 'block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5';
+const labelStyle =
+  'block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5';
 
 export const AddInventoryItemPage: React.FC = () => {
   const navigate = useNavigate();
@@ -96,7 +87,6 @@ export const AddInventoryItemPage: React.FC = () => {
   const handleCropComplete = (croppedBase64: string) => {
     setImages((prev) => {
       const next = [...prev, croppedBase64];
-      // Auto-set thumbnail to first image
       if (prev.length === 0) setThumbnailIndex(0);
       return next;
     });
@@ -157,94 +147,94 @@ export const AddInventoryItemPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-hidden selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient background aura */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[320px] bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.08)_0%,transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.05)_0%,transparent_65%)]" />
-        <Meteors number={10} />
-      </div>
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
       <Navbar glass />
 
-      <main className="app-container relative z-10 flex-1 py-4 pb-32">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => navigate('/inventory')}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/5 text-slate-700 dark:text-slate-300 shadow-xs transition hover:border-amber-400 hover:text-amber-500 cursor-pointer active:scale-95"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">Add New Item</h1>
-            <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-              Create a product or service in the inventory catalog
-            </p>
-          </div>
-        </div>
+      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 max-w-3xl mx-auto space-y-4">
+        {/* Page Header with BackButton */}
+        <PageHeader
+          backTo="/inventory"
+          backLabel="Inventory"
+          title="Add New Item"
+          description="Create a product or workshop service in the catalog"
+        />
 
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-          {/* Item Type */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Item Type</h2>
-            <div className="grid grid-cols-2 gap-3">
+        {error && (
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Classification Bento */}
+          <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3">
+            <label className={labelStyle}>Item Classification</label>
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => handleFieldChange('itemType', 'PRODUCT')}
-                className={`flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition ${
+                className={`flex items-center justify-center gap-2 rounded-2xl py-3 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer ${
                   form.itemType === 'PRODUCT'
-                    ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/25'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                    ? 'bg-amber-400 text-slate-950 shadow-md font-black'
+                    : 'glass-ghost-btn text-slate-600 dark:text-slate-400'
                 }`}
               >
-                <Package className="h-4 w-4" /> Product
+                <Package className="h-4 w-4" /> Physical Product
               </button>
               <button
                 type="button"
                 onClick={() => handleFieldChange('itemType', 'SERVICE')}
-                className={`flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition ${
+                className={`flex items-center justify-center gap-2 rounded-2xl py-3 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer ${
                   form.itemType === 'SERVICE'
-                    ? 'bg-violet-600 text-white shadow-md shadow-violet-600/25'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                    ? 'bg-violet-600 text-white shadow-md font-black'
+                    : 'glass-ghost-btn text-slate-600 dark:text-slate-400'
                 }`}
               >
-                <Wrench className="h-4 w-4" /> Service
+                <Wrench className="h-4 w-4" /> Workshop Service
               </button>
             </div>
           </div>
 
-          {/* Basic Info */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Basic Info</h2>
+          {/* Basic Info Bento */}
+          <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-4">
+            <label className={labelStyle}>Core Details</label>
 
             <div>
-              <label className={labelStyle}>Item Title *</label>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                Item Title *
+              </label>
               <input
                 required
                 type="text"
                 value={form.title}
                 onChange={(e) => handleFieldChange('title', e.target.value)}
                 placeholder="e.g. Engine Oil 10W-40, Wheel Alignment"
-                className={inputStyle}
+                className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none"
               />
               {duplicateCandidates.length > 0 && (
-                <div className="mt-2 rounded-xl bg-amber-500/10 border border-amber-500/30 p-2.5 flex items-start gap-2 text-xs">
+                <div className="mt-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 p-3 flex items-start gap-2 text-xs">
                   <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold text-amber-700 dark:text-amber-300">
                       Similar item found: "{duplicateCandidates[0].item.title}"
                     </span>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      An item with a very similar name or spelling already exists in your inventory.
+                      An item with a similar name already exists in your inventory.
                     </p>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={labelStyle}>Selling Price (₹) *</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                  Selling Price (₹) *
+                </label>
                 <input
                   required
                   type="number"
@@ -252,22 +242,28 @@ export const AddInventoryItemPage: React.FC = () => {
                   value={form.price}
                   onChange={(e) => handleFieldChange('price', e.target.value)}
                   placeholder="0"
-                  className={inputStyle}
+                  className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
                 />
               </div>
 
               {/* Category Selector */}
               <div>
-                <label className={labelStyle}>Category</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                  Category
+                </label>
                 <div className="flex gap-2">
                   <select
                     value={form.categoryId}
                     onChange={(e) => handleFieldChange('categoryId', e.target.value)}
-                    className={`${inputStyle} flex-1`}
+                    className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none"
                   >
-                    <option value="">General</option>
+                    <option value="" className="text-slate-900 dark:bg-slate-900">General</option>
                     {categories.map((cat) => (
-                      <option key={cat.id || cat._id} value={cat.id || cat._id}>
+                      <option
+                        key={cat.id || cat._id}
+                        value={cat.id || cat._id}
+                        className="text-slate-900 dark:bg-slate-900"
+                      >
                         {cat.name}
                       </option>
                     ))}
@@ -276,7 +272,7 @@ export const AddInventoryItemPage: React.FC = () => {
                     type="button"
                     onClick={() => setShowCategoryForm((v) => !v)}
                     title="Add new category"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-amber-500 shadow-xs transition hover:border-amber-400 hover:bg-amber-50 dark:border-slate-700 dark:bg-slate-800"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl glass-ghost-btn text-amber-500 hover:text-amber-400 active:scale-95 transition cursor-pointer"
                   >
                     <FolderPlus className="h-4 w-4" />
                   </button>
@@ -284,16 +280,16 @@ export const AddInventoryItemPage: React.FC = () => {
 
                 {/* Inline New Category Form */}
                 {showCategoryForm && (
-                  <div className="mt-3 rounded-xl border border-amber-400/40 bg-amber-50/60 p-3 space-y-2 dark:bg-amber-400/5 dark:border-amber-400/20">
-                    <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-                      New Category
+                  <div className="mt-3 rounded-2xl border border-amber-400/30 bg-amber-400/5 p-3 space-y-2">
+                    <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                      Create Category
                     </p>
                     <input
                       type="text"
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
                       placeholder="Category name"
-                      className={inputStyle}
+                      className="w-full rounded-xl glass-modern-input px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
@@ -301,105 +297,118 @@ export const AddInventoryItemPage: React.FC = () => {
                         }
                       }}
                     />
-                    <div className="flex gap-2">
-                      {(['PRODUCT', 'SERVICE', 'BOTH'] as const).map((t) => (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => setNewCategoryType(t)}
-                          className={`flex-1 rounded-lg py-1.5 text-[10px] font-bold uppercase transition ${
-                            newCategoryType === t
-                              ? 'bg-amber-400 text-slate-950'
-                              : 'bg-white border border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
-                          }`}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowCategoryForm(false)}
-                        className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    <div className="flex items-center justify-between pt-1">
+                      <select
+                        value={newCategoryType}
+                        onChange={(e) => setNewCategoryType(e.target.value as any)}
+                        className="rounded-lg glass-modern-input px-2 py-1 text-[11px] text-slate-900 dark:text-white"
                       >
-                        Cancel
-                      </button>
+                        <option value="BOTH" className="text-slate-900 dark:bg-slate-900">Both Products & Services</option>
+                        <option value="PRODUCT" className="text-slate-900 dark:bg-slate-900">Products Only</option>
+                        <option value="SERVICE" className="text-slate-900 dark:bg-slate-900">Services Only</option>
+                      </select>
                       <button
                         type="button"
-                        onClick={handleCreateCategory}
                         disabled={isCreatingCategory || !newCategoryName.trim()}
-                        className="flex-1 rounded-xl bg-emerald-500 py-2 text-xs font-bold text-white disabled:opacity-50"
+                        onClick={handleCreateCategory}
+                        className="rounded-lg glass-gold-btn px-3 py-1 text-xs font-bold text-slate-950 active:scale-95 transition disabled:opacity-50 cursor-pointer"
                       >
-                        {isCreatingCategory ? 'Adding...' : 'Add Category'}
+                        {isCreatingCategory ? 'Saving...' : 'Add'}
                       </button>
                     </div>
                   </div>
                 )}
               </div>
             </div>
-
-            <div>
-              <label className={labelStyle}>Description</label>
-              <textarea
-                rows={3}
-                value={form.description}
-                onChange={(e) => handleFieldChange('description', e.target.value)}
-                placeholder="Optional product/service details, notes, or instructions..."
-                className={`${inputStyle} resize-none`}
-              />
-            </div>
           </div>
 
-          {/* Stock (Products only) */}
+          {/* Stock Quantities (Products only) */}
           {form.itemType === 'PRODUCT' && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Stock Management
-              </h2>
-              <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3">
+              <label className={labelStyle}>Inventory Stock</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className={labelStyle}>Stock Quantity</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                    Initial Stock Count
+                  </label>
                   <input
                     type="number"
                     min="0"
                     value={form.stockQuantity}
                     onChange={(e) => handleFieldChange('stockQuantity', e.target.value)}
-                    className={inputStyle}
+                    placeholder="0"
+                    className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
                   />
                 </div>
                 <div>
-                  <label className={labelStyle}>Low Stock Threshold</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                    Low Stock Alert Threshold
+                  </label>
                   <input
                     type="number"
                     min="0"
                     value={form.minimumStockQuantity}
                     onChange={(e) => handleFieldChange('minimumStockQuantity', e.target.value)}
-                    placeholder="Alert when below this"
-                    className={inputStyle}
+                    placeholder="0"
+                    className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
                   />
-                  <p className="mt-1 text-[10px] text-slate-400">Alert will appear when stock falls below this number.</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Images */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
+          {/* Multi-image Uploader Bento */}
+          <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Product Photos
-                </h2>
-                <p className="text-[10px] text-slate-400 mt-0.5">4:3 landscape ratio. Tap ⭐ to set as thumbnail.</p>
-              </div>
+              <label className={labelStyle}>Media Photos (4:3)</label>
+              <span className="text-[10px] text-slate-400">Optional</span>
+            </div>
+
+            <div className="flex flex-wrap gap-2.5">
+              {images.map((img, idx) => (
+                <div key={idx} className="group relative h-16 w-20 shrink-0">
+                  <div
+                    className={`h-full w-full overflow-hidden rounded-xl border-2 transition-all ${
+                      thumbnailIndex === idx
+                        ? 'border-amber-400 shadow-md ring-2 ring-amber-400/30'
+                        : 'border-transparent'
+                    }`}
+                  >
+                    <img src={img} alt={`Upload ${idx + 1}`} className="h-full w-full object-cover" />
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition bg-slate-950/50 rounded-xl">
+                    <button
+                      type="button"
+                      title="Set as primary thumbnail"
+                      onClick={() => setThumbnailIndex(idx)}
+                      className="h-5 w-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow"
+                    >
+                      <Star className="h-2.5 w-2.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Remove image"
+                      onClick={() => handleRemoveImage(idx)}
+                      className="h-5 w-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow"
+                    >
+                      <Trash2 className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                  {thumbnailIndex === idx && (
+                    <div className="absolute left-1 top-1 rounded bg-amber-400 px-1 py-0.5 shadow">
+                      <Star className="h-2 w-2 fill-slate-950 text-slate-950" />
+                    </div>
+                  )}
+                </div>
+              ))}
+
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-amber-500/20 transition hover:bg-amber-600 active:scale-[0.97]"
+                className="h-16 w-20 shrink-0 rounded-xl border border-dashed border-amber-400/50 bg-amber-400/10 flex flex-col items-center justify-center gap-1 text-amber-500 hover:bg-amber-400/20 active:scale-95 transition cursor-pointer"
               >
-                <ImagePlus className="h-3.5 w-3.5" />
-                Add Photo
+                <ImagePlus className="h-4 w-4" />
+                <span className="text-[10px] font-bold">Add</span>
               </button>
               <input
                 ref={fileInputRef}
@@ -409,130 +418,48 @@ export const AddInventoryItemPage: React.FC = () => {
                 className="hidden"
               />
             </div>
-
-            {images.length === 0 ? (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 py-10 text-center transition hover:border-amber-400 hover:bg-amber-50/30 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-amber-400/50"
-              >
-                <ImagePlus className="h-10 w-10 text-slate-300 dark:text-slate-600 mb-2" />
-                <p className="text-sm font-bold text-slate-400 dark:text-slate-500">Click to upload images</p>
-                <p className="text-xs text-slate-300 dark:text-slate-600 mt-0.5">4:3 landscape crop applied automatically</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                {images.map((img, i) => (
-                  <div key={i} className="group relative">
-                    <div
-                      className={`relative aspect-[4/3] overflow-hidden rounded-xl border-2 transition ${
-                        thumbnailIndex === i
-                          ? 'border-amber-400 shadow-lg shadow-amber-400/20'
-                          : 'border-transparent hover:border-slate-300 dark:hover:border-slate-600'
-                      }`}
-                    >
-                      <img src={img} alt={`Product image ${i + 1}`} className="h-full w-full object-cover" />
-
-                      {/* Thumbnail Badge */}
-                      {thumbnailIndex === i && (
-                        <div className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-amber-400 px-1.5 py-0.5">
-                          <Star className="h-2.5 w-2.5 fill-slate-950 text-slate-950" />
-                          <span className="text-[9px] font-black text-slate-950">THUMB</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between p-1.5 opacity-0 transition group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={() => setThumbnailIndex(i)}
-                        title="Set as thumbnail"
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow-sm transition hover:bg-amber-500"
-                      >
-                        <Star className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(i)}
-                        title="Remove image"
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition hover:bg-red-600"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Add More */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex aspect-[4/3] items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 transition hover:border-amber-400 hover:bg-amber-50/30 dark:border-slate-700 dark:bg-slate-800"
-                >
-                  <Plus className="h-6 w-6 text-slate-300 dark:text-slate-600" />
-                </button>
-              </div>
-            )}
-
-            {images.length > 0 && (
-              <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                <p className="text-xs text-slate-600 dark:text-slate-300">
-                  <strong>{images.length} photo{images.length > 1 ? 's' : ''}</strong> added.{' '}
-                  Thumbnail: photo #{thumbnailIndex + 1}. Preview: {' '}
-                  <span className="font-bold text-amber-600 dark:text-amber-400">
-                    {money(Number(form.price) || 0)}
-                  </span>
-                </p>
-              </div>
-            )}
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm font-bold text-red-600 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-400">
-              {error}
-            </div>
-          )}
+          {/* Description Bento */}
+          <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-2">
+            <label className={labelStyle}>Description & Notes</label>
+            <textarea
+              rows={3}
+              value={form.description}
+              onChange={(e) => handleFieldChange('description', e.target.value)}
+              placeholder="Product specs, vehicle compatibility, or service details..."
+              className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none resize-none"
+            />
+          </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pb-8">
+          <div className="flex items-center justify-end gap-2.5 pt-2">
             <button
               type="button"
               onClick={() => navigate('/inventory')}
-              className="flex-1 rounded-xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="px-4 py-2 rounded-xl glass-ghost-btn text-xs font-bold text-slate-700 dark:text-slate-300 active:scale-95 transition cursor-pointer"
             >
-              <X className="inline h-4 w-4 mr-1.5 -mt-0.5" />
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isCreating || !form.title.trim() || !form.price}
-              className="flex-1 rounded-xl bg-emerald-500 py-3 text-sm font-black text-white shadow-md shadow-emerald-500/25 transition hover:bg-emerald-600 disabled:opacity-50 active:scale-[0.98]"
+              disabled={isCreating}
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl glass-gold-btn text-xs sm:text-sm font-black text-slate-950 shadow-md active:scale-95 transition disabled:opacity-50 cursor-pointer"
             >
-              {isCreating ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Creating...
-                </span>
-              ) : (
-                <>
-                  <Save className="inline h-4 w-4 mr-1.5 -mt-0.5" />
-                  Create Item
-                </>
-              )}
+              <Plus className="h-4 w-4 stroke-[2.5]" />
+              <span>{isCreating ? 'Creating...' : 'Save Item'}</span>
             </button>
           </div>
         </form>
       </main>
 
-      {/* Landscape Image Cropper */}
+      {/* Image Cropper Modal */}
       {cropSource && (
         <ImageCropperModal
           isOpen={!!cropSource}
           imageSrc={cropSource}
           aspectRatio={4 / 3}
-          title="Crop Product Photo (4:3 Landscape)"
+          title="Crop Item Photo (4:3 Landscape)"
           onClose={() => setCropSource(null)}
           onCropComplete={handleCropComplete}
         />
@@ -540,3 +467,5 @@ export const AddInventoryItemPage: React.FC = () => {
     </div>
   );
 };
+
+export default AddInventoryItemPage;

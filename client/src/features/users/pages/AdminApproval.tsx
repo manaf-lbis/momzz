@@ -2,6 +2,7 @@ import React from 'react';
 import { useGetPendingWorkersQuery, useApproveWorkerMutation } from '../../auth/api/authApi';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { ShieldAlert, UserCheck, RefreshCw, AlertCircle, ChevronLeft, Phone, Calendar, Loader2 } from 'lucide-react';
 import { formatDate } from '../../../shared/utils/formatters';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
@@ -38,27 +39,21 @@ export const AdminApproval: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* Top Header */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <BackButton to="/profile" label="Profile" />
-            <div>
-              <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                Staff Approvals
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400">
-                  <NumberTicker value={pendingWorkers.length} /> Pending
-                </span>
-              </h1>
-            </div>
-          </div>
-
-          <button
-            onClick={() => refetch()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition active:scale-95 cursor-pointer shadow-xs"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
-        </div>
+        <PageHeader
+          backTo="/profile"
+          backLabel="Profile"
+          title="Staff Approvals"
+          count={pendingWorkers.length}
+          actions={
+            <button
+              onClick={() => refetch()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition active:scale-95 cursor-pointer shadow-xs"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          }
+        />
 
         {/* Content Area */}
         {isLoading ? (

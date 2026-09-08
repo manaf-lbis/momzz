@@ -6,6 +6,7 @@ import { useGetJobCardsQuery, useGetJobStatsQuery, useToggleJobPinMutation, JobC
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PinJobModal } from '../../../shared/components/jobCard/PinJobModal';
 import { BackButton } from '../../../shared/components/common/BackButton';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { MagicTabs } from '../../../shared/components/magicui/MagicTabs';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
@@ -389,29 +390,24 @@ export const JobsListPage: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* ── TOP BAR: Header & New Button ── */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <BackButton to="/dashboard" label="Dashboard" />
-            <div>
-              <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                Active Vehicles
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-amber-600 dark:text-amber-300/90">
-                  <NumberTicker value={filteredJobs.length} /> Live
-                </span>
-              </h1>
-            </div>
-          </div>
-
-          {isAdmin && (
-            <button
-              onClick={() => navigate('/jobs/create')}
-              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl glass-gold-btn text-slate-950 font-black text-xs shadow-md active:scale-95 transition cursor-pointer shrink-0"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>New Vehicle</span>
-            </button>
-          )}
-        </div>
+        <PageHeader
+          backTo="/dashboard"
+          backLabel="Dashboard"
+          title="Active Vehicles"
+          count={filteredJobs.length}
+          actions={
+            isAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/jobs/create')}
+                className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl glass-gold-btn text-slate-950 font-black text-xs shadow-md active:scale-95 transition cursor-pointer shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New Vehicle</span>
+              </button>
+            )
+          }
+        />
 
         {/* ── TOP CONTROLS (Tabs & Search/Sort) ── */}
         <div className="space-y-2.5 py-1 bg-transparent">

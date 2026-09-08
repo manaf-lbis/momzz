@@ -22,6 +22,7 @@ import { useAuth } from '../../../shared/hooks/useAuth';
 import { useGetJobCardsQuery, JobCardData } from '../../jobs/api/jobApi';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
 
 type Timeframe = 'day' | 'week' | 'month' | 'year' | 'all';
@@ -211,29 +212,19 @@ export const WorkLogsPage: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-36 sm:pb-40 md:pb-16">
         {/* ── Top Header & Navigation ── */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <BackButton to="/dashboard" label="Back" />
-
+        <PageHeader
+          backTo="/dashboard"
+          backLabel="Back"
+          title="Work Logs & History"
+          description="Live chronological ledger of garage tasks and technician operations."
+          actions={
             <span className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 glass-ghost-btn px-3 py-1 rounded-full shadow-xs">
               {periodLabel}
             </span>
-          </div>
+          }
+        />
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
-                  <Flame className="w-4 h-4" />
-                </span>
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                  Work Logs & History
-                </h1>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                Live chronological ledger of garage tasks and technician operations.
-              </p>
-            </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
 
             {/* Timeframe Filter Tabs (Mobile Scrollable) */}
             <div className="w-full sm:w-auto overflow-x-auto no-scrollbar flex items-center gap-1 p-1 glass-ghost-btn rounded-xl shadow-xs shrink-0">
@@ -252,7 +243,6 @@ export const WorkLogsPage: React.FC = () => {
               ))}
             </div>
           </div>
-        </div>
 
         {/* ── Key Metrics Cards (2x2 on Mobile, 4x1 on Tablet/Desktop) ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
