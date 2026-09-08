@@ -419,94 +419,99 @@ export const JobDetailPage: React.FC = () => {
         }
       />
 
-        {/* ── VEHICLE HERO COMMAND CENTER ── */}
+        {/* ── VEHICLE HERO ── */}
         <section className="glass-head-card relative overflow-hidden rounded-3xl p-4 sm:p-5 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)]">
           {/* Top edge accent */}
-          <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/70 dark:via-amber-400/50 to-transparent pointer-events-none" />
-
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 dark:via-amber-400/40 to-transparent pointer-events-none" />
           {/* Ambient orbs */}
-          <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-amber-500/10 dark:bg-amber-400/[0.08] blur-3xl pointer-events-none" />
-          <div className="absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-cyan-500/10 dark:bg-cyan-400/[0.06] blur-3xl pointer-events-none" />
-
+          <div className="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-amber-500/[0.08] dark:bg-amber-400/[0.07] blur-3xl pointer-events-none" />
+          <div className="absolute -left-16 -bottom-16 w-56 h-56 rounded-full bg-cyan-500/[0.07] dark:bg-cyan-400/[0.05] blur-3xl pointer-events-none" />
           {isPinned && <BorderBeam size={220} duration={7} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />}
 
-          <div className="relative z-10 space-y-3">
+          <div className="relative z-10 space-y-2.5">
 
-            {/* Row 1 — Plate & Color */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 border border-amber-400/40 px-3 py-1 rounded-xl tracking-wider">
-                {currentJob.vehicleNumber}
-              </span>
-              {currentJob.vehicleColor && (
-                <span className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 bg-black/5 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
-                  <Palette className="w-3 h-3 text-amber-500 shrink-0" />
-                  <span className="capitalize">{currentJob.vehicleColor}</span>
+            {/* Row 1 — Registration + Color + Status (all in one line on mobile) */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Left: plate + color */}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[11px] sm:text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 border border-amber-400/40 px-2.5 py-0.5 rounded-lg tracking-wider shrink-0">
+                  {currentJob.vehicleNumber}
                 </span>
-              )}
-            </div>
+                {currentJob.vehicleColor && (
+                  <span className="text-[11px] font-mono font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1 shrink-0">
+                    <Palette className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                    <span className="capitalize truncate max-w-[80px]">{currentJob.vehicleColor}</span>
+                  </span>
+                )}
+              </div>
 
-            {/* Row 2 — Overdue + Status */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {deliveryInfo.isOverdue && (
-                <span className="text-xs font-mono font-black text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-xl flex items-center gap-1.5 animate-pulse">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 stroke-[2.5]" />
-                  Overdue ({deliveryInfo.shortLabel})
-                </span>
-              )}
-              <div className={`px-3 py-1 rounded-xl text-xs font-mono font-black uppercase tracking-wider border flex items-center gap-1.5 ${
+              {/* Right: status pill — always visible, compact */}
+              <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black uppercase tracking-wide border shrink-0 ${
                 isAllCompleted
                   ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
-                  : 'bg-amber-400/15 border-amber-400/30 text-amber-800 dark:text-amber-300'
+                  : 'bg-amber-400/10 border-amber-400/30 text-amber-800 dark:text-amber-300'
               }`}>
-                <span className={`w-2 h-2 rounded-full shrink-0 ${isAllCompleted ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
-                {isAllCompleted
-                  ? (currentJob.verifiedAt ? 'Verified • Handover Ready' : 'Ready for Sign-Off')
-                  : 'In Service Bay • In Progress'}
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isAllCompleted ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
+                <span>
+                  {isAllCompleted
+                    ? (currentJob.verifiedAt ? 'Verified' : 'Sign-Off')
+                    : 'In Service Bay'}
+                </span>
               </div>
             </div>
 
-            {/* Row 3 — Avatar + Vehicle Name */}
-            <div className="flex items-center gap-3">
+            {/* Overdue alert — only shown when overdue, full width, subtle */}
+            {deliveryInfo.isOverdue && (
+              <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-500/8 dark:bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-xl animate-pulse">
+                <AlertTriangle className="w-3 h-3 shrink-0 stroke-[2.5]" />
+                <span>Overdue — {deliveryInfo.shortLabel}</span>
+              </div>
+            )}
+
+            {/* Row 2 — Avatar + Vehicle Name + Ops */}
+            <div className="flex items-center gap-3 pt-0.5">
               <div className="relative shrink-0">
                 {currentJob.thumbnailUrl ? (
                   <img
                     src={currentJob.thumbnailUrl}
                     alt={currentJob.vehicleName}
-                    className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl object-cover border border-slate-200/80 dark:border-white/10 shadow-sm"
+                    className="w-11 h-11 rounded-2xl object-cover border border-slate-200/80 dark:border-white/10 shadow-sm"
                   />
                 ) : (
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-400/20 shadow-xs">
-                    <Car className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-400/20">
+                    <Car className="w-5 h-5" />
                   </div>
                 )}
                 {isPinned && (
-                  <span className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-amber-400 text-slate-950 font-bold flex items-center justify-center shadow-xs border border-white dark:border-slate-900 text-[9px]">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center shadow-xs border border-white dark:border-slate-900 text-[8px]">
                     📌
                   </span>
                 )}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
                   {currentJob.vehicleName || 'Vehicle Service'}
                 </h1>
-                <p className="text-xs font-mono text-slate-400 dark:text-slate-500 mt-0.5">
-                  Active Vehicle Record • {totalTasks} Operations
+                <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+                  {totalTasks > 0 ? `${totalTasks} operations` : 'No operations yet'}
                 </p>
               </div>
             </div>
 
-            {/* Row 4 — Progress */}
-            <div className="pt-2.5 border-t border-slate-200/60 dark:border-white/[0.07] space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-500 dark:text-slate-400 font-semibold">
-                  {completedCount} of {totalTasks} tasks completed
-                </span>
-                <span className={`font-black text-sm ${isAllCompleted ? 'text-emerald-500 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                  {progressPercent}%
-                </span>
+            {/* Row 3 — Progress */}
+            {totalTasks > 0 && (
+              <div className="pt-2.5 border-t border-slate-200/50 dark:border-white/[0.06] space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] sm:text-xs font-mono">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">
+                    {completedCount} of {totalTasks} done
+                  </span>
+                  <span className={`font-black text-sm ${isAllCompleted ? 'text-emerald-500 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                    {progressPercent}%
+                  </span>
+                </div>
+                <ProgressBarBeam progress={progressPercent} />
               </div>
-              <ProgressBarBeam progress={progressPercent} />
-            </div>
+            )}
           </div>
         </section>
 
