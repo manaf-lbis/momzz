@@ -203,10 +203,10 @@ export const InventoryPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setStockFilter(stockFilter === 'LOW_STOCK' ? 'ALL' : 'LOW_STOCK')}
-            className={`rounded-2xl p-3 sm:p-3.5 flex items-center gap-3 text-left transition active:scale-95 cursor-pointer border ${
+            className={`rounded-2xl p-3 sm:p-3.5 flex items-center gap-3 text-left transition active:scale-95 cursor-pointer glass-modern-card ${
               lowStockItems.length > 0
-                ? 'bg-rose-500/10 border-rose-500/30 dark:bg-rose-500/[0.08]'
-                : 'glass-modern-card'
+                ? '!border-rose-500/40 !bg-rose-500/10'
+                : ''
             }`}
           >
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
