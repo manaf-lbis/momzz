@@ -20,7 +20,9 @@
 @layer base {
   @font-face {
     font-family: 'BankGothic Md BT Medium';
-    src: local('BankGothic Md BT Medium'),
+    src: url('/fonts/BankGothic-Md-BT-Medium.ttf') format('truetype'),
+         url('/fonts/BankGothicMediumBT.ttf') format('truetype'),
+         local('BankGothic Md BT Medium'),
          local('BankGothic Md BT'),
          local('Bank Gothic Medium'),
          local('BankGothic-Medium'),
@@ -32,11 +34,25 @@
 
   @font-face {
     font-family: 'BankGothic Md BT';
-    src: local('BankGothic Md BT Medium'),
+    src: url('/fonts/BankGothic-Md-BT-Medium.ttf') format('truetype'),
+         url('/fonts/BankGothicMediumBT.ttf') format('truetype'),
+         local('BankGothic Md BT Medium'),
          local('BankGothic Md BT'),
          local('Bank Gothic Medium'),
          local('BankGothic-Medium'),
          local('BankGothic');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'Bank Gothic';
+    src: url('/fonts/BankGothic-Md-BT-Medium.ttf') format('truetype'),
+         url('/fonts/BankGothicMediumBT.ttf') format('truetype'),
+         local('BankGothic Md BT Medium'),
+         local('BankGothic Md BT'),
+         local('Bank Gothic Medium');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
@@ -49,7 +65,7 @@
 
   html, body, #root {
     min-height: 100vh;
-    font-family: "BankGothic Md BT Medium", "BankGothic Md BT", "Bank Gothic", "BankGothic", "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: "BankGothic Md BT Medium", "BankGothic Md BT", "Bank Gothic", "BankGothic", sans-serif;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
