@@ -311,6 +311,8 @@ export class JobRepository {
       isThumbnail: shouldBeThumbnail,
     } as any);
 
+    job.markModified('photos');
+    job.markModified('thumbnailUrl');
     await job.save();
 
     return await JobCard.findById(jobCardId)
@@ -340,6 +342,8 @@ export class JobRepository {
       job.thumbnailUrl = photoIdentifier;
     }
 
+    job.markModified('photos');
+    job.markModified('thumbnailUrl');
     await job.save();
 
     return await JobCard.findById(jobCardId)
@@ -371,6 +375,8 @@ export class JobRepository {
             job.thumbnailUrl = '';
           }
         }
+        job.markModified('photos');
+        job.markModified('thumbnailUrl');
         await job.save();
       }
     }

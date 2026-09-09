@@ -61,9 +61,20 @@ export const VehiclePhotoPage: React.FC = () => {
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString());
   const [sessionCaptures, setSessionCaptures] = useState<number>(0);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [localPhotos, setLocalPhotos] = useState<any[] | null>(null);
 
-  const { data: jobResponse, isLoading, isError } = useGetJobCardByIdQuery(id!, { skip: !id });
+  const { data: jobResponse, isLoading, isError, refetch } = useGetJobCardByIdQuery(id!, {
+    skip: !id,
+    refetchOnMountOrArgChange: true,
+  });
   const currentJob: JobCardData | undefined = jobResponse?.data;
+
+  // Sync server photos to localPhotos whenever fresh job data arrives
+  useEffect(() => {
+    if (jobResponse?.data?.photos) {
+      setLocalPhotos(jobResponse.data.photos);
+    }
+  }, [jobResponse?.data?.photos]);
 
   const [uploadJobImage] = useUploadJobImageMutation();
   const [setJobThumbnail, { isLoading: isSettingThumb }] = useSetJobThumbnailMutation();
@@ -269,17 +280,21 @@ export const VehiclePhotoPage: React.FC = () => {
       const stampedBase64 = burnTimestampOntoCanvas(video, width, height, currentRemark);
       if (!stampedBase64) throw new Error('Failed to capture frame.');
 
-      const jobId = currentJob.id || currentJob._id!;
+      const targetId = id || currentJob.id || currentJob._id!;
 
-      // Fire-and-update: we await the upload so the next snap doesn't overwrite
-      await uploadJobImage({
-        jobCardId: jobId,
+      const response = await uploadJobImage({
+        jobCardId: targetId,
         image: stampedBase64,
         remarks: currentRemark,
       }).unwrap();
 
+      if (response?.data?.photos) {
+        setLocalPhotos(response.data.photos);
+      }
+      refetch();
+
       setSessionCaptures((prev) => prev + 1);
-      showStatus('success', '✓ Photo captured & stamped!');
+      showStatus('success', '✓ Photo captured & added to inspection gallery!');
     } catch (err: any) {
       showStatus('error', err?.data?.message || err?.message || 'Failed to upload snapshot.');
     } finally {
@@ -299,14 +314,18 @@ export const VehiclePhotoPage: React.FC = () => {
         try {
           setIsCapturing(true);
           const stampedBase64 = burnTimestampOntoCanvas(img, img.width, img.height, remarks);
-          const jobId = currentJob.id || currentJob._id!;
-          await uploadJobImage({
-            jobCardId: jobId,
+          const targetId = id || currentJob.id || currentJob._id!;
+          const response = await uploadJobImage({
+            jobCardId: targetId,
             image: stampedBase64,
             remarks: remarks.trim(),
           }).unwrap();
+          if (response?.data?.photos) {
+            setLocalPhotos(response.data.photos);
+          }
+          refetch();
           setSessionCaptures((prev) => prev + 1);
-          showStatus('success', '✓ Photo captured & stamped!');
+          showStatus('success', '✓ Photo captured & added to inspection gallery!');
           setRemarks('');
         } catch (err: any) {
           showStatus('error', err?.data?.message || 'Failed to process camera photo.');
@@ -323,8 +342,13 @@ export const VehiclePhotoPage: React.FC = () => {
 
   const handleSetThumbnail = async (identifier: string) => {
     if (!currentJob) return;
+    const targetId = id || currentJob.id || currentJob._id!;
     try {
-      await setJobThumbnail({ jobCardId: currentJob.id || currentJob._id!, photoIdentifier: identifier }).unwrap();
+      const response = await setJobThumbnail({ jobCardId: targetId, photoIdentifier: identifier }).unwrap();
+      if (response?.data?.photos) {
+        setLocalPhotos(response.data.photos);
+      }
+      refetch();
       showStatus('success', 'Vehicle thumbnail updated.');
     } catch {
       showStatus('error', 'Failed to set thumbnail.');
@@ -333,8 +357,13 @@ export const VehiclePhotoPage: React.FC = () => {
 
   const handleDeletePhoto = async (identifier: string) => {
     if (!currentJob) return;
+    const targetId = id || currentJob.id || currentJob._id!;
     try {
-      await deleteJobPhoto({ jobCardId: currentJob.id || currentJob._id!, photoIdentifier: identifier }).unwrap();
+      const response = await deleteJobPhoto({ jobCardId: targetId, photoIdentifier: identifier }).unwrap();
+      if (response?.data?.photos) {
+        setLocalPhotos(response.data.photos);
+      }
+      refetch();
       showStatus('success', 'Photo removed.');
     } catch {
       showStatus('error', 'Failed to delete photo.');
@@ -346,11 +375,11 @@ export const VehiclePhotoPage: React.FC = () => {
     setTimeout(() => setStatusMsg(null), 3500);
   };
 
-  // ── Computed photo list ──
+  // ── Computed photo list (combines server/local photos + intake thumbnail if not yet in array) ──
   const photosList = React.useMemo(() => {
-    if (!currentJob) return [];
-    const list: any[] = Array.isArray(currentJob.photos) ? [...currentJob.photos] : [];
-    if (currentJob.thumbnailUrl) {
+    const rawPhotos = localPhotos !== null ? localPhotos : (currentJob?.photos || []);
+    const list: any[] = Array.isArray(rawPhotos) ? [...rawPhotos] : [];
+    if (currentJob?.thumbnailUrl) {
       const alreadyIn = list.some(
         (p: any) => p.url === currentJob.thumbnailUrl || p.publicId === currentJob.thumbnailUrl
       );
@@ -365,7 +394,7 @@ export const VehiclePhotoPage: React.FC = () => {
       }
     }
     return list;
-  }, [currentJob]);
+  }, [localPhotos, currentJob]);
 
   // ── Loading / Error States ──
   if (isLoading) {
@@ -654,11 +683,16 @@ export const VehiclePhotoPage: React.FC = () => {
           <div className="flex items-center justify-between px-0.5">
             <h2 className="text-sm font-mono font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-500" />
-              Photos ({photosList.length})
+              <span>Inspection Photos ({photosList.length}/10)</span>
             </h2>
-            {photosList.length > 1 && (
-              <span className="text-[10px] font-mono text-slate-400">Tap photo to view full screen</span>
-            )}
+            <div className="flex items-center gap-2 text-[10px] font-mono">
+              <span className="text-amber-500 font-bold">
+                {photosList.length} of 10 captured
+              </span>
+              {photosList.length > 1 && (
+                <span className="text-slate-400 hidden sm:inline">· Tap to zoom</span>
+              )}
+            </div>
           </div>
 
           {photosList.length === 0 ? (
@@ -666,7 +700,7 @@ export const VehiclePhotoPage: React.FC = () => {
               <Camera className="w-9 h-9 text-amber-500/40 mx-auto" />
               <p className="text-xs font-bold text-slate-600 dark:text-slate-400">No photos captured yet</p>
               <p className="text-[10px] font-mono text-slate-400">
-                Press SNAP above to capture inspection photos.
+                Press SNAP above to capture inspection angles (1 to 10 photos).
               </p>
             </div>
           ) : (
@@ -688,7 +722,7 @@ export const VehiclePhotoPage: React.FC = () => {
                     style={{ background: 'linear-gradient(to top, rgba(5,6,12,0.92) 0%, transparent 100%)' }}
                   >
                     <p className="text-amber-400 font-black font-mono text-sm truncate">
-                      {photo.remarks || `Inspection #${overlayIdx + 1}`}
+                      #{overlayIdx + 1} · {photo.remarks || `Inspection Angle ${overlayIdx + 1}`}
                     </p>
                     <p className="text-white/60 font-mono text-xs">
                       {currentJob.vehicleNumber} · {currentJob.vehicleName}
@@ -772,10 +806,14 @@ export const VehiclePhotoPage: React.FC = () => {
                           />
                           {/* Thumbnail badge */}
                           {isThumb && (
-                            <span className="absolute top-2 left-2 text-[9px] font-mono font-black uppercase px-1.5 py-0.5 rounded-lg bg-amber-400 text-slate-950 flex items-center gap-1 shadow pointer-events-none">
+                            <span className="absolute top-2 left-2 text-[9px] font-mono font-black uppercase px-1.5 py-0.5 rounded-lg bg-amber-400 text-slate-950 flex items-center gap-1 shadow pointer-events-none z-10">
                               <Star className="w-2.5 h-2.5 fill-current" /> Thumb
                             </span>
                           )}
+                          {/* Photo Sequence Badge (#1, #2, #3, ..., #10) */}
+                          <span className="absolute top-2 right-2 text-[10px] font-mono font-black px-2 py-0.5 rounded-lg bg-black/80 text-amber-400 border border-amber-400/40 shadow-md backdrop-blur-md pointer-events-none z-10">
+                            #{index + 1}
+                          </span>
                           {/* Hover zoom hint */}
                           <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                             <div className="w-8 h-8 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center">
