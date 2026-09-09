@@ -149,33 +149,44 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
         {/* Header: Vehicle Name & Info */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1 cursor-pointer" onClick={() => compact && setIsExpanded(!isExpanded)}>
-            {job.thumbnailUrl ? (
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsViewerOpen(true);
-                }}
-                className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl overflow-hidden shrink-0 border border-slate-200/90 dark:border-white/10 shadow-xs cursor-pointer hover:border-amber-400/80 transition active:scale-95 group/photo"
-                title="Click to view vehicle photo fullscreen"
-              >
-                <img
-                  src={job.thumbnailUrl}
-                  alt={job.vehicleName}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-110"
-                />
-                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center text-white">
-                  <Maximize2 className="w-3.5 h-3.5" />
+            {(() => {
+              const displayPhoto = job.thumbnailUrl || (job.photos && job.photos.length > 0 ? job.photos[0].url : null);
+              if (displayPhoto) {
+                return (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsViewerOpen(true);
+                    }}
+                    className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl overflow-hidden shrink-0 border border-slate-200/90 dark:border-white/10 shadow-xs cursor-pointer hover:border-amber-400/80 transition active:scale-95 group/photo"
+                    title={`Click to view ${viewerImages.length} vehicle inspection photo${viewerImages.length > 1 ? 's' : ''} fullscreen`}
+                  >
+                    <img
+                      src={displayPhoto}
+                      alt={job.vehicleName}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-110"
+                    />
+                    {viewerImages.length > 1 && (
+                      <span className="absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-black/80 backdrop-blur-xs text-[9px] font-mono font-black text-amber-400 border border-white/10 shadow-xs">
+                        {viewerImages.length}
+                      </span>
+                    )}
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center text-white">
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                  isReady
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                }`}>
+                  <Car className="w-5 h-5" />
                 </div>
-              </div>
-            ) : (
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-                isReady
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-              }`}>
-                <Car className="w-5 h-5" />
-              </div>
-            )}
+              );
+            })()}
 
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex items-center gap-2">

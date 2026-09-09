@@ -16,9 +16,22 @@ import {
   RefreshCw,
   Eye,
   ShieldCheck,
+  UploadCloud,
+  Layers,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
+
+const INSPECTION_ANGLES = [
+  { label: 'Front', icon: '🚘', note: 'Front View & Grille' },
+  { label: 'Rear', icon: '🚗', note: 'Rear View & Boot' },
+  { label: 'Left Side', icon: '👈', note: 'Left Profile & Doors' },
+  { label: 'Right Side', icon: '👉', note: 'Right Profile & Doors' },
+  { label: 'Odometer', icon: '⏱', note: 'Odometer & Fuel Level' },
+  { label: 'Engine', icon: '🔧', note: 'Under Bonnet Engine Bay' },
+  { label: 'Interior', icon: '💺', note: 'Interior Cabin & Seats' },
+  { label: 'Damage', icon: '⚠️', note: 'Scratch / Dent Closeup' },
+];
 import {
   useGetJobCardByIdQuery,
   useUploadJobImageMutation,
@@ -52,8 +65,9 @@ export const VehiclePhotoPage: React.FC = () => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
 
-  // Success / Error notifications
-  const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  // Success / Error / Info notifications
+  const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [sessionCaptures, setSessionCaptures] = useState<number>(0);
 
   const { data: jobResponse, isLoading, isError } = useGetJobCardByIdQuery(id!, { skip: !id });
   const currentJob: JobCardData | undefined = jobResponse?.data;
@@ -218,11 +232,10 @@ export const VehiclePhotoPage: React.FC = () => {
     return canvas.toDataURL('image/jpeg', 0.88);
   };
 
-  // ── TRIGGER LIVE SNAPSHOT ──
+  // ── TRIGGER LIVE SNAPSHOT (CONTINUOUS MULTI-SHOT CAPABLE) ──
   const handleSnapAndUpload = async () => {
-    if (!videoRef.current || !currentJob || isCapturing || isUploading) return;
+    if (!videoRef.current || !currentJob) return;
 
-    setIsCapturing(true);
     setFlashEffect(true);
     setTimeout(() => setFlashEffect(false), 200);
 
@@ -231,68 +244,105 @@ export const VehiclePhotoPage: React.FC = () => {
       const width = video.videoWidth || 1280;
       const height = video.videoHeight || 720;
 
-      const stampedBase64 = burnTimestampOntoCanvas(video, width, height, remarks);
+      const currentRemark = remarks.trim();
+      const markThumb = isThumbnail;
+
+      const stampedBase64 = burnTimestampOntoCanvas(video, width, height, currentRemark);
       if (!stampedBase64) {
         throw new Error('Failed to capture frame from video.');
       }
 
+      setSessionCaptures((prev) => prev + 1);
+      // Auto uncheck thumbnail after first photo so subsequent photos don't override unless chosen
+      setIsThumbnail(false);
+
       const jobId = currentJob.id || currentJob._id!;
-      await uploadJobImage({
+      uploadJobImage({
         jobCardId: jobId,
         image: stampedBase64,
-        remarks: remarks.trim(),
-        isThumbnail,
-      }).unwrap();
-
-      setStatusMsg({ type: 'success', text: 'Inspection photo captured & stamped successfully!' });
-      setRemarks('');
-      setTimeout(() => setStatusMsg(null), 4000);
+        remarks: currentRemark,
+        isThumbnail: markThumb,
+      })
+        .unwrap()
+        .then(() => {
+          setStatusMsg({
+            type: 'success',
+            text: 'Inspection photo captured & stamped! Ready for next angle.',
+          });
+          setTimeout(() => setStatusMsg(null), 3000);
+        })
+        .catch((err: any) => {
+          setStatusMsg({
+            type: 'error',
+            text: err?.data?.message || 'Failed to upload snapshot.',
+          });
+          setTimeout(() => setStatusMsg(null), 4000);
+        });
     } catch (err: any) {
       setStatusMsg({
         type: 'error',
-        text: err?.data?.message || err?.message || 'Failed to capture and upload photo. Try again.',
+        text: err?.message || 'Failed to capture frame.',
       });
-      setTimeout(() => setStatusMsg(null), 5000);
-    } finally {
-      setIsCapturing(false);
+      setTimeout(() => setStatusMsg(null), 4000);
     }
   };
 
-  // Fallback native camera capture
-  const handleNativeCameraFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !currentJob) return;
+  // ── MULTI-FILE NATIVE CAMERA / GALLERY CAPTURE ──
+  const handleNativeCameraFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0 || !currentJob) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = async () => {
-        try {
-          setIsCapturing(true);
-          const stampedBase64 = burnTimestampOntoCanvas(img, img.width, img.height, remarks);
-          const jobId = currentJob.id || currentJob._id!;
+    const files = Array.from(fileList);
+    setIsCapturing(true);
+    const jobId = currentJob.id || currentJob._id!;
+    let successCount = 0;
+
+    setStatusMsg({
+      type: 'info',
+      text: `Processing & stamping ${files.length} photo${files.length > 1 ? 's' : ''}...`,
+    });
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = base64;
+        });
+
+        const stamped = burnTimestampOntoCanvas(img, img.width, img.height, remarks);
+        if (stamped) {
           await uploadJobImage({
             jobCardId: jobId,
-            image: stampedBase64,
-            remarks: remarks.trim(),
-            isThumbnail,
+            image: stamped,
+            remarks: remarks.trim() || `Inspection Angle #${i + 1}`,
+            isThumbnail: i === 0 && isThumbnail,
           }).unwrap();
-
-          setStatusMsg({ type: 'success', text: 'Camera photo stamped & uploaded successfully!' });
-          setRemarks('');
-          setTimeout(() => setStatusMsg(null), 4000);
-        } catch (err: any) {
-          setStatusMsg({
-            type: 'error',
-            text: err?.data?.message || 'Failed to process camera photo.',
-          });
-        } finally {
-          setIsCapturing(false);
+          successCount++;
+          setSessionCaptures((prev) => prev + 1);
         }
-      };
-      img.src = reader.result as string;
-    };
-    reader.readAsDataURL(file);
+      } catch (err) {
+        console.error('Error processing multi-photo file:', err);
+      }
+    }
+
+    setIsCapturing(false);
+    setIsThumbnail(false);
+    setRemarks('');
+    setStatusMsg({
+      type: 'success',
+      text: `Successfully stamped & uploaded ${successCount} inspection photo${successCount > 1 ? 's' : ''}!`,
+    });
+    setTimeout(() => setStatusMsg(null), 4500);
     e.target.value = '';
   };
 
@@ -410,11 +460,15 @@ export const VehiclePhotoPage: React.FC = () => {
             className={`p-3 rounded-2xl text-xs font-mono flex items-center gap-2 ${
               statusMsg.type === 'success'
                 ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                : statusMsg.type === 'info'
+                ? 'bg-sky-500/15 border border-sky-500/30 text-sky-700 dark:text-sky-300'
                 : 'bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300'
             }`}
           >
             {statusMsg.type === 'success' ? (
               <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            ) : statusMsg.type === 'info' ? (
+              <Loader2 className="w-4 h-4 text-sky-500 animate-spin shrink-0" />
             ) : (
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
             )}
@@ -504,22 +558,53 @@ export const VehiclePhotoPage: React.FC = () => {
             )}
           </div>
 
-          {/* Hidden Native Camera Input (strictly camera capture fallback) */}
+          {/* Native Camera & Multi-Photo Input */}
           <input
             ref={nativeCameraInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
-            onChange={handleNativeCameraFile}
+            multiple
+            onChange={handleNativeCameraFiles}
             className="hidden"
           />
 
-          {/* ── 2. STUDIO CONTROLS (Remarks + Thumbnail Toggle + Shutter) ── */}
+          {/* ── 2. STUDIO CONTROLS (Angle Chips + Remarks + Thumbnail Toggle + Shutter) ── */}
           <div className="p-4 sm:p-5 space-y-3.5 border-t border-slate-200/80 dark:border-white/[0.08] bg-slate-900/60 dark:bg-black/60 backdrop-blur-xl">
+            {/* Quick Angle Chips */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                <span className="flex items-center gap-1.5 text-amber-400">
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Multi-Angle Inspection Tags</span>
+                </span>
+                <span className="text-slate-500 font-normal">Tap to tag & snap</span>
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
+                {INSPECTION_ANGLES.map((angle) => {
+                  const isSelected = remarks === angle.note;
+                  return (
+                    <button
+                      key={angle.label}
+                      type="button"
+                      onClick={() => setRemarks(isSelected ? '' : angle.note)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 shrink-0 border transition active:scale-95 cursor-pointer ${
+                        isSelected
+                          ? 'bg-amber-400 border-amber-400 text-slate-950 shadow-md shadow-amber-400/20'
+                          : 'bg-white/5 border-white/10 text-slate-300 hover:border-amber-400/40 hover:text-white'
+                      }`}
+                    >
+                      <span>{angle.icon}</span>
+                      <span>{angle.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Remarks Input */}
             <div className="space-y-1">
               <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                Inspection Remarks / Note (Optional)
+                Inspection Remarks / Note
               </label>
               <input
                 type="text"
@@ -531,7 +616,7 @@ export const VehiclePhotoPage: React.FC = () => {
               />
             </div>
 
-            {/* Thumbnail Toggle Checkbox */}
+            {/* Thumbnail Toggle Checkbox & Session Counter */}
             <div className="flex items-center justify-between pt-1">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -546,16 +631,35 @@ export const VehiclePhotoPage: React.FC = () => {
                 </span>
               </label>
 
-              <span className="text-[10px] font-mono text-slate-500">
-                Proof etched to pixels
-              </span>
+              {sessionCaptures > 0 ? (
+                <span className="px-2 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/30 text-amber-400 font-mono text-[10px] font-bold">
+                  {sessionCaptures} Captured This Session
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono text-slate-500">
+                  Continuous Multi-Shot Ready
+                </span>
+              )}
             </div>
 
-            {/* Shutter Button Action */}
-            <div className="flex items-center justify-center pt-2">
+            {/* Shutter Button Action Dock */}
+            <div className="flex items-center justify-center gap-4 pt-2">
+              {/* Batch Upload / Native Photos Picker */}
               <button
                 type="button"
-                disabled={isCapturing || isUploading || (!isCameraReady && !cameraError)}
+                disabled={isCapturing}
+                onClick={() => nativeCameraInputRef.current?.click()}
+                className="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white flex items-center gap-2 transition active:scale-95 cursor-pointer text-xs font-mono font-bold"
+                title="Select multiple photos from gallery or device"
+              >
+                <UploadCloud className="w-5 h-5 text-amber-400" />
+                <span className="hidden sm:inline">Batch Photos</span>
+              </button>
+
+              {/* Main Tactile Shutter */}
+              <button
+                type="button"
+                disabled={isCapturing || (!isCameraReady && !cameraError)}
                 onClick={handleSnapAndUpload}
                 className="relative group flex items-center justify-center p-1 rounded-full active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
               >
@@ -564,7 +668,7 @@ export const VehiclePhotoPage: React.FC = () => {
 
                 {/* Shutter Body */}
                 <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-amber-400 hover:bg-amber-300 border-4 border-slate-950 flex flex-col items-center justify-center shadow-2xl transition">
-                  {isCapturing || isUploading ? (
+                  {isCapturing ? (
                     <Loader2 className="w-7 h-7 text-slate-950 animate-spin" />
                   ) : (
                     <>
@@ -575,6 +679,17 @@ export const VehiclePhotoPage: React.FC = () => {
                     </>
                   )}
                 </div>
+              </button>
+
+              {/* Camera Flip or Retry Button */}
+              <button
+                type="button"
+                onClick={toggleCameraFacing}
+                className="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white flex items-center gap-2 transition active:scale-95 cursor-pointer text-xs font-mono font-bold"
+                title="Flip Camera (Front / Rear)"
+              >
+                <FlipHorizontal className="w-5 h-5 text-amber-400" />
+                <span className="hidden sm:inline">Flip</span>
               </button>
             </div>
           </div>

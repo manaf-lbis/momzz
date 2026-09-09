@@ -10,6 +10,7 @@ import { InstallAppBanner } from '../../../shared/components/common/InstallAppBa
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
+import { TermsAndConditionsModal } from '../../../shared/components/legal/TermsAndConditionsModal';
 
 export const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -24,6 +25,8 @@ export const AuthPage = () => {
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [errorMsg, setErrorMsg] = useState('');
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
   const [login, { isLoading: isLoginLoading }] = useLoginMutation();
   const [register, { isLoading: isRegLoading }] = useRegisterMutation();
@@ -49,6 +52,10 @@ export const AuthPage = () => {
     const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})/;
     if (!passwordRegex.test(formData.password)) {
       setErrorMsg('Password must be at least 8 characters, include a number and a special character.');
+      return false;
+    }
+    if (!isLogin && !agreeTerms) {
+      setErrorMsg('Please read and agree to the Terms of Service & Image Storage Policy to continue.');
       return false;
     }
     return true;
@@ -234,6 +241,29 @@ export const AuthPage = () => {
               </div>
             </div>
 
+            {!isLogin && (
+              <div className="flex items-start gap-2.5 pt-1 text-left">
+                <input
+                  type="checkbox"
+                  id="agreeTerms"
+                  checked={agreeTerms}
+                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded accent-amber-400 cursor-pointer shrink-0"
+                />
+                <label htmlFor="agreeTerms" className="text-[11px] text-slate-600 dark:text-slate-400 leading-tight select-none">
+                  I agree to the MOMZZ{' '}
+                  <button
+                    type="button"
+                    onClick={() => setIsTermsModalOpen(true)}
+                    className="text-amber-500 font-bold underline hover:text-amber-400 cursor-pointer inline"
+                  >
+                    Terms of Service, Image Storage Policy & Liability Shield
+                  </button>
+                  , acknowledging tamper-evident photo proof and pre-existing vehicle damage terms.
+                </label>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={isSubmitting}
@@ -261,6 +291,14 @@ export const AuthPage = () => {
           Track a vehicle service →
         </Link>
       </div>
+
+      {/* Terms & Conditions / Image Storage Policy Modal */}
+      <TermsAndConditionsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+        onAccept={() => setAgreeTerms(true)}
+        showAcceptButton={true}
+      />
     </div>
   );
 };
