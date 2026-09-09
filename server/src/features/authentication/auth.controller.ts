@@ -202,8 +202,9 @@ export class AuthController {
 
   async getLeaderboard(req: Request, res: Response) {
     try {
-      // The profile uses this list to calculate a genuine garage-wide position.
-      const leaderboard = await userRepository.getLeaderboard();
+      const timeframe = req.query.timeframe as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+      const leaderboard = await userRepository.getLeaderboard(timeframe, limit);
       return sendSuccess(res, 'Leaderboard fetched.', leaderboard, 200);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to fetch leaderboard.', 400);

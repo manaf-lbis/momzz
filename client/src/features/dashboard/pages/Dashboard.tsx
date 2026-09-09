@@ -85,7 +85,7 @@ export const Dashboard: React.FC = () => {
   const { data: statsRes }           = useGetJobStatsQuery(undefined, { refetchOnMountOrArgChange: true });
   const { data: pendingRes }         = useGetPendingWorkersQuery(undefined, { skip: !isAdmin });
   const { data: usersRes }           = useGetAllUsersQuery(undefined,       { skip: !isAdmin });
-  const { data: lbRes }              = useGetLeaderboardQuery();
+  const { data: lbRes }              = useGetLeaderboardQuery({ timeframe: 'month' });
   const { data: catalogRes }         = useGetCatalogQuery();
 
   const allJobs: JobCardData[] = Array.isArray(jobsRes?.data)
@@ -140,7 +140,7 @@ export const Dashboard: React.FC = () => {
   const totalUsers     = usersRes?.data?.length   || 0;
   const catalogCount   = catalogRes?.data?.length || 0;
   const topTech        = lbRes?.data?.[0];
-  const topScore       = (topTech as any)?.totalPoints || 0;
+  const topScore       = topTech ? parseFloat(Number((topTech as any).taskCount ?? (topTech as any).points ?? 0).toFixed(1)) : 0;
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -177,8 +177,8 @@ export const Dashboard: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 pt-5 pb-32 md:pb-16 flex flex-col gap-4">
 
-        {/* ── 1. HEADER (Profile Greeting + Controls) ── */}
-        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-5 pt-3 pb-3 mb-1 glass-modern-header flex items-center justify-between gap-3 transition-all">
+        {/* ── 1. HEADER (Profile Greeting + Controls - Mobile Only) ── */}
+        <header className="sm:hidden sticky top-0 z-30 -mx-4 px-4 -mt-5 pt-3 pb-3 mb-1 glass-modern-header flex items-center justify-between gap-3 transition-all">
           <Link to="/profile" className="flex items-center gap-3 active:opacity-75 transition group">
             <div className="relative w-11 h-11 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center font-black text-base text-amber-600 dark:text-amber-400
                             backdrop-blur-xl bg-white/70 dark:bg-white/[0.08] border border-white/90 dark:border-white/[0.12] shadow-xs">
@@ -218,10 +218,10 @@ export const Dashboard: React.FC = () => {
           </div>
         </header>
 
-        {/* ── 2. SEARCH PILL (Universal Fast Lookup) ── */}
+        {/* ── 2. SEARCH PILL (Universal Fast Lookup - Mobile Only) ── */}
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="w-full flex items-center gap-3 px-4 py-3.5 text-left cursor-pointer transition active:scale-[0.99]
+          className="sm:hidden w-full flex items-center gap-3 px-4 py-3.5 text-left cursor-pointer transition active:scale-[0.99]
                      glass-modern-card rounded-2xl shadow-xs hover:shadow-md hover:border-amber-400/50 dark:hover:border-amber-500/30"
         >
           <Search className="w-4 h-4 shrink-0 text-amber-500 dark:text-amber-400" />

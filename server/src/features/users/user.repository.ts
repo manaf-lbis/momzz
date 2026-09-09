@@ -25,8 +25,8 @@ export class UserRepository {
     return await User.find({ isApproved: false }).select('-password').sort({ createdAt: -1 });
   }
 
-  async getLeaderboard(limit?: number): Promise<IUser[]> {
-    const cacheKey = `cache:leaderboard:${limit || 'all'}`;
+  async getLeaderboard(timeframe?: string, limit?: number): Promise<IUser[]> {
+    const cacheKey = `cache:leaderboard:${timeframe || 'all'}:${limit || 'all'}`;
     const cached = await cacheService.get<IUser[]>(cacheKey);
     if (cached) {
       return cached;
@@ -36,12 +36,19 @@ export class UserRepository {
       isApproved: true, 
       status: { $ne: 'BLOCKED' }
     })
-
       .select('name role taskCount profileImageUrl mobile status isApproved createdAt')
       .lean();
 
-    const completedTasks = await Task.find({ status: 'COMPLETED' })
-      .select('completedBy partners isShared');
+    const taskQuery: any = { status: 'COMPLETED' };
+    if (timeframe === 'month') {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      taskQuery.completedAt = { $gte: startOfMonth, $lte: endOfMonth };
+    }
+
+    const completedTasks = await Task.find(taskQuery)
+      .select('completedBy partners isShared completedAt');
 
     const pointsMap: Record<string, number> = {};
     users.forEach((u) => {
@@ -67,13 +74,18 @@ export class UserRepository {
 
     const userObjects = users.map((u) => {
       const computedPts = parseFloat((pointsMap[u._id.toString()] || 0).toFixed(2));
-      if (u.taskCount !== computedPts) {
-        User.findByIdAndUpdate(u._id, { taskCount: computedPts }).catch(() => {});
+      if (!timeframe || timeframe === 'all') {
+        if (u.taskCount !== computedPts) {
+          User.findByIdAndUpdate(u._id, { taskCount: computedPts }).catch(() => {});
+          u.taskCount = computedPts;
+        }
+      } else {
         u.taskCount = computedPts;
       }
       return {
         ...u,
         id: u._id.toString(),
+        taskCount: computedPts,
         profileImageUrl: getCloudinaryUrl(u.profileImageUrl),
       } as unknown as IUser;
     });

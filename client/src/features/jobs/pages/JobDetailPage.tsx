@@ -27,6 +27,7 @@ import { SlideToSignoff } from '../components/SlideToSignoff';
 import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../../../shared/utils/confetti';
 import { playCompletionSound, playReopenSound } from '../../../shared/utils/completionSound';
 import {
+  ArrowUp,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
@@ -1079,7 +1080,8 @@ export const JobDetailPage: React.FC = () => {
                       <motion.div
                         key={taskId}
                         layout
-                        className={`group relative rounded-2xl sm:rounded-3xl glass-modern-card p-3 sm:p-3.5 flex gap-3.5 transition-all duration-200 hover:border-amber-400/50 hover:shadow-md overflow-hidden ${
+                        onClick={() => promptTaskStatusChange(task)}
+                        className={`group relative rounded-2xl sm:rounded-3xl glass-modern-card p-3 sm:p-3.5 flex gap-3.5 transition-all duration-200 hover:border-amber-400/50 hover:shadow-md overflow-hidden cursor-pointer ${
                           isCompleted ? 'border-emerald-500/40 bg-emerald-500/[0.02]' : ''
                         }`}
                       >
@@ -1129,7 +1131,10 @@ export const JobDetailPage: React.FC = () => {
                                 <button
                                   type="button"
                                   disabled={isUpdating}
-                                  onClick={() => promptTaskStatusChange(task)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    promptTaskStatusChange(task);
+                                  }}
                                   className="shrink-0 text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
                                   title="Click to reopen task"
                                 >
@@ -1144,7 +1149,10 @@ export const JobDetailPage: React.FC = () => {
                                 <button
                                   type="button"
                                   disabled={isUpdating}
-                                  onClick={() => promptTaskStatusChange(task)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    promptTaskStatusChange(task);
+                                  }}
                                   className="shrink-0 text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-amber-400/15 hover:bg-amber-400/25 text-amber-700 dark:text-amber-300 border border-amber-400/30 flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
                                   title="Click to mark complete"
                                 >
@@ -1160,11 +1168,9 @@ export const JobDetailPage: React.FC = () => {
 
                             {/* Task Name */}
                             <h4
-                              onClick={() => setActivityTask(task)}
-                              className={`text-xs sm:text-sm font-black transition-colors line-clamp-1 mt-0.5 cursor-pointer hover:text-amber-500 dark:hover:text-amber-300 ${
+                              className={`text-xs sm:text-sm font-black transition-colors line-clamp-1 mt-0.5 ${
                                 isCompleted ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-white'
                               }`}
-                              title="Click to view activity history"
                             >
                               {task.title}
                             </h4>
@@ -1257,7 +1263,10 @@ export const JobDetailPage: React.FC = () => {
                               {/* View Audit Logs */}
                               <button
                                 type="button"
-                                onClick={() => setActivityTask(task)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActivityTask(task);
+                                }}
                                 className="p-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition active:scale-90 cursor-pointer"
                                 title="View Task Audit Logs"
                               >
@@ -1267,7 +1276,10 @@ export const JobDetailPage: React.FC = () => {
                               {/* Pin Task */}
                               <button
                                 type="button"
-                                onClick={() => handleToggleTaskPin(taskId, isPinnedTask)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleTaskPin(taskId, isPinnedTask);
+                                }}
                                 className={`p-1.5 rounded-lg border transition active:scale-90 cursor-pointer ${
                                   isPinnedTask
                                     ? 'bg-amber-400/20 border-amber-400/40 text-amber-600 dark:text-amber-300'
@@ -1282,14 +1294,17 @@ export const JobDetailPage: React.FC = () => {
                               {isAdmin && (
                                 <button
                                   type="button"
-                                  onClick={() => setEditingTask({
-                                    isOpen: true,
-                                    task,
-                                    title: task.title,
-                                    quantityUsed: task.quantityUsed || 1,
-                                    unitPrice: task.unitPrice || 0,
-                                    discountAmount: task.discountAmount || 0,
-                                  })}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingTask({
+                                      isOpen: true,
+                                      task,
+                                      title: task.title,
+                                      quantityUsed: task.quantityUsed || 1,
+                                      unitPrice: task.unitPrice || 0,
+                                      discountAmount: task.discountAmount || 0,
+                                    });
+                                  }}
                                   className="p-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 text-sky-600 dark:text-sky-400 transition active:scale-90 cursor-pointer"
                                   title="Edit Task Details"
                                 >
@@ -1301,7 +1316,10 @@ export const JobDetailPage: React.FC = () => {
                               {isAdmin && (
                                 <button
                                   type="button"
-                                  onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'TASK', taskId })}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setConfirmDeleteModal({ isOpen: true, type: 'TASK', taskId });
+                                  }}
                                   className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-500 transition active:scale-90 cursor-pointer"
                                   title="Delete Task"
                                 >
@@ -1314,6 +1332,20 @@ export const JobDetailPage: React.FC = () => {
                       </motion.div>
                     );
                   })
+                )}
+
+                {/* Move to Top Button at the end of checklist */}
+                {sortedTasks.length > 0 && (
+                  <div className="pt-3 pb-2 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl glass-ghost-btn text-xs font-mono font-bold text-slate-500 dark:text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 border border-slate-200/80 dark:border-white/10 active:scale-95 transition cursor-pointer shadow-xs"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                      <span>Move to Top</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </section>
