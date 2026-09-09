@@ -13,6 +13,8 @@ import {
   updateJobCard,
   verifyJobCard,
   uploadJobImage,
+  setJobThumbnail,
+  deleteJobPhoto,
   toggleTaskPin,
   toggleJobPin,
 } from './job.controller';
@@ -37,6 +39,8 @@ router.patch('/:jobCardId/pin', validateRequest({ body: toggleJobPinSchema }), t
 router.patch('/:jobCardId/verify', verifyJobCard);
 
 router.patch('/:jobCardId/image', uploadJobImage);
+router.patch('/:jobCardId/photos/thumbnail', setJobThumbnail);
+router.delete('/:jobCardId/photos/:photoIdentifier', deleteJobPhoto);
 router.patch('/:jobCardId', adminMiddleware, updateJobCard);
 router.post('/:jobCardId/tasks', adminMiddleware, addTaskToJob);
 router.post('/:jobCardId/inventory-tasks', adminMiddleware, addInventoryTaskToJob);

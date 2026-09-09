@@ -15,12 +15,14 @@ import {
   AlertTriangle,
   RotateCcw,
   Loader2,
+  Maximize2,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { ConfirmationModal } from '../common/ConfirmationModal';
 import { playReopenSound } from '../../utils/completionSound';
 import { getDeliveryStatusInfo } from '../../utils/dateUtils';
 import { ProgressBarBeam } from '../magicui/AnimatedBeam';
+import { ImageViewerModal, ViewerImage } from '../common/ImageViewerModal';
 
 interface VehicleCardProps {
   job: JobCardData;
@@ -34,8 +36,34 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
   const [confirmReopen, setConfirmReopen] = useState<{ taskId: string; title: string } | null>(null);
   const [isReopening, setIsReopening] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   const [setTaskStatus] = useSetTaskStatusMutation();
+
+  const viewerImages: ViewerImage[] = React.useMemo(() => {
+    if (Array.isArray(job.photos) && job.photos.length > 0) {
+      return job.photos.map((p) => ({
+        url: p.url,
+        title: job.vehicleName,
+        subtitle: job.vehicleNumber,
+        timestamp: p.capturedAt || job.createdAt,
+        remarks: p.remarks,
+        isThumbnail: Boolean(p.isThumbnail || p.url === job.thumbnailUrl),
+      }));
+    }
+    if (job.thumbnailUrl) {
+      return [
+        {
+          url: job.thumbnailUrl,
+          title: job.vehicleName,
+          subtitle: job.vehicleNumber,
+          timestamp: job.createdAt,
+          isThumbnail: true,
+        },
+      ];
+    }
+    return [];
+  }, [job]);
 
   const tasksList = job.tasks || [];
   const totalTasks = tasksList.length;
@@ -121,13 +149,33 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
         {/* Header: Vehicle Name & Info */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1 cursor-pointer" onClick={() => compact && setIsExpanded(!isExpanded)}>
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-              isReady
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-            }`}>
-              <Car className="w-5 h-5" />
-            </div>
+            {job.thumbnailUrl ? (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsViewerOpen(true);
+                }}
+                className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl overflow-hidden shrink-0 border border-slate-200/90 dark:border-white/10 shadow-xs cursor-pointer hover:border-amber-400/80 transition active:scale-95 group/photo"
+                title="Click to view vehicle photo fullscreen"
+              >
+                <img
+                  src={job.thumbnailUrl}
+                  alt={job.vehicleName}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-110"
+                />
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center text-white">
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            ) : (
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                isReady
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+              }`}>
+                <Car className="w-5 h-5" />
+              </div>
+            )}
 
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex items-center gap-2">
@@ -299,6 +347,13 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
         message={`Reopen "${confirmReopen?.title}"?`}
         confirmText="Yes, Reopen"
         variant="warning"
+      />
+
+      {/* Lightbox Image Viewer */}
+      <ImageViewerModal
+        isOpen={isViewerOpen}
+        images={viewerImages}
+        onClose={() => setIsViewerOpen(false)}
       />
     </div>
   );

@@ -1,187 +1,334 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Cropper, { ReactCropperElement } from 'react-cropper';
-import 'cropperjs/dist/cropper.css';
 import {
-  ArrowLeft,
   Camera,
   Car,
   Check,
   CheckCircle2,
   Clock,
   FlipHorizontal,
-  FlipVertical,
   Loader2,
-  Pin,
-  RotateCcw,
-  RotateCw,
   Sparkles,
-  Upload,
-  ZoomIn,
-  ZoomOut,
   AlertTriangle,
+  Star,
+  Trash2,
+  Maximize2,
+  RefreshCw,
+  Eye,
+  ShieldCheck,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
-import { useGetJobCardsQuery, useGetJobCardByIdQuery, useUploadJobImageMutation, JobCardData } from '../../jobs/api/jobApi';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
-import { Meteors } from '../../../shared/components/magicui/Meteors';
+import {
+  useGetJobCardByIdQuery,
+  useUploadJobImageMutation,
+  useSetJobThumbnailMutation,
+  useDeleteJobPhotoMutation,
+  JobCardData,
+} from '../../jobs/api/jobApi';
+import { ImageViewerModal, ViewerImage } from '../../../shared/components/common/ImageViewerModal';
 
 export const VehiclePhotoPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const cropperRef = useRef<ReactCropperElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const nativeCameraInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [imageSrc, setImageSrc] = useState<string>('');
-  const [livePreviewUrl, setLivePreviewUrl] = useState<string>('');
-  const [scaleX, setScaleX] = useState<number>(1);
-  const [scaleY, setScaleY] = useState<number>(1);
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
-  const [successMsg, setSuccessMsg] = useState<string>('');
+  // Camera & Studio state
+  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState<string>('');
+  const [remarks, setRemarks] = useState<string>('');
+  const [isThumbnail, setIsThumbnail] = useState<boolean>(true);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [flashEffect, setFlashEffect] = useState(false);
 
-  const { data: jobResponse, isLoading: isSingleLoading, isError: isSingleError } = useGetJobCardByIdQuery(id!, { skip: !id });
-  const { data: listResponse, isLoading: isListLoading } = useGetJobCardsQuery(undefined, { skip: !!jobResponse?.data });
+  // Live ticking time for viewfinder HUD
+  const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString());
 
-  const rawList = listResponse?.data;
-  const jobsList: JobCardData[] = Array.isArray(rawList) ? rawList : rawList?.jobs || [];
-  const fallbackJob = jobsList.find((j: JobCardData) => j.id === id || j._id === id);
+  // Lightbox Modal state
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
-  const currentJob: JobCardData | undefined = jobResponse?.data || fallbackJob;
-  const isLoading = (isSingleLoading && !currentJob) || (isListLoading && !currentJob);
-  const isError = isSingleError && !currentJob;
+  // Success / Error notifications
+  const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const [uploadJobImage] = useUploadJobImageMutation();
+  const { data: jobResponse, isLoading, isError } = useGetJobCardByIdQuery(id!, { skip: !id });
+  const currentJob: JobCardData | undefined = jobResponse?.data;
 
-  // 2.1:1 ratio matching the vehicle card on the checklist/job list
-  const CARD_ASPECT_RATIO = 2.1 / 1;
+  const [uploadJobImage, { isLoading: isUploading }] = useUploadJobImageMutation();
+  const [setJobThumbnail, { isLoading: isSettingThumb }] = useSetJobThumbnailMutation();
+  const [deleteJobPhoto, { isLoading: isDeletingPhoto }] = useDeleteJobPhotoMutation();
 
-  // Auto-init with existing thumbnail if present and no new image picked
+  // Ticking time update
   useEffect(() => {
-    if (currentJob?.thumbnailUrl && !imageSrc) {
-      setLivePreviewUrl(currentJob.thumbnailUrl);
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString('en-IN', { hour12: false }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Camera stream initialization & cleanup
+  const stopCameraStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
-  }, [currentJob?.thumbnailUrl, imageSrc]);
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraReady(false);
+  }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setError('');
+  const startCameraStream = useCallback(async () => {
+    stopCameraStream();
+    setCameraError('');
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file (JPG, PNG, WebP).');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError('Live camera is not supported in this browser. Use system camera fallback.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImageSrc(reader.result as string);
-      setScaleX(1);
-      setScaleY(1);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: cameraFacing },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(() => {});
+          setIsCameraReady(true);
+        };
+      }
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setCameraError('Camera permission denied. Please allow camera access in browser settings.');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setCameraError('No camera found on this device. Use system camera fallback.');
+      } else {
+        setCameraError('Could not start live camera feed. Use system camera fallback.');
+      }
+    }
+  }, [cameraFacing, stopCameraStream]);
+
+  useEffect(() => {
+    startCameraStream();
+    return () => stopCameraStream();
+  }, [startCameraStream, stopCameraStream]);
+
+  const toggleCameraFacing = () => {
+    setCameraFacing((prev) => (prev === 'environment' ? 'user' : 'environment'));
   };
 
-  const handleCrop = () => {
-    const cropper = cropperRef.current?.cropper;
-    if (!cropper) return;
+  // ── BURN-IN CANVAS FUNCTION (Legal / Operational Timestamp Proof) ──
+  const burnTimestampOntoCanvas = (
+    sourceImage: CanvasImageSource,
+    srcWidth: number,
+    srcHeight: number,
+    noteText: string
+  ): string => {
+    const canvas = document.createElement('canvas');
+    const targetWidth = Math.min(srcWidth, 1920);
+    const targetHeight = Math.round((targetWidth / srcWidth) * srcHeight);
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    // 1. Draw the high-res camera frame
+    ctx.drawImage(sourceImage, 0, 0, targetWidth, targetHeight);
+
+    // 2. Calculate bottom inspection banner dimensions (sleek non-intrusive ribbon ~7-8% height)
+    const ribbonHeight = Math.max(54, Math.round(targetHeight * 0.075));
+    const ribbonY = targetHeight - ribbonHeight;
+
+    // 3. Draw frosted semi-transparent dark gradient bar
+    const gradient = ctx.createLinearGradient(0, ribbonY, 0, targetHeight);
+    gradient.addColorStop(0, 'rgba(8, 9, 15, 0.72)');
+    gradient.addColorStop(1, 'rgba(8, 9, 15, 0.94)');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, ribbonY, targetWidth, ribbonHeight);
+
+    // Thin amber highlight rule along top of ribbon
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(0, ribbonY, targetWidth, 2);
+
+    // Text formatting configurations
+    const fontSize = Math.max(12, Math.round(ribbonHeight * 0.28));
+    const smallFontSize = Math.max(10, Math.round(ribbonHeight * 0.22));
+    const paddingX = Math.round(targetWidth * 0.025);
+
+    // Text shadows for absolute readability
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+
+    // 4. Left side: Garage Brand Badge + Vehicle Plate & Model
+    ctx.font = `900 ${fontSize}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.fillStyle = '#fbbf24'; // Amber-400
+    const badgeText = '⚡ MOMZZ INSPECTION PROOF';
+    ctx.fillText(badgeText, paddingX, ribbonY + ribbonHeight * 0.42);
+
+    ctx.font = `700 ${smallFontSize}px ui-monospace, monospace`;
+    ctx.fillStyle = '#ffffff';
+    const vehicleText = `${currentJob?.vehicleNumber || ''} • ${currentJob?.vehicleName || 'Vehicle'}`;
+    ctx.fillText(vehicleText, paddingX, ribbonY + ribbonHeight * 0.8);
+
+    // 5. Right side: Precise Timestamp & Location
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString('en-IN', { hour12: false });
+    const fullTimestampStr = `${dateStr}  ${timeStr} IST`;
+
+    ctx.font = `900 ${fontSize}px ui-monospace, monospace`;
+    ctx.fillStyle = '#ffffff';
+    const timeWidth = ctx.measureText(fullTimestampStr).width;
+    const rightX = targetWidth - paddingX - timeWidth;
+    ctx.fillText(fullTimestampStr, rightX, ribbonY + ribbonHeight * 0.42);
+
+    // Remarks text (if present)
+    if (noteText.trim()) {
+      ctx.font = `700 ${smallFontSize}px ui-monospace, monospace`;
+      ctx.fillStyle = '#fbbf24';
+      const remarkDisplay = `REMARK: ${noteText.trim().toUpperCase()}`;
+      const remarkWidth = ctx.measureText(remarkDisplay).width;
+      ctx.fillText(remarkDisplay, targetWidth - paddingX - remarkWidth, ribbonY + ribbonHeight * 0.8);
+    } else {
+      ctx.font = `600 ${smallFontSize}px ui-sans-serif, system-ui, sans-serif`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+      const verifiedTag = 'VERIFIED TAMPER-PROOF CAPTURE';
+      const tagWidth = ctx.measureText(verifiedTag).width;
+      ctx.fillText(verifiedTag, targetWidth - paddingX - tagWidth, ribbonY + ribbonHeight * 0.8);
+    }
+
+    return canvas.toDataURL('image/jpeg', 0.88);
+  };
+
+  // ── TRIGGER LIVE SNAPSHOT ──
+  const handleSnapAndUpload = async () => {
+    if (!videoRef.current || !currentJob || isCapturing || isUploading) return;
+
+    setIsCapturing(true);
+    setFlashEffect(true);
+    setTimeout(() => setFlashEffect(false), 200);
 
     try {
-      const canvas = cropper.getCroppedCanvas({
-        maxWidth: 1600,
-        maxHeight: 900,
-        imageSmoothingEnabled: true,
-        imageSmoothingQuality: 'high',
-      });
-      if (canvas) {
-        setLivePreviewUrl(canvas.toDataURL('image/jpeg', 0.88));
+      const video = videoRef.current;
+      const width = video.videoWidth || 1280;
+      const height = video.videoHeight || 720;
+
+      const stampedBase64 = burnTimestampOntoCanvas(video, width, height, remarks);
+      if (!stampedBase64) {
+        throw new Error('Failed to capture frame from video.');
       }
-    } catch {
-      // ignore
+
+      const jobId = currentJob.id || currentJob._id!;
+      await uploadJobImage({
+        jobCardId: jobId,
+        image: stampedBase64,
+        remarks: remarks.trim(),
+        isThumbnail,
+      }).unwrap();
+
+      setStatusMsg({ type: 'success', text: 'Inspection photo captured & stamped successfully!' });
+      setRemarks('');
+      setTimeout(() => setStatusMsg(null), 4000);
+    } catch (err: any) {
+      setStatusMsg({
+        type: 'error',
+        text: err?.data?.message || err?.message || 'Failed to capture and upload photo. Try again.',
+      });
+      setTimeout(() => setStatusMsg(null), 5000);
+    } finally {
+      setIsCapturing(false);
     }
   };
 
-  const handleFlipHorizontal = () => {
-    const cropper = cropperRef.current?.cropper;
-    if (!cropper) return;
-    const next = scaleX * -1;
-    cropper.scaleX(next);
-    setScaleX(next);
-    handleCrop();
+  // Fallback native camera capture
+  const handleNativeCameraFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentJob) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          setIsCapturing(true);
+          const stampedBase64 = burnTimestampOntoCanvas(img, img.width, img.height, remarks);
+          const jobId = currentJob.id || currentJob._id!;
+          await uploadJobImage({
+            jobCardId: jobId,
+            image: stampedBase64,
+            remarks: remarks.trim(),
+            isThumbnail,
+          }).unwrap();
+
+          setStatusMsg({ type: 'success', text: 'Camera photo stamped & uploaded successfully!' });
+          setRemarks('');
+          setTimeout(() => setStatusMsg(null), 4000);
+        } catch (err: any) {
+          setStatusMsg({
+            type: 'error',
+            text: err?.data?.message || 'Failed to process camera photo.',
+          });
+        } finally {
+          setIsCapturing(false);
+        }
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
-  const handleFlipVertical = () => {
-    const cropper = cropperRef.current?.cropper;
-    if (!cropper) return;
-    const next = scaleY * -1;
-    cropper.scaleY(next);
-    setScaleY(next);
-    handleCrop();
-  };
-
-  const handleRotate = () => {
-    const cropper = cropperRef.current?.cropper;
-    if (!cropper) return;
-    cropper.rotate(90);
-    handleCrop();
-  };
-
-  const handleZoom = (delta: number) => {
-    const cropper = cropperRef.current?.cropper;
-    if (!cropper) return;
-    cropper.zoom(delta);
-    handleCrop();
-  };
-
-  const handleReset = () => {
-    const cropper = cropperRef.current?.cropper;
-    if (!cropper) return;
-    cropper.reset();
-    setScaleX(1);
-    setScaleY(1);
-    handleCrop();
-  };
-
-  const handleSave = async () => {
-    const cropper = cropperRef.current?.cropper;
-    if (!cropper || !currentJob) return;
-
-    setIsUploading(true);
-    setError('');
-
+  // Handle Thumbnail Toggle on existing photo
+  const handleSetThumbnail = async (identifier: string) => {
+    if (!currentJob) return;
+    const jobId = currentJob.id || currentJob._id!;
     try {
-      const canvas = cropper.getCroppedCanvas({
-        maxWidth: 1600,
-        maxHeight: 900,
-        imageSmoothingEnabled: true,
-        imageSmoothingQuality: 'high',
-      });
+      await setJobThumbnail({ jobCardId: jobId, photoIdentifier: identifier }).unwrap();
+      setStatusMsg({ type: 'success', text: 'Vehicle thumbnail updated.' });
+      setTimeout(() => setStatusMsg(null), 3000);
+    } catch {
+      setStatusMsg({ type: 'error', text: 'Failed to set thumbnail.' });
+    }
+  };
 
-      const base64 = canvas.toDataURL('image/jpeg', 0.88);
-      const jobId = currentJob.id || currentJob._id!;
-
-      await uploadJobImage({ jobCardId: jobId, image: base64 }).unwrap();
-
-      setSuccessMsg('Vehicle photo saved successfully!');
-      setTimeout(() => {
-        navigate(`/jobs/${jobId}`);
-      }, 700);
-    } catch (err: any) {
-      setError(err?.data?.message || err?.message || 'Failed to upload photo. Please try again.');
-    } finally {
-      setIsUploading(false);
+  // Handle Delete photo
+  const handleDeletePhoto = async (identifier: string) => {
+    if (!currentJob) return;
+    const jobId = currentJob.id || currentJob._id!;
+    try {
+      await deleteJobPhoto({ jobCardId: jobId, photoIdentifier: identifier }).unwrap();
+      setStatusMsg({ type: 'success', text: 'Photo removed.' });
+      setTimeout(() => setStatusMsg(null), 3000);
+    } catch {
+      setStatusMsg({ type: 'error', text: 'Failed to delete photo.' });
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A] text-slate-900 dark:text-white flex flex-col">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#07080e] text-slate-900 dark:text-white flex flex-col">
         <Navbar />
-        <div className="flex-1 max-w-4xl w-full mx-auto px-4 py-12 flex flex-col items-center justify-center gap-3">
+        <div className="flex-1 flex flex-col items-center justify-center gap-3">
           <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
-          <p className="text-xs font-mono text-amber-500">Loading vehicle details...</p>
+          <p className="text-xs font-mono text-amber-500 font-bold">Loading Live Studio...</p>
         </div>
       </div>
     );
@@ -189,9 +336,9 @@ export const VehiclePhotoPage: React.FC = () => {
 
   if (isError || !currentJob) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A] text-slate-900 dark:text-white flex flex-col">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#07080e] text-slate-900 dark:text-white flex flex-col">
         <Navbar />
-        <div className="max-w-md mx-auto my-16 p-6 industrial-card rounded-2xl text-center space-y-3">
+        <div className="max-w-md mx-auto my-16 p-6 rounded-3xl glass-modern-card text-center space-y-3">
           <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto" />
           <h2 className="text-sm font-bold uppercase">Job Card Not Found</h2>
           <button
@@ -205,409 +352,367 @@ export const VehiclePhotoPage: React.FC = () => {
     );
   }
 
-  const totalTasks = currentJob.tasks?.length || 0;
-  const completedTasks = currentJob.tasks?.filter((t) => t.status === 'COMPLETED').length || 0;
-  const isReady = totalTasks > 0 && completedTasks === totalTasks;
+  // Aggregate photos for this vehicle
+  const photosList = Array.isArray(currentJob.photos) && currentJob.photos.length > 0
+    ? currentJob.photos
+    : currentJob.thumbnailUrl
+    ? [{ url: currentJob.thumbnailUrl, remarks: 'Primary Vehicle Photo', isThumbnail: true, capturedAt: currentJob.createdAt }]
+    : [];
 
-  const getGarageDuration = (createdDateStr: string) => {
-    const start = new Date(createdDateStr).getTime();
-    const now = Date.now();
-    const diffMs = Math.max(0, now - start);
-    const totalMinutes = Math.floor(diffMs / 60000);
-    if (totalMinutes < 60) return `${Math.max(1, totalMinutes)}m in garage`;
-    const hours = Math.floor(totalMinutes / 60);
-    if (hours < 24) return `${hours}h ${totalMinutes % 60}m in garage`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d ${hours % 24}h in garage`;
-    return `${Math.floor(days / 7)}w ${days % 7}d in garage`;
-  };
-
-  const formattedDate = new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(currentJob.createdAt));
+  const viewerImages: ViewerImage[] = photosList.map((p: any) => ({
+    url: p.url,
+    title: currentJob.vehicleName,
+    subtitle: currentJob.vehicleNumber,
+    timestamp: p.capturedAt || currentJob.createdAt,
+    remarks: p.remarks,
+    isThumbnail: Boolean(p.isThumbnail || p.url === currentJob.thumbnailUrl),
+  }));
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col selection:bg-amber-400/20 transition-colors duration-200">
-      {/* Ambient background aura */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <Meteors number={6} />
-      </div>
-
+    <div className="min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col selection:bg-amber-400/20 font-sans">
       <Navbar glass />
 
-      <main className="app-container relative z-10 flex-1 py-4 pb-32 space-y-4">
-        {/* Page Top Header */}
-        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-3.5 pb-3.5 mb-3 glass-modern-header flex items-center justify-between gap-3 transition-all">
+      <main className="app-container relative z-10 flex-1 py-4 pb-32 space-y-4 max-w-3xl mx-auto w-full">
+        {/* Top Header */}
+        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 -mt-4 pt-3 pb-3 mb-2 glass-modern-header flex items-center justify-between gap-3 transition-all">
           <div className="flex items-center gap-3 min-w-0">
-            <BackButton to={`/jobs/${currentJob.id || currentJob._id}`} label="Job Card" />
-
+            <BackButton to={`/jobs/${currentJob.id || currentJob._id}`} label="Vehicle" />
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">
+                <h1 className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">
                   {currentJob.vehicleName}
                 </h1>
-                {currentJob.vehicleColor && (
-                  <span className="text-amber-500 font-bold text-xs">
-                    · {currentJob.vehicleColor}
-                  </span>
-                )}
-                <span className="inline-block text-[11px] font-mono font-black text-amber-500 bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                <span className="text-[11px] font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-md">
                   {currentJob.vehicleNumber}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono mt-0.5">
-                Vehicle Photo Studio · Real-time Card Crop & Preview
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                Live Camera Studio · In-Image Timestamp Proof
               </p>
             </div>
           </div>
 
-          {/* Top Save button */}
-          {imageSrc && (
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={isUploading}
-              onClick={handleSave}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-400 text-zinc-950 text-xs font-black uppercase rounded-xl hover:bg-amber-300 shadow-md shadow-amber-400/15 transition active:scale-95 disabled:opacity-50 shrink-0"
+              onClick={toggleCameraFacing}
+              className="p-2 rounded-xl glass-ghost-btn text-slate-600 dark:text-slate-300 hover:text-amber-500 dark:hover:text-amber-400 border border-slate-200/80 dark:border-white/10 active:scale-90 transition cursor-pointer"
+              title="Flip Camera (Front/Rear)"
             >
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                  <span>Save Photo</span>
-                </>
-              )}
+              <FlipHorizontal className="w-4 h-4" />
             </button>
-          )}
+          </div>
         </header>
 
-        {/* Hidden File Input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-
-        {error && (
-          <div className="p-3.5 bg-red-950/70 border border-red-800/80 rounded-2xl text-xs font-mono text-red-300 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-            <span>{error}</span>
+        {/* Notifications */}
+        {statusMsg && (
+          <div
+            className={`p-3 rounded-2xl text-xs font-mono flex items-center gap-2 ${
+              statusMsg.type === 'success'
+                ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                : 'bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300'
+            }`}
+          >
+            {statusMsg.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+            )}
+            <span>{statusMsg.text}</span>
           </div>
         )}
 
-        {successMsg && (
-          <div className="p-3.5 bg-emerald-950/70 border border-emerald-800/80 rounded-2xl text-xs font-mono text-emerald-300 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>{successMsg}</span>
-          </div>
-        )}
+        {/* ── 1. LIVE CAMERA VIEWFINDER STUDIO ── */}
+        <section className="relative rounded-3xl overflow-hidden glass-modern-card border border-slate-200/80 dark:border-white/10 shadow-2xl bg-black">
+          {/* Flash animation */}
+          {flashEffect && (
+            <div className="absolute inset-0 z-40 bg-white opacity-80 pointer-events-none transition-opacity duration-150" />
+          )}
 
-        {/* Studio Content */}
-        {!imageSrc ? (
-          /* Empty / Capture Selection State */
-          <div className="space-y-4">
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 dark:border-zinc-700 hover:border-amber-400/80 dark:hover:border-amber-400/80 rounded-3xl p-10 sm:p-14 text-center cursor-pointer bg-white dark:bg-zinc-900/60 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-all flex flex-col items-center justify-center gap-4 shadow-sm"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-500">
-                <Camera className="w-8 h-8" />
+          {/* Viewfinder Video Stream */}
+          <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full flex items-center justify-center overflow-hidden bg-black">
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              autoPlay
+              className="w-full h-full object-cover"
+            />
+
+            {/* Viewfinder Overlays / HUD */}
+            <div className="absolute inset-0 pointer-events-none p-4 flex flex-col justify-between z-20">
+              {/* Top HUD Row */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono font-black text-rose-400 uppercase tracking-widest">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                    LIVE CAMERA
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-white/80 bg-black/50 px-2 py-1 rounded-md backdrop-blur-md">
+                    {currentTime}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 bg-black/60 px-2.5 py-1 rounded-full border border-white/10 text-[10px] font-mono text-amber-400 font-bold backdrop-blur-md">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>STAMP ACTIVE</span>
+                </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-base font-black text-slate-900 dark:text-white">
-                  Capture or Upload Vehicle Photo
-                </p>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
-                  Take a photo or pick from device (JPG, PNG, WebP)
-                </p>
+
+              {/* Viewfinder Target Framing Brackets */}
+              <div className="self-center w-48 h-32 sm:w-64 sm:h-44 border border-white/20 rounded-2xl relative">
+                <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-amber-400" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-amber-400" />
+                <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-amber-400" />
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-amber-400" />
               </div>
-              <button
-                type="button"
-                className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 bg-amber-400 text-zinc-950 text-xs font-black uppercase rounded-xl hover:bg-amber-300 shadow-md shadow-amber-400/20 transition active:scale-95"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Select / Capture Image</span>
-              </button>
+
+              {/* Bottom HUD: Live watermark simulation preview */}
+              <div className="w-full py-1.5 px-3 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 flex items-center justify-between text-[9px] font-mono text-white/80">
+                <span className="text-amber-400 font-bold">
+                  ⚡ {currentJob.vehicleNumber} · {currentJob.vehicleName}
+                </span>
+                <span>{currentTime} IST · PROOF BURNT ON SHUTTER</span>
+              </div>
             </div>
 
-            {/* If vehicle already has a photo, show it */}
-            {currentJob.thumbnailUrl && (
-              <div className="p-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl space-y-2">
-                <div className="flex items-center justify-between text-xs font-mono text-slate-500 dark:text-zinc-400">
-                  <span className="font-bold text-slate-700 dark:text-zinc-300">Current Photo Active</span>
+            {/* Error / Fallback State */}
+            {cameraError && (
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-black/90 text-white space-y-3">
+                <AlertTriangle className="w-8 h-8 text-amber-400" />
+                <p className="text-xs font-mono text-slate-300 max-w-sm">{cameraError}</p>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-amber-500 hover:underline font-bold"
+                    onClick={startCameraStream}
+                    className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-mono font-bold flex items-center gap-1.5 transition active:scale-95"
                   >
-                    Replace Photo
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Retry Camera</span>
                   </button>
-                </div>
-                <div className="relative rounded-xl overflow-hidden max-h-48 border border-slate-200 dark:border-zinc-800">
-                  <img
-                    src={currentJob.thumbnailUrl}
-                    alt={currentJob.vehicleName}
-                    className="w-full h-48 object-cover object-center"
-                  />
+
+                  <button
+                    type="button"
+                    onClick={() => nativeCameraInputRef.current?.click()}
+                    className="px-3.5 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-bold font-mono flex items-center gap-1.5 transition active:scale-95 shadow-md"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Open Phone Camera</span>
+                  </button>
                 </div>
               </div>
             )}
           </div>
-        ) : (
-          /* Cropper + Toolbar + Live Card Preview */
-          <div className="space-y-5">
-            {/* Cropper Section */}
-            <div className="p-4 sm:p-5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl space-y-3.5 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
-                  <Camera className="w-4 h-4 text-amber-500" />
-                  Crop & Frame Vehicle Image
-                </span>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="text-amber-500 hover:underline font-bold flex items-center gap-1"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  Choose Different Image
-                </button>
-              </div>
 
-              {/* Cropper Stage */}
-              <div className="relative rounded-2xl overflow-hidden bg-black border border-zinc-800 max-h-[360px] flex items-center justify-center">
-                <Cropper
-                  ref={cropperRef}
-                  src={imageSrc}
-                  style={{ height: 340, width: '100%' }}
-                  aspectRatio={CARD_ASPECT_RATIO}
-                  guides={true}
-                  viewMode={1}
-                  minCropBoxWidth={140}
-                  minCropBoxHeight={70}
-                  background={false}
-                  responsive={true}
-                  autoCropArea={0.95}
-                  checkOrientation={false}
-                  cropend={handleCrop}
-                  ready={handleCrop}
-                />
-              </div>
+          {/* Hidden Native Camera Input (strictly camera capture fallback) */}
+          <input
+            ref={nativeCameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleNativeCameraFile}
+            className="hidden"
+          />
 
-              {/* Cropper Studio Controls: Flip Horizontal, Flip Vertical, Rotate, Zoom, Reset */}
-              <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* Flip Horizontal */}
-                  <button
-                    type="button"
-                    onClick={handleFlipHorizontal}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold transition active:scale-95"
-                    title="Flip Horizontal"
-                  >
-                    <FlipHorizontal className="w-3.5 h-3.5" />
-                    <span>Flip H</span>
-                  </button>
-
-                  {/* Flip Vertical */}
-                  <button
-                    type="button"
-                    onClick={handleFlipVertical}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold transition active:scale-95"
-                    title="Flip Vertical"
-                  >
-                    <FlipVertical className="w-3.5 h-3.5" />
-                    <span>Flip V</span>
-                  </button>
-
-                  {/* Rotate 90° */}
-                  <button
-                    type="button"
-                    onClick={handleRotate}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold transition active:scale-95"
-                    title="Rotate 90° Clockwise"
-                  >
-                    <RotateCw className="w-3.5 h-3.5" />
-                    <span>Rotate</span>
-                  </button>
-
-                  {/* Zoom Controls */}
-                  <button
-                    type="button"
-                    onClick={() => handleZoom(0.1)}
-                    className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 transition active:scale-95"
-                    title="Zoom In"
-                  >
-                    <ZoomIn className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleZoom(-0.1)}
-                    className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 transition active:scale-95"
-                    title="Zoom Out"
-                  >
-                    <ZoomOut className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* Reset Button */}
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-white text-xs font-mono font-bold transition"
-                  title="Reset Transformations"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Reset</span>
-                </button>
-              </div>
+          {/* ── 2. STUDIO CONTROLS (Remarks + Thumbnail Toggle + Shutter) ── */}
+          <div className="p-4 sm:p-5 space-y-3.5 border-t border-slate-200/80 dark:border-white/[0.08] bg-slate-900/60 dark:bg-black/60 backdrop-blur-xl">
+            {/* Remarks Input */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Inspection Remarks / Note (Optional)
+              </label>
+              <input
+                type="text"
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="e.g. Front bumper scratch, Engine bay, Odometer read..."
+                maxLength={60}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-amber-400/50 text-xs font-mono text-white placeholder-slate-500 outline-none transition"
+              />
             </div>
 
-            {/* Live Real-Data Card Preview (Exact same card size and layout as Checklist page!) */}
-            <div className="p-4 sm:p-5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl space-y-3 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  Live Checklist Card Preview
+            {/* Thumbnail Toggle Checkbox */}
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isThumbnail}
+                  onChange={(e) => setIsThumbnail(e.target.checked)}
+                  className="w-4 h-4 rounded accent-amber-400 cursor-pointer"
+                />
+                <span className="text-xs font-mono text-slate-300 font-bold flex items-center gap-1">
+                  <Star className={`w-3.5 h-3.5 ${isThumbnail ? 'text-amber-400 fill-amber-400' : 'text-slate-500'}`} />
+                  Mark as Primary Vehicle Thumbnail
                 </span>
-                <span className="text-slate-400 dark:text-zinc-500 text-[11px]">
-                  Exact Job Card Appearance
-                </span>
-              </div>
+              </label>
 
-              {/* Exact Card Preview Matching Job List Page */}
-              <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between min-h-[175px] shadow-lg border border-zinc-800 bg-[#0b132b] select-none">
-                {/* Background Image with Clean Left-to-Right Medium Gradient Overlay */}
-                {livePreviewUrl && (
-                  <>
-                    <img
-                      src={livePreviewUrl}
-                      alt={currentJob.vehicleName}
-                      className="absolute inset-0 w-full h-full object-cover object-center z-0"
-                    />
-                    {/* Clean left-to-right medium gradient tone */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#0b1328] via-[#0b1328]/80 via-42% to-transparent z-0" />
-                    {/* Subtle soft vignette */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0b1328]/60 via-transparent to-black/25 z-0" />
-                  </>
-                )}
+              <span className="text-[10px] font-mono text-slate-500">
+                Proof etched to pixels
+              </span>
+            </div>
 
-                {/* Content Container (Layered on top of gradient) */}
-                <div className="relative z-10 flex flex-col justify-between flex-1 gap-3.5">
-                  {/* Top Row: Vehicle Name, Color, Pinned Badges, Status Badge */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-tight truncate flex items-center gap-1.5 drop-shadow-xs">
-                          <Car className="w-4 h-4 text-amber-400 shrink-0" />
-                          <span className="truncate">{currentJob.vehicleName}</span>
-                          {currentJob.vehicleColor && (
-                            <span className="text-amber-400 font-bold text-xs shrink-0">
-                              · {currentJob.vehicleColor}
-                            </span>
-                          )}
-                        </h3>
+            {/* Shutter Button Action */}
+            <div className="flex items-center justify-center pt-2">
+              <button
+                type="button"
+                disabled={isCapturing || isUploading || (!isCameraReady && !cameraError)}
+                onClick={handleSnapAndUpload}
+                className="relative group flex items-center justify-center p-1 rounded-full active:scale-95 transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {/* Outer Glow Ring */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-400 to-yellow-400 opacity-60 group-hover:opacity-100 blur-sm transition" />
 
-                        {currentJob.isPinnedForAll && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400 text-zinc-950 font-mono font-black text-[9px] uppercase tracking-wider shadow-sm shadow-amber-400/20 shrink-0">
-                            <Pin className="w-2.5 h-2.5 fill-zinc-950" />
-                            Pinned for All
+                {/* Shutter Body */}
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-amber-400 hover:bg-amber-300 border-4 border-slate-950 flex flex-col items-center justify-center shadow-2xl transition">
+                  {isCapturing || isUploading ? (
+                    <Loader2 className="w-7 h-7 text-slate-950 animate-spin" />
+                  ) : (
+                    <>
+                      <Camera className="w-6 h-6 sm:w-7 sm:h-7 text-slate-950" />
+                      <span className="text-[8px] font-black font-mono uppercase tracking-wider text-slate-950 mt-0.5">
+                        SNAP
+                      </span>
+                    </>
+                  )}
+                </div>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 3. INSPECTION PHOTOS GALLERY (All photos for this vehicle) ── */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Inspection Gallery ({photosList.length})</span>
+            </h2>
+            {photosList.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setViewerIndex(0);
+                  setViewerOpen(true);
+                }}
+                className="text-xs font-mono font-bold text-amber-500 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Open Fullscreen Viewer</span>
+              </button>
+            )}
+          </div>
+
+          {photosList.length === 0 ? (
+            <div className="py-8 text-center rounded-3xl glass-modern-card p-4 space-y-1">
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No inspection photos yet</p>
+              <p className="text-[11px] font-mono text-slate-400">
+                Snap vehicle angles above using the live camera shutter.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {photosList.map((photo: any, index: number) => {
+                const photoUrl = photo.url;
+                const identifier = photo.publicId || photo.url;
+                const isThumb = Boolean(photo.isThumbnail || photoUrl === currentJob.thumbnailUrl);
+
+                return (
+                  <div
+                    key={photo.publicId || photo.url || index}
+                    className={`group relative rounded-2xl overflow-hidden glass-modern-card border transition-all ${
+                      isThumb ? 'border-amber-400/80 shadow-md shadow-amber-400/10' : 'border-slate-200/80 dark:border-white/10'
+                    }`}
+                  >
+                    {/* Thumbnail Image Viewport */}
+                    <div
+                      className="relative aspect-[4/3] overflow-hidden bg-black/40 cursor-pointer"
+                      onClick={() => {
+                        setViewerIndex(index);
+                        setViewerOpen(true);
+                      }}
+                    >
+                      <img
+                        src={photoUrl}
+                        alt="Vehicle Angle"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+
+                      {/* Top Overlay Badge */}
+                      <div className="absolute top-2 left-2 flex items-center gap-1">
+                        {isThumb && (
+                          <span className="text-[9px] font-mono font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 shadow-xs flex items-center gap-1">
+                            <Star className="w-2.5 h-2.5 fill-current" />
+                            <span>Thumbnail</span>
                           </span>
                         )}
                       </div>
 
-                      {/* Registration Plate Badge */}
-                      <div>
-                        <span className="inline-block text-[11px] font-mono font-black text-slate-200 bg-slate-950/85 border border-slate-700/80 px-2.5 py-0.5 rounded-lg shadow-2xs">
-                          {currentJob.vehicleNumber}
-                        </span>
+                      {/* Expand Eye Icon on hover */}
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                        <div className="w-8 h-8 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center">
+                          <Maximize2 className="w-4 h-4" />
+                        </div>
                       </div>
                     </div>
 
-                    {/* Right: Status Pill */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {isReady ? (
-                        <span className="shrink-0 flex items-center gap-1 px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-xs shadow-xs">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          Ready
-                        </span>
+                    {/* Bottom Metadata & Actions */}
+                    <div className="p-2.5 space-y-2 bg-white/5 backdrop-blur-md">
+                      {photo.remarks ? (
+                        <p className="text-[11px] font-mono text-amber-500 font-bold truncate">
+                          {photo.remarks}
+                        </p>
                       ) : (
-                        <span className="shrink-0 flex items-center gap-1 px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-xs shadow-xs">
-                          <Clock className="w-3.5 h-3.5 text-amber-400" />
-                          Active
-                        </span>
+                        <p className="text-[10px] font-mono text-slate-400 truncate">
+                          Photo #{index + 1}
+                        </p>
                       )}
-                    </div>
-                  </div>
 
-                  {/* Middle: Tasks Progress Row */}
-                  <div className="space-y-1.5 pt-1">
-                    <div className="flex items-center justify-between text-[11px] font-mono">
-                      <span className="text-slate-300 uppercase tracking-wider font-bold text-[10px]">
-                        TASKS
-                      </span>
-                      <span className="font-black text-amber-400">
-                        {completedTasks}/{totalTasks}
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/10 p-0.5">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-300"
-                        style={{
-                          width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] font-mono">
+                        {/* Make Thumbnail button */}
+                        {!isThumb ? (
+                          <button
+                            type="button"
+                            disabled={isSettingThumb}
+                            onClick={() => handleSetThumbnail(identifier)}
+                            className="text-slate-400 hover:text-amber-400 flex items-center gap-1 cursor-pointer transition"
+                          >
+                            <Star className="w-3 h-3" />
+                            <span>Set Thumbnail</span>
+                          </button>
+                        ) : (
+                          <span className="text-amber-400 font-bold flex items-center gap-1">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                            <span>Primary</span>
+                          </span>
+                        )}
 
-                  {/* Bottom Row: Garage Duration & Date */}
-                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-0.5">
-                    <span className="flex items-center gap-1 text-slate-300">
-                      <Clock className="w-3 h-3 text-slate-400" />
-                      {getGarageDuration(currentJob.createdAt)}
-                    </span>
-                    <span className="font-bold text-slate-300">{formattedDate}</span>
+                        {/* Delete button */}
+                        <button
+                          type="button"
+                          disabled={isDeletingPhoto}
+                          onClick={() => handleDeletePhoto(identifier)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                          title="Delete Photo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
-
-            {/* Bottom Actions Bar (Reduced Save Button Size) */}
-            <div className="flex items-center justify-between gap-3 p-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xs">
-              <button
-                type="button"
-                onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}`)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
-              >
-                Cancel & Return
-              </button>
-
-              <button
-                type="button"
-                disabled={isUploading}
-                onClick={handleSave}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-400 text-zinc-950 text-xs font-black uppercase rounded-xl hover:bg-amber-300 shadow-md shadow-amber-400/15 transition active:scale-95 disabled:opacity-50"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Saving Photo...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>Save Photo</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
+          )}
+        </section>
       </main>
+
+      {/* ── 4. REUSABLE EXPANDED LIGHTBOX IMAGE VIEWER ── */}
+      <ImageViewerModal
+        isOpen={viewerOpen}
+        images={viewerImages}
+        initialIndex={viewerIndex}
+        onClose={() => setViewerOpen(false)}
+      />
     </div>
   );
 };

@@ -21,6 +21,15 @@ const mapJobCardImages = (jobObj: any) => {
   if (jobObj.thumbnailUrl) {
     jobObj.thumbnailUrl = getCloudinaryUrl(jobObj.thumbnailUrl);
   }
+  if (Array.isArray(jobObj.photos)) {
+    jobObj.photos = jobObj.photos.map((p: any) => {
+      const photoObj = p && typeof p.toObject === 'function' ? p.toObject() : { ...p };
+      return {
+        ...photoObj,
+        url: getCloudinaryUrl(photoObj.publicId || photoObj.url),
+      };
+    });
+  }
   if (jobObj.createdBy?.profileImageUrl) {
     jobObj.createdBy.profileImageUrl = getCloudinaryUrl(jobObj.createdBy.profileImageUrl);
   }
@@ -156,14 +165,19 @@ export const updateJobCard = async (req: Request, res: Response) => {
 export const uploadJobImage = async (req: Request, res: Response) => {
   try {
     const { jobCardId } = req.params;
-    const { image } = req.body;
+    const { image, remarks, isThumbnail } = req.body;
 
     if (!jobCardId || !image) {
       return sendError(res, 'Job card ID and image data are required.', 400);
     }
 
-    const { publicId } = await uploadToCloudinary(image, 'momzz/vehicles');
-    const updatedJob = await jobRepository.updateJobThumbnail(jobCardId, publicId);
+    const { publicId, url } = await uploadToCloudinary(image, 'momzz/vehicles');
+    const updatedJob = await jobRepository.addJobPhoto(jobCardId, {
+      url: url || publicId,
+      publicId,
+      remarks: remarks || '',
+      isThumbnail: Boolean(isThumbnail),
+    });
     if (!updatedJob) {
       return sendError(res, 'Job card not found.', 404);
     }
@@ -177,10 +191,67 @@ export const uploadJobImage = async (req: Request, res: Response) => {
 
     emitJobUpdated(formatted);
     await cacheService.delByPrefix('cache:jobs');
-    return sendSuccess(res, 'Vehicle photo updated successfully.', formatted);
+    return sendSuccess(res, 'Vehicle photo added successfully.', formatted);
 
   } catch (error: any) {
     return sendError(res, error.message || 'Failed to upload vehicle photo.', 500);
+  }
+};
+
+export const setJobThumbnail = async (req: Request, res: Response) => {
+  try {
+    const { jobCardId } = req.params;
+    const { photoIdentifier } = req.body;
+
+    if (!jobCardId || !photoIdentifier) {
+      return sendError(res, 'Job card ID and photo identifier are required.', 400);
+    }
+
+    const updatedJob = await jobRepository.setJobThumbnail(jobCardId, photoIdentifier);
+    if (!updatedJob) {
+      return sendError(res, 'Job card not found.', 404);
+    }
+
+    const tasks = await jobRepository.findTasksByJobCardId(jobCardId);
+    const formatted = mapJobCardImages({
+      ...updatedJob.toObject(),
+      id: updatedJob._id.toString(),
+      tasks: tasks.map(mapTaskImages),
+    });
+
+    emitJobUpdated(formatted);
+    await cacheService.delByPrefix('cache:jobs');
+    return sendSuccess(res, 'Thumbnail updated successfully.', formatted);
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to update thumbnail.', 500);
+  }
+};
+
+export const deleteJobPhoto = async (req: Request, res: Response) => {
+  try {
+    const { jobCardId, photoIdentifier } = req.params;
+
+    if (!jobCardId || !photoIdentifier) {
+      return sendError(res, 'Job card ID and photo identifier are required.', 400);
+    }
+
+    const updatedJob = await jobRepository.deleteJobPhoto(jobCardId, photoIdentifier);
+    if (!updatedJob) {
+      return sendError(res, 'Job card not found.', 404);
+    }
+
+    const tasks = await jobRepository.findTasksByJobCardId(jobCardId);
+    const formatted = mapJobCardImages({
+      ...updatedJob.toObject(),
+      id: updatedJob._id.toString(),
+      tasks: tasks.map(mapTaskImages),
+    });
+
+    emitJobUpdated(formatted);
+    await cacheService.delByPrefix('cache:jobs');
+    return sendSuccess(res, 'Photo deleted successfully.', formatted);
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to delete photo.', 500);
   }
 };
 

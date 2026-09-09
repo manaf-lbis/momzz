@@ -55,9 +55,11 @@ import {
   Mail,
   Wrench,
   Package,
+  Maximize2,
 } from 'lucide-react';
 import { getDeliveryStatusInfo } from '../../../shared/utils/dateUtils';
 import { ProgressBarBeam } from '../../../shared/components/magicui/AnimatedBeam';
+import { ImageViewerModal, ViewerImage } from '../../../shared/components/common/ImageViewerModal';
 
 type TaskFilterType = 'ALL' | 'PENDING' | 'COMPLETED';
 
@@ -80,6 +82,17 @@ export const JobDetailPage: React.FC = () => {
   const [activeDetailView, setActiveDetailView] = useState<'CHECKLIST' | 'ACTIONS'>('CHECKLIST');
   const [statusFilter, setStatusFilter] = useState<TaskFilterType>('ALL');
   const [activityTask, setActivityTask] = useState<TaskItem | null>(null);
+
+  // Lightbox Image Viewer State
+  const [viewerImages, setViewerImages] = useState<ViewerImage[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+
+  const openImageViewer = (imgs: ViewerImage[], startIndex = 0) => {
+    setViewerImages(imgs);
+    setViewerIndex(startIndex);
+    setIsViewerOpen(true);
+  };
 
   // Complete Sub-Task Modal State
   const [completeTaskModal, setCompleteTaskModal] = useState<{
@@ -151,6 +164,32 @@ export const JobDetailPage: React.FC = () => {
 
   const currentJob: JobCardData | undefined = jobResponse?.data;
   const currentUserId = user?.id || (user as any)?._id;
+
+  const vehicleViewerImages: ViewerImage[] = React.useMemo(() => {
+    if (!currentJob) return [];
+    if (Array.isArray(currentJob.photos) && currentJob.photos.length > 0) {
+      return currentJob.photos.map((p: any) => ({
+        url: p.url,
+        title: currentJob.vehicleName,
+        subtitle: currentJob.vehicleNumber,
+        timestamp: p.capturedAt || currentJob.createdAt,
+        remarks: p.remarks,
+        isThumbnail: Boolean(p.isThumbnail || p.url === currentJob.thumbnailUrl),
+      }));
+    }
+    if (currentJob.thumbnailUrl) {
+      return [
+        {
+          url: currentJob.thumbnailUrl,
+          title: currentJob.vehicleName,
+          subtitle: currentJob.vehicleNumber,
+          timestamp: currentJob.createdAt,
+          isThumbnail: true,
+        },
+      ];
+    }
+    return [];
+  }, [currentJob]);
 
   const allWorkers = (allUsersResponse?.data || []).filter(
     (u: any) => (u.id || u._id) !== currentUserId
@@ -503,14 +542,46 @@ export const JobDetailPage: React.FC = () => {
               </div>
             )}
 
-            {/* Row 2 — Vehicle Name + Ops */}
-            <div className="pt-0.5 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
-                {currentJob.vehicleName || 'Vehicle Service'}
-              </h1>
-              <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
-                {totalTasks > 0 ? `${totalTasks} operations` : 'No operations yet'}
-              </p>
+            {/* Row 2 — Vehicle Name + Ops + Vehicle Photo Thumbnail */}
+            <div className="pt-0.5 flex items-center justify-between gap-3 min-w-0">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
+                  {currentJob.vehicleName || 'Vehicle Service'}
+                </h1>
+                <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+                  {totalTasks > 0 ? `${totalTasks} operations` : 'No operations yet'}
+                </p>
+              </div>
+
+              {/* Vehicle Photo Thumbnail (Click to expand in Lightbox) */}
+              {currentJob.thumbnailUrl ? (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openImageViewer(vehicleViewerImages, 0);
+                  }}
+                  className="group/photo relative w-16 h-12 sm:w-20 sm:h-14 rounded-2xl overflow-hidden shrink-0 border border-slate-200/90 dark:border-white/10 shadow-sm cursor-pointer hover:border-amber-400/80 transition active:scale-95"
+                  title="Click to view vehicle photo fullscreen"
+                >
+                  <img
+                    src={currentJob.thumbnailUrl}
+                    alt={currentJob.vehicleName}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center text-white">
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
+                  className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/20 text-amber-500 hover:bg-amber-400/20 flex items-center justify-center shrink-0 transition active:scale-95 cursor-pointer"
+                  title="Capture vehicle photo"
+                >
+                  <Camera className="w-5 h-5" />
+                </button>
+              )}
             </div>
 
             {/* Row 3 — Progress */}
@@ -824,32 +895,60 @@ export const JobDetailPage: React.FC = () => {
                 {/* Actions Bento Stack */}
                 <div className="space-y-2.5">
                   {/* 1. Vehicle Inspection Photos */}
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
-                    className="group w-full p-3.5 rounded-2xl bg-slate-50/80 hover:bg-slate-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.07] hover:border-amber-400/40 dark:hover:border-amber-400/40 transition-all duration-200 text-left flex items-center justify-between gap-3 cursor-pointer shadow-2xs active:scale-[0.985]"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-400/30 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-                        <Camera className="w-5 h-5" />
+                  <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.07] space-y-2.5 shadow-2xs">
+                    <div
+                      onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
+                      className="group flex items-center justify-between gap-3 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-400/30 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+                          <Camera className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-500 dark:group-hover:text-amber-300 transition-colors truncate">
+                            Vehicle Inspection Photos
+                          </h4>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                            {vehicleViewerImages.length > 0
+                              ? `${vehicleViewerImages.length} inspection photo${vehicleViewerImages.length > 1 ? 's' : ''} • Studio ready`
+                              : 'Capture & upload multi-angle photos'}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-500 dark:group-hover:text-amber-300 transition-colors truncate">
-                          Vehicle Inspection Photos
-                        </h4>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                          {currentJob.thumbnailUrl ? 'Photo attached • Studio ready' : 'Capture & upload multi-angle photos'}
-                        </p>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-lg bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-700 dark:text-amber-300 group-hover:bg-amber-400 group-hover:text-slate-950 transition-colors flex items-center gap-1">
+                          <span>Studio</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-lg bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-700 dark:text-amber-300 group-hover:bg-amber-400 group-hover:text-slate-950 transition-colors flex items-center gap-1">
-                        <span>Studio</span>
-                        <ChevronRight className="w-3 h-3" />
-                      </span>
-                    </div>
-                  </button>
+                    {/* Horizontal Photo Strip (Click to open Lightbox) */}
+                    {vehicleViewerImages.length > 0 && (
+                      <div className="pt-2 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5">
+                        {vehicleViewerImages.map((img, idx) => (
+                          <div
+                            key={idx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openImageViewer(vehicleViewerImages, idx);
+                            }}
+                            className="group/thumb relative w-14 h-11 sm:w-16 sm:h-12 rounded-xl overflow-hidden shrink-0 border border-slate-200/90 dark:border-white/10 cursor-pointer hover:border-amber-400 transition active:scale-95 shadow-2xs"
+                            title="Click to view photo fullscreen"
+                          >
+                            <img src={img.url} alt="" className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform" />
+                            {img.isThumbnail && (
+                              <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-amber-400" />
+                            )}
+                            <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
+                              <Maximize2 className="w-3 h-3" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {/* 2. Pin Priority Configuration */}
                   <button
@@ -1086,13 +1185,29 @@ export const JobDetailPage: React.FC = () => {
                         }`}
                       >
                         {/* -- LEFT SIDE: SQUARE IMAGE / THUMBNAIL (Fixed Square Size matching InventoryPage) -- */}
-                        <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10 self-center flex items-center justify-center">
+                        <div
+                          onClick={(e) => {
+                            if (thumbnailUrl) {
+                              e.stopPropagation();
+                              openImageViewer([{ url: thumbnailUrl, title: task.title, subtitle: task.itemType === 'PRODUCT' ? 'Spares & Parts' : 'Workshop Service' }], 0);
+                            }
+                          }}
+                          className={`relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10 self-center flex items-center justify-center ${
+                            thumbnailUrl ? 'cursor-zoom-in group/thumb' : ''
+                          }`}
+                          title={thumbnailUrl ? 'Click to expand image' : undefined}
+                        >
                           {thumbnailUrl ? (
-                            <img
-                              src={thumbnailUrl}
-                              alt={task.title}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
+                            <>
+                              <img
+                                src={thumbnailUrl}
+                                alt={task.title}
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                              <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                <Maximize2 className="w-4 h-4" />
+                              </div>
+                            </>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               {isService ? (
@@ -1120,13 +1235,17 @@ export const JobDetailPage: React.FC = () => {
                         {/* -- RIGHT SIDE: TASK & WORKSHOP DETAILS -- */}
                         <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5">
                           <div>
-                            {/* Top Row: Category + Status Action Pill Button */}
-                            <div className="flex items-center justify-between gap-1.5">
-                              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 truncate max-w-[140px] sm:max-w-[200px]">
-                                {categoryName}
-                              </span>
+                            {/* Top Row: Product Name in Colored Text Yellow + Status Action Pill Button */}
+                            <div className="flex items-start justify-between gap-1.5">
+                              <h4
+                                className={`text-xs sm:text-sm font-black transition-colors line-clamp-2 text-amber-500 dark:text-amber-400 tracking-tight max-w-[150px] sm:max-w-[240px] ${
+                                  isCompleted ? 'line-through opacity-70' : ''
+                                }`}
+                              >
+                                {task.title}
+                              </h4>
 
-                              {/* Status Action Pill Button (Replaces old checkbox button) */}
+                              {/* Status Action Pill Button */}
                               {isCompleted ? (
                                 <button
                                   type="button"
@@ -1163,32 +1282,6 @@ export const JobDetailPage: React.FC = () => {
                                   )}
                                   <span>In Progress</span>
                                 </button>
-                              )}
-                            </div>
-
-                            {/* Task Name */}
-                            <h4
-                              className={`text-xs sm:text-sm font-black transition-colors line-clamp-1 mt-0.5 ${
-                                isCompleted ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-white'
-                              }`}
-                            >
-                              {task.title}
-                            </h4>
-
-                            {/* SKU / Identifier & Quantity row */}
-                            <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono text-slate-400 dark:text-slate-500 flex-wrap">
-                              {task.inventoryItem?.sku ? (
-                                <span className="bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-white/5 truncate max-w-[130px]">
-                                  SKU: {task.inventoryItem.sku}
-                                </span>
-                              ) : (task.inventoryItem?.id || task.inventoryItem?._id) ? (
-                                <span>ID: {(task.inventoryItem.id || task.inventoryItem._id)!.slice(-6).toUpperCase()}</span>
-                              ) : null}
-
-                              {task.quantityUsed && task.quantityUsed > 1 && (
-                                <span className="bg-amber-400/10 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded font-bold border border-amber-400/20">
-                                  Qty: {task.quantityUsed}
-                                </span>
                               )}
                             </div>
 
@@ -1236,25 +1329,21 @@ export const JobDetailPage: React.FC = () => {
                             )}
                           </div>
 
-                          {/* Bottom Row: Price on left, Action Icons on right */}
+                          {/* Bottom Row: SKU/Qty details on left, Action Icons on right (No price, no edit button) */}
                           <div className="flex items-center justify-between pt-1.5 border-t border-slate-200/60 dark:border-white/[0.06] mt-2">
-                            <div className="flex items-baseline gap-1.5">
-                              {(task.finalPrice != null || task.unitPrice != null) && (
-                                <>
-                                  <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                    ₹{Math.max(0, finalPrice).toLocaleString('en-IN')}
-                                  </span>
-                                  {task.quantityUsed && task.quantityUsed > 1 && (
-                                    <span className="text-[9px] font-mono text-slate-400">
-                                      (₹{(unitPrice).toLocaleString('en-IN')} × {task.quantityUsed})
-                                    </span>
-                                  )}
-                                  {task.discountAmount ? (
-                                    <span className="text-[9px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                                      -₹{task.discountAmount}
-                                    </span>
-                                  ) : null}
-                                </>
+                            <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400 dark:text-slate-500 flex-wrap">
+                              {task.inventoryItem?.sku ? (
+                                <span className="bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-white/5 truncate max-w-[130px]">
+                                  SKU: {task.inventoryItem.sku}
+                                </span>
+                              ) : (task.inventoryItem?.id || task.inventoryItem?._id) ? (
+                                <span>ID: {(task.inventoryItem.id || task.inventoryItem._id)!.slice(-6).toUpperCase()}</span>
+                              ) : null}
+
+                              {task.quantityUsed && task.quantityUsed > 1 && (
+                                <span className="bg-amber-400/15 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded font-bold border border-amber-400/20">
+                                  Qty: {task.quantityUsed}
+                                </span>
                               )}
                             </div>
 
@@ -1289,28 +1378,6 @@ export const JobDetailPage: React.FC = () => {
                               >
                                 <Pin className={`w-3 h-3 ${isPinnedTask ? 'fill-current' : ''}`} />
                               </button>
-
-                              {/* Edit Task (Admin) */}
-                              {isAdmin && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingTask({
-                                      isOpen: true,
-                                      task,
-                                      title: task.title,
-                                      quantityUsed: task.quantityUsed || 1,
-                                      unitPrice: task.unitPrice || 0,
-                                      discountAmount: task.discountAmount || 0,
-                                    });
-                                  }}
-                                  className="p-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 text-sky-600 dark:text-sky-400 transition active:scale-90 cursor-pointer"
-                                  title="Edit Task Details"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
 
                               {/* Delete Task (Admin) */}
                               {isAdmin && (
@@ -1871,6 +1938,14 @@ export const JobDetailPage: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      {/* ── LIGHTBOX IMAGE VIEWER MODAL ── */}
+      <ImageViewerModal
+        isOpen={isViewerOpen}
+        images={viewerImages}
+        initialIndex={viewerIndex}
+        onClose={() => setIsViewerOpen(false)}
+      />
     </div>
   );
 };

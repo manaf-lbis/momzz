@@ -247,6 +247,98 @@ export class JobRepository {
       .populate('pinnedBy', 'name role profileImageUrl');
   }
 
+  async addJobPhoto(
+    jobCardId: string,
+    photoData: { url: string; publicId?: string; remarks?: string; isThumbnail?: boolean }
+  ): Promise<IJobCard | null> {
+    const job = await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
+    if (!job) return null;
+
+    if (!Array.isArray(job.photos)) {
+      job.photos = [];
+    }
+
+    const shouldBeThumbnail = Boolean(photoData.isThumbnail || !job.thumbnailUrl || job.photos.length === 0);
+
+    if (shouldBeThumbnail) {
+      job.photos.forEach((p: any) => {
+        p.isThumbnail = false;
+      });
+      job.thumbnailUrl = photoData.publicId || photoData.url;
+    }
+
+    job.photos.push({
+      url: photoData.url,
+      publicId: photoData.publicId || '',
+      remarks: photoData.remarks || '',
+      capturedAt: new Date(),
+      isThumbnail: shouldBeThumbnail,
+    } as any);
+
+    await job.save();
+
+    return await JobCard.findById(jobCardId)
+      .populate('verifiedBy', 'name mobile role')
+      .populate('createdBy', 'name mobile role profileImageUrl')
+      .populate('pinnedBy', 'name role profileImageUrl');
+  }
+
+  async setJobThumbnail(jobCardId: string, photoIdentifier: string): Promise<IJobCard | null> {
+    const job = await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
+    if (!job) return null;
+
+    if (Array.isArray(job.photos)) {
+      let matched = false;
+      job.photos.forEach((p: any) => {
+        if (p.publicId === photoIdentifier || p.url === photoIdentifier) {
+          p.isThumbnail = true;
+          matched = true;
+        } else {
+          p.isThumbnail = false;
+        }
+      });
+      if (matched) {
+        job.thumbnailUrl = photoIdentifier;
+      }
+    } else {
+      job.thumbnailUrl = photoIdentifier;
+    }
+
+    await job.save();
+
+    return await JobCard.findById(jobCardId)
+      .populate('verifiedBy', 'name mobile role')
+      .populate('createdBy', 'name mobile role profileImageUrl')
+      .populate('pinnedBy', 'name role profileImageUrl');
+  }
+
+  async deleteJobPhoto(jobCardId: string, photoIdentifier: string): Promise<IJobCard | null> {
+    const job = await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
+    if (!job) return null;
+
+    if (Array.isArray(job.photos)) {
+      const idx = job.photos.findIndex((p: any) => p.publicId === photoIdentifier || p.url === photoIdentifier);
+      if (idx > -1) {
+        const wasThumb = job.photos[idx].isThumbnail || job.thumbnailUrl === photoIdentifier;
+        job.photos.splice(idx, 1);
+        if (wasThumb) {
+          if (job.photos.length > 0) {
+            job.photos[0].isThumbnail = true;
+            job.thumbnailUrl = job.photos[0].publicId || job.photos[0].url;
+          } else {
+            job.thumbnailUrl = '';
+          }
+        }
+        await job.save();
+      }
+    }
+
+    return await JobCard.findById(jobCardId)
+      .populate('verifiedBy', 'name mobile role')
+      .populate('createdBy', 'name mobile role profileImageUrl')
+      .populate('pinnedBy', 'name role profileImageUrl');
+  }
+
   async togglePinJobCard(jobCardId: string, userId: string, mode: 'ALL' | 'ME'): Promise<IJobCard | null> {
     const job = await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
     if (!job) return null;

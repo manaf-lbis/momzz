@@ -54,6 +54,14 @@ export interface TaskItem {
   activityLog?: { action: 'COMPLETED' | 'REOPENED'; at: string; user?: { name: string; profileImageUrl?: string } }[];
 }
 
+export interface IJobPhoto {
+  url: string;
+  publicId?: string;
+  remarks?: string;
+  capturedAt?: string;
+  isThumbnail?: boolean;
+}
+
 export interface JobCardData {
   id: string;
   _id?: string;
@@ -64,6 +72,7 @@ export interface JobCardData {
   customerMobile?: string;
   customerEmail?: string;
   thumbnailUrl?: string;
+  photos?: IJobPhoto[];
   expectedDeliveryDate?: string | null;
   status: 'IN_PROGRESS' | 'COMPLETED';
   createdBy?: {
@@ -252,12 +261,33 @@ export const jobApi = apiSlice.injectEndpoints({
     }),
     uploadJobImage: builder.mutation<
       { success: boolean; data: JobCardData },
-      { jobCardId: string; image: string }
+      { jobCardId: string; image: string; remarks?: string; isThumbnail?: boolean }
     >({
-      query: ({ jobCardId, image }) => ({
+      query: ({ jobCardId, ...body }) => ({
         url: `/jobs/${jobCardId}/image`,
         method: 'PATCH',
-        body: { image },
+        body,
+      }),
+      invalidatesTags: ['JobCard'],
+    }),
+    setJobThumbnail: builder.mutation<
+      { success: boolean; data: JobCardData },
+      { jobCardId: string; photoIdentifier: string }
+    >({
+      query: ({ jobCardId, photoIdentifier }) => ({
+        url: `/jobs/${jobCardId}/photos/thumbnail`,
+        method: 'PATCH',
+        body: { photoIdentifier },
+      }),
+      invalidatesTags: ['JobCard'],
+    }),
+    deleteJobPhoto: builder.mutation<
+      { success: boolean; data: JobCardData },
+      { jobCardId: string; photoIdentifier: string }
+    >({
+      query: ({ jobCardId, photoIdentifier }) => ({
+        url: `/jobs/${jobCardId}/photos/${encodeURIComponent(photoIdentifier)}`,
+        method: 'DELETE',
       }),
       invalidatesTags: ['JobCard'],
     }),
@@ -287,6 +317,8 @@ export const {
   useToggleJobPinMutation,
   useVerifyJobCardMutation,
   useUploadJobImageMutation,
+  useSetJobThumbnailMutation,
+  useDeleteJobPhotoMutation,
 } = jobApi;
 
 
