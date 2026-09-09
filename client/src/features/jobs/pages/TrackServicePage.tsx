@@ -15,6 +15,9 @@ import {
   ChevronLeft,
   AlertTriangle,
   Loader2,
+  Scale,
+  FileText,
+  Lock,
 } from 'lucide-react';
 import { formatDeliveryDate, getDeliveryStatusInfo } from '../../../shared/utils/dateUtils';
 import { getBaseServerUrl } from '../../../shared/utils/serverUrl';
@@ -23,6 +26,7 @@ import { AnimatedThemeToggle } from '../../../shared/components/magicui/Animated
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { Link } from 'react-router-dom';
+import { TermsAndConditionsModal } from '../../../shared/components/legal/TermsAndConditionsModal';
 
 type PublicJob = {
   id: string;
@@ -53,6 +57,7 @@ export const TrackServicePage: React.FC = () => {
   const [jobs, setJobs] = useState<PublicJob[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
 
   const search = async () => {
     setError('');
@@ -178,6 +183,62 @@ export const TrackServicePage: React.FC = () => {
           )}
         </section>
 
+        {/* Vehicle Tracking & Data Protection Notice Banner */}
+        <section className="rounded-3xl glass-modern-card p-4 sm:p-5 border border-amber-400/25 dark:border-amber-400/20 bg-amber-400/5 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-2xl bg-amber-400/20 text-amber-500 border border-amber-400/30 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    Vehicle Tracking & Privacy Terms
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                    DPDPA 2023
+                  </span>
+                </div>
+                <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                  Live task updates, tamper-evident intake photo records & zero customer data resale
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsTermsOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-mono text-xs font-bold transition active:scale-95 cursor-pointer shrink-0"
+              >
+                Quick View (EN / മലയാളം)
+              </button>
+              <Link
+                to="/terms#vehicle-tracking-policy"
+                className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-mono text-xs font-black transition active:scale-95 cursor-pointer shrink-0 flex items-center gap-1 shadow-xs"
+              >
+                <span>Full Terms</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[10.5px] font-mono text-slate-600 dark:text-slate-400 border-t border-slate-200/60 dark:border-white/5">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <span>Encrypted live status stream</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>In-image timestamp proof</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+              <span>Pre-existing defect exclusion</span>
+            </div>
+          </div>
+        </section>
+
         {/* Live Service Bento Cards */}
         {jobs.map((job) => {
           const totalTasks = job.tasks?.length || 0;
@@ -300,6 +361,21 @@ export const TrackServicePage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Vehicle Tracking Legal Disclosure Bar */}
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/70 dark:border-white/[0.05] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] font-mono">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                  <Scale className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span>Subject to MOMZ'Z Vehicle Bailment & Inspection Terms</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsTermsOpen(true)}
+                  className="text-amber-600 dark:text-amber-400 font-bold hover:underline cursor-pointer"
+                >
+                  View Terms & Privacy (English / മലയാളം) →
+                </button>
+              </div>
+
               {/* Quick Contact Buttons */}
               <div className="pt-2 flex items-center gap-2">
                 <a
@@ -333,6 +409,12 @@ export const TrackServicePage: React.FC = () => {
           </Link>
         </div>
       </div>
+
+      {/* Vehicle Tracking Terms & Privacy Modal */}
+      <TermsAndConditionsModal
+        isOpen={isTermsOpen}
+        onClose={() => setIsTermsOpen(false)}
+      />
     </main>
   );
 };

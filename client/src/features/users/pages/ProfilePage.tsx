@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import {
@@ -26,6 +26,8 @@ import {
   FileText,
   CheckCircle2,
   Database,
+  ExternalLink,
+  Languages,
 } from 'lucide-react';
 import { useAppDispatch } from '../../../shared/hooks/useAppDispatch';
 import { logout, updateUser } from '../../auth/store/authSlice';
@@ -424,55 +426,63 @@ export const ProfilePage: React.FC = () => {
               </div>
             </section>
 
-            {/* Legal & Policy Compliance Card */}
+            {/* Legal & Terms and Conditions Card */}
             <section className="rounded-3xl glass-modern-card p-4 sm:p-5 shadow-xl space-y-3 transition-colors">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-amber-400/20 text-amber-500 border border-amber-400/30 flex items-center justify-center shrink-0">
                     <Scale className="w-5 h-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                        Terms of Service & Data Policy
+                      <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                        Legal & Terms and Conditions
                       </h4>
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                         <CheckCircle2 className="w-2.5 h-2.5" />
-                        <span>Protected</span>
+                        <span>DPDPA 2023</span>
                       </span>
                     </div>
                     <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                      Vehicle intake photographic proof, liability shield & cloud storage
+                      Privacy policy, zero data theft protection, vehicle inspection & tracking terms
                     </p>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsTermsModalOpen(true)}
-                  className="px-3 py-2 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/30 text-amber-700 dark:text-amber-300 font-mono text-xs font-bold transition active:scale-95 cursor-pointer shrink-0 flex items-center gap-1.5"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>View Terms</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsTermsModalOpen(true)}
+                    className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-mono text-xs font-bold transition active:scale-95 cursor-pointer shrink-0"
+                  >
+                    Quick View
+                  </button>
+                  <Link
+                    to="/terms"
+                    className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-mono text-xs font-black transition active:scale-95 cursor-pointer shrink-0 flex items-center gap-1.5 shadow-sm"
+                  >
+                    <span>Read Full Legal Page</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/70 dark:border-white/[0.05] grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono text-slate-600 dark:text-slate-400">
                 <div className="flex items-center gap-2">
                   <Camera className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span>Tamper-proof forensic photos</span>
+                  <span>Tamper-evident in-image timestamp photos</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span>Pre-existing damage exclusion</span>
+                  <span>Zero data theft & resale protection</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Database className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-                  <span>Encrypted cloud storage</span>
+                  <Car className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                  <span>Pre-existing damage exclusion & bailment</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Lock className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-                  <span>Strict customer zero-sale policy</span>
+                  <Languages className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                  <span>Available in English & മലയാളം (Malayalam)</span>
                 </div>
               </div>
             </section>

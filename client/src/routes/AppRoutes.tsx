@@ -27,6 +27,7 @@ const AddInventoryItemPage = lazy(() => import('../features/catalog/pages/AddInv
 const VehiclePhotoPage = lazy(() => import('../features/jobs/pages/VehiclePhotoPage').then((m) => ({ default: m.VehiclePhotoPage })));
 const TrackServicePage = lazy(() => import('../features/jobs/pages/TrackServicePage').then((m) => ({ default: m.TrackServicePage })));
 const SalesPage = lazy(() => import('../features/catalog/pages/SalesPage').then((m) => ({ default: m.SalesPage })));
+const TermsPage = lazy(() => import('../features/legal/pages/TermsPage').then((m) => ({ default: m.TermsPage })));
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -35,11 +36,13 @@ export const AppRoutes: React.FC = () => {
       <GsapPageTransition>
         <Suspense fallback={<PageShimmer label="Loading..." />}>
           <Routes>
-            {/* Public Auth Routes */}
+            {/* Public Auth & Informational Routes */}
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/login" element={<AuthPage />} />
             <Route path="/register" element={<AuthPage />} />
             <Route path="/track" element={<TrackServicePage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/legal" element={<TermsPage />} />
 
             {/* Admin-Only Routes */}
             <Route element={<ProtectedRoute requireAdmin={true} />}>

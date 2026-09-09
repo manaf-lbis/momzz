@@ -19,10 +19,14 @@ export const Footer: React.FC = () => {
           </span>
         </Link>
 
-        {/* Rights reserved */}
-        <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400 text-center">
-          © {new Date().getFullYear()} MOMZ'Z Auto Garage. All rights reserved.
-        </p>
+        {/* Rights reserved & Legal Link */}
+        <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500 dark:text-slate-400 text-center flex-wrap justify-center">
+          <span>© {new Date().getFullYear()} MOMZ'Z Auto Garage. All rights reserved.</span>
+          <span>·</span>
+          <Link to="/terms" className="text-slate-600 dark:text-slate-400 hover:text-amber-500 underline transition">
+            Terms & Privacy (EN / മലയാളം)
+          </Link>
+        </div>
 
         {/* Creator credit */}
         <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-400 dark:text-slate-500">
