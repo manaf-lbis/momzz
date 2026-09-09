@@ -707,6 +707,29 @@ export const VehiclePhotoPage: React.FC = () => {
             <PhotoProvider
               speed={() => 250}
               easing={() => 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'}
+              maskClosable={true}
+              pullClosable={true}
+              brokenElement={
+                <div className="flex flex-col items-center justify-center p-6 text-center max-w-sm bg-slate-950/85 border border-white/10 rounded-3xl shadow-2xl backdrop-blur-xl">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-400/10 border border-amber-400/25 flex items-center justify-center text-amber-400 mb-3">
+                    <AlertTriangle className="w-7 h-7" />
+                  </div>
+                  <p className="text-white font-black text-sm uppercase tracking-wide">
+                    Photo Unavailable
+                  </p>
+                  <p className="text-[11px] text-slate-400 font-mono mt-1">
+                    This photo could not be loaded from storage or is no longer accessible.
+                  </p>
+                </div>
+              }
+              loadingElement={
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <div className="w-10 h-10 border-3 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                  <span className="text-[11px] font-mono font-bold text-amber-400 uppercase tracking-widest">
+                    Loading Image...
+                  </span>
+                </div>
+              }
               overlayRender={({ index: overlayIdx }) => {
                 const photo = photosList[overlayIdx];
                 if (!photo) return null;

@@ -22,13 +22,40 @@ const mapJobCardImages = (jobObj: any) => {
     jobObj.thumbnailUrl = getCloudinaryUrl(jobObj.thumbnailUrl);
   }
   if (Array.isArray(jobObj.photos)) {
-    jobObj.photos = jobObj.photos.map((p: any) => {
-      const photoObj = p && typeof p.toObject === 'function' ? p.toObject() : { ...p };
-      return {
-        ...photoObj,
-        url: getCloudinaryUrl(photoObj.publicId || photoObj.url),
-      };
-    });
+    jobObj.photos = jobObj.photos
+      .filter((p: any) => Boolean(p && (p.url || p.publicId)))
+      .map((p: any) => {
+        const photoObj = p && typeof p.toObject === 'function' ? p.toObject() : { ...p };
+        const rawUrl = photoObj.url || '';
+        const resolvedUrl = (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('data:'))
+          ? rawUrl
+          : getCloudinaryUrl(photoObj.publicId || photoObj.url);
+        return {
+          ...photoObj,
+          url: resolvedUrl,
+        };
+      })
+      .filter((p: any) => Boolean(p.url));
+
+    if (jobObj.thumbnailUrl && !jobObj.photos.some((p: any) => p.url === jobObj.thumbnailUrl)) {
+      jobObj.photos.unshift({
+        url: jobObj.thumbnailUrl,
+        publicId: extractPublicId(jobObj.thumbnailUrl),
+        remarks: 'Intake Photo',
+        capturedAt: jobObj.createdAt || new Date(),
+        isThumbnail: true,
+      });
+    }
+  } else if (jobObj.thumbnailUrl) {
+    jobObj.photos = [
+      {
+        url: jobObj.thumbnailUrl,
+        publicId: extractPublicId(jobObj.thumbnailUrl),
+        remarks: 'Intake Photo',
+        capturedAt: jobObj.createdAt || new Date(),
+        isThumbnail: true,
+      },
+    ];
   }
   if (jobObj.createdBy?.profileImageUrl) {
     jobObj.createdBy.profileImageUrl = getCloudinaryUrl(jobObj.createdBy.profileImageUrl);

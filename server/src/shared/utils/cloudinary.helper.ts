@@ -6,12 +6,29 @@ import { ENV } from '../../config/env';
  * If the input is already a full http(s) URL or data URI, returns it as-is (backward compatibility).
  */
 export const getCloudinaryUrl = (publicIdOrUrl?: string): string => {
-  if (!publicIdOrUrl) return '';
-  if (publicIdOrUrl.startsWith('http://') || publicIdOrUrl.startsWith('https://') || publicIdOrUrl.startsWith('data:')) {
-    return publicIdOrUrl;
+  if (!publicIdOrUrl || typeof publicIdOrUrl !== 'string') return '';
+  const trimmed = publicIdOrUrl.trim();
+  if (
+    !trimmed ||
+    trimmed === 'undefined' ||
+    trimmed === 'null' ||
+    trimmed === 'test-url' ||
+    trimmed === 'test-id' ||
+    trimmed === 'photo1' ||
+    trimmed === 'photo2'
+  ) {
+    return '';
   }
-  const cloudName = ENV.CLOUDINARY_CLOUD_NAME || 'demo';
-  return `https://res.cloudinary.com/${cloudName}/image/upload/${publicIdOrUrl}`;
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:')
+  ) {
+    return trimmed;
+  }
+  const cloudName = ENV.CLOUDINARY_CLOUD_NAME || 'momzz';
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${trimmed}`;
 };
 
 /**

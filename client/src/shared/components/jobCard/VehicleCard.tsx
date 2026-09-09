@@ -41,28 +41,31 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
   const [setTaskStatus] = useSetTaskStatusMutation();
 
   const viewerImages: ViewerImage[] = React.useMemo(() => {
+    const list: ViewerImage[] = [];
     if (Array.isArray(job.photos) && job.photos.length > 0) {
-      return job.photos.map((p) => ({
-        url: p.url,
+      job.photos.forEach((p) => {
+        if (p?.url) {
+          list.push({
+            url: p.url,
+            title: job.vehicleName,
+            subtitle: job.vehicleNumber,
+            timestamp: p.capturedAt || job.createdAt,
+            remarks: p.remarks,
+            isThumbnail: Boolean(p.isThumbnail || p.url === job.thumbnailUrl),
+          });
+        }
+      });
+    }
+    if (job.thumbnailUrl && !list.some((img) => img.url === job.thumbnailUrl)) {
+      list.unshift({
+        url: job.thumbnailUrl,
         title: job.vehicleName,
         subtitle: job.vehicleNumber,
-        timestamp: p.capturedAt || job.createdAt,
-        remarks: p.remarks,
-        isThumbnail: Boolean(p.isThumbnail || p.url === job.thumbnailUrl),
-      }));
+        timestamp: job.createdAt,
+        isThumbnail: true,
+      });
     }
-    if (job.thumbnailUrl) {
-      return [
-        {
-          url: job.thumbnailUrl,
-          title: job.vehicleName,
-          subtitle: job.vehicleNumber,
-          timestamp: job.createdAt,
-          isThumbnail: true,
-        },
-      ];
-    }
-    return [];
+    return list;
   }, [job]);
 
   const tasksList = job.tasks || [];
@@ -165,6 +168,9 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
                       src={displayPhoto}
                       alt={job.vehicleName}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-110"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
                     />
                     {viewerImages.length > 1 && (
                       <span className="absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-black/80 backdrop-blur-xs text-[9px] font-mono font-black text-amber-400 border border-white/10 shadow-xs">

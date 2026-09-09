@@ -167,28 +167,31 @@ export const JobDetailPage: React.FC = () => {
 
   const vehicleViewerImages: ViewerImage[] = React.useMemo(() => {
     if (!currentJob) return [];
+    const list: ViewerImage[] = [];
     if (Array.isArray(currentJob.photos) && currentJob.photos.length > 0) {
-      return currentJob.photos.map((p: any) => ({
-        url: p.url,
+      currentJob.photos.forEach((p: any) => {
+        if (p?.url) {
+          list.push({
+            url: p.url,
+            title: currentJob.vehicleName,
+            subtitle: currentJob.vehicleNumber,
+            timestamp: p.capturedAt || currentJob.createdAt,
+            remarks: p.remarks,
+            isThumbnail: Boolean(p.isThumbnail || p.url === currentJob.thumbnailUrl),
+          });
+        }
+      });
+    }
+    if (currentJob.thumbnailUrl && !list.some((img) => img.url === currentJob.thumbnailUrl)) {
+      list.unshift({
+        url: currentJob.thumbnailUrl,
         title: currentJob.vehicleName,
         subtitle: currentJob.vehicleNumber,
-        timestamp: p.capturedAt || currentJob.createdAt,
-        remarks: p.remarks,
-        isThumbnail: Boolean(p.isThumbnail || p.url === currentJob.thumbnailUrl),
-      }));
+        timestamp: currentJob.createdAt,
+        isThumbnail: true,
+      });
     }
-    if (currentJob.thumbnailUrl) {
-      return [
-        {
-          url: currentJob.thumbnailUrl,
-          title: currentJob.vehicleName,
-          subtitle: currentJob.vehicleNumber,
-          timestamp: currentJob.createdAt,
-          isThumbnail: true,
-        },
-      ];
-    }
-    return [];
+    return list;
   }, [currentJob]);
 
   const allWorkers = (allUsersResponse?.data || []).filter(
