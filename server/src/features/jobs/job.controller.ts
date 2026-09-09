@@ -9,7 +9,7 @@ import {
   emitTaskUpdated,
   emitTaskDeleted,
 } from '../../config/socket';
-import { getCloudinaryUrl, uploadToCloudinary, extractPublicId } from '../../shared/utils/cloudinary.helper';
+import { getCloudinaryUrl, uploadToCloudinary, extractPublicId, deleteFromCloudinary } from '../../shared/utils/cloudinary.helper';
 import { cacheService } from '../cache/cache.service';
 
 
@@ -235,9 +235,17 @@ export const deleteJobPhoto = async (req: Request, res: Response) => {
       return sendError(res, 'Job card ID and photo identifier are required.', 400);
     }
 
-    const updatedJob = await jobRepository.deleteJobPhoto(jobCardId, photoIdentifier);
+    const { job: updatedJob, deletedPublicId } = await jobRepository.deleteJobPhoto(jobCardId, photoIdentifier);
     if (!updatedJob) {
       return sendError(res, 'Job card not found.', 404);
+    }
+
+    // Delete image from Cloudinary for storage efficiency
+    const targetToDelete = deletedPublicId || photoIdentifier;
+    if (targetToDelete) {
+      deleteFromCloudinary(targetToDelete).catch((err) => {
+        console.warn('[Cloudinary] Failed to delete removed photo:', err);
+      });
     }
 
     const tasks = await jobRepository.findTasksByJobCardId(jobCardId);

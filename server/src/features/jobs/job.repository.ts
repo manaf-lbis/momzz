@@ -5,6 +5,8 @@ import User from '../../models/User.model';
 import { catalogRepository } from '../catalog/catalog.repository';
 import { cacheService } from '../cache/cache.service';
 
+import { extractPublicId } from '../../shared/utils/cloudinary.helper';
+
 
 export class JobRepository {
   async createJobCard(data: {
@@ -18,7 +20,22 @@ export class JobRepository {
     expectedDeliveryDate?: Date | string | null;
     createdBy: string;
   }): Promise<IJobCard> {
-    return await JobCard.create(data);
+    const photos = data.thumbnailUrl
+      ? [
+          {
+            url: data.thumbnailUrl,
+            publicId: extractPublicId(data.thumbnailUrl),
+            remarks: 'Intake Photo',
+            capturedAt: new Date(),
+            isThumbnail: true,
+          },
+        ]
+      : [];
+
+    return await JobCard.create({
+      ...data,
+      photos,
+    });
   }
 
 
@@ -258,7 +275,26 @@ export class JobRepository {
       job.photos = [];
     }
 
-    const shouldBeThumbnail = Boolean(photoData.isThumbnail || !job.thumbnailUrl || job.photos.length === 0);
+    // Migration / Backwards Compatibility:
+    // If the job already had a thumbnailUrl from initial creation, but photos array is empty,
+    // preserve that initial thumbnailUrl as an existing photo so it is NEVER lost or overwritten!
+    if (job.thumbnailUrl && job.photos.length === 0) {
+      const existingId = extractPublicId(job.thumbnailUrl);
+      job.photos.push({
+        url: existingId || job.thumbnailUrl,
+        publicId: existingId,
+        remarks: 'Intake Photo',
+        capturedAt: job.createdAt || new Date(),
+        isThumbnail: true,
+      } as any);
+    }
+
+    // The new photo should ONLY become the thumbnail if:
+    // a) Explicitly requested (photoData.isThumbnail === true), OR
+    // b) The vehicle currently has NO thumbnail AND no photos marked as thumbnail.
+    // Every new capture simply appends a new photo without changing the existing thumbnail!
+    const hasThumbnail = Boolean(job.thumbnailUrl || job.photos.some((p: any) => p.isThumbnail));
+    const shouldBeThumbnail = Boolean(photoData.isThumbnail || !hasThumbnail);
 
     if (shouldBeThumbnail) {
       job.photos.forEach((p: any) => {
@@ -312,15 +348,21 @@ export class JobRepository {
       .populate('pinnedBy', 'name role profileImageUrl');
   }
 
-  async deleteJobPhoto(jobCardId: string, photoIdentifier: string): Promise<IJobCard | null> {
+  async deleteJobPhoto(
+    jobCardId: string,
+    photoIdentifier: string
+  ): Promise<{ job: IJobCard | null; deletedPublicId?: string }> {
     const job = await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
-    if (!job) return null;
+    if (!job) return { job: null };
+
+    let deletedPublicId: string | undefined = undefined;
 
     if (Array.isArray(job.photos)) {
       const idx = job.photos.findIndex((p: any) => p.publicId === photoIdentifier || p.url === photoIdentifier);
       if (idx > -1) {
-        const wasThumb = job.photos[idx].isThumbnail || job.thumbnailUrl === photoIdentifier;
-        job.photos.splice(idx, 1);
+        const removed = job.photos.splice(idx, 1)[0];
+        deletedPublicId = removed.publicId || removed.url;
+        const wasThumb = removed.isThumbnail || job.thumbnailUrl === photoIdentifier || job.thumbnailUrl === removed.publicId;
         if (wasThumb) {
           if (job.photos.length > 0) {
             job.photos[0].isThumbnail = true;
@@ -333,10 +375,12 @@ export class JobRepository {
       }
     }
 
-    return await JobCard.findById(jobCardId)
+    const updatedJob = await JobCard.findById(jobCardId)
       .populate('verifiedBy', 'name mobile role')
       .populate('createdBy', 'name mobile role profileImageUrl')
       .populate('pinnedBy', 'name role profileImageUrl');
+
+    return { job: updatedJob, deletedPublicId };
   }
 
   async togglePinJobCard(jobCardId: string, userId: string, mode: 'ALL' | 'ME'): Promise<IJobCard | null> {

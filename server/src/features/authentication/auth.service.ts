@@ -6,7 +6,7 @@ import { ROLES } from '../../shared/constants/status';
 import { AuthRepository } from './auth.repository';
 import { userRepository } from '../users/user.repository';
 import { emitUserApproved, emitUserBlocked } from '../../config/socket';
-import { getCloudinaryUrl, uploadToCloudinary } from '../../shared/utils/cloudinary.helper';
+import { getCloudinaryUrl, uploadToCloudinary, deleteFromCloudinary } from '../../shared/utils/cloudinary.helper';
 import { cacheService } from '../cache/cache.service';
 
 
@@ -191,11 +191,22 @@ export class AuthService {
   }
 
   async updateProfileImage(userId: string, imageData: string) {
+    const existingUser = await this.authRepo.findById(userId);
+    const oldImage = existingUser?.profileImageUrl;
+
     const { publicId, url } = await uploadToCloudinary(imageData, 'momzz/profiles');
 
     // Store ONLY the Cloudinary publicId in the database
     const user = await this.authRepo.updateProfileImage(userId, publicId);
     if (!user) throw new Error('User not found.');
+
+    // Delete old profile image from Cloudinary for storage efficiency
+    if (oldImage && oldImage !== publicId) {
+      deleteFromCloudinary(oldImage).catch((err) => {
+        console.warn('[Cloudinary] Failed to delete old profile image:', err);
+      });
+    }
+
     await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
     return this.formatUser(user);
   }

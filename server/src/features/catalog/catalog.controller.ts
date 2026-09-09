@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { catalogRepository } from './catalog.repository';
 import { sendError, sendSuccess } from '../../shared/utils/response.handler';
-import { getCloudinaryUrl, extractPublicId, uploadToCloudinary } from '../../shared/utils/cloudinary.helper';
+import { getCloudinaryUrl, extractPublicId, uploadToCloudinary, deleteFromCloudinary, deleteMultipleFromCloudinary } from '../../shared/utils/cloudinary.helper';
 
 const format = (document: any) => {
   const obj = document.toObject ? document.toObject() : { ...document };
@@ -153,13 +153,40 @@ export const updateCatalogItem = async (req: Request, res: Response) => {
       }
     }
     
+    const existingItem = await catalogRepository.findItem(req.params.id);
     const item = await catalogRepository.updateItem(req.params.id, updates);
-    return item ? sendSuccess(res, 'Catalog item updated.', format(item)) : sendError(res, 'Item not found.', 404);
+    if (!item) return sendError(res, 'Item not found.', 404);
+
+    // Delete removed images from Cloudinary for storage efficiency
+    if (existingItem) {
+      const oldImages = [existingItem.thumbnailUrl, ...(existingItem.images || [])].filter(Boolean);
+      const newImages = new Set([updates.thumbnailUrl, ...(updates.images || item.images || [])].filter(Boolean));
+      const orphaned = oldImages.filter((img) => !newImages.has(img));
+      if (orphaned.length > 0) {
+        deleteMultipleFromCloudinary(orphaned).catch(() => {});
+      }
+    }
+
+    return sendSuccess(res, 'Catalog item updated.', format(item));
   } catch (error: any) { return sendError(res, error.message || 'Could not update item.', 400); }
 };
 
 export const deleteCatalogItem = async (req: Request, res: Response) => {
-  try { return (await catalogRepository.deleteItem(req.params.id)) ? sendSuccess(res, 'Catalog item removed.', null) : sendError(res, 'Item not found.', 404); }
+  try {
+    const existingItem = await catalogRepository.findItem(req.params.id);
+    const deleted = await catalogRepository.deleteItem(req.params.id);
+    if (!deleted) return sendError(res, 'Item not found.', 404);
+
+    // Delete associated images from Cloudinary for storage efficiency
+    if (existingItem) {
+      const imagesToDelete = [existingItem.thumbnailUrl, ...(existingItem.images || [])].filter(Boolean);
+      if (imagesToDelete.length > 0) {
+        deleteMultipleFromCloudinary(imagesToDelete).catch(() => {});
+      }
+    }
+
+    return sendSuccess(res, 'Catalog item removed.', null);
+  }
   catch (error: any) { return sendError(res, error.message || 'Could not remove item.', 500); }
 };
 

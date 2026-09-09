@@ -110,3 +110,63 @@ export const uploadToCloudinary = async (
     url: getCloudinaryUrl(data.public_id),
   };
 };
+
+/**
+ * Deletes a single image from Cloudinary by its publicId or full URL.
+ * Silently handles cases where the asset is already deleted or not found.
+ */
+export const deleteFromCloudinary = async (
+  publicIdOrUrl?: string
+): Promise<{ result: string }> => {
+  if (!publicIdOrUrl) return { result: 'skipped' };
+
+  const publicId = extractPublicId(publicIdOrUrl);
+  if (!publicId || publicId.startsWith('http://') || publicId.startsWith('https://') || publicId.startsWith('data:')) {
+    return { result: 'skipped' };
+  }
+
+  if (!ENV.CLOUDINARY_CLOUD_NAME || !ENV.CLOUDINARY_API_KEY || !ENV.CLOUDINARY_API_SECRET) {
+    console.warn('[Cloudinary] Skipping asset deletion: Cloudinary credentials not configured.');
+    return { result: 'not_configured' };
+  }
+
+  try {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = createHash('sha1')
+      .update(`public_id=${publicId}&timestamp=${timestamp}${ENV.CLOUDINARY_API_SECRET}`)
+      .digest('hex');
+
+    const form = new FormData();
+    form.append('public_id', publicId);
+    form.append('api_key', ENV.CLOUDINARY_API_KEY);
+    form.append('timestamp', String(timestamp));
+    form.append('signature', signature);
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${ENV.CLOUDINARY_CLOUD_NAME}/image/destroy`, {
+      method: 'POST',
+      body: form,
+    });
+
+    const data = (await response.json()) as { result?: string; error?: { message?: string } };
+    if (!response.ok || (data.result !== 'ok' && data.result !== 'not found')) {
+      console.warn(`[Cloudinary] Asset deletion returned: ${data.result || data.error?.message || 'unknown'}`);
+    }
+    return { result: data.result || 'ok' };
+  } catch (err: any) {
+    console.error(`[Cloudinary] Failed to delete asset ${publicId}:`, err?.message || err);
+    return { result: 'error' };
+  }
+};
+
+/**
+ * Deletes multiple images from Cloudinary concurrently.
+ */
+export const deleteMultipleFromCloudinary = async (
+  identifiers: (string | undefined)[]
+): Promise<void> => {
+  const uniqueIds = Array.from(new Set(identifiers.filter((id): id is string => Boolean(id && typeof id === 'string'))));
+  if (uniqueIds.length === 0) return;
+
+  await Promise.allSettled(uniqueIds.map((id) => deleteFromCloudinary(id)));
+};
+

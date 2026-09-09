@@ -162,14 +162,57 @@ export const VehiclePhotoPage: React.FC = () => {
     // 1. Draw the high-res camera frame
     ctx.drawImage(sourceImage, 0, 0, targetWidth, targetHeight);
 
-    // 2. Calculate bottom inspection banner dimensions (sleek non-intrusive ribbon ~7-8% height)
-    const ribbonHeight = Math.max(54, Math.round(targetHeight * 0.075));
+    // 2. Format exact, unambiguous local Indian Standard Time (IST)
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const month = monthNames[now.getMonth()];
+    const year = now.getFullYear();
+    const dateFormatted = `${day}-${month}-${year}`; // e.g. "09-SEP-2026"
+
+    const hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = String(hours % 12 || 12).padStart(2, '0');
+    const timeFormatted = `${hours12}:${minutes}:${seconds} ${ampm} IST`; // e.g. "08:24:10 AM IST"
+    const fullTimestampStr = `${dateFormatted} • ${timeFormatted}`;
+
+    const paddingX = Math.round(targetWidth * 0.025);
+
+    // 3. Top-Right Corner Watermark Capsule for multi-angle legal verification
+    const cornerPillText = `DATE: ${dateFormatted} | ${timeFormatted}`;
+    const cornerFontSize = Math.max(10, Math.round(targetHeight * 0.018));
+    ctx.font = `800 ${cornerFontSize}px ui-monospace, monospace`;
+    const cornerTextMetrics = ctx.measureText(cornerPillText);
+    const cornerWidth = cornerTextMetrics.width + 24;
+    const cornerHeight = Math.max(24, Math.round(targetHeight * 0.034));
+    const cornerX = targetWidth - cornerWidth - paddingX;
+    const cornerY = paddingX;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(6, 7, 14, 0.78)';
+    ctx.beginPath();
+    ctx.roundRect(cornerX, cornerY, cornerWidth, cornerHeight, 8);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 3;
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText(cornerPillText, cornerX + 12, cornerY + cornerHeight * 0.68);
+    ctx.restore();
+
+    // 4. Calculate bottom inspection banner dimensions (~7.5% height)
+    const ribbonHeight = Math.max(56, Math.round(targetHeight * 0.075));
     const ribbonY = targetHeight - ribbonHeight;
 
-    // 3. Draw frosted semi-transparent dark gradient bar
+    // Draw frosted semi-transparent dark gradient bar
     const gradient = ctx.createLinearGradient(0, ribbonY, 0, targetHeight);
-    gradient.addColorStop(0, 'rgba(8, 9, 15, 0.72)');
-    gradient.addColorStop(1, 'rgba(8, 9, 15, 0.94)');
+    gradient.addColorStop(0, 'rgba(8, 9, 15, 0.78)');
+    gradient.addColorStop(1, 'rgba(8, 9, 15, 0.96)');
 
     ctx.fillStyle = gradient;
     ctx.fillRect(0, ribbonY, targetWidth, ribbonHeight);
@@ -181,15 +224,14 @@ export const VehiclePhotoPage: React.FC = () => {
     // Text formatting configurations
     const fontSize = Math.max(12, Math.round(ribbonHeight * 0.28));
     const smallFontSize = Math.max(10, Math.round(ribbonHeight * 0.22));
-    const paddingX = Math.round(targetWidth * 0.025);
 
     // Text shadows for absolute readability
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
     ctx.shadowBlur = 4;
     ctx.shadowOffsetX = 1;
     ctx.shadowOffsetY = 1;
 
-    // 4. Left side: Garage Brand Badge + Vehicle Plate & Model
+    // Left side: Garage Brand Badge + Vehicle Plate & Model
     ctx.font = `900 ${fontSize}px ui-sans-serif, system-ui, sans-serif`;
     ctx.fillStyle = '#fbbf24'; // Amber-400
     const badgeText = '⚡ MOMZZ INSPECTION PROOF';
@@ -200,12 +242,7 @@ export const VehiclePhotoPage: React.FC = () => {
     const vehicleText = `${currentJob?.vehicleNumber || ''} • ${currentJob?.vehicleName || 'Vehicle'}`;
     ctx.fillText(vehicleText, paddingX, ribbonY + ribbonHeight * 0.8);
 
-    // 5. Right side: Precise Timestamp & Location
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const timeStr = now.toLocaleTimeString('en-IN', { hour12: false });
-    const fullTimestampStr = `${dateStr}  ${timeStr} IST`;
-
+    // Right side: Exact Date & Time (Unambiguous format)
     ctx.font = `900 ${fontSize}px ui-monospace, monospace`;
     ctx.fillStyle = '#ffffff';
     const timeWidth = ctx.measureText(fullTimestampStr).width;
@@ -221,7 +258,7 @@ export const VehiclePhotoPage: React.FC = () => {
       ctx.fillText(remarkDisplay, targetWidth - paddingX - remarkWidth, ribbonY + ribbonHeight * 0.8);
     } else {
       ctx.font = `600 ${smallFontSize}px ui-sans-serif, system-ui, sans-serif`;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
       const verifiedTag = 'VERIFIED TAMPER-PROOF CAPTURE';
       const tagWidth = ctx.measureText(verifiedTag).width;
       ctx.fillText(verifiedTag, targetWidth - paddingX - tagWidth, ribbonY + ribbonHeight * 0.8);
@@ -378,12 +415,26 @@ export const VehiclePhotoPage: React.FC = () => {
     );
   }
 
-  // Aggregate photos for this vehicle
-  const photosList = Array.isArray(currentJob.photos) && currentJob.photos.length > 0
-    ? currentJob.photos
-    : currentJob.thumbnailUrl
-    ? [{ url: currentJob.thumbnailUrl, remarks: 'Primary Vehicle Photo', isThumbnail: true, capturedAt: currentJob.createdAt }]
-    : [];
+  // Aggregate photos for this vehicle (preserve intake thumbnail and all captured angles)
+  const photosList = React.useMemo(() => {
+    if (!currentJob) return [];
+    const list = Array.isArray(currentJob.photos) ? [...currentJob.photos] : [];
+    if (currentJob.thumbnailUrl) {
+      const alreadyInList = list.some(
+        (p: any) => p.url === currentJob.thumbnailUrl || p.publicId === currentJob.thumbnailUrl
+      );
+      if (!alreadyInList) {
+        list.unshift({
+          url: currentJob.thumbnailUrl,
+          publicId: currentJob.thumbnailUrl,
+          remarks: 'Original Intake Photo',
+          capturedAt: currentJob.createdAt || new Date().toISOString(),
+          isThumbnail: true,
+        });
+      }
+    }
+    return list;
+  }, [currentJob]);
 
   const viewerImages: ViewerImage[] = photosList.map((p: any) => ({
     url: p.url,
@@ -759,13 +810,21 @@ export const VehiclePhotoPage: React.FC = () => {
                           <h4 className="text-xs font-mono font-black text-amber-500 dark:text-amber-400 truncate">
                             {photo.remarks || `Inspection Angle #${index + 1}`}
                           </h4>
-                          <p className="text-[10px] font-mono text-slate-400 mt-0.5">
-                            {photo.capturedAt
-                              ? new Date(photo.capturedAt).toLocaleString('en-IN', {
-                                  dateStyle: 'short',
-                                  timeStyle: 'short',
-                                })
-                              : 'Stamped & Verified'}
+                          <p className="text-[10.5px] font-mono text-slate-300 dark:text-slate-300 mt-1 flex items-center gap-1.5 font-bold">
+                            <Clock className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span>
+                              {photo.capturedAt
+                                ? new Date(photo.capturedAt).toLocaleString('en-IN', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                    hour12: true,
+                                  })
+                                : 'Live Stamped Capture'}
+                            </span>
                           </p>
                         </div>
 

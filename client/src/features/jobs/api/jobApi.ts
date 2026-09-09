@@ -268,7 +268,22 @@ export const jobApi = apiSlice.injectEndpoints({
         method: 'PATCH',
         body,
       }),
-      invalidatesTags: ['JobCard'],
+      invalidatesTags: (_result, _error, { jobCardId }) => [
+        { type: 'JobCard', id: jobCardId },
+        'JobCard',
+      ],
+      async onQueryStarted({ jobCardId }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          if (data?.data) {
+            dispatch(
+              jobApi.util.updateQueryData('getJobCardById', jobCardId, (draft) => {
+                draft.data = data.data;
+              })
+            );
+          }
+        } catch {}
+      },
     }),
     setJobThumbnail: builder.mutation<
       { success: boolean; data: JobCardData },
@@ -279,7 +294,22 @@ export const jobApi = apiSlice.injectEndpoints({
         method: 'PATCH',
         body: { photoIdentifier },
       }),
-      invalidatesTags: ['JobCard'],
+      invalidatesTags: (_result, _error, { jobCardId }) => [
+        { type: 'JobCard', id: jobCardId },
+        'JobCard',
+      ],
+      async onQueryStarted({ jobCardId }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          if (data?.data) {
+            dispatch(
+              jobApi.util.updateQueryData('getJobCardById', jobCardId, (draft) => {
+                draft.data = data.data;
+              })
+            );
+          }
+        } catch {}
+      },
     }),
     deleteJobPhoto: builder.mutation<
       { success: boolean; data: JobCardData },
@@ -289,7 +319,22 @@ export const jobApi = apiSlice.injectEndpoints({
         url: `/jobs/${jobCardId}/photos/${encodeURIComponent(photoIdentifier)}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['JobCard'],
+      invalidatesTags: (_result, _error, { jobCardId }) => [
+        { type: 'JobCard', id: jobCardId },
+        'JobCard',
+      ],
+      async onQueryStarted({ jobCardId }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          if (data?.data) {
+            dispatch(
+              jobApi.util.updateQueryData('getJobCardById', jobCardId, (draft) => {
+                draft.data = data.data;
+              })
+            );
+          }
+        } catch {}
+      },
     }),
     getJobStats: builder.query<
       { success: boolean; data: { activeCount: number; totalCount: number; pendingVerificationCount: number; totalCompletedTasks: number } },
