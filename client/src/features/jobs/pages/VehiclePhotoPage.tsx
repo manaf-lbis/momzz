@@ -16,7 +16,6 @@ import {
   RefreshCw,
   Eye,
   ShieldCheck,
-  UploadCloud,
   Layers,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
@@ -54,7 +53,6 @@ export const VehiclePhotoPage: React.FC = () => {
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string>('');
   const [remarks, setRemarks] = useState<string>('');
-  const [isThumbnail, setIsThumbnail] = useState<boolean>(true);
   const [isCapturing, setIsCapturing] = useState(false);
   const [flashEffect, setFlashEffect] = useState(false);
 
@@ -232,7 +230,7 @@ export const VehiclePhotoPage: React.FC = () => {
     return canvas.toDataURL('image/jpeg', 0.88);
   };
 
-  // ── TRIGGER LIVE SNAPSHOT (CONTINUOUS MULTI-SHOT CAPABLE) ──
+  // ── TRIGGER LIVE SNAPSHOT (CONTINUOUS CAPTURE) ──
   const handleSnapAndUpload = async () => {
     if (!videoRef.current || !currentJob) return;
 
@@ -245,7 +243,6 @@ export const VehiclePhotoPage: React.FC = () => {
       const height = video.videoHeight || 720;
 
       const currentRemark = remarks.trim();
-      const markThumb = isThumbnail;
 
       const stampedBase64 = burnTimestampOntoCanvas(video, width, height, currentRemark);
       if (!stampedBase64) {
@@ -253,21 +250,18 @@ export const VehiclePhotoPage: React.FC = () => {
       }
 
       setSessionCaptures((prev) => prev + 1);
-      // Auto uncheck thumbnail after first photo so subsequent photos don't override unless chosen
-      setIsThumbnail(false);
 
       const jobId = currentJob.id || currentJob._id!;
       uploadJobImage({
         jobCardId: jobId,
         image: stampedBase64,
         remarks: currentRemark,
-        isThumbnail: markThumb,
       })
         .unwrap()
         .then(() => {
           setStatusMsg({
             type: 'success',
-            text: 'Inspection photo captured & stamped! Ready for next angle.',
+            text: 'Photo captured & stamped! Check photo below to set as thumbnail.',
           });
           setTimeout(() => setStatusMsg(null), 3000);
         })
@@ -287,62 +281,44 @@ export const VehiclePhotoPage: React.FC = () => {
     }
   };
 
-  // ── MULTI-FILE NATIVE CAMERA / GALLERY CAPTURE ──
-  const handleNativeCameraFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = e.target.files;
-    if (!fileList || fileList.length === 0 || !currentJob) return;
+  // ── FALLBACK PHONE CAMERA CAPTURE ──
+  const handleNativeCameraFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentJob) return;
 
-    const files = Array.from(fileList);
-    setIsCapturing(true);
-    const jobId = currentJob.id || currentJob._id!;
-    let successCount = 0;
-
-    setStatusMsg({
-      type: 'info',
-      text: `Processing & stamping ${files.length} photo${files.length > 1 ? 's' : ''}...`,
-    });
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
-        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const image = new Image();
-          image.onload = () => resolve(image);
-          image.onerror = reject;
-          image.src = base64;
-        });
-
-        const stamped = burnTimestampOntoCanvas(img, img.width, img.height, remarks);
-        if (stamped) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          setIsCapturing(true);
+          const stampedBase64 = burnTimestampOntoCanvas(img, img.width, img.height, remarks);
+          const jobId = currentJob.id || currentJob._id!;
           await uploadJobImage({
             jobCardId: jobId,
-            image: stamped,
-            remarks: remarks.trim() || `Inspection Angle #${i + 1}`,
-            isThumbnail: i === 0 && isThumbnail,
+            image: stampedBase64,
+            remarks: remarks.trim(),
           }).unwrap();
-          successCount++;
-          setSessionCaptures((prev) => prev + 1);
-        }
-      } catch (err) {
-        console.error('Error processing multi-photo file:', err);
-      }
-    }
 
-    setIsCapturing(false);
-    setIsThumbnail(false);
-    setRemarks('');
-    setStatusMsg({
-      type: 'success',
-      text: `Successfully stamped & uploaded ${successCount} inspection photo${successCount > 1 ? 's' : ''}!`,
-    });
-    setTimeout(() => setStatusMsg(null), 4500);
+          setSessionCaptures((prev) => prev + 1);
+          setStatusMsg({
+            type: 'success',
+            text: 'Photo captured & stamped! Check photo below to set as thumbnail.',
+          });
+          setRemarks('');
+          setTimeout(() => setStatusMsg(null), 3500);
+        } catch (err: any) {
+          setStatusMsg({
+            type: 'error',
+            text: err?.data?.message || 'Failed to process camera photo.',
+          });
+        } finally {
+          setIsCapturing(false);
+        }
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
     e.target.value = '';
   };
 
@@ -558,17 +534,17 @@ export const VehiclePhotoPage: React.FC = () => {
             )}
           </div>
 
-          {/* Native Camera & Multi-Photo Input */}
+          {/* Native Camera Input (Fallback) */}
           <input
             ref={nativeCameraInputRef}
             type="file"
             accept="image/*"
-            multiple
-            onChange={handleNativeCameraFiles}
+            capture="environment"
+            onChange={handleNativeCameraFile}
             className="hidden"
           />
 
-          {/* ── 2. STUDIO CONTROLS (Angle Chips + Remarks + Thumbnail Toggle + Shutter) ── */}
+          {/* ── 2. STUDIO CONTROLS (Angle Chips + Remarks + Shutter) ── */}
           <div className="p-4 sm:p-5 space-y-3.5 border-t border-slate-200/80 dark:border-white/[0.08] bg-slate-900/60 dark:bg-black/60 backdrop-blur-xl">
             {/* Quick Angle Chips */}
             <div className="space-y-1.5">
@@ -616,44 +592,29 @@ export const VehiclePhotoPage: React.FC = () => {
               />
             </div>
 
-            {/* Thumbnail Toggle Checkbox & Session Counter */}
+            {/* Helper Caption & Session Counter (No Checkbox) */}
             <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isThumbnail}
-                  onChange={(e) => setIsThumbnail(e.target.checked)}
-                  className="w-4 h-4 rounded accent-amber-400 cursor-pointer"
-                />
-                <span className="text-xs font-mono text-slate-300 font-bold flex items-center gap-1">
-                  <Star className={`w-3.5 h-3.5 ${isThumbnail ? 'text-amber-400 fill-amber-400' : 'text-slate-500'}`} />
-                  Mark as Primary Vehicle Thumbnail
-                </span>
-              </label>
-
-              {sessionCaptures > 0 ? (
+              <span className="text-[10px] font-mono text-slate-400">
+                Tap SNAP to capture · Mark thumbnail directly on photos below
+              </span>
+              {sessionCaptures > 0 && (
                 <span className="px-2 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/30 text-amber-400 font-mono text-[10px] font-bold">
-                  {sessionCaptures} Captured This Session
-                </span>
-              ) : (
-                <span className="text-[10px] font-mono text-slate-500">
-                  Continuous Multi-Shot Ready
+                  {sessionCaptures} Captured
                 </span>
               )}
             </div>
 
             {/* Shutter Button Action Dock */}
             <div className="flex items-center justify-center gap-4 pt-2">
-              {/* Batch Upload / Native Photos Picker */}
+              {/* Camera Flip Button */}
               <button
                 type="button"
-                disabled={isCapturing}
-                onClick={() => nativeCameraInputRef.current?.click()}
+                onClick={toggleCameraFacing}
                 className="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white flex items-center gap-2 transition active:scale-95 cursor-pointer text-xs font-mono font-bold"
-                title="Select multiple photos from gallery or device"
+                title="Flip Camera (Front / Rear)"
               >
-                <UploadCloud className="w-5 h-5 text-amber-400" />
-                <span className="hidden sm:inline">Batch Photos</span>
+                <FlipHorizontal className="w-5 h-5 text-amber-400" />
+                <span className="hidden sm:inline">Flip Camera</span>
               </button>
 
               {/* Main Tactile Shutter */}
@@ -681,27 +642,31 @@ export const VehiclePhotoPage: React.FC = () => {
                 </div>
               </button>
 
-              {/* Camera Flip or Retry Button */}
-              <button
-                type="button"
-                onClick={toggleCameraFacing}
+              {/* Jump to Gallery Shortcut */}
+              <a
+                href="#inspection-gallery"
                 className="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white flex items-center gap-2 transition active:scale-95 cursor-pointer text-xs font-mono font-bold"
-                title="Flip Camera (Front / Rear)"
+                title="View captured photos below"
               >
-                <FlipHorizontal className="w-5 h-5 text-amber-400" />
-                <span className="hidden sm:inline">Flip</span>
-              </button>
+                <Eye className="w-5 h-5 text-amber-400" />
+                <span className="hidden sm:inline">Photos ({photosList.length})</span>
+              </a>
             </div>
           </div>
         </section>
 
-        {/* ── 3. INSPECTION PHOTOS GALLERY (All photos for this vehicle) ── */}
-        <section className="space-y-3">
+        {/* ── 3. INSPECTION PHOTOS GALLERY (Captured Photos Listed Below) ── */}
+        <section id="inspection-gallery" className="space-y-3 pt-2">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Inspection Gallery ({photosList.length})</span>
-            </h2>
+            <div>
+              <h2 className="text-sm font-mono font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>Captured Photos ({photosList.length})</span>
+              </h2>
+              <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                Mark any photo below to set it as the primary vehicle thumbnail
+              </p>
+            </div>
             {photosList.length > 0 && (
               <button
                 type="button"
@@ -712,20 +677,21 @@ export const VehiclePhotoPage: React.FC = () => {
                 className="text-xs font-mono font-bold text-amber-500 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <Eye className="w-3.5 h-3.5" />
-                <span>Open Fullscreen Viewer</span>
+                <span>Fullscreen Slider</span>
               </button>
             )}
           </div>
 
           {photosList.length === 0 ? (
-            <div className="py-8 text-center rounded-3xl glass-modern-card p-4 space-y-1">
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No inspection photos yet</p>
+            <div className="py-10 text-center rounded-3xl glass-modern-card p-4 space-y-1">
+              <Camera className="w-8 h-8 text-amber-500/50 mx-auto mb-2" />
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No photos captured yet</p>
               <p className="text-[11px] font-mono text-slate-400">
-                Snap vehicle angles above using the live camera shutter.
+                Snap vehicle inspection angles above using the live camera shutter.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {photosList.map((photo: any, index: number) => {
                 const photoUrl = photo.url;
                 const identifier = photo.publicId || photo.url;
@@ -734,8 +700,10 @@ export const VehiclePhotoPage: React.FC = () => {
                 return (
                   <div
                     key={photo.publicId || photo.url || index}
-                    className={`group relative rounded-2xl overflow-hidden glass-modern-card border transition-all ${
-                      isThumb ? 'border-amber-400/80 shadow-md shadow-amber-400/10' : 'border-slate-200/80 dark:border-white/10'
+                    className={`group relative rounded-2xl sm:rounded-3xl overflow-hidden glass-modern-card border transition-all ${
+                      isThumb
+                        ? 'border-amber-400 shadow-lg shadow-amber-400/10 ring-2 ring-amber-400/30'
+                        : 'border-slate-200/80 dark:border-white/10 hover:border-amber-400/50'
                     }`}
                   >
                     {/* Thumbnail Image Viewport */}
@@ -752,66 +720,79 @@ export const VehiclePhotoPage: React.FC = () => {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
 
-                      {/* Top Overlay Badge */}
-                      <div className="absolute top-2 left-2 flex items-center gap-1">
-                        {isThumb && (
-                          <span className="text-[9px] font-mono font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 shadow-xs flex items-center gap-1">
-                            <Star className="w-2.5 h-2.5 fill-current" />
-                            <span>Thumbnail</span>
+                      {/* Direct On-Photo Thumbnail Marking Action */}
+                      <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10 pointer-events-none">
+                        {isThumb ? (
+                          <span className="text-[10px] font-mono font-black uppercase tracking-wider px-2.5 py-1 rounded-xl bg-amber-400 text-slate-950 shadow-md flex items-center gap-1.5 pointer-events-auto border border-amber-300">
+                            <Star className="w-3 h-3 fill-current text-slate-950" />
+                            <span>Primary Thumbnail</span>
                           </span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={isSettingThumb}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetThumbnail(identifier);
+                            }}
+                            className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-xl bg-black/75 hover:bg-amber-400 hover:text-slate-950 text-white shadow-md flex items-center gap-1.5 pointer-events-auto border border-white/20 backdrop-blur-md transition active:scale-95 cursor-pointer ml-auto"
+                            title="Mark this photo as vehicle thumbnail"
+                          >
+                            <Star className="w-3 h-3 text-amber-400" />
+                            <span>Set as Thumbnail</span>
+                          </button>
                         )}
                       </div>
 
-                      {/* Expand Eye Icon on hover */}
-                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                        <div className="w-8 h-8 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center">
+                      {/* Hover Zoom / Expand Indicator */}
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white pointer-events-none">
+                        <div className="w-9 h-9 rounded-2xl bg-black/60 backdrop-blur-md flex items-center justify-center shadow-lg">
                           <Maximize2 className="w-4 h-4" />
                         </div>
                       </div>
                     </div>
 
-                    {/* Bottom Metadata & Actions */}
-                    <div className="p-2.5 space-y-2 bg-white/5 backdrop-blur-md">
-                      {photo.remarks ? (
-                        <p className="text-[11px] font-mono text-amber-500 font-bold truncate">
-                          {photo.remarks}
-                        </p>
-                      ) : (
-                        <p className="text-[10px] font-mono text-slate-400 truncate">
-                          Photo #{index + 1}
-                        </p>
-                      )}
-
-                      <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] font-mono">
-                        {/* Make Thumbnail button */}
-                        {!isThumb ? (
-                          <button
-                            type="button"
-                            disabled={isSettingThumb}
-                            onClick={() => handleSetThumbnail(identifier)}
-                            className="text-slate-400 hover:text-amber-400 flex items-center gap-1 cursor-pointer transition"
-                          >
-                            <Star className="w-3 h-3" />
-                            <span>Set Thumbnail</span>
-                          </button>
-                        ) : (
-                          <span className="text-amber-400 font-bold flex items-center gap-1">
-                            <Check className="w-3 h-3 stroke-[3]" />
-                            <span>Primary</span>
-                          </span>
-                        )}
+                    {/* Bottom Card Footer */}
+                    <div className="p-3 space-y-2 bg-white/5 backdrop-blur-md">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-mono font-black text-amber-500 dark:text-amber-400 truncate">
+                            {photo.remarks || `Inspection Angle #${index + 1}`}
+                          </h4>
+                          <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                            {photo.capturedAt
+                              ? new Date(photo.capturedAt).toLocaleString('en-IN', {
+                                  dateStyle: 'short',
+                                  timeStyle: 'short',
+                                })
+                              : 'Stamped & Verified'}
+                          </p>
+                        </div>
 
                         {/* Delete button */}
                         <button
                           type="button"
                           disabled={isDeletingPhoto}
                           onClick={() => handleDeletePhoto(identifier)}
-                          className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/15 transition cursor-pointer"
                           title="Delete Photo"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
+
+                      {/* Marking Bar on Listed Photo Itself */}
+                      {!isThumb && (
+                        <button
+                          type="button"
+                          disabled={isSettingThumb}
+                          onClick={() => handleSetThumbnail(identifier)}
+                          className="w-full py-1.5 rounded-xl bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 text-amber-700 dark:text-amber-300 font-mono text-[11px] font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer"
+                        >
+                          <Star className="w-3.5 h-3.5" />
+                          <span>Mark as Thumbnail</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
