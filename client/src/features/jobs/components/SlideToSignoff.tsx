@@ -70,11 +70,11 @@ export const SlideToSignoff: React.FC<SlideToSignoffProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+      initial={{ opacity: 0, y: 15, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 20, scale: 0.95 }}
+      exit={{ opacity: 0, y: 15, scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className={`fixed bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 w-[92vw] max-w-[340px] pointer-events-auto select-none ${className}`}
+      className={`relative w-full max-w-[340px] sm:max-w-[360px] mx-auto select-none ${className}`}
     >
       <div
         ref={containerRef}
