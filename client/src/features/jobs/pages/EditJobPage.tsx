@@ -10,6 +10,7 @@ import {
   Mail,
   Minus,
   PackagePlus,
+  Package,
   Plus,
   Search,
   Trash2,
@@ -25,6 +26,7 @@ import {
   useGetJobCardsQuery,
   useGetJobCardByIdQuery,
   useUpdateJobMutation,
+  useUpdateTaskMutation,
   useAddTaskMutation,
   useAddInventoryTaskMutation,
   useDeleteTaskMutation,
@@ -82,6 +84,7 @@ export const EditJobPage: React.FC = () => {
   const isJobsLoading = (isSingleLoading && !currentJob) || (isListLoading && !currentJob);
 
   const [updateJob, { isLoading: isUpdatingJob }] = useUpdateJobMutation();
+  const [updateTask] = useUpdateTaskMutation();
   const [addTask] = useAddTaskMutation();
   const [addInventoryTask] = useAddInventoryTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
@@ -306,6 +309,22 @@ export const EditJobPage: React.FC = () => {
           }
         } catch (e) {
           console.error('Failed to add task item', newLine, e);
+        }
+      }
+
+      // 3. Update modified existing tasks
+      const existingTasks = selected.filter((s) => s.id);
+      for (const existingLine of existingTasks) {
+        try {
+          await updateTask({
+            taskId: existingLine.id!,
+            title: existingLine.item.title,
+            quantityUsed: existingLine.quantityUsed,
+            unitPrice: existingLine.item.price || 0,
+            discountAmount: existingLine.discountAmount,
+          }).unwrap();
+        } catch (e) {
+          console.error('Failed to update task item', existingLine, e);
         }
       }
 
@@ -820,84 +839,116 @@ export const EditJobPage: React.FC = () => {
                     selected.map((line, index) => (
                       <article
                         key={`${line.item.id}-${index}`}
-                        className="p-3 rounded-2xl glass-modern-card space-y-2.5"
+                        className="p-3 rounded-2xl glass-modern-card flex gap-3 items-center"
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1 space-y-0.5">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <b className="truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                                {line.item.title}
-                              </b>
-                              {line.item.id?.startsWith('custom-') && (
-                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
-                                  Just this job
-                                </span>
+                        {/* Left square image */}
+                        <div className="relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10 flex items-center justify-center">
+                          {line.item.thumbnailUrl ? (
+                            <img
+                              src={line.item.thumbnailUrl}
+                              alt={line.item.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              {line.item.itemType === 'SERVICE' ? (
+                                <Wrench className="w-6 h-6 text-violet-400/70" />
+                              ) : (
+                                <Package className="w-6 h-6 text-amber-500/70" />
                               )}
                             </div>
-                            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 block">
-                              {line.item.itemType === 'SERVICE' ? 'Service' : 'Product'}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => setSelected((lines) => lines.filter((_, i) => i !== index))}
-                            className="p-1 text-slate-400 hover:text-rose-500 transition cursor-pointer"
+                          )}
+                          <span
+                            className={`absolute top-1 left-1 text-[7px] font-black uppercase px-1 py-0.2 rounded ${
+                              line.item.itemType === 'SERVICE'
+                                ? 'bg-violet-500/80 text-white'
+                                : 'bg-amber-400/90 text-slate-950 font-black'
+                            }`}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                            {line.item.itemType === 'SERVICE' ? 'SVC' : 'PART'}
+                          </span>
                         </div>
 
-                        {/* Quantity Counter & Rate Input */}
-                        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60 dark:border-white/[0.04]">
-                          <div className="flex items-center gap-2">
-                            {/* Quantity Controls */}
-                            <div className="flex items-center gap-1 bg-white/60 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-lg p-0.5">
-                              <button
-                                onClick={() =>
-                                  updateSelectedLine(index, {
-                                    quantityUsed: Math.max(1, line.quantityUsed - 1),
-                                  })
-                                }
-                                className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                              >
-                                <Minus className="w-3 h-3" />
-                              </button>
-                              <b className="w-6 text-center font-mono font-bold text-slate-900 dark:text-white text-[11px]">
-                                {line.quantityUsed}
-                              </b>
-                              <button
-                                onClick={() =>
-                                  updateSelectedLine(index, {
-                                    quantityUsed: line.quantityUsed + 1,
-                                  })
-                                }
-                                className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                              >
-                                <Plus className="w-3 h-3" />
-                              </button>
+                        {/* Right details */}
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1 space-y-0.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <b className="truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                                  {line.item.title}
+                                </b>
+                                {line.item.id?.startsWith('custom-') && (
+                                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                                    Just this job
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 block">
+                                {line.item.itemType === 'SERVICE' ? 'Service' : 'Product'}
+                              </span>
                             </div>
-
-                            {/* Rate / Price Input */}
-                            <div className="flex items-center gap-1 bg-white/60 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-lg px-2 py-0.5">
-                              <span className="text-[10px] font-mono text-slate-400">₹</span>
-                              <input
-                                type="number"
-                                min="0"
-                                value={line.item.price || ''}
-                                placeholder="0"
-                                onChange={(e) => {
-                                  const val = Math.max(0, Number(e.target.value) || 0);
-                                  updateSelectedLine(index, {
-                                    item: { ...line.item, price: val } as any,
-                                  });
-                                }}
-                                className="w-14 bg-transparent text-right font-mono font-bold text-xs text-slate-900 dark:text-white outline-none"
-                              />
-                            </div>
+                            <button
+                              onClick={() => setSelected((lines) => lines.filter((_, i) => i !== index))}
+                              className="p-1 text-slate-400 hover:text-rose-500 transition cursor-pointer"
+                              title="Remove item"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
 
-                          <p className="text-right font-mono font-bold text-amber-600 dark:text-amber-300 text-xs">
-                            {money(Math.max(0, (line.item.price || 0) * line.quantityUsed - (line.discountAmount || 0)))}
-                          </p>
+                          {/* Quantity Counter & Rate Input */}
+                          <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60 dark:border-white/[0.04]">
+                            <div className="flex items-center gap-2">
+                              {/* Quantity Controls */}
+                              <div className="flex items-center gap-1 bg-white/60 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-lg p-0.5">
+                                <button
+                                  onClick={() =>
+                                    updateSelectedLine(index, {
+                                      quantityUsed: Math.max(1, line.quantityUsed - 1),
+                                    })
+                                  }
+                                  className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                >
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <b className="w-6 text-center font-mono font-bold text-slate-900 dark:text-white text-[11px]">
+                                  {line.quantityUsed}
+                                </b>
+                                <button
+                                  onClick={() =>
+                                    updateSelectedLine(index, {
+                                      quantityUsed: line.quantityUsed + 1,
+                                    })
+                                  }
+                                  className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              </div>
+
+                              {/* Rate / Price Input */}
+                              <div className="flex items-center gap-1 bg-white/60 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-lg px-2 py-0.5">
+                                <span className="text-[10px] font-mono text-slate-400">₹</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={line.item.price || ''}
+                                  placeholder="0"
+                                  onChange={(e) => {
+                                    const val = Math.max(0, Number(e.target.value) || 0);
+                                    updateSelectedLine(index, {
+                                      item: { ...line.item, price: val } as any,
+                                    });
+                                  }}
+                                  className="w-14 bg-transparent text-right font-mono font-bold text-xs text-slate-900 dark:text-white outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <p className="text-right font-mono font-bold text-amber-600 dark:text-amber-300 text-xs">
+                              {money(Math.max(0, (line.item.price || 0) * line.quantityUsed - (line.discountAmount || 0)))}
+                            </p>
+                          </div>
                         </div>
                       </article>
                     ))

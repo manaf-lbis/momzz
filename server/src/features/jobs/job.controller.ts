@@ -514,6 +514,46 @@ export const addInventoryTaskToJob = async (req: Request, res: Response) => {
   } catch (error: any) { return sendError(res, error.message || 'Could not add inventory item.', 400); }
 };
 
+export const updateTask = async (req: Request, res: Response) => {
+  try {
+    const { taskId } = req.params;
+    const { title, quantityUsed, discountAmount, unitPrice } = req.body;
+
+    const existingTask = await jobRepository.findTaskById(taskId);
+    if (!existingTask) {
+      return sendError(res, 'Task not found.', 404);
+    }
+
+    const job = await jobRepository.findJobById(existingTask.jobCardId.toString());
+    if (job?.verifiedAt && req.user?.role !== 'ADMIN') {
+      return sendError(res, 'This job card has been verified and cannot be modified.', 403);
+    }
+
+    const updatedTask = await jobRepository.updateTask(taskId, {
+      title,
+      quantityUsed: quantityUsed !== undefined ? Number(quantityUsed) : undefined,
+      discountAmount: discountAmount !== undefined ? Number(discountAmount) : undefined,
+      unitPrice: unitPrice !== undefined ? Number(unitPrice) : undefined,
+    });
+
+    if (!updatedTask) {
+      return sendError(res, 'Task not found.', 404);
+    }
+
+    const formattedTask = mapTaskImages({
+      ...updatedTask.toObject(),
+      id: updatedTask._id.toString(),
+    });
+
+    emitTaskUpdated(updatedTask.jobCardId.toString(), taskId, formattedTask, 'EDITED');
+    await cacheService.delByPrefix('cache:jobs');
+
+    return sendSuccess(res, 'Task updated successfully.', formattedTask, 200);
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to update task.', 500);
+  }
+};
+
 export const deleteTask = async (req: Request, res: Response) => {
   try {
     const { taskId } = req.params;

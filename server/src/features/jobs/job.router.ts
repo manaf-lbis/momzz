@@ -7,6 +7,7 @@ import {
   setTaskStatus,
   addTaskToJob,
   addInventoryTaskToJob,
+  updateTask,
   deleteTask,
   deleteJobCard,
   updateJobCard,
@@ -31,6 +32,7 @@ router.get('/:jobCardId', getJobCardById);
 router.post('/create', adminMiddleware, createJobWithTasks);
 router.patch('/tasks/:taskId/status', validateRequest({ body: setTaskStatusSchema }), setTaskStatus);
 router.patch('/tasks/:taskId/pin', toggleTaskPin);
+router.patch('/tasks/:taskId', adminMiddleware, updateTask);
 router.patch('/:jobCardId/pin', validateRequest({ body: toggleJobPinSchema }), toggleJobPin);
 router.patch('/:jobCardId/verify', verifyJobCard);
 

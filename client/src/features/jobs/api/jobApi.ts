@@ -6,7 +6,17 @@ export interface TaskItem {
   jobCardId: string;
   title: string;
   description?: string;
-  inventoryItem?: { id?: string; _id?: string; title: string; thumbnailUrl?: string; itemType: 'PRODUCT' | 'SERVICE' };
+  inventoryItem?: {
+    id?: string;
+    _id?: string;
+    title: string;
+    thumbnailUrl?: string;
+    itemType: 'PRODUCT' | 'SERVICE';
+    sku?: string;
+    price?: number;
+    stockQuantity?: number;
+    category?: { id?: string; _id?: string; name: string };
+  };
   itemType?: 'PRODUCT' | 'SERVICE';
   quantityUsed?: number;
   unitPrice?: number;
@@ -189,6 +199,17 @@ export const jobApi = apiSlice.injectEndpoints({
       invalidatesTags: ['JobCard', 'Task', 'Catalog'],
     }),
 
+    updateTask: builder.mutation<
+      { success: boolean; data: TaskItem },
+      { taskId: string; title?: string; quantityUsed?: number; discountAmount?: number; unitPrice?: number }
+    >({
+      query: ({ taskId, ...body }) => ({
+        url: `/jobs/tasks/${taskId}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['JobCard', 'Catalog'],
+    }),
     deleteTask: builder.mutation<
       { success: boolean; message: string },
       { taskId: string }
@@ -259,6 +280,7 @@ export const {
   useSetTaskStatusMutation,
   useAddTaskMutation,
   useAddInventoryTaskMutation,
+  useUpdateTaskMutation,
   useDeleteTaskMutation,
   useDeleteJobCardMutation,
   useToggleTaskPinMutation,

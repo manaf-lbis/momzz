@@ -150,7 +150,7 @@ export const emitTaskUpdated = (
   jobCardId: string,
   taskId: string,
   task: any,
-  action: 'COMPLETE' | 'REOPEN' | 'PIN_TOGGLED'
+  action: 'COMPLETE' | 'REOPEN' | 'PIN_TOGGLED' | 'EDITED'
 ) => {
   if (io) {
     io.emit('task:updated', { jobCardId, taskId, task, action });

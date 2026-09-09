@@ -182,7 +182,11 @@ export class JobRepository {
       .populate('completedBy', 'name mobile role profileImageUrl')
       .populate('partners', 'name mobile role profileImageUrl')
       .populate('activityLog.user', 'name mobile role profileImageUrl')
-      .populate('inventoryItem', 'title thumbnailUrl itemType stockQuantity');
+      .populate({
+        path: 'inventoryItem',
+        select: 'title thumbnailUrl itemType stockQuantity sku price category',
+        populate: { path: 'category', select: 'name' },
+      });
   }
 
   async findTasksForJobs(jobCardIds: (string | mongoose.Types.ObjectId)[], isDetailed: boolean = false): Promise<Record<string, ITask[]>> {
@@ -200,7 +204,11 @@ export class JobRepository {
         .populate('completedBy', 'name mobile role profileImageUrl')
         .populate('partners', 'name mobile role profileImageUrl')
         .populate('activityLog.user', 'name mobile role profileImageUrl')
-        .populate('inventoryItem', 'title thumbnailUrl itemType stockQuantity') as any;
+        .populate({
+          path: 'inventoryItem',
+          select: 'title thumbnailUrl itemType stockQuantity sku price category',
+          populate: { path: 'category', select: 'name' },
+        }) as any;
     }
 
     const tasks = await query;
@@ -316,7 +324,12 @@ export class JobRepository {
       if (task.status === 'COMPLETED') {
         return await Task.findById(taskId)
           .populate('completedBy', 'name mobile role profileImageUrl')
-          .populate('partners', 'name mobile role profileImageUrl');
+          .populate('partners', 'name mobile role profileImageUrl')
+          .populate({
+            path: 'inventoryItem',
+            select: 'title thumbnailUrl itemType stockQuantity sku price category',
+            populate: { path: 'category', select: 'name' },
+          });
       }
 
       // Filter out the current user from partners list (safety guard)
@@ -345,7 +358,12 @@ export class JobRepository {
       if (task.status === 'OPEN') {
         return await Task.findById(taskId)
           .populate('completedBy', 'name mobile role profileImageUrl')
-          .populate('partners', 'name mobile role profileImageUrl');
+          .populate('partners', 'name mobile role profileImageUrl')
+          .populate({
+            path: 'inventoryItem',
+            select: 'title thumbnailUrl itemType stockQuantity sku price category',
+            populate: { path: 'category', select: 'name' },
+          });
       }
 
       const prevUser = task.completedBy;
@@ -388,7 +406,12 @@ export class JobRepository {
     return await Task.findById(taskId)
       .populate('completedBy', 'name mobile role profileImageUrl')
       .populate('partners', 'name mobile role profileImageUrl')
-      .populate('activityLog.user', 'name mobile role profileImageUrl');
+      .populate('activityLog.user', 'name mobile role profileImageUrl')
+      .populate({
+        path: 'inventoryItem',
+        select: 'title thumbnailUrl itemType stockQuantity sku price category',
+        populate: { path: 'category', select: 'name' },
+      });
   }
 
   async togglePinTask(taskId: string): Promise<ITask | null> {
@@ -400,7 +423,11 @@ export class JobRepository {
       .populate('completedBy', 'name mobile role profileImageUrl')
       .populate('partners', 'name mobile role profileImageUrl')
       .populate('activityLog.user', 'name mobile role profileImageUrl')
-      .populate('inventoryItem', 'title thumbnailUrl itemType stockQuantity');
+      .populate({
+        path: 'inventoryItem',
+        select: 'title thumbnailUrl itemType stockQuantity sku price category',
+        populate: { path: 'category', select: 'name' },
+      });
   }
 
   async addTaskToJob(jobCardId: string, title: string): Promise<ITask> {
@@ -422,8 +449,84 @@ export class JobRepository {
       const finalPrice = Math.max(0, item.price * quantity - discountAmount);
       const task = await Task.create({ jobCardId, title: item.title, inventoryItem: item._id, itemType: item.itemType, quantityUsed: quantity, stockTracked, unitPrice: item.price, discountAmount, finalPrice });
       await JobCard.findByIdAndUpdate(jobCardId, { $set: { status: 'IN_PROGRESS', verifiedBy: null, verifiedAt: null } });
-      return task;
+      return await Task.findById(task._id).populate({
+        path: 'inventoryItem',
+        select: 'title thumbnailUrl itemType stockQuantity sku price category',
+        populate: { path: 'category', select: 'name' },
+      }) as unknown as ITask;
     } catch (error) { if (stockTracked) await catalogRepository.restoreStock(itemId, quantity); throw error; }
+  }
+
+  async updateTask(
+    taskId: string,
+    updates: {
+      title?: string;
+      quantityUsed?: number;
+      discountAmount?: number;
+      unitPrice?: number;
+    }
+  ): Promise<ITask | null> {
+    const task = await Task.findById(taskId);
+    if (!task) return null;
+
+    // Handle stock adjustment if quantity changed for tracked product
+    if (
+      updates.quantityUsed !== undefined &&
+      task.inventoryItem &&
+      task.itemType === 'PRODUCT' &&
+      task.stockTracked !== false
+    ) {
+      const newQty = Math.max(1, Number(updates.quantityUsed));
+      const oldQty = task.quantityUsed || 1;
+      const diff = newQty - oldQty;
+
+      if (diff > 0) {
+        const deducted = await catalogRepository.deductStock(task.inventoryItem.toString(), diff);
+        if (!deducted) {
+          throw new Error('Insufficient stock for this item.');
+        }
+      } else if (diff < 0) {
+        await catalogRepository.restoreStock(task.inventoryItem.toString(), Math.abs(diff));
+      }
+      task.quantityUsed = newQty;
+    } else if (updates.quantityUsed !== undefined) {
+      task.quantityUsed = Math.max(1, Number(updates.quantityUsed));
+    }
+
+    if (updates.title !== undefined && updates.title.trim()) {
+      task.title = updates.title.trim();
+    }
+
+    if (updates.unitPrice !== undefined) {
+      task.unitPrice = Math.max(0, Number(updates.unitPrice));
+    }
+
+    if (updates.discountAmount !== undefined) {
+      task.discountAmount = Math.max(0, Number(updates.discountAmount));
+    }
+
+    const effectiveUnitPrice = task.unitPrice ?? 0;
+    const effectiveQty = task.quantityUsed || 1;
+    const effectiveDiscount = task.discountAmount || 0;
+    task.finalPrice = Math.max(0, effectiveUnitPrice * effectiveQty - effectiveDiscount);
+
+    await task.save();
+
+    // Reset verification status if job card was verified
+    await JobCard.findByIdAndUpdate(task.jobCardId, { $set: { verifiedBy: null, verifiedAt: null } });
+
+    // Invalidate cached jobs
+    cacheService.delByPrefix('cache:jobs').catch(() => {});
+
+    return await Task.findById(taskId)
+      .populate('completedBy', 'name mobile role profileImageUrl')
+      .populate('partners', 'name mobile role profileImageUrl')
+      .populate('activityLog.user', 'name mobile role profileImageUrl')
+      .populate({
+        path: 'inventoryItem',
+        select: 'title thumbnailUrl itemType stockQuantity sku price category',
+        populate: { path: 'category', select: 'name' },
+      });
   }
 
   async deleteTask(taskId: string): Promise<ITask | null> {
