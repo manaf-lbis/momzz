@@ -1087,35 +1087,30 @@ export const JobDetailPage: React.FC = () => {
                   Verified
                 </span>
               </div>
-            ) : isAllCompleted && isAdmin ? (
+            ) : isAllCompleted ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="p-4 rounded-3xl bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-emerald-500/15 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md"
+                className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-3 shadow-sm"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center font-bold shrink-0 shadow-md shadow-emerald-500/25">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold shrink-0 shadow-sm">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
-                  <div>
-                    <p className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-300 uppercase tracking-tight">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tight">
                       All Service Operations Complete
                     </p>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                      Ready for Quality Assurance inspection and manager sign-off.
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
+                      {isAdmin
+                        ? 'Ready for Quality Assurance inspection. Slide the verification button below to sign off.'
+                        : 'Ready for Quality Assurance inspection and manager sign-off.'}
                     </p>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleVerify}
-                  disabled={isVerifying}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 shrink-0"
-                >
-                  {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  <span>Sign-off QA Inspection</span>
-                </button>
+                <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/25 shrink-0 hidden sm:inline">
+                  QA Ready
+                </span>
               </motion.div>
             ) : null}
 
@@ -1929,7 +1924,7 @@ export const JobDetailPage: React.FC = () => {
 
       {/* ── SLIDE TO SIGNOFF PILL DOCK (Fixed Bottom) ── */}
       <AnimatePresence>
-        {isAllCompleted && !currentJob.verifiedAt && (
+        {isAllCompleted && !currentJob.verifiedAt && isAdmin && (
           <SlideToSignoff
             onSignoff={handleVerify}
             isLoading={isVerifying}
