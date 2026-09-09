@@ -124,7 +124,7 @@ export const AnalyticsPage: React.FC = () => {
   const TIMEFRAMES: Timeframe[] = ['today', 'week', 'month', 'year'];
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col overflow-x-clip selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient aura */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
         <Meteors number={6} />

@@ -101,7 +101,7 @@ export const TrackServicePage: React.FC = () => {
   }, [jobs.length]);
 
   return (
-    <main className="min-h-screen glass-canvas text-slate-900 dark:text-white px-3 sm:px-4 py-6 sm:py-10 flex flex-col overflow-x-clip selection:bg-amber-400/20 transition-colors duration-200 relative pb-20">
+    <main className="min-h-screen glass-canvas text-slate-900 dark:text-white px-3 sm:px-4 py-6 sm:py-10 flex flex-col selection:bg-amber-400/20 transition-colors duration-200 relative pb-20">
       {/* Ambient background aura */}
       <div className="glass-ambient-glow" aria-hidden="true" />
 

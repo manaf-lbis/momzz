@@ -79,7 +79,7 @@ export const UserManagementPage: React.FC = () => {
   }, [rawUsers, roleFilter, search]);
 
   return (
-    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col overflow-x-clip selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col selection:bg-amber-400/20 transition-colors duration-200">
       {/* Subtle ambient light */}
       <div className="glass-ambient-glow" aria-hidden="true" />
 

@@ -228,7 +228,7 @@ export const VehiclePhotoPage: React.FC = () => {
   }).format(new Date(currentJob.createdAt));
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-clip selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient background aura */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
         <Meteors number={6} />

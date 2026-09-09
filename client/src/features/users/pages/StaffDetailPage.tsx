@@ -372,7 +372,7 @@ export const StaffDetailPage: React.FC = () => {
   const isSelf = staffId === currentAuthId;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#07080e] text-slate-900 dark:text-white flex flex-col overflow-x-clip selection:bg-amber-400/20 transition-colors duration-300 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#07080e] text-slate-900 dark:text-white flex flex-col selection:bg-amber-400/20 transition-colors duration-300 font-sans">
       {/* Ambient background aura */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
         <Meteors number={8} />

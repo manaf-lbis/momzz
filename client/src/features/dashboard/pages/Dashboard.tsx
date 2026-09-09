@@ -168,7 +168,7 @@ export const Dashboard: React.FC = () => {
   const modernCard = "glass-modern-card rounded-2xl overflow-hidden cursor-pointer active:scale-[0.985]";
 
   return (
-    <div className="relative min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col overflow-x-clip transition-colors duration-300 font-sans">
+    <div className="relative min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col transition-colors duration-300 font-sans">
 
       {/* ── Fluid Organic Wave Canvas Background ── */}
       <FluidCanvasBackground />

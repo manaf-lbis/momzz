@@ -373,13 +373,13 @@ export const EditJobPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col overflow-x-clip selection:bg-amber-400/20 transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#080810] text-slate-900 dark:text-white flex flex-col selection:bg-amber-400/20 transition-colors duration-200">
       {/* Ambient background aura */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true" />
 
       <Navbar glass />
 
-      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 overflow-x-clip">
+      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16">
         {/* Page Top Header */}
         <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-3.5 pb-3.5 mb-3 glass-modern-header flex items-center justify-between gap-3 transition-all">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
