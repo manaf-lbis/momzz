@@ -5,7 +5,9 @@ import { useAppDispatch } from '../../../shared/hooks/useAppDispatch';
 import { setCredentials } from '../store/authSlice';
 import { Input } from '../../../shared/components/common/Input';
 import { Button } from '../../../shared/components/common/Button';
-import { Wrench, Phone, Lock, AlertCircle } from 'lucide-react';
+import { Phone, Lock, AlertCircle } from 'lucide-react';
+import { FluidCanvasBackground } from '../../../shared/components/common/FluidCanvasBackground';
+import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
 
 export const Login: React.FC = () => {
   const [mobile, setMobile] = useState('');
@@ -44,28 +46,40 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-1.5 bg-hazard-stripes"></div>
+    <div className="relative min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 overflow-hidden font-sans">
+      {/* ── Background Canvas ── */}
+      <FluidCanvasBackground />
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+      {/* ── Top Floating Controls ── */}
+      <div className="absolute top-4 right-4 z-20">
+        <AnimatedThemeToggle variant="icon-only" />
+      </div>
+
+      {/* ── Brand Header ── */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="flex justify-center">
-          <div className="w-14 h-14 rounded-xl bg-yellow-400 flex items-center justify-center text-zinc-950 shadow-yellow-glow">
-            <Wrench className="w-8 h-8 stroke-[2.5]" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="MOMZ'Z Logo"
+            className="w-14 h-14 rounded-2xl object-cover bg-black border border-slate-200 dark:border-white/15 shadow-md transform hover:scale-105 transition-all"
+          />
         </div>
-        <h2 className="mt-4 text-center text-3xl font-extrabold tracking-tight text-zinc-100 uppercase font-sans">
-          MOMZ'Z
+        <h2 className="mt-4 text-center text-3xl font-black tracking-wider uppercase font-display text-slate-900 dark:text-white">
+          MOMZ<span className="text-amber-500 dark:text-amber-400 font-black">'Z</span> AUTO
         </h2>
-        <p className="mt-1 text-center text-xs font-mono text-zinc-400 uppercase tracking-widest">
-          AUTHENTICATE SYSTEM ACCESS
+        <p className="mt-1 text-center text-xs font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+          GARAGE WORKSPACE SIGN IN
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="industrial-card py-8 px-6 shadow-2xl rounded-xl sm:px-10">
+      {/* ── Login Card ── */}
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <div className="glass-modern-card relative overflow-hidden py-8 px-6 sm:px-10 rounded-3xl shadow-xl hover:border-amber-400/40 transition-all">
+          <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/70 to-transparent pointer-events-none" />
+
           {errorMsg && (
-            <div className="mb-6 p-3 bg-red-950/60 border border-red-800/80 rounded-lg flex items-center gap-2 text-red-300 text-xs font-mono">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+            <div className="mb-6 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-2.5 text-rose-700 dark:text-rose-300 text-xs font-mono">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -77,7 +91,7 @@ export const Login: React.FC = () => {
               placeholder="e.g. 9876543210"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
-              icon={<Phone className="w-4 h-4" />}
+              icon={<Phone className="w-4 h-4 text-amber-500" />}
               required
             />
 
@@ -87,20 +101,20 @@ export const Login: React.FC = () => {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              icon={<Lock className="w-4 h-4" />}
+              icon={<Lock className="w-4 h-4 text-amber-500" />}
               required
             />
 
             <div className="pt-2">
-              <Button type="submit" variant="primary" fullWidth isLoading={isLoading}>
-                Access System
+              <Button type="submit" variant="primary" fullWidth isLoading={isLoading} className="font-bold py-3 text-sm">
+                Sign In to Workspace
               </Button>
             </div>
           </form>
 
-          <div className="mt-6 text-center text-xs text-zinc-400 font-mono">
-            New technician or admin?{' '}
-            <Link to="/auth" className="text-yellow-400 hover:text-yellow-300 font-semibold underline">
+          <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400 font-mono">
+            New technician or staff?{' '}
+            <Link to="/auth" className="text-amber-600 dark:text-amber-400 hover:underline font-bold">
               Create Account
             </Link>
           </div>

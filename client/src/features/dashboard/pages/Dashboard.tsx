@@ -15,8 +15,6 @@ import {
   ShieldCheck,
   Trophy,
   Users,
-  Volume2,
-  VolumeX,
   Wrench,
   Zap,
   TrendingUp,
@@ -36,17 +34,22 @@ import { useGetCatalogQuery } from "../../catalog/api/catalogApi";
 import { DashboardBentoSkeleton } from "../../../shared/components/common/PageShimmer";
 import { NumberTicker } from "../../../shared/components/magicui/NumberTicker";
 import { GlobalSearchModal } from "../../../shared/components/common/GlobalSearchModal";
-import { isCompletionSoundEnabled, setCompletionSoundEnabled } from "../../../shared/utils/completionSound";
 import { AnimatedThemeToggle } from "../../../shared/components/magicui/AnimatedThemeToggle";
 import { FluidCanvasBackground } from "../../../shared/components/common/FluidCanvasBackground";
 import { BorderBeam } from "../../../shared/components/magicui/BorderBeam";
+
+const heroSlideMeta = [
+  { title: "Live Garage Flow", badge: "Live Flow" },
+  { title: "Quality Control & QA", badge: "QA Inspection" },
+  { title: "Garage Leaderboard", badge: "Leaderboard" },
+  { title: "Inventory & Services", badge: "Catalog & Parts" },
+];
 
 export const Dashboard: React.FC = () => {
   const { user, isAdmin } = useAuth();
   const currentUserId = user?.id || (user as any)?._id;
   const navigate = useNavigate();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isSoundOn, setIsSoundOn] = useState(isCompletionSoundEnabled());
   const [heroSlide, setHeroSlide] = useState(0);
   const [pinnedIndex, setPinnedIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right'>('left');
@@ -189,31 +192,22 @@ export const Dashboard: React.FC = () => {
             </div>
             <div className="leading-tight">
               <div className="flex items-center gap-1.5">
-                <p className="text-[10px] font-mono uppercase tracking-widest text-amber-600/80 dark:text-amber-400/80 font-bold">
+                <p className="text-xs font-mono uppercase tracking-widest text-amber-600/80 dark:text-amber-400/80 font-bold">
                   Good {greeting}
                 </p>
                 <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
-                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase">{user?.role}</span>
+                <span className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase">{user?.role}</span>
               </div>
-              <p className="text-[15px] font-black text-slate-900 dark:text-white">
+              <p className="text-base font-black text-slate-900 dark:text-white">
                 {user?.name?.split(" ")[0]}
               </p>
             </div>
           </Link>
 
           <div className="flex items-center gap-1.5">
-            <span className="hidden sm:inline text-[11px] font-mono text-slate-400 dark:text-slate-500 mr-1">
+            <span className="hidden sm:inline text-xs font-mono text-slate-400 dark:text-slate-500 mr-1">
               {dateStr}
             </span>
-            <button
-              onClick={() => { const n = !isSoundOn; setIsSoundOn(n); setCompletionSoundEnabled(n); }}
-              className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition active:scale-95
-                         backdrop-blur-xl bg-white/70 dark:bg-white/[0.07] border border-white/90 dark:border-white/[0.1]
-                         text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400"
-              title={isSoundOn ? "Sound on" : "Sound muted"}
-            >
-              {isSoundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            </button>
             <AnimatedThemeToggle variant="icon-only" />
           </div>
         </header>
@@ -225,10 +219,10 @@ export const Dashboard: React.FC = () => {
                      glass-modern-card rounded-2xl shadow-xs hover:shadow-md hover:border-amber-400/50 dark:hover:border-amber-500/30"
         >
           <Search className="w-4 h-4 shrink-0 text-amber-500 dark:text-amber-400" />
-          <span className="text-[13px] font-mono flex-1 truncate text-slate-400 dark:text-slate-500">
+          <span className="text-sm font-mono flex-1 truncate text-slate-400 dark:text-slate-500">
             Search vehicles, plates, jobs, customers…
           </span>
-          <kbd className="hidden sm:inline text-[10px] px-2 py-0.5 rounded-lg font-mono bg-black/5 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500 border border-black/5 dark:border-white/[0.08]">
+          <kbd className="hidden sm:inline text-xs px-2 py-0.5 rounded-lg font-mono bg-black/5 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500 border border-black/5 dark:border-white/[0.08]">
             ⌘K
           </kbd>
         </button>
@@ -240,7 +234,7 @@ export const Dashboard: React.FC = () => {
         >
           <div className="flex items-center justify-between mb-3 px-0.5">
             <div className="flex items-center gap-2">
-              <h2 className="flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              <h2 className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                 <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500/30" />
                 Priority Vehicle
               </h2>
@@ -287,7 +281,7 @@ export const Dashboard: React.FC = () => {
                     <ChevronRight className="w-3 h-3" />
                   </button>
 
-                  <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 hidden sm:inline ml-1">
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 hidden sm:inline ml-1">
                     Swipe left/right
                   </span>
                 </div>
@@ -296,7 +290,7 @@ export const Dashboard: React.FC = () => {
 
             <button
               onClick={() => navigate('/jobs')}
-              className="text-[11px] font-mono text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-1 transition"
+              className="text-xs font-mono text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-1 transition"
             >
               <span>View all</span>
               <ArrowUpRight className="w-3 h-3" />
@@ -382,10 +376,14 @@ export const Dashboard: React.FC = () => {
                       style={{ transformStyle: 'preserve-3d', touchAction: 'pan-y' }}
                       onClick={() => {
                         if (!isDraggingRef.current) {
-                          navigate(`/jobs/${jobId}`);
+                          if (jobId) {
+                            navigate(`/jobs/${jobId}`);
+                          } else {
+                            navigate('/jobs');
+                          }
                         }
                       }}
-                      className={`${modernCard} p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:border-amber-400/50 dark:hover:border-amber-400/40 cursor-grab active:cursor-grabbing select-none`}
+                      className={`${modernCard} p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:border-amber-400/50 dark:hover:border-amber-400/40 cursor-pointer select-none`}
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
                         {curPinned.thumbnailUrl ? (
@@ -402,13 +400,13 @@ export const Dashboard: React.FC = () => {
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight truncate">
+                            <p className="text-base font-black text-slate-900 dark:text-white leading-tight truncate">
                               {curPinned.vehicleName}
                             </p>
-                            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-400/15 text-amber-700 dark:text-amber-300">
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-amber-400/15 text-amber-700 dark:text-amber-300">
                               {curPinned.vehicleNumber}
                             </span>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10">
+                            <span className="inline-flex items-center gap-1 text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/10">
                               {isPinnedForAll ? (
                                 <Globe className="w-2.5 h-2.5 text-amber-500" />
                               ) : (
@@ -418,7 +416,7 @@ export const Dashboard: React.FC = () => {
                             </span>
                           </div>
 
-                          <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-1 truncate">
+                          <p className="text-xs font-mono text-slate-400 dark:text-slate-500 mt-1 truncate">
                             {pinnerDisplay === 'Garage Priority' ? 'Garage Priority' : `Pinned by ${pinnerDisplay}`} • {curPinned.customerName ? `Client: ${curPinned.customerName}` : 'In Service Bay'}
                           </p>
                         </div>
@@ -427,7 +425,7 @@ export const Dashboard: React.FC = () => {
                       {/* Progress Bar & Arrow */}
                       <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-white/[0.06]">
                         <div className="space-y-1 sm:text-right">
-                          <div className="flex items-center sm:justify-end gap-1.5 text-[11px] font-mono">
+                          <div className="flex items-center sm:justify-end gap-1.5 text-xs font-mono">
                             <span className="font-bold text-amber-600 dark:text-amber-400">{jobProgress}%</span>
                             <span className="text-slate-400">({completedTasks}/{totalJobTasks} tasks)</span>
                           </div>
@@ -451,10 +449,10 @@ export const Dashboard: React.FC = () => {
           ) : (
             <div
               onClick={() => navigate('/jobs')}
-              className={`${modernCard} p-4 text-center py-5 space-y-1 hover:border-amber-400/50 dark:hover:border-amber-400/40`}
+              className={`${modernCard} p-4 text-center py-5 space-y-1 hover:border-amber-400/50 dark:hover:border-amber-400/40 cursor-pointer`}
             >
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No Pinned Priority Vehicles</p>
-              <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No Pinned Priority Vehicles</p>
+              <p className="text-xs font-mono text-slate-400 dark:text-slate-500">
                 Pin critical vehicle jobs to monitor them here.
               </p>
             </div>
@@ -473,22 +471,41 @@ export const Dashboard: React.FC = () => {
           {/* Active border beam */}
           <BorderBeam size={280} duration={8} colorFrom="#f59e0b" colorTo="#fbbf24" borderWidth={1.2} />
 
-          {/* Carousel Header Controls & Slide Indicators */}
-          <div className="relative z-10 flex items-center justify-between gap-3 mb-3.5">
-            {/* Slide Pagination Dots */}
-            <div className="flex items-center gap-1.5">
-              {[0, 1, 2, 3].map((idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setHeroSlide(idx)}
-                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                    heroSlide === idx
-                      ? "w-7 bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"
-                      : "w-2 bg-slate-300 dark:bg-white/20 hover:bg-slate-400 dark:hover:bg-white/40"
-                  }`}
-                  aria-label={`Go to slide ${idx + 1}`}
-                />
-              ))}
+          {/* Carousel Header Controls & Slide Indicators with Persistent Title */}
+          <div className="relative z-10 flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              {/* Slide Pagination Dots with Tooltips */}
+              <div className="flex items-center gap-1.5">
+                {heroSlideMeta.map((slide, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setHeroSlide(idx)}
+                    className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                      heroSlide === idx
+                        ? "w-7 bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                        : "w-2 bg-slate-300 dark:bg-white/20 hover:bg-slate-400 dark:hover:bg-white/40"
+                    }`}
+                    aria-label={`Go to slide ${idx + 1}: ${slide.title}`}
+                    title={`Slide ${idx + 1}: ${slide.title}`}
+                  />
+                ))}
+              </div>
+
+              {/* Persistent Slide Name Label */}
+              <div className="flex items-center gap-1.5 pl-1 border-l border-slate-200 dark:border-white/10">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={heroSlide}
+                    initial={{ opacity: 0, x: -4 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 4 }}
+                    transition={{ duration: 0.18 }}
+                    className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+                  >
+                    {heroSlideMeta[heroSlide].badge}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
             </div>
 
             {/* Prev / Next Arrows */}
@@ -496,22 +513,22 @@ export const Dashboard: React.FC = () => {
               <button
                 onClick={() => setHeroSlide((prev) => (prev === 0 ? 3 : prev - 1))}
                 className="w-7 h-7 rounded-lg flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition active:scale-90 cursor-pointer"
-                title="Previous Slide"
+                title={`Previous: ${heroSlideMeta[(heroSlide === 0 ? 3 : heroSlide - 1)].title}`}
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setHeroSlide((prev) => (prev + 1) % 4)}
                 className="w-7 h-7 rounded-lg flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition active:scale-90 cursor-pointer"
-                title="Next Slide"
+                title={`Next: ${heroSlideMeta[((heroSlide + 1) % 4)].title}`}
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
-          {/* Carousel Slide Content */}
-          <div className="relative z-10 min-h-[145px] flex items-center">
+          {/* Carousel Slide Content with unified height to eliminate layout jump */}
+          <div className="relative z-10 min-h-[160px] sm:min-h-[155px] flex items-center">
             <AnimatePresence mode="wait">
               {/* Slide 0: Live Garage Flow */}
               {heroSlide === 0 && (
@@ -525,20 +542,17 @@ export const Dashboard: React.FC = () => {
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2.5">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                         Live Garage Flow
                       </span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
                         ⚡ {velocity}% Velocity
                       </span>
                     </div>
 
                     <div className="flex items-end gap-3.5 mb-2.5">
-                      <span
-                        className="font-black leading-none text-slate-900 dark:text-white tracking-tight"
-                        style={{ fontSize: "clamp(44px,10vw,68px)", fontVariantNumeric: "tabular-nums" }}
-                      >
+                      <span className="font-display font-black leading-none text-slate-900 dark:text-white tracking-tight text-5xl sm:text-6xl tabular-nums">
                         <NumberTicker value={activeCount} />
                       </span>
                       <div className="pb-1">
@@ -560,7 +574,7 @@ export const Dashboard: React.FC = () => {
                         {velocity}%
                       </span>
                     </div>
-                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                    <p className="text-xs font-mono text-slate-400 dark:text-slate-500">
                       {totalDone} of {totalAllTasks} tasks completed · daily turnover
                     </p>
                   </div>
@@ -568,11 +582,11 @@ export const Dashboard: React.FC = () => {
                   <div className="hidden sm:flex flex-col gap-2 shrink-0 w-[130px]">
                     <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
                       <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{completedCount}</p>
-                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Completed</p>
+                      <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Completed</p>
                     </div>
                     <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
                       <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{totalCount}</p>
-                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Lifetime</p>
+                      <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Lifetime</p>
                     </div>
                   </div>
                 </motion.div>
@@ -590,22 +604,19 @@ export const Dashboard: React.FC = () => {
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2.5">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300">
                         <ShieldCheck className="w-3.5 h-3.5" />
                         Quality Control & QA
                       </span>
                       {qaCount > 0 && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
                           {qaCount} Awaiting Sign-Off
                         </span>
                       )}
                     </div>
 
                     <div className="flex items-end gap-3.5 mb-2.5">
-                      <span
-                        className="font-black leading-none text-purple-600 dark:text-purple-400 tracking-tight"
-                        style={{ fontSize: "clamp(44px,10vw,68px)", fontVariantNumeric: "tabular-nums" }}
-                      >
+                      <span className="font-display font-black leading-none text-purple-600 dark:text-purple-400 tracking-tight text-5xl sm:text-6xl tabular-nums">
                         <NumberTicker value={qaCount} />
                       </span>
                       <div className="pb-1">
@@ -614,7 +625,7 @@ export const Dashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
                       Ensure 100% inspection accuracy before customer delivery. Instant technician time log stamps and quality audits.
                     </p>
                   </div>
@@ -622,11 +633,11 @@ export const Dashboard: React.FC = () => {
                   <div className="hidden sm:flex flex-col gap-2 shrink-0 w-[130px]">
                     <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
                       <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{qaCount}</p>
-                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">QA Pending</p>
+                      <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">QA Pending</p>
                     </div>
                     <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
                       <p className="text-2xl font-black text-sky-600 dark:text-sky-400">{totalDone}</p>
-                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Done Today</p>
+                      <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Done Today</p>
                     </div>
                   </div>
                 </motion.div>
@@ -644,20 +655,17 @@ export const Dashboard: React.FC = () => {
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2.5">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
                         <Trophy className="w-3.5 h-3.5 text-amber-500" />
                         Garage Leaderboard
                       </span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
                         {totalUsers} Staff Members
                       </span>
                     </div>
 
                     <div className="flex items-end gap-3.5 mb-2.5">
-                      <span
-                        className="font-black leading-none text-amber-500 dark:text-amber-400 tracking-tight"
-                        style={{ fontSize: "clamp(44px,10vw,68px)", fontVariantNumeric: "tabular-nums" }}
-                      >
+                      <span className="font-display font-black leading-none text-amber-500 dark:text-amber-400 tracking-tight text-5xl sm:text-6xl tabular-nums">
                         <NumberTicker value={topScore} />
                       </span>
                       <div className="pb-1">
@@ -668,7 +676,7 @@ export const Dashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
                       Recognizing top garage mechanics with live task points, real-time speed bonuses, and technician rankings.
                     </p>
                   </div>
@@ -676,11 +684,11 @@ export const Dashboard: React.FC = () => {
                   <div className="hidden sm:flex flex-col gap-2 shrink-0 w-[130px]">
                     <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
                       <p className="text-2xl font-black text-amber-500 dark:text-amber-400">{topScore}</p>
-                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Top Points</p>
+                      <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Top Points</p>
                     </div>
                     <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
                       <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{totalUsers}</p>
-                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Active Staff</p>
+                      <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Active Staff</p>
                     </div>
                   </div>
                 </motion.div>
@@ -698,20 +706,17 @@ export const Dashboard: React.FC = () => {
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2.5">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-sky-500/10 border border-sky-500/20 text-sky-700 dark:text-sky-400">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-sky-500/10 border border-sky-500/20 text-sky-700 dark:text-sky-400">
                         <Package className="w-3.5 h-3.5" />
                         Inventory & Services
                       </span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
                         Fast Job Card Sync
                       </span>
                     </div>
 
                     <div className="flex items-end gap-3.5 mb-2.5">
-                      <span
-                        className="font-black leading-none text-sky-600 dark:text-sky-400 tracking-tight"
-                        style={{ fontSize: "clamp(44px,10vw,68px)", fontVariantNumeric: "tabular-nums" }}
-                      >
+                      <span className="font-display font-black leading-none text-sky-600 dark:text-sky-400 tracking-tight text-5xl sm:text-6xl tabular-nums">
                         <NumberTicker value={catalogCount} />
                       </span>
                       <div className="pb-1">
@@ -720,7 +725,7 @@ export const Dashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
                       Instant price calculation, stock depletion warning, and seamless custom checklist addition on any job card.
                     </p>
                   </div>
@@ -728,11 +733,11 @@ export const Dashboard: React.FC = () => {
                   <div className="hidden sm:flex flex-col gap-2 shrink-0 w-[130px]">
                     <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
                       <p className="text-2xl font-black text-sky-600 dark:text-sky-400">{catalogCount}</p>
-                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">In Catalog</p>
+                      <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">In Catalog</p>
                     </div>
                     <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
                       <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{totalCount}</p>
-                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Jobs Served</p>
+                      <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Jobs Served</p>
                     </div>
                   </div>
                 </motion.div>
@@ -746,22 +751,22 @@ export const Dashboard: React.FC = () => {
         {/* ── 5. BENTO OPERATIONS HUB (Modular Japanese Bento Grid) ── */}
         <section>
           <div className="flex items-center justify-between mb-3 px-0.5">
-            <h2 className="flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            <h2 className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
               <Zap className="w-3.5 h-3.5 text-amber-500" />
               Operations Hub
             </h2>
-            <span className="text-[10px] font-mono text-slate-400 dark:text-slate-600">Bento Matrix</span>
+            <span className="text-xs font-mono text-slate-400 dark:text-slate-600">Bento Matrix</span>
           </div>
 
           <div
-            className="grid grid-cols-2 md:grid-cols-4 gap-3"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-3"
             style={{ gridAutoRows: "minmax(145px,auto)" }}
           >
 
             {/* Tile 1: Active Vehicles Listing Quick Access (2 cols) */}
             <div
               onClick={() => navigate("/jobs")}
-              className={`col-span-2 md:col-span-2 ${modernCard} p-5 flex flex-col justify-between
+              className={`col-span-2 lg:col-span-2 ${modernCard} p-5 flex flex-col justify-between
                           hover:border-amber-400/50 dark:hover:border-amber-400/40`}
             >
               <div className="flex items-start justify-between">
@@ -770,12 +775,12 @@ export const Dashboard: React.FC = () => {
                     <Car className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight">Active Vehicles</p>
-                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Service bays & queue</p>
+                    <p className="text-base font-black text-slate-900 dark:text-white leading-tight">Active Vehicles</p>
+                    <p className="text-xs font-mono text-slate-400 dark:text-slate-500">Service bays & queue</p>
                   </div>
                 </div>
 
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   {activeCount} In Bay
                 </span>
@@ -783,13 +788,13 @@ export const Dashboard: React.FC = () => {
 
               {/* Interactive quick filter chips */}
               <div className="flex items-center gap-2 pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
-                <span className="text-[10px] font-mono text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-xs font-mono text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md font-semibold">
                   All Bays
                 </span>
-                <span className="text-[10px] font-mono text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-xs font-mono text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md font-semibold">
                   In Progress
                 </span>
-                <span className="text-[10px] font-mono text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-xs font-mono text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md font-semibold">
                   Work Cards
                 </span>
                 <ArrowUpRight className="w-4 h-4 text-amber-500 ml-auto" />
@@ -799,7 +804,7 @@ export const Dashboard: React.FC = () => {
             {/* Tile 2: QA Sign-Off (2 cols) */}
             <div
               onClick={() => navigate("/jobs", { state: { view: "verify" } })}
-              className={`col-span-2 md:col-span-2 ${modernCard} p-5 flex flex-col justify-between
+              className={`col-span-2 lg:col-span-2 ${modernCard} p-5 flex flex-col justify-between
                           hover:border-purple-400/50 dark:hover:border-purple-400/40`}
             >
               <div className="flex items-start justify-between">
@@ -808,17 +813,17 @@ export const Dashboard: React.FC = () => {
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight">QA Sign-Off</p>
-                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Supervisor inspection</p>
+                    <p className="text-base font-black text-slate-900 dark:text-white leading-tight">QA Sign-Off</p>
+                    <p className="text-xs font-mono text-slate-400 dark:text-slate-500">Supervisor inspection</p>
                   </div>
                 </div>
 
                 {qaCount > 0 ? (
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-black bg-purple-500 text-white animate-pulse shadow-sm">
+                  <span className="px-2.5 py-1 rounded-full text-xs font-mono font-black bg-purple-500 text-white animate-pulse shadow-sm">
                     {qaCount} Ready
                   </span>
                 ) : (
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                     All Passed
                   </span>
                 )}
@@ -826,13 +831,13 @@ export const Dashboard: React.FC = () => {
 
               {/* Interactive preview indicators */}
               <div className="flex items-center gap-2 pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
-                <span className="text-[10px] font-mono text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-xs font-mono text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-md font-semibold">
                   Mechanical
                 </span>
-                <span className="text-[10px] font-mono text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-xs font-mono text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-md font-semibold">
                   Cosmetic
                 </span>
-                <span className="text-[10px] font-mono text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-xs font-mono text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-md font-semibold">
                   Delivery Sign
                 </span>
                 <ArrowUpRight className="w-4 h-4 text-purple-500 ml-auto" />
@@ -842,20 +847,20 @@ export const Dashboard: React.FC = () => {
             {/* Tile 2: Leaderboard (1 col) */}
             <div
               onClick={() => navigate("/leaderboard")}
-              className={`col-span-1 md:col-span-1 ${modernCard} p-4 flex flex-col justify-between
+              className={`col-span-1 lg:col-span-1 ${modernCard} p-4 flex flex-col justify-between
                           hover:border-amber-400/50 dark:hover:border-amber-400/40`}
             >
               <div className="flex items-start justify-between gap-1">
                 <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs">
                   <Trophy className="w-4 h-4" />
                 </div>
-                <span className="px-2 py-0.5 rounded-md text-[9px] font-mono font-black bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                <span className="px-2 py-0.5 rounded-md text-xs font-mono font-black bg-amber-500/15 text-amber-700 dark:text-amber-400">
                   {topScore} QP
                 </span>
               </div>
               <div className="pt-2">
-                <p className="text-[13px] font-black text-slate-900 dark:text-white truncate">Leaderboard</p>
-                <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                <p className="text-sm font-black text-slate-900 dark:text-white truncate">Leaderboard</p>
+                <p className="text-xs font-mono text-slate-400 dark:text-slate-500 truncate mt-0.5">
                   🏆 #{1} {topTech?.name?.split(" ")[0] || "Technician"}
                 </p>
               </div>
@@ -864,20 +869,20 @@ export const Dashboard: React.FC = () => {
             {/* Tile 3: Work Activity Logs (1 col) */}
             <div
               onClick={() => navigate("/work-logs")}
-              className={`col-span-1 md:col-span-1 ${modernCard} p-4 flex flex-col justify-between
+              className={`col-span-1 lg:col-span-1 ${modernCard} p-4 flex flex-col justify-between
                           hover:border-rose-400/50 dark:hover:border-rose-400/40`}
             >
               <div className="flex items-start justify-between gap-1">
                 <div className="w-9 h-9 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-xs">
                   <Flame className="w-4 h-4" />
                 </div>
-                <span className="px-2 py-0.5 rounded-md text-[9px] font-mono font-black bg-rose-500/15 text-rose-700 dark:text-rose-400">
+                <span className="px-2 py-0.5 rounded-md text-xs font-mono font-black bg-rose-500/15 text-rose-700 dark:text-rose-400">
                   {totalDone} Logged
                 </span>
               </div>
               <div className="pt-2">
-                <p className="text-[13px] font-black text-slate-900 dark:text-white truncate">Work Logs</p>
-                <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                <p className="text-sm font-black text-slate-900 dark:text-white truncate">Work Logs</p>
+                <p className="text-xs font-mono text-slate-400 dark:text-slate-500 truncate mt-0.5">
                   Live task activity
                 </p>
               </div>
@@ -886,7 +891,7 @@ export const Dashboard: React.FC = () => {
             {/* Tile 4: Inventory (2 cols) */}
             <div
               onClick={() => navigate("/inventory")}
-              className={`col-span-2 md:col-span-2 ${modernCard} p-5 flex flex-col justify-between
+              className={`col-span-2 lg:col-span-2 ${modernCard} p-5 flex flex-col justify-between
                           hover:border-sky-400/50 dark:hover:border-sky-400/40`}
             >
               <div className="flex items-start justify-between">
@@ -895,23 +900,23 @@ export const Dashboard: React.FC = () => {
                     <Package className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight">Parts Inventory</p>
-                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Catalog & stock levels</p>
+                    <p className="text-base font-black text-slate-900 dark:text-white leading-tight">Parts Inventory</p>
+                    <p className="text-xs font-mono text-slate-400 dark:text-slate-500">Catalog & stock levels</p>
                   </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-black bg-sky-500/15 text-sky-700 dark:text-sky-400">
+                <span className="px-2.5 py-1 rounded-full text-xs font-mono font-black bg-sky-500/15 text-sky-700 dark:text-sky-400">
                   {catalogCount} items
                 </span>
               </div>
 
               <div className="flex items-center gap-2 pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
-                <span className="text-[10px] font-mono text-sky-700 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-xs font-mono text-sky-700 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-md font-semibold">
                   Spares
                 </span>
-                <span className="text-[10px] font-mono text-sky-700 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-xs font-mono text-sky-700 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-md font-semibold">
                   Consumables
                 </span>
-                <span className="text-[10px] font-mono text-sky-700 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-xs font-mono text-sky-700 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-md font-semibold">
                   Supplies
                 </span>
                 <ArrowUpRight className="w-4 h-4 text-sky-500 ml-auto" />
@@ -921,7 +926,7 @@ export const Dashboard: React.FC = () => {
             {/* Tile 5: Vehicle Archives (2 cols) */}
             <div
               onClick={() => navigate("/jobs", { state: { view: "all" } })}
-              className={`col-span-2 md:col-span-2 ${modernCard} p-5 flex flex-col justify-between
+              className={`col-span-2 lg:col-span-2 ${modernCard} p-5 flex flex-col justify-between
                           hover:border-teal-400/50 dark:hover:border-teal-400/40`}
             >
               <div className="flex items-start justify-between">
@@ -930,20 +935,20 @@ export const Dashboard: React.FC = () => {
                     <History className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-[15px] font-black text-slate-900 dark:text-white leading-tight">Lifetime Archives</p>
-                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Service histories & bills</p>
+                    <p className="text-base font-black text-slate-900 dark:text-white leading-tight">Lifetime Archives</p>
+                    <p className="text-xs font-mono text-slate-400 dark:text-slate-500">Service histories & bills</p>
                   </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-black bg-teal-500/15 text-teal-700 dark:text-teal-400">
+                <span className="px-2.5 py-1 rounded-full text-xs font-mono font-black bg-teal-500/15 text-teal-700 dark:text-teal-400">
                   {totalCount} vehicles
                 </span>
               </div>
 
               <div className="flex items-center gap-2 pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
-                <span className="text-[10px] font-mono text-teal-700 dark:text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-xs font-mono text-teal-700 dark:text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-md font-semibold">
                   Past Invoices
                 </span>
-                <span className="text-[10px] font-mono text-teal-700 dark:text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-md font-semibold">
+                <span className="text-xs font-mono text-teal-700 dark:text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-md font-semibold">
                   Customer History
                 </span>
                 <ArrowUpRight className="w-4 h-4 text-teal-500 ml-auto" />
@@ -956,7 +961,7 @@ export const Dashboard: React.FC = () => {
         {/* ── 6. ADMIN CONTROL TILES ── */}
         {isAdmin && (
           <section>
-            <h2 className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-widest mb-3 text-slate-400 dark:text-slate-500">
+            <h2 className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest mb-3 text-slate-400 dark:text-slate-500">
               <Clock className="w-3 h-3 text-amber-500" />
               Admin Controls
             </h2>
@@ -974,8 +979,8 @@ export const Dashboard: React.FC = () => {
                     {a.icon}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[13px] font-black text-slate-900 dark:text-white truncate">{a.label}</p>
-                    <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate">{a.sub}</p>
+                    <p className="text-sm font-black text-slate-900 dark:text-white truncate">{a.label}</p>
+                    <p className="text-xs font-mono text-slate-400 dark:text-slate-500 truncate">{a.sub}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 ml-auto shrink-0" />
                 </div>
@@ -983,6 +988,9 @@ export const Dashboard: React.FC = () => {
             </div>
           </section>
         )}
+
+        {/* Mobile scroll-fade gradient indicator so content doesn't abruptly clip before dock */}
+        <div className="sm:hidden fixed bottom-16 inset-x-0 h-10 bg-gradient-to-t from-[#eff1f5]/90 dark:from-[#090a12]/90 to-transparent pointer-events-none z-20" />
 
       </main>
 

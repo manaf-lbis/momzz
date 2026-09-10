@@ -28,10 +28,25 @@ export interface LegalSection {
     en: string;
     ml: string;
   };
-  iconName: 'Scale' | 'ShieldCheck' | 'Camera' | 'Car' | 'Lock' | 'Database' | 'AlertTriangle' | 'FileText';
+  iconName: 'Scale' | 'ShieldCheck' | 'Camera' | 'Car' | 'Lock' | 'Database' | 'AlertTriangle' | 'FileText' | 'Code' | 'Server';
   statutoryBadges: string[];
   clauses: LegalClause[];
 }
+
+export const LEGAL_METADATA = {
+  version: '2026.1',
+  lastUpdated: 'September 2026',
+  effectiveDate: 'September 10, 2026',
+  jurisdiction: 'Kerala, India',
+  statutes: [
+    'Digital Personal Data Protection Act (DPDPA), 2023',
+    'Information Technology Act, 2000 (Sections 43, 43A, 65, 66, 72A)',
+    'Indian Copyright Act, 1957 (Sections 14, 51, 63)',
+    'Indian Contract Act, 1872 (Sections 148–181 Bailment)',
+    'CERT-In Cyber Security Directions, 2022',
+    'Bharatiya Nyaya Sanhita (BNS), 2023',
+  ],
+};
 
 export const LEGAL_SECTIONS: LegalSection[] = [
   {
@@ -342,6 +357,151 @@ export const LEGAL_SECTIONS: LegalSection[] = [
         body: {
           en: 'To the maximum extent permitted by applicable Indian laws, the cumulative aggregate liability of the workshop enterprise and MOMZ\'Z software for any claims arising under or related to vehicle servicing or platform usage shall be strictly capped at the direct labor invoice amount paid for that specific service job card. All disputes shall be subject to the exclusive jurisdiction of the competent courts in Kerala, India.',
           ml: 'നിയമാനുസൃതമായ പരമാവധി പരിധിയിൽ, ഏതെങ്കിലും തർക്കങ്ങളിലെ ബാധ്യത ആ പ്രത്യേക സർവീസിന് നൽകിയ ലേബർ നിരക്കിൽ മാത്രമായി പരിമിതപ്പെടുത്തിയിരിക്കുന്നു. എല്ലാ നിയമപരമായ തർക്കങ്ങളും കേരളത്തിലെ കോടതികളുടെ അധികാരപരിധിക്ക് വിധേയമായിരിക്കും.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'anti-reverse-engineering',
+    number: '06',
+    title: {
+      en: 'Software Intellectual Property & Anti-Reverse Engineering Shield',
+      ml: 'സോഫ്റ്റ്‌വെയർ ബൗദ്ധിക സ്വത്തവകാശവും റിവേഴ്സ് എഞ്ചിനീയറിംഗ് വിരുദ്ധ സംരക്ഷണവും',
+    },
+    subtitle: {
+      en: 'Absolute prohibition of source code extraction, decompilation, scraping, cloning & trade-secret misappropriation',
+      ml: 'സോഴ്സ് കോഡ് ചോർത്തൽ, ഡീകംപൈലേഷൻ, അനധികൃത പകർത്തൽ എന്നിവയ്‌ക്കെതിരെയുള്ള കർശന നിയമ സംരക്ഷണം',
+    },
+    iconName: 'Code',
+    statutoryBadges: [
+      'Indian Copyright Act, 1957 (Sec 14, 51, 63)',
+      'IT Act 2000 (Sec 43, 65, 66)',
+      'Bharatiya Nyaya Sanhita (Trade Secrets)',
+    ],
+    clauses: [
+      {
+        id: 'proprietary-ownership',
+        clauseNumber: '6.1',
+        title: {
+          en: 'Exclusive Proprietary Ownership & Trade Secrets',
+          ml: 'പൂർണ്ണ ഉടമസ്ഥാവകാശവും വ്യാപാര രഹസ്യങ്ങളും',
+        },
+        body: {
+          en: 'The MOMZ\'Z garage operating platform, including its source code, object code, API architecture, frontend layouts, database schemas, camera watermarking algorithms, real-time sync systems, workflows, graphics, and trade dress, is the exclusive proprietary intellectual property of MOMZ\'Z Auto Garage and its licensors. All rights not expressly granted herein are strictly reserved under the Indian Copyright Act, 1957.',
+          ml: 'MOMZ\'Z സോഫ്റ്റ്‌വെയറിന്റെ സോഴ്സ് കോഡ്, ആപ്ലിക്കേഷൻ രൂപകൽപ്പന, ഡാറ്റാബേസ് ഘടന, ക്യാമറ വാട്ടർമാർക്കിംഗ് സംവിധാനങ്ങൾ എന്നിവ MOMZ\'Z-ന്റെ പൂർണ്ണ ബൗദ്ധിക സ്വത്തവകാശമാണ്. ഇതിന്റെ പകർപ്പവകാശം 1957-ലെ ഇന്ത്യൻ പകർപ്പവകാശ നിയമപ്രകാരം പൂർണ്ണമായും സംരക്ഷിക്കപ്പെട്ടിരിക്കുന്നു.',
+        },
+      },
+      {
+        id: 'no-reverse-engineering',
+        clauseNumber: '6.2',
+        title: {
+          en: 'Strict Prohibition Against Reverse Engineering & Decompilation',
+          ml: 'റിവേഴ്സ് എഞ്ചിനീയറിംഗും കോഡ് ചോർത്തലും കർശനമായി നിരോധിച്ചിരിക്കുന്നു',
+        },
+        body: {
+          en: 'Users, technicians, administrators, competitors, and third parties are strictly prohibited from: (a) reverse engineering, decompiling, disassembling, or attempting to derive the source code or underlying architecture of the Platform; (b) inspecting, dumping, or extracting production client bundles, JavaScript bytecode, or internal API contracts; (c) duplicating, cloning, or creating derivative works of the garage management logic; or (d) bypassing, neutralizing, or tampering with digital rights management, security tokens, or authentication controls.',
+          ml: 'ആപ്ലിക്കേഷൻ റിവേഴ്സ് എഞ്ചിനീയറിംഗ് ചെയ്യുക, ഡീകംപൈൽ ചെയ്ത് സോഴ്സ് കോഡ് വേർതിരിച്ചെടുക്കാൻ ശ്രമിക്കുക, സെക്യൂരിറ്റി ടോക്കണുകൾ മറികടക്കുക, അല്ലെങ്കിൽ ഈ സിസ്റ്റം അനുകരിച്ച് മറ്റൊരു സംവിധാനം നിർമ്മിക്കുക എന്നിവ കർശനമായി നിരോധിച്ചിരിക്കുന്നു.',
+        },
+        highlight: {
+          en: 'NON-DISASSEMBLY SHIELD: Any attempt to decompile, probe, scrape, or extract source code constitutes a direct violation of Section 65 of the IT Act, 2000 and the Indian Copyright Act.',
+          ml: 'സോഴ്സ് കോഡ് സംരക്ഷണം: കോഡ് വേർതിരിച്ചെടുക്കാനോ മോഷ്ടിക്കാനോ ഉള്ള ശ്രമങ്ങൾ ഗുരുതരമായ ക്രിമിനൽ കുറ്റമായി കണക്കാക്കും.',
+        },
+      },
+      {
+        id: 'no-scraping-automation',
+        clauseNumber: '6.3',
+        title: {
+          en: 'Prohibition of Automated Scraping & Unauthorized Access',
+          ml: 'ഓട്ടോമേറ്റഡ് സ്ക്രാപ്പിംഗും അനധികൃത പ്രവേശനവും തടയൽ',
+        },
+        body: {
+          en: 'No bot, spider, scraper, crawler, deep-link, or automated scripting tool may be utilized to access, monitor, query, harvest, or replicate any content, vehicle data, client lists, or spare parts catalogues hosted on the Platform. Automated rate-limiting, IP blocking, and firewall countermeasures are deployed to neutralize unauthorized access attempts.',
+          ml: 'ഓട്ടോമേറ്റഡ് ബോട്ടുകൾ അല്ലെങ്കിൽ സ്ക്രാപ്പർ ടൂളുകൾ ഉപയോഗിച്ച് പ്ലാറ്റ്‌ഫോമിലെ ഡാറ്റ, ഫോട്ടോകൾ, വില വിവരങ്ങൾ എന്നിവ ശേഖരിക്കുന്നത് പൂർണ്ണമായും വിലക്കിയിരിക്കുന്നു.',
+        },
+      },
+      {
+        id: 'remedies-prosecution',
+        clauseNumber: '6.4',
+        title: {
+          en: 'Civil Injunctions, Criminal Prosecution & Liquidated Damages',
+          ml: 'സിവിൽ നഷ്ടപരിഹാരവും ക്രിമിനൽ നിയമനടപടികളും',
+        },
+        body: {
+          en: 'Any violation of this Section 06 causes irreparable harm for which monetary damages alone would be inadequate. MOMZ\'Z reserves the right to seek emergency ex-parte injunctive relief from competent courts, initiate criminal complaints under Sections 43 and 66 of the IT Act, 2000 and Section 63 of the Copyright Act, 1957 (punishable with imprisonment up to 3 years and substantial fines), and claim comprehensive liquidated damages, including recovery of forensic investigation expenses and legal costs.',
+          ml: 'ഈ ബൗദ്ധിക സ്വത്തവകാശ ലംഘനങ്ങൾ ഉണ്ടായാൽ കോടതി വഴി ഉടനടി വിലക്ക് (Injunction) വാങ്ങുന്നതിനും, ഐടി നിയമം സെക്ഷൻ 66, പകർപ്പവകാശ നിയമം സെക്ഷൻ 63 എന്നിവ പ്രകാരം തടവുശിക്ഷയും പിഴയും ഉൾപ്പെടെയുള്ള ക്രിമിനൽ കേസുകൾ ഫയൽ ചെയ്യുന്നതിനും കമ്പനിക്ക് പൂർണ്ണ അവകാശമുണ്ടായിരിക്കും.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'technical-security-compromise',
+    number: '07',
+    title: {
+      en: 'Technical Security Protocols & Security Compromise Liability Shield',
+      ml: 'സാങ്കേതിക സുരക്ഷാ മാനദണ്ഡങ്ങളും സുരക്ഷാ വീഴ്ചാ ബാധ്യതാ സംരക്ഷണവും',
+    },
+    subtitle: {
+      en: 'Reasonable security practices, zero-day & upstream infrastructure shield, incident reporting under CERT-In',
+      ml: 'ഐടി സുരക്ഷാ രീതികൾ, ക്ലൗഡ് തകരാറുകൾക്കുള്ള ബാധ്യതാ പരിധി, സൈബർ സുരക്ഷാ മാനദണ്ഡങ്ങൾ',
+    },
+    iconName: 'Server',
+    statutoryBadges: [
+      'IT Act 2000 (Sec 43A - Reasonable Security)',
+      'SPDI Rules, 2011',
+      'CERT-In Cybersecurity Directions, 2022',
+      'DPDPA 2023 Security Norms',
+    ],
+    clauses: [
+      {
+        id: 'security-standards',
+        clauseNumber: '7.1',
+        title: {
+          en: 'Reasonable Security Practices & Cryptographic Protocols',
+          ml: 'ന്യായമായ സുരക്ഷാ സംവിധാനങ്ങളും എൻക്രിപ്ഷനും',
+        },
+        body: {
+          en: 'MOMZ\'Z maintains reasonable security practices and procedures in strict accordance with Section 43A of the Information Technology Act, 2000 and the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011. Measures include end-to-end HTTPS/TLS 1.3 encryption, salted bcrypt password hashing, encrypted JWT tokens with short expiry, Redis token revocation blacklists, rate-limiting, and sanitized SQL/NoSQL querying to prevent injection attacks.',
+          ml: '2000-ലെ ഐടി നിയമം സെക്ഷൻ 43A നിർദ്ദേശിക്കുന്ന എല്ലാ സുരക്ഷാ മാനദണ്ഡങ്ങളും പ്ലാറ്റ്‌ഫോം കർശനമായി പാലിക്കുന്നു. പാസ്‌വേഡുകൾ എൻക്രിപ്റ്റ് ചെയ്തും, സുരക്ഷിതമായ ടോക്കണുകൾ ഉപയോഗിച്ചും ഉപയോക്താക്കളുടെ വിവരങ്ങൾ സംരക്ഷിക്കുന്നു.',
+        },
+      },
+      {
+        id: 'compromise-shield',
+        clauseNumber: '7.2',
+        title: {
+          en: 'Zero-Day, Upstream Outages & Security Compromise Liability Shield',
+          ml: 'സീറോ-ഡേ ആക്രമണങ്ങൾ, ക്ലൗഡ് തകരാറുകൾ എന്നിവയ്ക്കുള്ള സംരക്ഷണം',
+        },
+        body: {
+          en: 'While MOMZ\'Z implements industry-standard security safeguards, no digital system, internet transmission, or cloud environment is completely impenetrable. MOMZ\'Z, its directors, developers, and partners shall NOT be held liable for: (a) zero-day vulnerabilities in third-party software, libraries, operating systems, or hardware chips; (b) upstream outages or catastrophic failures of third-party cloud hosting providers (e.g., AWS, MongoDB Atlas, Cloudinary, telecom carriers); (c) state-sponsored cyber warfare, distributed denial-of-service (DDoS) assaults, or sophisticated Advanced Persistent Threats (APTs) exceeding reasonable commercial defensive standards; or (d) unauthorized access resulting from compromised end-user devices, malware on user phones, or unpatched user operating systems.',
+          ml: 'വ്യവസായ മാനദണ്ഡങ്ങൾ അനുസരിച്ചുള്ള പരമാവധി സുരക്ഷ ഏർപ്പെടുത്തിയിട്ടുണ്ടെങ്കിലും, ആഗോള ക്ലൗഡ് സെർവർ തകരാറുകൾ (AWS, MongoDB Atlas മുതലായവ), പുതിയ ഇന്റർനെറ്റ് വൈറസ്/മാൽവെയർ ആക്രമണങ്ങൾ (Zero-Day), അല്ലെങ്കിൽ ഉപയോക്താവിന്റെ ഫോണിലെ വൈറസുകൾ കാരണം സംഭവിക്കുന്ന സുരക്ഷാ വീഴ്ചകൾക്ക് MOMZ\'Z ബാധ്യസ്ഥമായിരിക്കില്ല.',
+        },
+        highlight: {
+          en: 'UPSTREAM & FORCE MAJEURE DISCLAIMER: In the event of unforeseen cyber intrusions where commercially reasonable security standards were in place, our liability is strictly limited as permitted under Section 43A of the IT Act.',
+          ml: 'സുരക്ഷാ പരിധി: ന്യായമായ സുരക്ഷ മുൻകരുതലുകൾ എടുത്തിട്ടുള്ള സാഹചര്യത്തിൽ, അപ്രതീക്ഷിത ബാഹ്യ സൈബർ ആക്രമണങ്ങൾക്ക് നിയമപരമായ ബാധ്യതാ പരിരക്ഷ ഉണ്ടായിരിക്കുന്നതാണ്.',
+        },
+      },
+      {
+        id: 'certin-disclosure',
+        clauseNumber: '7.3',
+        title: {
+          en: 'Incident Notification & CERT-In Protocol Compliance',
+          ml: 'സൈബർ സുരക്ഷാ സംഭവങ്ങളുടെ റിപ്പോർട്ടിംഗും അറിയിപ്പുകളും',
+        },
+        body: {
+          en: 'In the event of a verified cybersecurity breach or unauthorized data exfiltration affecting user data, MOMZ\'Z will promptly take remedial measures to contain the vulnerability, notify competent statutory authorities (including the Indian Computer Emergency Response Team - CERT-In under Cyber Security Directions 2022), and provide transparent guidance and mitigation advisories to affected stakeholders.',
+          ml: 'എപ്പോഴെങ്കിലും ഏതെങ്കിലും തരത്തിലുള്ള സൈബർ സുരക്ഷാ വീഴ്ച ഉണ്ടായാൽ, ഉടനടി അത് തടയാനുള്ള നടപടികൾ സ്വീകരിക്കുകയും, കേന്ദ്ര സർക്കാർ ഏജൻസിയായ CERT-In ന് നിർദ്ദിഷ്ട സമയത്തിനുള്ളിൽ റിപ്പോർട്ട് ചെയ്യുകയും ചെയ്യുന്നതാണ്.',
+        },
+      },
+      {
+        id: 'user-security-duty',
+        clauseNumber: '7.4',
+        title: {
+          en: 'User Duty of Credential Hygiene & Session Management',
+          ml: 'ഉപയോക്താവിന്റെ പാസ്‌വേഡ് സുരക്ഷാ ഉത്തരവാദിത്തം',
+        },
+        body: {
+          en: 'Each user is solely responsible for maintaining the absolute confidentiality of their login credentials, safeguarding their physical mobile device, ensuring secure lock-screens, and immediately executing a session sign-out upon leaving a workshop terminal unattended. Users must report any suspected credential compromise or unauthorized access to workshop management immediately at security@momzz.com.',
+          ml: 'ഉപയോക്താക്കൾ തങ്ങളുടെ പാസ്‌വേഡ് രഹസ്യമായി സൂക്ഷിക്കേണ്ടതും വർക്ക്‌ഷോപ്പ് കമ്പ്യൂട്ടറുകൾ വിടുമ്പോൾ ലോഗൗട്ട് ചെയ്യേണ്ടതുമാണ്. പാസ്‌വേഡ് മറ്റുള്ളവർക്ക് നൽകുന്നത് കാരണം ഉണ്ടാകുന്ന നഷ്ടങ്ങൾക്ക് ഉപയോക്താവ് തന്നെ ഉത്തരവാദിയായിരിക്കും.',
         },
       },
     ],

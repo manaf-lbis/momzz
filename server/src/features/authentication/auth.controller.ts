@@ -290,6 +290,34 @@ export class AuthController {
       return sendError(res, error.message || 'Failed to update user details.', 400);
     }
   }
+
+  async acceptTerms(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return sendError(res, 'Unauthenticated user.', 401);
+      }
+      const { version } = req.body;
+      if (!version) {
+        return sendError(res, 'Version is required.', 400);
+      }
+      const updatedUser = await authService.acceptTerms(req.user.id, version);
+      return sendSuccess(res, 'Terms and conditions accepted successfully.', updatedUser, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to record terms acceptance.', 400);
+    }
+  }
+
+  async getTermsStatus(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return sendError(res, 'Unauthenticated user.', 401);
+      }
+      const status = await authService.getTermsStatus(req.user.id);
+      return sendSuccess(res, 'Terms status retrieved.', status, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to fetch terms status.', 400);
+    }
+  }
 }
 
 export const authController = new AuthController();

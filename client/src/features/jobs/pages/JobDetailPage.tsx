@@ -25,7 +25,6 @@ import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { SlideToSignoff } from '../components/SlideToSignoff';
 import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../../../shared/utils/confetti';
-import { playCompletionSound, playReopenSound } from '../../../shared/utils/completionSound';
 import {
   ArrowUp,
   ChevronLeft,
@@ -286,7 +285,6 @@ export const JobDetailPage: React.FC = () => {
         currentUserId: user?.id,
       }).unwrap();
 
-      playCompletionSound();
       triggerSubTaskConfetti();
 
       if (completedCount + 1 === totalTasks) {
@@ -315,7 +313,6 @@ export const JobDetailPage: React.FC = () => {
         currentUserName: user?.name,
         currentUserId: user?.id,
       }).unwrap();
-      playReopenSound();
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Failed to reopen task.');
     } finally {
@@ -364,7 +361,6 @@ export const JobDetailPage: React.FC = () => {
     if (!currentJob) return;
     try {
       await verifyJobCard({ jobCardId: currentJob.id || currentJob._id! }).unwrap();
-      playCompletionSound();
       triggerVehicleReadyConfetti();
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Unable to verify this job card.');
@@ -432,72 +428,27 @@ export const JobDetailPage: React.FC = () => {
       <Navbar glass />
 
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
-        {/* ── TOP NAV / ACTION BAR ── */}
+        {/* ── TOP NAV / CLEAN HEADER ── */}
         <PageHeader
           backTo="/jobs"
           title={currentJob.vehicleName || 'Vehicle'}
-          count={currentJob.vehicleNumber}
-          actions={
-            <div className="flex items-center gap-1.5">
-            {/* Pin Action */}
-            <button
-              type="button"
-              onClick={() => setIsPinJobModalOpen(true)}
-              className={`p-2 rounded-xl border transition active:scale-90 cursor-pointer flex items-center gap-1.5 ${
-                isPinned
-                  ? 'bg-amber-400/20 border-amber-400/40 text-amber-700 dark:text-amber-300 shadow-2xs'
-                  : 'glass-ghost-btn text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-              title="Pin Priority / Garage Global Pin"
-            >
-              {isJobPinnedForAll ? (
-                <Globe className="w-3.5 h-3.5 text-amber-500" />
-              ) : (
-                <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-current text-amber-500' : ''}`} />
-              )}
-              <span className="text-[11px] font-mono font-bold hidden md:inline">
-                {isJobPinnedForAll ? 'Garage Pin' : isJobPinnedForMe ? 'Pinned' : 'Pin'}
+          badge={
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-mono text-[11px] sm:text-xs font-black tracking-wider text-amber-700 dark:text-amber-300 bg-amber-400/20 border border-amber-400/35 px-2 py-0.5 rounded-md uppercase">
+                {currentJob.vehicleNumber}
               </span>
-            </button>
-
-            {/* Photo Action */}
-            <button
-              type="button"
-              onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
-              className="p-2 rounded-xl glass-ghost-btn text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white active:scale-90 transition cursor-pointer flex items-center gap-1.5"
-              title="Vehicle Inspection Photos"
-            >
-              <Camera className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-mono font-bold hidden md:inline">Photos</span>
-            </button>
-
-            {/* Edit Action (Admin) */}
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
-                className="p-2 rounded-xl glass-gold-btn text-slate-950 shadow-md active:scale-90 transition cursor-pointer flex items-center gap-1.5"
-                title="Edit Job Card"
-              >
-                <Edit2 className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span className="text-[11px] font-mono font-black hidden md:inline">Edit</span>
-              </button>
-            )}
-
-            {/* Delete Job Action (Admin) */}
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
-                className="p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-300 border border-rose-500/30 active:scale-90 transition cursor-pointer"
-                title="Delete Job Card"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        }
-      />
+              {currentJob.status && (
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md uppercase border ${
+                  currentJob.status === 'COMPLETED'
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                    : 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30'
+                }`}>
+                  {currentJob.status.replace('_', ' ')}
+                </span>
+              )}
+            </div>
+          }
+        />
 
         {/* ── VEHICLE HERO ── */}
         <section className="glass-head-card relative overflow-hidden rounded-3xl p-4 sm:p-5 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)]">
@@ -632,6 +583,79 @@ export const JobDetailPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
+            {/* Quick Primary Actions Toolbar */}
+            <div className="col-span-1 md:col-span-2 p-4 sm:p-5 rounded-3xl glass-modern-card border border-amber-400/25 dark:border-amber-400/20 bg-gradient-to-r from-amber-500/[0.08] via-transparent to-sky-500/[0.05] shadow-md space-y-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-2xl bg-amber-400/20 text-amber-600 dark:text-amber-400 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-2xs">
+                    <Wrench className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+                      Job Actions & Operations Hub
+                    </h3>
+                    <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                      Vehicle camera inspections, card editing, priority pin & deletion
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                  {/* Photo Studio Button */}
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
+                    className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl sm:rounded-2xl glass-ghost-btn text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white border border-slate-200/90 dark:border-white/10 active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 text-xs font-mono font-bold shadow-2xs"
+                    title="Vehicle Inspection Photos"
+                  >
+                    <Camera className="w-4 h-4 text-amber-500" />
+                    <span>Photos ({vehicleViewerImages.length})</span>
+                  </button>
+
+                  {/* Pin Priority Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsPinJobModalOpen(true)}
+                    className={`flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl sm:rounded-2xl border text-xs font-mono font-bold transition active:scale-95 cursor-pointer flex items-center justify-center gap-2 shadow-2xs ${
+                      isPinned
+                        ? 'bg-amber-400/20 border-amber-400/40 text-amber-700 dark:text-amber-300'
+                        : 'glass-ghost-btn text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title="Pin Priority"
+                  >
+                    <Pin className={`w-4 h-4 ${isPinned ? 'fill-current text-amber-500' : ''}`} />
+                    <span>{isJobPinnedForAll ? 'Garage Pin' : isJobPinnedForMe ? 'Pinned' : 'Pin Priority'}</span>
+                  </button>
+
+                  {/* Edit Job Button (Admin) */}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
+                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl sm:rounded-2xl glass-gold-btn text-slate-950 shadow-sm active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 text-xs font-mono font-black"
+                      title="Edit Job Card"
+                    >
+                      <Edit2 className="w-4 h-4 stroke-[2.5]" />
+                      <span>Edit Card</span>
+                    </button>
+                  )}
+
+                  {/* Delete Job Button (Admin) */}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
+                      className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl sm:rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 text-xs font-mono font-bold shadow-2xs"
+                      title="Delete Job Card"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Left Column: QA Verification Log + Client Contact */}
             <div className="space-y-4">
               {/* QA Sign-off Audit & Verification Log */}

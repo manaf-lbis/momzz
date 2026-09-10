@@ -157,6 +157,21 @@ export const authApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['User'],
     }),
+    acceptTerms: builder.mutation<{ success: boolean; message: string; data: User }, { version: string }>({
+      query: (body) => ({
+        url: '/auth/accept-terms',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['User'],
+    }),
+    getTermsStatus: builder.query<{
+      success: boolean;
+      data: { currentVersion: string; acceptedVersion: string; acceptedAt: string | null; needsAcceptance: boolean };
+    }, void>({
+      query: () => '/auth/terms-status',
+      providesTags: ['User'],
+    }),
   }),
 });
 
@@ -177,4 +192,6 @@ export const {
   useAdminResetPasswordMutation,
   useUpdateUserByAdminMutation,
   useChangePasswordMutation,
+  useAcceptTermsMutation,
+  useGetTermsStatusQuery,
 } = authApi;

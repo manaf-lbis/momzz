@@ -5,7 +5,6 @@ import { store } from './store/store';
 import { AppRoutes } from './routes/AppRoutes';
 import { ThemeProvider } from './features/auth/context/ThemeContext';
 import { SocketProvider } from './features/auth/context/SocketContext';
-import { SessionLoginSound } from './shared/components/common/SessionLoginSound';
 import { Footer } from './shared/components/common/Footer';
 import { LeaderboardWelcomeModal } from './shared/components/common/LeaderboardWelcomeModal';
 import { QuickAccessDock } from './shared/components/navigation/QuickAccessDock';
@@ -27,7 +26,6 @@ export const App: React.FC = () => {
 
   return (
     <Provider store={store}>
-      <SessionLoginSound />
       <ThemeProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <SocketProvider>

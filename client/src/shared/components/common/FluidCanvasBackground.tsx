@@ -9,14 +9,14 @@ import React from 'react';
 export const FluidCanvasBackground: React.FC = () => {
   return (
     <div
-      className="fixed inset-0 pointer-events-none select-none -z-10 overflow-hidden bg-[#f4f5f8] dark:bg-[#080912] transition-colors duration-300"
+      className="fixed inset-0 pointer-events-none select-none z-0 overflow-hidden bg-transparent dark:bg-[#080912]/85 transition-colors duration-300"
       style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: -1,
+        zIndex: 0,
       }}
       aria-hidden="true"
     >
@@ -148,8 +148,8 @@ export const FluidCanvasBackground: React.FC = () => {
           </filter>
         </defs>
 
-        {/* ── BASE SCRIBBLE LINES (Static neutral backdrop) ── */}
-        <g className="opacity-25 dark:opacity-15 text-slate-500 dark:text-amber-400">
+        {/* ── BASE SCRIBBLE LINES (Static neutral backdrop - softened in light mode) ── */}
+        <g className="opacity-10 dark:opacity-15 text-slate-400 dark:text-amber-400">
           {/* Scribble Curve 1 — Sweeping diagonal loop */}
           <path
             d="M-80,180 C180,40 380,420 680,210 C980,0 1120,440 1380,260 C1480,190 1560,320 1620,280"
@@ -228,7 +228,7 @@ export const FluidCanvasBackground: React.FC = () => {
         </g>
 
         {/* ── NEURON IMPULSE TRAVELERS (Layer 2: Crisp Bright Core) ── */}
-        <g className="text-amber-400 dark:text-yellow-200">
+        <g className="opacity-40 dark:opacity-100 text-amber-500 dark:text-yellow-200">
           <path
             d="M-80,180 C180,40 380,420 680,210 C980,0 1120,440 1380,260 C1480,190 1560,320 1620,280"
             fill="none"
@@ -268,7 +268,7 @@ export const FluidCanvasBackground: React.FC = () => {
         </g>
 
         {/* ── SUBTLE SYNAPSE JUNCTION NODES ── */}
-        <g className="text-amber-500 dark:text-amber-400">
+        <g className="opacity-40 dark:opacity-100 text-amber-500 dark:text-amber-400">
           {/* Node 1: upper crest of Curve 1 */}
           <g className="neuron-node-1" style={{ transformOrigin: '680px 210px' }}>
             <circle cx="680" cy="210" r="5" fill="currentColor" opacity="0.2" filter="url(#node-glow)" />
@@ -301,16 +301,16 @@ export const FluidCanvasBackground: React.FC = () => {
 
       {/* ── Very subtle, minimal warm ambient breath at top ── */}
       <div
-        className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] rounded-full pointer-events-none opacity-20 dark:opacity-10"
+        className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] rounded-full pointer-events-none opacity-10 dark:opacity-10"
         style={{
           background: 'radial-gradient(ellipse at center, rgba(245, 158, 11, 0.15) 0%, transparent 70%)',
           filter: 'blur(90px)',
         }}
       />
 
-      {/* ── Soft Neutral Corner Vignette ── */}
+      {/* ── Soft Neutral Corner Vignette (dark mode only for atmosphere) ── */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none hidden dark:block"
         style={{
           background:
             'radial-gradient(ellipse 90% 80% at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.25) 100%)',

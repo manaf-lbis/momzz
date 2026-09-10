@@ -47,7 +47,7 @@ export const QuickAccessDock: React.FC = () => {
     <>
       <aside
         aria-label="Floating Navigation Dock"
-        className="fixed bottom-3 sm:bottom-5 inset-x-0 z-50 flex justify-center pointer-events-none px-3 select-none"
+        className="fixed bottom-4 sm:bottom-5 inset-x-0 z-50 flex justify-center pointer-events-none px-3 select-none"
       >
         <Dock
           direction="bottom"

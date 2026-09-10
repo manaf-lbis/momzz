@@ -1,8 +1,8 @@
 import { redis } from '../../config/redis';
 
 export class CacheService {
-  // Permanent L1 In-Memory Cache — persists until explicit update/delete on change
-  private memoryCache = new Map<string, any>();
+  // L1 In-Memory Cache with auto-expiry
+  private memoryCache = new Map<string, { value: any; expiresAt?: number }>();
 
   // In-memory token blacklist Set — 0 Redis commands on every normal request
   private blacklistSet = new Set<string>();
@@ -34,20 +34,27 @@ export class CacheService {
   }
 
   /**
-   * Get value from cached memory directly (0ms, 0 Redis commands).
-   * Falls back to Upstash Redis only on cold server start.
+   * Get value from cached memory or fallback to Redis with TTL check.
    */
   async get<T>(key: string): Promise<T | null> {
-    // 1. Direct in-memory lookup (Zero TTL, never deleted unless changed)
+    // 1. Direct in-memory lookup with expiration check
     if (this.memoryCache.has(key)) {
-      return this.memoryCache.get(key) as T;
+      const entry = this.memoryCache.get(key);
+      if (entry) {
+        if (entry.expiresAt && Date.now() > entry.expiresAt) {
+          this.memoryCache.delete(key);
+        } else {
+          return entry.value as T;
+        }
+      }
     }
 
-    // 2. Fallback to Upstash Redis on cold start
+    // 2. Fallback to Upstash Redis
     try {
       const data = await redis.get<T>(key);
       if (data !== null && data !== undefined) {
-        this.memoryCache.set(key, data);
+        // Cache in local memory with safe 30s TTL
+        this.memoryCache.set(key, { value: data, expiresAt: Date.now() + 30 * 1000 });
         return data;
       }
       return null;
@@ -58,27 +65,23 @@ export class CacheService {
   }
 
   /**
-   * Set value in memory and Upstash Redis permanently until data is changed.
-   * If ttlSeconds is not passed, data is stored permanently without auto-expiry.
+   * Set value in memory and Upstash Redis with a safe TTL (defaults to 60s).
    */
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    // Store in memory permanently (until change)
-    this.memoryCache.set(key, value);
+    const safeTtl = ttlSeconds && ttlSeconds > 0 ? ttlSeconds : 60;
+    const expiresAt = Date.now() + safeTtl * 1000;
+    this.memoryCache.set(key, { value, expiresAt });
 
-    // Sync to Upstash Redis
+    // Sync to Upstash Redis with TTL
     try {
-      if (ttlSeconds && ttlSeconds > 0) {
-        await redis.set(key, value, { ex: ttlSeconds });
-      } else {
-        await redis.set(key, value);
-      }
+      await redis.set(key, value, { ex: safeTtl });
     } catch (error: any) {
       console.warn(`[CACHE WARNING] Failed to set key "${key}": ${error.message}`);
     }
   }
 
   /**
-   * Delete one or more keys from memory and Redis (called ONLY on database changes).
+   * Delete one or more keys from memory and Redis.
    */
   async del(keyOrKeys: string | string[]): Promise<void> {
     const keys = Array.isArray(keyOrKeys) ? keyOrKeys : [keyOrKeys];
@@ -116,6 +119,16 @@ export class CacheService {
     } catch (error: any) {
       console.warn(`[CACHE WARNING] Failed to delByPrefix "${prefix}": ${error.message}`);
     }
+  }
+
+  /**
+   * Clear all cache in memory and Redis.
+   */
+  async flushAll(): Promise<void> {
+    this.memoryCache.clear();
+    try {
+      await this.delByPrefix('cache:jobs');
+    } catch {}
   }
 
   /**

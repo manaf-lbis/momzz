@@ -23,9 +23,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['"BankGothic Md BT Medium"', '"BankGothic Md BT"', '"Bank Gothic"', 'BankGothic', 'Outfit', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
-        display: ['"BankGothic Md BT Medium"', '"BankGothic Md BT"', '"Bank Gothic"', 'BankGothic', 'Montserrat', 'Outfit', 'sans-serif'],
+        sans: ['"DM Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+        display: ['"Barlow Condensed"', 'Syne', '"BankGothic Md BT Medium"', '"Bank Gothic"', 'sans-serif'],
       },
       colors: {
         void: {

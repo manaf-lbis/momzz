@@ -315,7 +315,11 @@ export const getJobCardById = async (req: Request, res: Response) => {
   try {
     const { jobCardId } = req.params;
     const job = await jobRepository.findJobById(jobCardId);
-    if (!job) return sendError(res, 'Job card not found.', 404);
+    if (!job) {
+      await cacheService.del('cache:jobs:live');
+      await cacheService.delByPrefix('cache:jobs');
+      return sendError(res, 'Job card not found.', 404);
+    }
 
     const tasks = await jobRepository.findTasksByJobCardId(jobCardId);
     const allCompleted = tasks.length > 0 && tasks.every((t) => t.status === 'COMPLETED');
@@ -437,7 +441,7 @@ export const getJobCards = async (req: Request, res: Response) => {
       });
     });
 
-    await cacheService.set('cache:jobs:live', liveJobsWithTasks);
+    await cacheService.set('cache:jobs:live', liveJobsWithTasks, 30);
     return sendSuccess(res, 'Live job cards retrieved successfully.', liveJobsWithTasks, 200);
 
   } catch (error: any) {

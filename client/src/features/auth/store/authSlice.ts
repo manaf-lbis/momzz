@@ -20,6 +20,9 @@ export interface User {
   createdAt?: string;
   profileImageUrl?: string;
   loginAudit?: Array<{ timestamp: string; status: 'SUCCESS' | 'FAILED'; ipAddress: string }>;
+  acceptedTermsVersion?: string;
+  acceptedTermsAt?: string | null;
+  needsTermsAcceptance?: boolean;
 }
 
 interface AuthState {

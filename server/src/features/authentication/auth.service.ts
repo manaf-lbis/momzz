@@ -16,6 +16,8 @@ export interface RegisterDTO {
   password: string;
 }
 
+export const CURRENT_TERMS_VERSION = '2026.1';
+
 export class AuthService {
   private authRepo = new AuthRepository();
 
@@ -170,11 +172,37 @@ export class AuthService {
   private formatUser(user: any) {
     if (!user) return user;
     const profile = user.toObject ? user.toObject() : user;
+    const acceptedVersion = profile.acceptedTermsVersion || '';
     return {
       ...profile,
       id: profile._id?.toString() || profile.id,
       _id: profile._id?.toString() || profile.id,
-      profileImageUrl: getCloudinaryUrl(profile.profileImageUrl)
+      profileImageUrl: getCloudinaryUrl(profile.profileImageUrl),
+      acceptedTermsVersion: acceptedVersion,
+      acceptedTermsAt: profile.acceptedTermsAt || null,
+      needsTermsAcceptance: acceptedVersion !== CURRENT_TERMS_VERSION,
+    };
+  }
+
+  async acceptTerms(userId: string, version: string) {
+    if (!version) {
+      throw new Error('Terms version is required');
+    }
+    const user = await this.authRepo.updateTermsAcceptance(userId, version);
+    if (!user) throw new Error('User not found');
+    await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
+    return this.formatUser(user);
+  }
+
+  async getTermsStatus(userId: string) {
+    const user = await this.authRepo.findById(userId);
+    if (!user) throw new Error('User not found');
+    const acceptedVersion = user.acceptedTermsVersion || '';
+    return {
+      currentVersion: CURRENT_TERMS_VERSION,
+      acceptedVersion,
+      acceptedAt: user.acceptedTermsAt || null,
+      needsAcceptance: acceptedVersion !== CURRENT_TERMS_VERSION,
     };
   }
 

@@ -17,6 +17,8 @@ export interface IUser extends Document {
   lastSeen?: Date;
   profileImageUrl?: string;
   loginAudit: Array<{ timestamp: Date; status: 'SUCCESS' | 'FAILED'; ipAddress: string }>;
+  acceptedTermsVersion?: string;
+  acceptedTermsAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,6 +89,14 @@ const UserSchema: Schema = new Schema(
     loginAudit: {
       type: [{ timestamp: Date, status: String, ipAddress: String }],
       default: [],
+    },
+    acceptedTermsVersion: {
+      type: String,
+      default: '',
+    },
+    acceptedTermsAt: {
+      type: Date,
+      default: null,
     },
   },
   {

@@ -382,11 +382,28 @@ export const StaffDetailPage: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* ── 1. TOP NAVIGATION & BREADCRUMB ── */}
-        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-3.5 pb-3.5 mb-3 glass-modern-header flex items-center justify-between gap-3 transition-all">
-          <BackButton to="/users" label="Staff Roster" />
+        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-3 pb-3 sm:pt-3.5 sm:pb-3.5 mb-3 glass-modern-header flex items-center justify-between gap-2.5 transition-all">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <BackButton to="/users" label="Staff" />
+            <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 shrink-0 hidden xs:block" />
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
+                {staffMember.name}
+              </span>
+              <span
+                className={`text-[9px] sm:text-[10px] font-mono font-bold px-2 py-0.5 rounded-full uppercase border shrink-0 ${
+                  staffMember.role === 'ADMIN'
+                    ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30'
+                    : 'bg-amber-400/15 text-amber-700 dark:text-amber-300 border-amber-400/30'
+                }`}
+              >
+                {staffMember.role}
+              </span>
+            </div>
+          </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 hidden sm:inline">
               Staff ID: <span className="text-slate-700 dark:text-slate-300 font-bold">{staffId.slice(-6)}</span>
             </span>
           </div>

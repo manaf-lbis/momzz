@@ -411,7 +411,7 @@ export const EditJobPage: React.FC = () => {
               <span className="hidden sm:inline">Back to Job Details</span>
             </button>
             <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 shrink-0 hidden sm:block" />
-            <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white truncate">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white truncate">
               Edit Job Card
             </h1>
           </div>

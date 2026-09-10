@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { Phone, Lock, User, ArrowRight, ShieldAlert, Wrench, Loader2, Sparkles } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLoginMutation, useRegisterMutation } from '../api/authApi';
 import { useAppDispatch } from '../../../shared/hooks/useAppDispatch';
 import { setCredentials } from '../store/authSlice';
 import { useAppSelector } from '../../../shared/hooks/useAppSelector';
-import { InstallAppBanner } from '../../../shared/components/common/InstallAppBanner';
+
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { TermsAndConditionsModal } from '../../../shared/components/legal/TermsAndConditionsModal';
 
 export const AuthPage = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  const [isLogin, setIsLogin] = useState(location.pathname !== '/register');
   const [formData, setFormData] = useState({
     name: '',
     mobile: '',
@@ -39,6 +40,14 @@ export const AuthPage = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  React.useEffect(() => {
+    if (location.pathname === '/register') {
+      setIsLogin(false);
+    } else if (location.pathname === '/login') {
+      setIsLogin(true);
+    }
+  }, [location.pathname]);
+
   const validateForm = () => {
     if (!isLogin && (!formData.name || formData.name.trim().length < 2)) {
       setErrorMsg('Name must be at least 2 characters long.');
@@ -55,7 +64,7 @@ export const AuthPage = () => {
       return false;
     }
     if (!isLogin && !agreeTerms) {
-      setErrorMsg('Please read and agree to the Terms of Service & Image Storage Policy to continue.');
+      setErrorMsg('Please agree to the Terms & Conditions to continue.');
       return false;
     }
     return true;
@@ -110,7 +119,6 @@ export const AuthPage = () => {
       <div className="absolute top-4 right-4 z-50">
         <AnimatedThemeToggle variant="icon-only" />
       </div>
-      <InstallAppBanner />
 
       <div className="relative z-10 flex-1 flex flex-col justify-center items-center p-4">
         {/* App Branding */}
@@ -136,9 +144,11 @@ export const AuthPage = () => {
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
-          className="relative w-full max-w-sm rounded-3xl glass-modern-card p-6 shadow-2xl overflow-hidden"
+          className="relative w-full max-w-sm sm:rounded-3xl sm:glass-modern-card sm:p-6 sm:shadow-2xl sm:overflow-hidden p-1 bg-transparent border-0 shadow-none"
         >
-          <BorderBeam size={180} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
+          <div className="hidden sm:block pointer-events-none">
+            <BorderBeam size={180} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
+          </div>
 
           {/* Toggle Switch */}
           <div className="grid grid-cols-2 p-1 bg-white/80 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 mb-5 shadow-2xs">
@@ -242,24 +252,23 @@ export const AuthPage = () => {
             </div>
 
             {!isLogin && (
-              <div className="flex items-start gap-2.5 pt-1 text-left">
+              <div className="flex items-center gap-2 pt-1 text-left">
                 <input
                   type="checkbox"
                   id="agreeTerms"
                   checked={agreeTerms}
                   onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded accent-amber-400 cursor-pointer shrink-0"
+                  className="w-4 h-4 rounded accent-amber-400 cursor-pointer shrink-0"
                 />
-                <label htmlFor="agreeTerms" className="text-[11px] text-slate-600 dark:text-slate-400 leading-tight select-none">
-                  I agree to the MOMZZ{' '}
+                <label htmlFor="agreeTerms" className="text-xs text-slate-600 dark:text-slate-400 select-none cursor-pointer">
+                  I agree to{' '}
                   <button
                     type="button"
                     onClick={() => setIsTermsModalOpen(true)}
                     className="text-amber-500 font-bold underline hover:text-amber-400 cursor-pointer inline"
                   >
-                    Terms of Service, Image Storage Policy & Liability Shield
+                    Terms &amp; Conditions
                   </button>
-                  , acknowledging tamper-evident photo proof and pre-existing vehicle damage terms.
                 </label>
               </div>
             )}

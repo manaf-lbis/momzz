@@ -9,9 +9,6 @@ import {
   ShoppingCart,
   Users,
   Trophy,
-  Volume2,
-  VolumeX,
-  Smartphone,
   KeyRound,
   LogOut,
   ChevronRight,
@@ -21,13 +18,8 @@ import {
   Loader2,
   Phone,
   Calendar,
-  Scale,
-  ShieldCheck,
   FileText,
-  CheckCircle2,
   Database,
-  ExternalLink,
-  Languages,
 } from 'lucide-react';
 import { useAppDispatch } from '../../../shared/hooks/useAppDispatch';
 import { logout, updateUser } from '../../auth/store/authSlice';
@@ -37,14 +29,12 @@ import {
   useChangePasswordMutation,
   useUpdateProfileImageMutation,
 } from '../../auth/api/authApi';
-import { isCompletionSoundEnabled, setCompletionSoundEnabled } from '../../../shared/utils/completionSound';
 import { ImageCropperModal } from '../../../shared/components/common/ImageCropperModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
-import { TermsAndConditionsModal } from '../../../shared/components/legal/TermsAndConditionsModal';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -61,46 +51,12 @@ export const ProfilePage: React.FC = () => {
   // State
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [isSoundEnabled, setIsSoundEnabled] = useState(isCompletionSoundEnabled());
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [cropSource, setCropSource] = useState<string | null>(null);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
-  useEffect(() => {
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
-    }
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      alert('Momzz OS is already installed or your browser does not support quick PWA installation.');
-      return;
-    }
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstalled(true);
-      setDeferredPrompt(null);
-    }
-  };
-
-  const handleSoundToggle = () => {
-    const next = !isSoundEnabled;
-    setIsSoundEnabled(next);
-    setCompletionSoundEnabled(next);
-  };
 
   const handleLogout = async () => {
     try {
@@ -171,7 +127,7 @@ export const ProfilePage: React.FC = () => {
         <PageHeader
           backTo="/dashboard"
           title="Profile & Preferences"
-          description="Account settings, theme appearance, audio and garage access"
+          description="Account settings, theme appearance, and garage access"
         />
 
         {/* 2-Column Grid */}
@@ -253,52 +209,31 @@ export const ProfilePage: React.FC = () => {
               />
             </section>
 
-            {/* Appearance, Audio & App Preferences */}
+            {/* Appearance & App Preferences */}
             <section className="rounded-3xl glass-modern-card shadow-xl overflow-hidden divide-y divide-slate-200/60 dark:divide-white/[0.06] transition-colors">
               {/* MagicUI Style Theme Switcher */}
               <AnimatedThemeToggle variant="large-card" />
 
-              {/* Sound FX Toggle */}
-              <div className="px-4 py-3.5 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-400/15 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0">
-                    {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">Audio Feedback</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Completion chimes & sounds</p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSoundToggle}
-                  className={`w-11 h-6 rounded-full p-0.5 transition-colors flex items-center cursor-pointer ${
-                    isSoundEnabled ? 'bg-amber-400 justify-end' : 'bg-slate-300 dark:bg-white/10 justify-start'
-                  }`}
-                >
-                  <motion.div layout className="w-5 h-5 rounded-full bg-white dark:bg-slate-950 shadow-md" />
-                </button>
-              </div>
-
-              {/* Install PWA App */}
-              <button
-                onClick={handleInstallClick}
-                className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-100/80 dark:hover:bg-white/5 transition active:scale-[0.99] cursor-pointer"
+              {/* Terms & Conditions */}
+              <Link
+                to="/terms"
+                className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-100/80 dark:hover:bg-white/5 transition active:scale-[0.99] group cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-sky-500/15 text-sky-500 dark:text-sky-400 flex items-center justify-center shrink-0">
-                    <Smartphone className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-xl bg-amber-400/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <FileText className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">Install PWA App</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      Terms & Conditions
+                    </p>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                      {isInstalled ? 'Installed on device' : 'Add to home screen for 1-tap launch'}
+                      Workshop policies & terms of service
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
-              </button>
+                <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-amber-500 transition-colors shrink-0" />
+              </Link>
             </section>
           </div>
 
@@ -426,66 +361,6 @@ export const ProfilePage: React.FC = () => {
               </div>
             </section>
 
-            {/* Legal & Terms and Conditions Card */}
-            <section className="rounded-3xl glass-modern-card p-4 sm:p-5 shadow-xl space-y-3 transition-colors">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 text-amber-500 border border-amber-400/30 flex items-center justify-center shrink-0">
-                    <Scale className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                        Legal & Terms and Conditions
-                      </h4>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                        <CheckCircle2 className="w-2.5 h-2.5" />
-                        <span>DPDPA 2023</span>
-                      </span>
-                    </div>
-                    <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                      Privacy policy, zero data theft protection, vehicle inspection & tracking terms
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsTermsModalOpen(true)}
-                    className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-mono text-xs font-bold transition active:scale-95 cursor-pointer shrink-0"
-                  >
-                    Quick View
-                  </button>
-                  <Link
-                    to="/terms"
-                    className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-mono text-xs font-black transition active:scale-95 cursor-pointer shrink-0 flex items-center gap-1.5 shadow-sm"
-                  >
-                    <span>Read Full Legal Page</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/70 dark:border-white/[0.05] grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono text-slate-600 dark:text-slate-400">
-                <div className="flex items-center gap-2">
-                  <Camera className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span>Tamper-evident in-image timestamp photos</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span>Zero data theft & resale protection</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Car className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-                  <span>Pre-existing damage exclusion & bailment</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Languages className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-                  <span>Available in English & മലയാളം (Malayalam)</span>
-                </div>
-              </div>
-            </section>
 
             {/* Support Hotline Banner */}
             <section className="rounded-3xl glass-modern-card p-4 shadow-xl flex items-center justify-between gap-3 transition-colors">
@@ -640,11 +515,6 @@ export const ProfilePage: React.FC = () => {
         />
       )}
 
-      {/* Terms & Conditions & Data Storage Policy Modal */}
-      <TermsAndConditionsModal
-        isOpen={isTermsModalOpen}
-        onClose={() => setIsTermsModalOpen(false)}
-      />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Minus, Plus, Receipt, Search, ShoppingBag, Trash2, X } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
+import { BackButton } from '../../../shared/components/common/BackButton';
 import { CatalogItem, useCreateSaleMutation, useGetCatalogQuery } from '../../catalog/api/catalogApi';
 import { advancedSearch } from '../../../shared/utils/searchAlgorithm';
 
@@ -272,18 +273,22 @@ export const SalesPage: React.FC = () => {
         <section className="flex min-w-0 flex-1 flex-col">
           {/* Header & Filter Controls */}
           <div className="border-b border-slate-200/80 bg-white/95 px-4 py-4 dark:border-white/[0.08] dark:bg-[#080811]/90 sm:px-6 backdrop-blur-2xl">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                  Point of Sale
-                </p>
-                <h1 className="mt-0.5 text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                  Direct Counter Sales
-                </h1>
+            <div className="flex items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <BackButton to="/dashboard" label="Dashboard" />
+                <div className="h-6 w-px bg-slate-200 dark:bg-white/10 shrink-0 hidden xs:block" />
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 truncate">
+                    Point of Sale
+                  </p>
+                  <h1 className="mt-0.5 text-lg sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white truncate">
+                    Direct Counter Sales
+                  </h1>
+                </div>
               </div>
-              <div className="text-right text-xs text-slate-500 dark:text-slate-400 font-mono">
+              <div className="text-right text-xs text-slate-500 dark:text-slate-400 font-mono shrink-0">
                 <b className="block text-slate-900 dark:text-white">{itemCount} items in cart</b>
-                <span>Ready to checkout</span>
+                <span className="hidden sm:inline">Ready to checkout</span>
               </div>
             </div>
 

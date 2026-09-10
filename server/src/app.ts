@@ -150,6 +150,10 @@ initSocket(server);
 
 connectDB().then(async () => {
   await testRedisConnection();
+  try {
+    const { cacheService } = await import('./features/cache/cache.service');
+    await cacheService.delByPrefix('cache:jobs');
+  } catch {}
   server.listen(ENV.PORT, () => {
     console.log(`[SERVER] Momzz backend listening on http://localhost:${ENV.PORT}`);
     console.log(`[SERVER] Configured Client URLs: ${ENV.CLIENT_URLS.join(', ') || ENV.CLIENT_URL || 'None'}`);

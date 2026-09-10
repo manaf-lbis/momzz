@@ -13,6 +13,7 @@ export const Register: React.FC = () => {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>(ROLES.WORKER);
+  const [agreeTerms, setAgreeTerms] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const [register, { isLoading }] = useRegisterMutation();
@@ -25,6 +26,11 @@ export const Register: React.FC = () => {
 
     if (!name || !mobile || !password) {
       setErrorMsg('Please complete all required fields.');
+      return;
+    }
+
+    if (!agreeTerms) {
+      setErrorMsg('Please agree to the Terms & Conditions to continue.');
       return;
     }
 
@@ -47,7 +53,7 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen bg-zinc-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Background hazard stripes accent bar */}
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-hazard-stripes"></div>
 
@@ -57,7 +63,7 @@ export const Register: React.FC = () => {
             <Wrench className="w-8 h-8 stroke-[2.5]" />
           </div>
         </div>
-        <h2 className="mt-4 text-center text-3xl font-extrabold tracking-tight text-zinc-100 uppercase font-sans">
+        <h2 className="mt-4 text-center text-3xl font-extrabold tracking-wider text-zinc-100 uppercase font-display">
           JOIN <span className="text-yellow-400">MOMZ'Z</span> AUTO GARAGE
         </h2>
         <p className="mt-1 text-center text-xs font-mono text-zinc-400 uppercase tracking-widest">
@@ -66,7 +72,7 @@ export const Register: React.FC = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="industrial-card py-8 px-6 shadow-2xl rounded-xl sm:px-10">
+        <div className="sm:industrial-card sm:py-8 sm:px-10 sm:shadow-2xl sm:rounded-xl p-0 bg-transparent border-0 shadow-none">
           {errorMsg && (
             <div className="mb-6 p-3 bg-red-950/60 border border-red-800/80 rounded-lg flex items-center gap-2 text-red-300 text-xs font-mono">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
@@ -139,6 +145,26 @@ export const Register: React.FC = () => {
                   ? '* Workers require approval from an existing Admin before accessing job cards.'
                   : '* Admins gain immediate full administrative access.'}
               </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1 text-left">
+              <input
+                type="checkbox"
+                id="agreeTermsRegister"
+                checked={agreeTerms}
+                onChange={(e) => setAgreeTerms(e.target.checked)}
+                className="w-4 h-4 rounded accent-yellow-400 cursor-pointer shrink-0"
+              />
+              <label htmlFor="agreeTermsRegister" className="text-xs text-zinc-400 select-none cursor-pointer">
+                I agree to{' '}
+                <Link
+                  to="/terms"
+                  target="_blank"
+                  className="text-yellow-400 font-bold underline hover:text-yellow-300 inline"
+                >
+                  Terms &amp; Conditions
+                </Link>
+              </label>
             </div>
 
             <div className="pt-2">

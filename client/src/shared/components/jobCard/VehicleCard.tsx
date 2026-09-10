@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { ConfirmationModal } from '../common/ConfirmationModal';
-import { playReopenSound } from '../../utils/completionSound';
 import { getDeliveryStatusInfo } from '../../utils/dateUtils';
 import { ProgressBarBeam } from '../magicui/AnimatedBeam';
 import { ImageViewerModal, ViewerImage } from '../common/ImageViewerModal';
@@ -139,7 +138,6 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
   };
 
   const promptReopen = (taskId: string, title: string) => {
-    playReopenSound();
     setConfirmReopen({ taskId, title });
   };
 

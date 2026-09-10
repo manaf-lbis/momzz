@@ -249,9 +249,9 @@ export const CreateJobPage: React.FC = () => {
               label={step === 2 ? 'Step 1' : 'Vehicles'}
             />
             <div>
-              <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 {step === 1 ? 'Intake & Vehicle Registration' : 'Job Checklist & Parts'}
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300">
+                <span className="text-[10px] sm:text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300">
                   Step {step} of 2
                 </span>
               </h1>
