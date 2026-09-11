@@ -9,10 +9,11 @@ import {
   AlertCircle,
   Loader2,
   Scale,
+  LogOut,
 } from 'lucide-react';
-import { useAcceptTermsMutation } from '../../../features/auth/api/authApi';
+import { useAcceptTermsMutation, useLogoutApiMutation } from '../../../features/auth/api/authApi';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
-import { updateUser, User } from '../../../features/auth/store/authSlice';
+import { updateUser, logout, User } from '../../../features/auth/store/authSlice';
 import { LEGAL_METADATA } from './legalContent';
 
 interface TermsAcceptanceModalProps {
@@ -22,8 +23,19 @@ interface TermsAcceptanceModalProps {
 export const TermsAcceptanceModal: React.FC<TermsAcceptanceModalProps> = ({ user }) => {
   const dispatch = useAppDispatch();
   const [acceptTerms, { isLoading }] = useAcceptTermsMutation();
+  const [logoutApi] = useLogoutApiMutation();
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    try {
+      await logoutApi().unwrap();
+    } catch {
+      // Ignore API logout errors
+    } finally {
+      dispatch(logout());
+    }
+  };
 
   const handleAccept = async () => {
     if (!agreed || isLoading) return;
@@ -40,7 +52,7 @@ export const TermsAcceptanceModal: React.FC<TermsAcceptanceModalProps> = ({ user
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950 text-slate-100 animate-fadeIn"
       role="dialog"
       aria-modal="true"
       aria-labelledby="terms-modal-title"
@@ -182,6 +194,21 @@ export const TermsAcceptanceModal: React.FC<TermsAcceptanceModalProps> = ({ user
               </>
             )}
           </button>
+
+          {/* Sign Out Option */}
+          <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/5 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 text-[11px]">
+              Decline terms? You can safely exit:
+            </span>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

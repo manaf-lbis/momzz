@@ -43,15 +43,7 @@ export class AuthController {
         {
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
-          user: {
-            id: result.user._id,
-            name: result.user.name,
-            mobile: result.user.mobile,
-            role: result.user.role,
-            isApproved: result.user.isApproved,
-            taskCount: result.user.taskCount,
-            profileImageUrl: getCloudinaryUrl(result.user.profileImageUrl),
-          },
+          user: authService.formatUser(result.user),
         },
         201
       );
@@ -81,15 +73,7 @@ export class AuthController {
         {
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
-          user: {
-            id: result.user._id,
-            name: result.user.name,
-            mobile: result.user.mobile,
-            role: result.user.role,
-            isApproved: result.user.isApproved,
-            taskCount: result.user.taskCount,
-            profileImageUrl: getCloudinaryUrl(result.user.profileImageUrl),
-          },
+          user: authService.formatUser(result.user),
         },
         200
       );
@@ -117,15 +101,7 @@ export class AuthController {
         {
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
-          user: {
-            id: result.user._id,
-            name: result.user.name,
-            mobile: result.user.mobile,
-            role: result.user.role,
-            isApproved: result.user.isApproved,
-            taskCount: result.user.taskCount,
-            profileImageUrl: getCloudinaryUrl(result.user.profileImageUrl),
-          },
+          user: authService.formatUser(result.user),
         },
         200
       );

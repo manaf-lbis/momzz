@@ -5,6 +5,7 @@ import { sendError } from '../utils/response.handler';
 import { AuthUserPayload } from '../../global';
 import { userRepository } from '../../features/users/user.repository';
 import { cacheService } from '../../features/cache/cache.service';
+import { CURRENT_TERMS_VERSION } from '../../features/authentication/auth.service';
 
 export interface CachedUserSession {
   id: string;
@@ -15,6 +16,7 @@ export interface CachedUserSession {
   status: 'ACTIVE' | 'BLOCKED';
   taskCount?: number;
   profileImageUrl?: string;
+  acceptedTermsVersion?: string;
 }
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
@@ -54,6 +56,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         status: dbUser.status,
         taskCount: dbUser.taskCount,
         profileImageUrl: dbUser.profileImageUrl,
+        acceptedTermsVersion: dbUser.acceptedTermsVersion || '',
       };
       await cacheService.set(sessionKey, userDoc, 86400); // 24 hours
     }
@@ -64,6 +67,29 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 
     if (!userDoc.isApproved && userDoc.role !== 'ADMIN') {
       return sendError(res, 'Your account is awaiting administrator approval.', 403);
+    }
+
+    // Mandatory Terms & Conditions acceptance gate
+    const exemptPaths = [
+      '/api/auth/accept-terms',
+      '/api/auth/terms-status',
+      '/api/auth/me',
+      '/api/auth/logout',
+      '/accept-terms',
+      '/terms-status',
+      '/me',
+      '/logout',
+    ];
+    const rawUrl = req.originalUrl.split('?')[0];
+    const isExempt = exemptPaths.some((p) => rawUrl.endsWith(p) || req.path.endsWith(p));
+
+    if (!isExempt && (userDoc.acceptedTermsVersion || '') !== CURRENT_TERMS_VERSION) {
+      return sendError(
+        res,
+        'You must accept the updated Terms and Conditions before accessing the application.',
+        403,
+        { code: 'TERMS_NOT_ACCEPTED', requiredVersion: CURRENT_TERMS_VERSION }
+      );
     }
 
     req.user = {

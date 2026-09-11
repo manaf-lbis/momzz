@@ -169,7 +169,7 @@ export class AuthService {
   }
 
 
-  private formatUser(user: any) {
+  public formatUser(user: any) {
     if (!user) return user;
     const profile = user.toObject ? user.toObject() : user;
     const acceptedVersion = profile.acceptedTermsVersion || '';

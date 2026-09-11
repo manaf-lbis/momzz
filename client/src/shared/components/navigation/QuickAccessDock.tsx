@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { Dock, DockIcon, DockSeparator } from '../magicui/Dock';
 import { GlobalSearchModal } from '../common/GlobalSearchModal';
+import { LEGAL_METADATA } from '../legal/legalContent';
 
 export const QuickAccessDock: React.FC = () => {
   const { user } = useAuth();
@@ -20,6 +21,7 @@ export const QuickAccessDock: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   if (!user) return null;
+  if (user.needsTermsAcceptance || user.acceptedTermsVersion !== LEGAL_METADATA.version) return null;
 
   const currentPath = location.pathname;
 

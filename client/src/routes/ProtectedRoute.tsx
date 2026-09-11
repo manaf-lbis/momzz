@@ -38,10 +38,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requireAdmin = f
     (currentUser.needsTermsAcceptance ||
       currentUser.acceptedTermsVersion !== LEGAL_METADATA.version);
 
-  return (
-    <>
-      {needsTerms && <TermsAcceptanceModal user={currentUser} />}
-      <Outlet />
-    </>
-  );
+  if (needsTerms) {
+    return <TermsAcceptanceModal user={currentUser} />;
+  }
+
+  return <Outlet />;
 };
