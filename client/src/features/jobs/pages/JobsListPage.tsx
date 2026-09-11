@@ -35,7 +35,6 @@ import { useAuth } from '../../../shared/hooks/useAuth';
 import { PageShimmer, JobsListSkeleton } from '../../../shared/components/common/PageShimmer';
 import { getDeliveryStatusInfo } from '../../../shared/utils/dateUtils';
 import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
-import { ProgressBarBeam } from '../../../shared/components/magicui/AnimatedBeam';
 
 type TimeFilter = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'ALL';
 type JobsView = 'MY_JOBS' | 'PENDING_VERIFICATION' | 'ALL_VEHICLES';
@@ -517,66 +516,72 @@ export const JobsListPage: React.FC = () => {
               return (
                 <motion.div
                   key={jobId}
-                  whileHover={{ y: -3 }}
+                  whileHover={{ y: -2 }}
                   transition={{ duration: 0.18 }}
                   onClick={() => navigate(`/jobs/${jobId}`)}
-                  className="group relative overflow-hidden rounded-2xl glass-modern-card p-3.5 sm:p-5 flex flex-col justify-between cursor-pointer"
+                  className="group relative overflow-hidden rounded-2xl glass-modern-card p-3.5 sm:p-5 flex flex-col justify-between cursor-pointer select-none active:scale-[0.985] hover:border-amber-400/50 dark:hover:border-amber-400/40 transition-all duration-200"
                 >
-                  <div>
-                    {/* Top Row: Vehicle Icon/Photo + Name & Badges */}
-                    <div className="flex items-start justify-between gap-2 sm:gap-2.5">
-                      <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
+                  <div className="space-y-3">
+                    {/* Top Row: Vehicle Icon/Photo + Name, Plate & Badges */}
+                    <div className="flex items-start justify-between gap-2.5 sm:gap-3">
+                      <div className="flex items-start gap-2.5 sm:gap-3.5 min-w-0 flex-1">
                         {job.thumbnailUrl ? (
                           <img
                             src={job.thumbnailUrl}
                             alt=""
-                            className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-white/10"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-white/10 pointer-events-none"
                           />
                         ) : (
-                          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-xs shrink-0">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-xs shrink-0 pointer-events-none">
                             <Car className="w-4 h-4 sm:w-5 sm:h-5" />
                           </div>
                         )}
 
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <h3 className="text-sm sm:text-base font-black uppercase text-slate-900 dark:text-white tracking-tight truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                            <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                               {job.vehicleName || 'Vehicle'}
                             </h3>
+                            <span className="text-[10px] sm:text-xs font-mono font-bold px-1.5 py-0.5 sm:px-2 rounded-md bg-amber-400/15 text-amber-700 dark:text-amber-300 border border-amber-400/20 shrink-0">
+                              {job.vehicleNumber}
+                            </span>
                             {isReady && (
-                              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3" /> Ready
+                              <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-mono font-bold px-1.5 py-0.5 sm:px-2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shrink-0">
+                                <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> Ready
                               </span>
                             )}
                             {job.expectedDeliveryDate && (
                               <span
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border ${
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 sm:px-2 rounded-full text-[10px] sm:text-xs font-mono font-bold border shrink-0 ${
                                   deliveryInfo.isOverdue
                                     ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/40 animate-pulse shadow-xs'
                                     : deliveryInfo.badgeClass
                                 }`}
                               >
                                 {deliveryInfo.isOverdue ? (
-                                  <AlertTriangle className="w-3 h-3 text-rose-500 shrink-0 stroke-[2.5]" />
+                                  <AlertTriangle className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-rose-500 shrink-0 stroke-[2.5]" />
                                 ) : (
-                                  <Clock className="w-3 h-3 shrink-0" />
+                                  <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
                                 )}
                                 <span>{deliveryInfo.shortLabel}</span>
                               </span>
                             )}
-                          </div>
-
-                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            <span className="text-[11px] sm:text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/30 tracking-wider">
-                              {job.vehicleNumber}
-                            </span>
-                            {job.vehicleColor && (
-                              <span className="text-[11px] sm:text-xs font-mono text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
-                                <span>•</span>
-                                <span>{job.vehicleColor}</span>
+                            {pinned && (
+                              <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-mono font-bold px-1.5 py-0.5 sm:px-2 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20 shrink-0">
+                                {isPinnedForAll ? (
+                                  <Globe className="w-2.5 h-2.5 text-amber-500" />
+                                ) : (
+                                  <Pin className="w-2.5 h-2.5 text-amber-500 fill-current" />
+                                )}
+                                <span>{isPinnedForAll ? 'Garage Pin' : 'Personal Pin'}</span>
                               </span>
                             )}
                           </div>
+
+                          <p className="text-[11px] sm:text-xs font-mono text-slate-400 dark:text-slate-500 mt-1 truncate">
+                            {job.customerName ? `Client: ${job.customerName}` : 'In Service Bay'}
+                            {job.vehicleColor ? ` • ${job.vehicleColor}` : ''}
+                          </p>
                         </div>
                       </div>
 
@@ -602,31 +607,45 @@ export const JobsListPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Progress Bar Beam */}
-                    <div className="space-y-1.5 mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-200/60 dark:border-white/[0.06]">
-                      <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-mono">
-                        <span className="text-slate-500 dark:text-slate-400 uppercase font-bold text-[9px] sm:text-[10px]">
+                    {/* Progress Bar & Stats (Matching Dashboard style) */}
+                    <div className="space-y-1.5 pt-2 sm:pt-2.5 border-t border-slate-200/60 dark:border-white/[0.06]">
+                      <div className="flex items-center justify-between text-[11px] sm:text-xs font-mono">
+                        <span className="text-slate-500 dark:text-slate-400 uppercase font-bold text-[9px] sm:text-[10px] tracking-wider">
                           Service Progress
                         </span>
-                        <span
-                          className={`font-black text-[11px] sm:text-xs px-2 py-0.5 rounded-md ${
-                            isReady
-                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
-                              : 'bg-slate-100 dark:bg-white/5 text-amber-600 dark:text-amber-300 border border-slate-200 dark:border-white/10'
-                          }`}
-                        >
-                          {completedTasks}/{totalTasks} ({progressPercent}%)
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-bold ${isReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                            {progressPercent}%
+                          </span>
+                          <span className="text-slate-400 dark:text-slate-500">
+                            ({completedTasks}/{totalTasks} tasks)
+                          </span>
+                        </div>
                       </div>
-                      <ProgressBarBeam progress={progressPercent} />
+                      <div className="w-full h-1.5 rounded-full overflow-hidden bg-slate-200 dark:bg-white/10">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            isReady ? 'bg-emerald-500' : 'bg-amber-500'
+                          }`}
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Card Bottom: View Details Action */}
-                  <div className="mt-3 pt-2 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center justify-end">
-                    <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold transition-colors text-xs">
-                      <span>View Details</span>
-                      <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  {/* Card Bottom: Status indicator & View Details Action */}
+                  <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`w-1.5 h-1.5 rounded-full ${isReady ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                      <span className="text-[10px] sm:text-xs font-mono text-slate-400 dark:text-slate-500">
+                        {isReady ? 'Ready for Delivery' : 'In Service Bay'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold group-hover:text-amber-500 transition-colors">
+                      <span className="text-[11px] sm:text-xs font-mono">View Details</span>
+                      <div className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                        <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      </div>
                     </div>
                   </div>
                 </motion.div>

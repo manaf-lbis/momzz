@@ -144,7 +144,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
   const deliveryInfo = getDeliveryStatusInfo(job.expectedDeliveryDate, isReady);
 
   return (
-    <div className="relative bg-white/90 dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800/90 hover:border-amber-400/50 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs dark:shadow-xl transition-all space-y-4 backdrop-blur-xl">
+    <div className="relative glass-modern-card hover:border-amber-400/50 dark:hover:border-amber-400/40 rounded-2xl sm:rounded-3xl p-4 sm:p-5 transition-all space-y-4 select-none">
       {/* Content wrapper */}
       <div className="relative z-10 space-y-4">
         {/* Header: Vehicle Name & Info */}
@@ -205,7 +205,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({ job, compact = false }
               </div>
               
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-mono font-black text-slate-950 bg-amber-400 px-2.5 py-0.5 rounded-md border border-amber-500/50 shadow-xs tracking-wider">
+                <span className="text-[10px] sm:text-xs font-mono font-bold px-1.5 py-0.5 sm:px-2 rounded-md bg-amber-400/15 text-amber-700 dark:text-amber-300 border border-amber-400/20 shrink-0">
                   {job.vehicleNumber}
                 </span>
                 {job.expectedDeliveryDate && (
