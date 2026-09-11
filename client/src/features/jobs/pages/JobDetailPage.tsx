@@ -21,7 +21,6 @@ import { PinJobModal } from '../../../shared/components/jobCard/PinJobModal';
 import { BackButton } from '../../../shared/components/common/BackButton';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { MagicTabs } from '../../../shared/components/magicui/MagicTabs';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { SlideToSignoff } from '../components/SlideToSignoff';
 import { triggerSubTaskConfetti, triggerVehicleReadyConfetti } from '../../../shared/utils/confetti';
@@ -452,10 +451,6 @@ export const JobDetailPage: React.FC = () => {
 
         {/* ── VEHICLE HERO ── */}
         <section className="glass-head-card relative overflow-hidden rounded-3xl p-4 sm:p-5 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)]">
-          {/* Top edge accent */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 dark:via-amber-400/40 to-transparent pointer-events-none" />
-          {isPinned && <BorderBeam size={220} duration={7} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />}
-
           <div className="relative z-10 space-y-2.5">
 
             {/* Row 1 — Registration + Color + Status (all in one line on mobile) */}
@@ -729,8 +724,6 @@ export const JobDetailPage: React.FC = () => {
 
               {/* Client & Fast Communications Hub */}
               <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-4">
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 dark:via-amber-400/20 to-transparent pointer-events-none" />
-
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
                   <div>
                     <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
@@ -847,8 +840,6 @@ export const JobDetailPage: React.FC = () => {
             <div className="space-y-4">
               {/* Delivery & Timeline Card */}
               <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-3">
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 dark:via-amber-400/20 to-transparent pointer-events-none" />
-
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
                   <div>
                     <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
@@ -902,8 +893,6 @@ export const JobDetailPage: React.FC = () => {
 
               {/* Vehicle Operational Actions */}
               <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-4">
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 dark:via-amber-400/20 to-transparent pointer-events-none" />
-
                 {/* Header */}
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
                   <div>
@@ -1491,8 +1480,6 @@ export const JobDetailPage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               className="relative w-full max-w-sm rounded-3xl bg-[#0b0b14] border border-white/[0.09] shadow-2xl p-5 sm:p-5.5 space-y-4 overflow-hidden"
             >
-              <BorderBeam size={180} duration={8} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={0.75} />
-
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1669,8 +1656,6 @@ export const JobDetailPage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               className="relative w-full max-w-sm rounded-3xl bg-[#090912] border border-white/[0.08] shadow-2xl p-5 sm:p-5.5 space-y-3.5 overflow-hidden"
             >
-              <BorderBeam size={160} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={0.75} />
-
               {/* Header */}
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -1856,8 +1841,6 @@ export const JobDetailPage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               className="relative w-full max-w-sm rounded-3xl bg-[#0b0b14] border border-white/[0.09] shadow-2xl p-5 sm:p-6 space-y-4 overflow-hidden"
             >
-              <BorderBeam size={180} duration={8} colorFrom="#38bdf8" colorTo="#fbbf24" borderWidth={0.75} />
-
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

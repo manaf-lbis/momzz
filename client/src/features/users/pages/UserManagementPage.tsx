@@ -19,7 +19,6 @@ import {
   Activity,
   ArrowUpRight,
 } from 'lucide-react';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
 
@@ -203,8 +202,6 @@ export const UserManagementPage: React.FC = () => {
                   onClick={() => navigate(`/users/${uId}`)}
                   className="group relative overflow-hidden rounded-2xl glass-modern-card hover:border-amber-400/50 p-3.5 flex flex-col justify-between transition-all duration-200 cursor-pointer shadow-sm"
                 >
-                  <BorderBeam size={140} duration={8} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={0.75} />
-
                   <div className="flex items-center justify-between gap-3">
                     {/* Avatar & Online Dot */}
                     <div className="flex items-center gap-3 min-w-0">

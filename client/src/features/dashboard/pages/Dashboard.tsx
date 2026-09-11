@@ -36,7 +36,6 @@ import { NumberTicker } from "../../../shared/components/magicui/NumberTicker";
 import { GlobalSearchModal } from "../../../shared/components/common/GlobalSearchModal";
 import { AnimatedThemeToggle } from "../../../shared/components/magicui/AnimatedThemeToggle";
 import { FluidCanvasBackground } from "../../../shared/components/common/FluidCanvasBackground";
-import { BorderBeam } from "../../../shared/components/magicui/BorderBeam";
 
 const heroSlideMeta = [
   { title: "Live Garage Flow", badge: "Live Flow" },
@@ -465,12 +464,6 @@ export const Dashboard: React.FC = () => {
           onMouseLeave={() => setIsCarouselHovered(false)}
           className="glass-head-card relative overflow-hidden rounded-3xl p-5 sm:p-7 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_44px_-8px_rgba(0,0,0,0.7)]"
         >
-          {/* Subtle top edge glow reflection */}
-          <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/70 dark:via-amber-400/50 to-transparent pointer-events-none" />
-
-          {/* Active border beam */}
-          <BorderBeam size={280} duration={8} colorFrom="#f59e0b" colorTo="#fbbf24" borderWidth={1.2} />
-
           {/* Carousel Header Controls & Slide Indicators with Persistent Title */}
           <div className="relative z-10 flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2.5">

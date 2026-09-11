@@ -24,7 +24,6 @@ import { BackButton } from '../../../shared/components/common/BackButton';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
 import confetti from 'canvas-confetti';
 import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { LeaderboardSkeleton } from '../../../shared/components/common/PageShimmer';
 
@@ -269,9 +268,6 @@ const TaskHistoryPanel: React.FC<{
         style={{ maxHeight: '90vh' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent pointer-events-none" />
-        <BorderBeam size={220} duration={7} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={1} />
-
         {/* Header */}
         <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-white/[0.06] shrink-0">
           <Avatar name={user.name} imageUrl={user.profileImageUrl} size={44} rank={0} />
@@ -638,7 +634,6 @@ export const LeaderboardPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 mb-5 shadow-sm"
         >
-          <BorderBeam size={180} duration={7} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-500 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center shrink-0 shadow-md shadow-amber-400/20">
               {currentUserRank ? `#${currentUserRank}` : '—'}
@@ -675,8 +670,6 @@ export const LeaderboardPage: React.FC = () => {
                 transition={{ delay: 0.06 }}
                 className="relative overflow-hidden rounded-3xl glass-modern-card pt-10 pb-6 px-4 sm:px-6 lg:px-5 h-full"
               >
-                <BorderBeam size={280} duration={12} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={1} />
-
                 {/* Label & Spotlight Action */}
                 <div className="absolute top-3.5 inset-x-4 flex items-center justify-between pointer-events-auto">
                   <span className="flex items-center gap-1 text-[10px] font-mono font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest whitespace-nowrap">

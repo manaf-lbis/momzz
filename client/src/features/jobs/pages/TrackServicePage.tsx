@@ -23,7 +23,6 @@ import { formatDeliveryDate, getDeliveryStatusInfo } from '../../../shared/utils
 import { getBaseServerUrl } from '../../../shared/utils/serverUrl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { Link } from 'react-router-dom';
 import { TermsAndConditionsModal } from '../../../shared/components/legal/TermsAndConditionsModal';
@@ -137,8 +136,6 @@ export const TrackServicePage: React.FC = () => {
 
         {/* Search Bento Card */}
         <section className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 shadow-xl space-y-3.5">
-          <BorderBeam size={180} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
-
           <div>
             <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
               Vehicle Registration Number

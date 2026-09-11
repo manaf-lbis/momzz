@@ -8,7 +8,6 @@ import { setCredentials } from '../store/authSlice';
 import { useAppSelector } from '../../../shared/hooks/useAppSelector';
 
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { TermsAndConditionsModal } from '../../../shared/components/legal/TermsAndConditionsModal';
 
@@ -146,10 +145,6 @@ export const AuthPage = () => {
           transition={{ duration: 0.3 }}
           className="relative w-full max-w-sm sm:rounded-3xl sm:glass-modern-card sm:p-6 sm:shadow-2xl sm:overflow-hidden p-1 bg-transparent border-0 shadow-none"
         >
-          <div className="hidden sm:block pointer-events-none">
-            <BorderBeam size={180} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
-          </div>
-
           {/* Toggle Switch */}
           <div className="grid grid-cols-2 p-1 bg-white/80 dark:bg-white/5 rounded-2xl border border-slate-200/80 dark:border-white/10 mb-5 shadow-2xs">
             <button

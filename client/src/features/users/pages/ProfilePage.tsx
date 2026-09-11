@@ -31,7 +31,6 @@ import {
 } from '../../auth/api/authApi';
 import { ImageCropperModal } from '../../../shared/components/common/ImageCropperModal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
@@ -136,8 +135,6 @@ export const ProfilePage: React.FC = () => {
           <div className="lg:col-span-5 space-y-4">
             {/* Identity Card */}
             <section className="relative overflow-hidden rounded-3xl glass-modern-card p-5 shadow-xl space-y-4 transition-colors">
-              <BorderBeam size={180} duration={8} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={0.75} />
-
               <div className="flex flex-col items-center text-center space-y-3">
                 {/* Avatar with Camera Trigger */}
                 <div className="relative group">

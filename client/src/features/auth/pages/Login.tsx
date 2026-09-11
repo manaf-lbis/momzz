@@ -75,8 +75,6 @@ export const Login: React.FC = () => {
       {/* ── Login Card ── */}
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="glass-modern-card relative overflow-hidden py-8 px-6 sm:px-10 rounded-3xl shadow-xl hover:border-amber-400/40 transition-all">
-          <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/70 to-transparent pointer-events-none" />
-
           {errorMsg && (
             <div className="mb-6 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-2.5 text-rose-700 dark:text-rose-300 text-xs font-mono">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />

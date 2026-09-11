@@ -8,7 +8,6 @@ import { PinJobModal } from '../../../shared/components/jobCard/PinJobModal';
 import { BackButton } from '../../../shared/components/common/BackButton';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { MagicTabs } from '../../../shared/components/magicui/MagicTabs';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import {
   ChevronLeft,
@@ -522,8 +521,6 @@ export const JobsListPage: React.FC = () => {
                   onClick={() => navigate(`/jobs/${jobId}`)}
                   className="group relative overflow-hidden rounded-2xl glass-modern-card p-4 sm:p-5 flex flex-col justify-between cursor-pointer"
                 >
-                  {pinned && <BorderBeam size={160} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={0.75} />}
-
                   <div>
                     {/* Top Row: Vehicle Icon/Photo + Name & Badges */}
                     <div className="flex items-start justify-between gap-2.5">

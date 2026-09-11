@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ProgressBarBeam } from './AnimatedBeam';
-import { BorderBeam } from './BorderBeam';
 import { getDeliveryStatusInfo } from '../../utils/dateUtils';
 
 export interface StackJobCardItem {
@@ -153,10 +152,6 @@ export const IosNotificationStack: React.FC<IosNotificationStackProps> = ({
             'group relative w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 cursor-pointer flex flex-col justify-between glass-modern-card transition-all duration-200 shadow-sm overflow-hidden'
           )}
         >
-          {currentJob.isPinned && (
-            <BorderBeam size={200} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
-          )}
-
           <div>
             {/* Top Row: Vehicle Name, Plate, Status & Priority */}
             <div className="flex items-start justify-between gap-2">

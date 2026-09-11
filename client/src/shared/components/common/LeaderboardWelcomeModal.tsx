@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { useGetLeaderboardQuery } from '../../../features/auth/api/authApi';
 import { useAuth } from '../../hooks/useAuth';
 import { NumberTicker } from '../magicui/NumberTicker';
-import { BorderBeam } from '../magicui/BorderBeam';
 
 const SESSION_KEY = 'podium_welcome_shown_v7';
 
@@ -80,8 +79,6 @@ export const LeaderboardWelcomeModal: React.FC = () => {
           className="relative w-full max-w-sm sm:max-w-md overflow-hidden rounded-3xl glass-modern-card shadow-2xl p-5 sm:p-6 space-y-4 text-center select-none border border-slate-200/80 dark:border-white/10"
           onClick={(e) => e.stopPropagation()}
         >
-          <BorderBeam size={220} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
-
           {/* Ambient Glow */}
           <div className="pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 w-56 h-56 rounded-full bg-amber-400/15 blur-3xl" />
 

@@ -32,7 +32,6 @@ import { advancedSearch, findDuplicateCandidates } from '../../../shared/utils/s
 import { ImageCropperModal } from '../../../shared/components/common/ImageCropperModal';
 import { getDeliveryPreset } from '../../../shared/utils/dateUtils';
 import { ModernDateTimePicker } from '../../../shared/components/common/ModernDateTimePicker';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 
 type SelectedLine = {

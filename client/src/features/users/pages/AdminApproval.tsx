@@ -6,7 +6,6 @@ import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { ShieldAlert, UserCheck, RefreshCw, AlertCircle, ChevronLeft, Phone, Calendar, Loader2 } from 'lucide-react';
 import { formatDate } from '../../../shared/utils/formatters';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
 import { useNavigate } from 'react-router-dom';
@@ -82,8 +81,6 @@ export const AdminApproval: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="group relative overflow-hidden rounded-2xl glass-modern-card p-4 space-y-3 flex flex-col justify-between"
                 >
-                  <BorderBeam size={160} duration={6} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
-
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-2xl overflow-hidden bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center font-black text-sm text-white shrink-0">

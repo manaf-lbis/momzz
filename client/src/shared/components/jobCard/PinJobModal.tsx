@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pin, X, Check, Loader2, Globe, Lock, Sparkles } from 'lucide-react';
 import { JobCardData } from '../../../features/jobs/api/jobApi';
-import { BorderBeam } from '../magicui/BorderBeam';
 
 interface PinJobModalProps {
   isOpen: boolean;
@@ -59,8 +58,6 @@ export const PinJobModal: React.FC<PinJobModalProps> = ({
           className="relative w-full max-w-sm bg-[#0f0f1e] rounded-3xl border border-white/12 shadow-2xl overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          <BorderBeam size={180} duration={8} colorFrom="#fbbf24" colorTo="#f59e0b" borderWidth={1} />
-
           {/* Header */}
           <div className="px-5 pt-5 pb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">

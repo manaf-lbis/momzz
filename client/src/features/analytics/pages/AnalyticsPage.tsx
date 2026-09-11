@@ -21,7 +21,6 @@ import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { PageShimmer, BentoCardSkeleton } from '../../../shared/components/common/PageShimmer';
 

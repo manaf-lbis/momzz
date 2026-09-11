@@ -26,7 +26,6 @@ import {
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
-import { BorderBeam } from '../../../shared/components/magicui/BorderBeam';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
 import { useAuth } from '../../../shared/hooks/useAuth';
@@ -411,8 +410,6 @@ export const StaffDetailPage: React.FC = () => {
 
         {/* ── 2. HERO PROFILE COMMAND CARD ── */}
         <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-7 shadow-lg border border-white/90 dark:border-white/[0.08]">
-          <BorderBeam size={260} duration={8} colorFrom="#fbbf24" colorTo="#8b5cf6" borderWidth={1} />
-
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             {/* Left: Avatar & Personal Info */}
             <div className="flex items-start sm:items-center gap-4 min-w-0">
