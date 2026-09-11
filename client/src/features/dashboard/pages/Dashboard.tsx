@@ -180,8 +180,8 @@ export const Dashboard: React.FC = () => {
       <main className="app-container relative z-10 flex-1 pt-5 pb-32 md:pb-16 flex flex-col gap-4">
 
         {/* ── 1. HEADER (Profile Greeting + Controls - Mobile Only) ── */}
-        <header className="sm:hidden sticky top-0 z-30 -mx-4 px-4 -mt-5 pt-3 pb-3 mb-1 glass-modern-header flex items-center justify-between gap-3 transition-all">
-          <Link to="/profile" className="flex items-center gap-2.5 active:opacity-75 transition group">
+        <header className="sm:hidden sticky top-0 z-30 -mx-4 px-4 -mt-5 pt-2.5 pb-2.5 mb-2 glass-modern-header flex items-center justify-between gap-3 transition-all">
+          <Link to="/profile" className="flex items-center gap-2.5 active:opacity-75 transition group min-w-0">
             <div className="relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl overflow-hidden shrink-0 flex items-center justify-center font-black text-sm sm:text-base text-amber-600 dark:text-amber-400
                             backdrop-blur-xl bg-white/70 dark:bg-white/[0.08] border border-white/90 dark:border-white/[0.12] shadow-xs">
               {user?.profileImageUrl
@@ -189,7 +189,7 @@ export const Dashboard: React.FC = () => {
                 : user?.name?.charAt(0)?.toUpperCase()}
               <span className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-emerald-400 border-2 border-white dark:border-[#07080e]" />
             </div>
-            <div className="leading-tight">
+            <div className="leading-tight min-w-0">
               <div className="flex items-center gap-1.5">
                 <p className="text-[10px] sm:text-xs font-mono uppercase tracking-widest text-amber-600/80 dark:text-amber-400/80 font-bold">
                   Good {greeting}
@@ -197,13 +197,13 @@ export const Dashboard: React.FC = () => {
                 <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
                 <span className="text-[10px] sm:text-xs font-mono text-slate-400 dark:text-slate-500 uppercase">{user?.role}</span>
               </div>
-              <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+              <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">
                 {user?.name?.split(" ")[0]}
               </p>
             </div>
           </Link>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="hidden sm:inline text-xs font-mono text-slate-400 dark:text-slate-500 mr-1">
               {dateStr}
             </span>

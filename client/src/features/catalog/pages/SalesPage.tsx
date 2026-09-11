@@ -272,7 +272,7 @@ export const SalesPage: React.FC = () => {
         {/* Catalog Section */}
         <section className="flex min-w-0 flex-1 flex-col">
           {/* Header & Filter Controls */}
-          <div className="border-b border-slate-200/80 bg-white/95 px-4 py-4 dark:border-white/[0.08] dark:bg-[#080811]/90 sm:px-6 backdrop-blur-2xl">
+          <div className="glass-modern-header px-4 py-3.5 sm:px-6">
             <div className="flex items-center justify-between gap-3 sm:gap-4">
               <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                 <BackButton to="/dashboard" label="Dashboard" />

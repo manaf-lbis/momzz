@@ -400,8 +400,8 @@ export const EditJobPage: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16">
         {/* Page Top Header */}
-        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-3.5 pb-3.5 mb-3 glass-modern-header flex items-center justify-between gap-3 transition-all">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-2.5 pb-2.5 sm:pt-3 sm:pb-3 mb-2 sm:mb-3 glass-modern-header flex items-center justify-between gap-3 transition-all">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               type="button"
               onClick={() => (step === 2 ? setStep(1) : navigate(`/jobs/${id}`))}
@@ -411,12 +411,12 @@ export const EditJobPage: React.FC = () => {
               <span className="hidden sm:inline">Back to Job Details</span>
             </button>
             <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 shrink-0 hidden sm:block" />
-            <h1 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white truncate">
+            <h1 className="text-base sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white truncate">
               Edit Job Card
             </h1>
           </div>
 
-          <span className="rounded-full bg-amber-400/15 border border-amber-400/30 px-2.5 py-0.5 text-[10px] sm:text-xs font-mono font-bold text-amber-700 dark:text-amber-300 shrink-0">
+          <span className="rounded-full bg-amber-400/15 border border-amber-400/30 px-2 py-0.5 text-[10px] sm:text-xs font-mono font-bold text-amber-700 dark:text-amber-300 shrink-0">
             Step {step} of 2
           </span>
         </header>

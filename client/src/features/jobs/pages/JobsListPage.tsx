@@ -7,6 +7,7 @@ import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PinJobModal } from '../../../shared/components/jobCard/PinJobModal';
 import { BackButton } from '../../../shared/components/common/BackButton';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
+import { ModernInfiniteLoader } from '../../../shared/components/common/ModernInfiniteLoader';
 import { MagicTabs } from '../../../shared/components/magicui/MagicTabs';
 import { Meteors } from '../../../shared/components/magicui/Meteors';
 import {
@@ -634,12 +635,15 @@ export const JobsListPage: React.FC = () => {
           </div>
         )}
 
-        {/* Infinite Scroll Sentinel */}
-        {hasMore && (
-          <div ref={sentinelRef} className="py-6 flex justify-center">
-            <Loader2 className="w-5 h-5 text-amber-300 animate-spin" />
-          </div>
-        )}
+        {/* Modern Infinite Scroll Loader & End Indicator */}
+        <ModernInfiniteLoader
+          sentinelRef={sentinelRef}
+          hasMore={hasMore}
+          isLoading={isFetchingMore}
+          totalCount={filteredJobs.length}
+          entityName="vehicles"
+          loadingLabel="Loading more garage vehicles"
+        />
       </main>
 
       {/* Pin Job Modal */}

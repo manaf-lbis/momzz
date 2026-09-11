@@ -145,8 +145,8 @@ export const TermsPage: React.FC = () => {
       <Navbar glass />
 
       {/* Top Controls Header (Sticky) */}
-      <header className="sticky top-0 sm:top-14 z-30 border-b border-slate-200/80 dark:border-white/[0.08] bg-white/80 dark:bg-[#08090f]/80 backdrop-blur-md transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+      <header className="sticky top-0 sm:top-14 z-30 glass-modern-header transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <BackButton label={language === 'en' ? 'Back' : 'തിരികെ'} />
             <div className="h-4 w-px bg-slate-300 dark:bg-white/10 hidden sm:block" />

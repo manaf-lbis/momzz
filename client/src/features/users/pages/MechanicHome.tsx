@@ -18,6 +18,7 @@ import {
 import { Button } from '../../../shared/components/common/Button';
 import { Link } from 'react-router-dom';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
+import { ModernInfiniteLoader } from '../../../shared/components/common/ModernInfiniteLoader';
 
 export const MechanicHome: React.FC = () => {
   const { user } = useAuth();
@@ -280,17 +281,15 @@ export const MechanicHome: React.FC = () => {
                 <VehicleCard key={job.id || job._id} job={job} compact={true} />
               ))}
 
-              {/* Infinite Scroll Sentinel */}
-              <div ref={observerRef} className="py-4 text-center">
-                {isLoading && page > 1 && (
-                  <div className="flex items-center justify-center gap-2 text-xs font-mono text-yellow-400">
-                    <Wrench className="w-4 h-4 animate-spin" /> Loading more vehicles...
-                  </div>
-                )}
-                {page >= totalPages && accumulatedJobs.length > 10 && (
-                  <p className="text-[11px] font-mono text-zinc-600">— All vehicles loaded —</p>
-                )}
-              </div>
+              {/* Modern Infinite Scroll Loader & End Indicator */}
+              <ModernInfiniteLoader
+                sentinelRef={observerRef}
+                hasMore={page < totalPages}
+                isLoading={isLoading && page > 1}
+                totalCount={accumulatedJobs.length}
+                entityName="vehicles"
+                loadingLabel="Loading more active vehicles"
+              />
             </div>
           )}
         </div>

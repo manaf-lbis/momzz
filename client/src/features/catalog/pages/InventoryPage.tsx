@@ -17,6 +17,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
+import { ModernInfiniteLoader } from '../../../shared/components/common/ModernInfiniteLoader';
 import { MagicTabs } from '../../../shared/components/magicui/MagicTabs';
 import {
   CatalogItem,
@@ -506,20 +507,16 @@ export const InventoryPage: React.FC = () => {
           </div>
         )}
 
-        {/* -- INFINITE SCROLL SENTINEL & COUNTER -- */}
+        {/* -- INFINITE SCROLL LOADER & END COUNTER -- */}
         {filteredItems.length > 0 && (
-          <div className="py-4 flex flex-col items-center justify-center gap-2">
-            {visibleCount < filteredItems.length ? (
-              <div ref={sentinelRef} className="flex items-center gap-2 text-xs font-mono text-slate-400 py-2">
-                <div className="w-4 h-4 rounded-full border-2 border-amber-400/40 border-t-amber-400 animate-spin" />
-                <span>Loading more parts...</span>
-              </div>
-            ) : (
-              <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                All {filteredItems.length} inventory items loaded
-              </p>
-            )}
-          </div>
+          <ModernInfiniteLoader
+            sentinelRef={sentinelRef}
+            hasMore={visibleCount < filteredItems.length}
+            isLoading={false}
+            totalCount={filteredItems.length}
+            entityName="inventory items"
+            loadingLabel="Loading more inventory parts"
+          />
         )}
       </main>
     </div>

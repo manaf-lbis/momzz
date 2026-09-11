@@ -241,17 +241,17 @@ export const CreateJobPage: React.FC = () => {
 
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* Header & Step Indicator */}
-        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-3 pb-3 mb-1 glass-modern-header flex items-center justify-between gap-3 transition-all">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-2.5 pb-2.5 sm:pt-3 sm:pb-3 mb-2 glass-modern-header flex items-center justify-between gap-3 transition-all">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <BackButton
               onClick={() => (step === 2 ? setStep(1) : navigate('/jobs'))}
               label={step === 2 ? 'Step 1' : 'Vehicles'}
             />
-            <div>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                {step === 1 ? 'Intake & Vehicle Registration' : 'Job Checklist & Parts'}
-                <span className="text-[10px] sm:text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300">
-                  Step {step} of 2
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2 truncate">
+                <span>{step === 1 ? 'Intake & Registration' : 'Job Checklist & Parts'}</span>
+                <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-700 dark:text-amber-300 shrink-0">
+                  Step {step}/2
                 </span>
               </h1>
             </div>

@@ -61,7 +61,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   return (
     <header
-      className={`sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-3 pb-3 sm:pt-3.5 sm:pb-3.5 mb-3 glass-modern-header transition-all flex flex-col gap-2 ${className}`}
+      className={`sticky top-0 sm:top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 -mt-4 pt-2.5 pb-2.5 sm:pt-3 sm:pb-3 mb-2 sm:mb-3 glass-modern-header transition-all flex flex-col gap-1.5 ${className}`}
     >
       {/* Primary Header Row */}
       <div className="flex items-center justify-between gap-2 sm:gap-4 w-full min-w-0">
@@ -71,7 +71,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             <button
               type="button"
               onClick={handleBack}
-              className="p-1.5 -ml-1 sm:p-2 sm:-ml-1.5 rounded-xl hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition active:scale-95 shrink-0 cursor-pointer"
+              className="p-1.5 -ml-1 sm:p-2 sm:-ml-1.5 rounded-xl hover:bg-slate-200/50 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition active:scale-95 shrink-0 cursor-pointer"
               aria-label="Go back"
               title="Go back"
             >
@@ -123,7 +123,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
       {/* Mobile Sub-row: Shows badge and/or secondary actions below title on narrow screens */}
       {(subRow || badge) && (
-        <div className="sm:hidden flex items-center justify-between gap-2 pt-1 border-t border-slate-200/50 dark:border-white/[0.06]">
+        <div className="sm:hidden flex items-center justify-between gap-2 pt-1 border-t border-slate-200/30 dark:border-white/[0.04]">
           <div className="flex items-center gap-1.5 flex-wrap min-w-0">
             {badge}
           </div>
