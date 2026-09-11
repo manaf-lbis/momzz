@@ -87,7 +87,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white min-w-0 truncate">
+              <h1 className="text-base sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white min-w-0 truncate">
                 {title}
               </h1>
 
@@ -98,7 +98,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
               )}
 
               {count !== undefined && count !== null && (
-                <span className="text-xs sm:text-sm font-semibold text-slate-400 dark:text-slate-500 shrink-0 select-none font-mono">
+                <span className="text-[11px] sm:text-sm font-semibold text-slate-400 dark:text-slate-500 shrink-0 select-none font-mono">
                   ({count})
                 </span>
               )}

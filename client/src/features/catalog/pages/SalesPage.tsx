@@ -281,7 +281,7 @@ export const SalesPage: React.FC = () => {
                   <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 truncate">
                     Point of Sale
                   </p>
-                  <h1 className="mt-0.5 text-lg sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white truncate">
+                  <h1 className="mt-0.5 text-base sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white truncate">
                     Direct Counter Sales
                   </h1>
                 </div>

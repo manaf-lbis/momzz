@@ -185,15 +185,15 @@ export const InventoryPage: React.FC = () => {
         />
 
         {/* -- STOCK KPI OVERVIEW BAR -- */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
           {/* Total Parts */}
-          <div className="rounded-2xl glass-modern-card p-3 sm:p-3.5 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-              <Boxes className="w-4 h-4" />
+          <div className="rounded-2xl glass-modern-card p-2.5 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+              <Boxes className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-mono font-bold uppercase text-slate-400 dark:text-slate-500">Total Items</p>
-              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
+              <p className="text-[9px] sm:text-[10px] font-mono font-bold uppercase text-slate-400 dark:text-slate-500">Total Items</p>
+              <p className="text-sm sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
                 {rawItems.length}
               </p>
             </div>
@@ -203,22 +203,22 @@ export const InventoryPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setStockFilter(stockFilter === 'LOW_STOCK' ? 'ALL' : 'LOW_STOCK')}
-            className={`rounded-2xl p-3 sm:p-3.5 flex items-center gap-3 text-left transition active:scale-95 cursor-pointer glass-modern-card ${
+            className={`rounded-2xl p-2.5 sm:p-3.5 flex items-center gap-2.5 sm:gap-3 text-left transition active:scale-95 cursor-pointer glass-modern-card ${
               lowStockItems.length > 0
                 ? '!border-rose-500/40 !bg-rose-500/10'
                 : ''
             }`}
           >
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+            <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 ${
               lowStockItems.length > 0
                 ? 'bg-rose-500/20 text-rose-500 border border-rose-500/40 animate-pulse'
                 : 'bg-slate-100 dark:bg-white/5 text-slate-400'
             }`}>
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-mono font-bold uppercase text-slate-400 dark:text-slate-500">Low Stock</p>
-              <p className={`text-base sm:text-lg font-black leading-tight ${
+              <p className="text-[9px] sm:text-[10px] font-mono font-bold uppercase text-slate-400 dark:text-slate-500">Low Stock</p>
+              <p className={`text-sm sm:text-lg font-black leading-tight ${
                 lowStockItems.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
               }`}>
                 {lowStockItems.length}
@@ -227,26 +227,26 @@ export const InventoryPage: React.FC = () => {
           </button>
 
           {/* Spares / Physical Products */}
-          <div className="rounded-2xl glass-modern-card p-3 sm:p-3.5 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
-              <Package className="w-4 h-4" />
+          <div className="rounded-2xl glass-modern-card p-2.5 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
+              <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-mono font-bold uppercase text-slate-400 dark:text-slate-500">Spares & Stock</p>
-              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
+              <p className="text-[9px] sm:text-[10px] font-mono font-bold uppercase text-slate-400 dark:text-slate-500">Spares & Stock</p>
+              <p className="text-sm sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
                 {totalProducts}
               </p>
             </div>
           </div>
 
           {/* Workshop Services */}
-          <div className="rounded-2xl glass-modern-card p-3 sm:p-3.5 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
-              <Wrench className="w-4 h-4" />
+          <div className="rounded-2xl glass-modern-card p-2.5 sm:p-3.5 flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
+              <Wrench className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-mono font-bold uppercase text-slate-400 dark:text-slate-500">Labor & Services</p>
-              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
+              <p className="text-[9px] sm:text-[10px] font-mono font-bold uppercase text-slate-400 dark:text-slate-500">Labor & Services</p>
+              <p className="text-sm sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
                 {totalServices}
               </p>
             </div>

@@ -437,7 +437,7 @@ export const VehiclePhotoPage: React.FC = () => {
           <BackButton to={`/jobs/${currentJob.id || currentJob._id}`} label="Back" />
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
+              <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
                 {currentJob.vehicleName}
               </h1>
               <span className="text-[11px] sm:text-xs font-mono font-black text-amber-700 dark:text-amber-300 bg-amber-400/20 border border-amber-400/35 px-2 py-0.5 rounded-md uppercase tracking-wider">

@@ -610,7 +610,7 @@ export const LeaderboardPage: React.FC = () => {
               <button
                 key={key}
                 onClick={() => setTimeframe(key)}
-                className={`relative flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                className={`relative flex-1 py-1.5 sm:py-2 text-[11px] sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 ${
                   isActive ? 'text-slate-950 font-black' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
@@ -632,24 +632,24 @@ export const LeaderboardPage: React.FC = () => {
           key={`standing-${timeframe}`}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 mb-5 shadow-sm"
+          className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-3.5 sm:p-5 mb-4 sm:mb-5 shadow-sm"
         >
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-500 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center shrink-0 shadow-md shadow-amber-400/20">
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-400 to-amber-500 text-slate-950 font-black text-xs sm:text-base flex items-center justify-center shrink-0 shadow-md shadow-amber-400/20">
               {currentUserRank ? `#${currentUserRank}` : '—'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">
+              <p className="text-xs sm:text-base font-black text-slate-900 dark:text-white truncate">
                 {user?.name || 'You'}{' '}
-                <span className="text-amber-600 dark:text-amber-400 font-medium text-xs">(you)</span>
+                <span className="text-amber-600 dark:text-amber-400 font-medium text-[10px] sm:text-xs">(you)</span>
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate font-mono">{motivationText}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate font-mono">{motivationText}</p>
             </div>
             <div className="text-right shrink-0">
-              <div className="text-lg sm:text-2xl font-black font-mono text-amber-500 dark:text-amber-400 leading-none">
+              <div className="text-base sm:text-2xl font-black font-mono text-amber-500 dark:text-amber-400 leading-none">
                 {fmtPts(currentUserPoints)}
               </div>
-              <p className="text-[9px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5 font-bold">QP Points</p>
+              <p className="text-[8px] sm:text-[9px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5 font-bold">QP Points</p>
             </div>
           </div>
         </motion.div>

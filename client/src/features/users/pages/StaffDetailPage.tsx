@@ -386,7 +386,7 @@ export const StaffDetailPage: React.FC = () => {
             <BackButton to="/users" label="Staff" />
             <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 shrink-0 hidden xs:block" />
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
+              <span className="text-sm sm:text-lg font-black text-slate-900 dark:text-white truncate">
                 {staffMember.name}
               </span>
               <span
@@ -431,7 +431,7 @@ export const StaffDetailPage: React.FC = () => {
 
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  <h1 className="text-base sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                     {staffMember.name}
                   </h1>
                   <span

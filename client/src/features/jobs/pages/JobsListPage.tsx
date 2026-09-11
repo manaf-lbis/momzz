@@ -519,21 +519,21 @@ export const JobsListPage: React.FC = () => {
                   whileHover={{ y: -3 }}
                   transition={{ duration: 0.18 }}
                   onClick={() => navigate(`/jobs/${jobId}`)}
-                  className="group relative overflow-hidden rounded-2xl glass-modern-card p-4 sm:p-5 flex flex-col justify-between cursor-pointer"
+                  className="group relative overflow-hidden rounded-2xl glass-modern-card p-3.5 sm:p-5 flex flex-col justify-between cursor-pointer"
                 >
                   <div>
                     {/* Top Row: Vehicle Icon/Photo + Name & Badges */}
-                    <div className="flex items-start justify-between gap-2.5">
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2 sm:gap-2.5">
+                      <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
                         {job.thumbnailUrl ? (
                           <img
                             src={job.thumbnailUrl}
                             alt=""
-                            className="w-11 h-11 rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-white/10"
+                            className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-white/10"
                           />
                         ) : (
-                          <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-xs shrink-0">
-                            <Car className="w-5 h-5" />
+                          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-xs shrink-0">
+                            <Car className="w-4 h-4 sm:w-5 sm:h-5" />
                           </div>
                         )}
 
@@ -566,11 +566,11 @@ export const JobsListPage: React.FC = () => {
                           </div>
 
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            <span className="text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/30 tracking-wider">
+                            <span className="text-[11px] sm:text-xs font-mono font-black text-slate-900 dark:text-amber-300 bg-amber-400/20 dark:bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/30 tracking-wider">
                               {job.vehicleNumber}
                             </span>
                             {job.vehicleColor && (
-                              <span className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
+                              <span className="text-[11px] sm:text-xs font-mono text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
                                 <span>•</span>
                                 <span>{job.vehicleColor}</span>
                               </span>
@@ -602,13 +602,13 @@ export const JobsListPage: React.FC = () => {
                     </div>
 
                     {/* Progress Bar Beam */}
-                    <div className="space-y-1.5 mt-3 pt-2.5 border-t border-slate-200/60 dark:border-white/[0.06]">
-                      <div className="flex items-center justify-between text-[11px] font-mono">
-                        <span className="text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px]">
+                    <div className="space-y-1.5 mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-200/60 dark:border-white/[0.06]">
+                      <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-mono">
+                        <span className="text-slate-500 dark:text-slate-400 uppercase font-bold text-[9px] sm:text-[10px]">
                           Service Progress
                         </span>
                         <span
-                          className={`font-black text-xs px-2 py-0.5 rounded-md ${
+                          className={`font-black text-[11px] sm:text-xs px-2 py-0.5 rounded-md ${
                             isReady
                               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
                               : 'bg-slate-100 dark:bg-white/5 text-amber-600 dark:text-amber-300 border border-slate-200 dark:border-white/10'

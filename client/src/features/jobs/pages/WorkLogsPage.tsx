@@ -246,52 +246,52 @@ export const WorkLogsPage: React.FC = () => {
         {/* ── Key Metrics Cards (2x2 on Mobile, 4x1 on Tablet/Desktop) ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
           {/* Total Tasks */}
-          <div className="glass-modern-card rounded-2xl p-3 sm:p-4 shadow-xs flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+          <div className="glass-modern-card rounded-2xl p-2.5 sm:p-4 shadow-xs flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Completed</p>
-              <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">
+              <p className="text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Completed</p>
+              <p className="text-base sm:text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">
                 {allLogs.length}
               </p>
             </div>
           </div>
 
           {/* Vehicles */}
-          <div className="glass-modern-card rounded-2xl p-3 sm:p-4 shadow-xs flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <Car className="w-5 h-5" />
+          <div className="glass-modern-card rounded-2xl p-2.5 sm:p-4 shadow-xs flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Car className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Vehicles</p>
-              <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">
+              <p className="text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Vehicles</p>
+              <p className="text-base sm:text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">
                 {stats.uniqueVehicles}
               </p>
             </div>
           </div>
 
           {/* Technicians */}
-          <div className="glass-modern-card rounded-2xl p-3 sm:p-4 shadow-xs flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5" />
+          <div className="glass-modern-card rounded-2xl p-2.5 sm:p-4 shadow-xs flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Mechanics</p>
-              <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">
+              <p className="text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Mechanics</p>
+              <p className="text-base sm:text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">
                 {stats.uniqueTechs}
               </p>
             </div>
           </div>
 
           {/* Avg Duration */}
-          <div className="glass-modern-card rounded-2xl p-3 sm:p-4 shadow-xs flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-              <Timer className="w-5 h-5" />
+          <div className="glass-modern-card rounded-2xl p-2.5 sm:p-4 shadow-xs flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+              <Timer className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Avg Time</p>
-              <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">
+              <p className="text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Avg Time</p>
+              <p className="text-base sm:text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">
                 {stats.avgMins < 60 ? `${stats.avgMins}m` : `${Math.floor(stats.avgMins / 60)}h ${stats.avgMins % 60}m`}
               </p>
             </div>

@@ -494,7 +494,7 @@ export const JobDetailPage: React.FC = () => {
             {/* Row 2 — Vehicle Name + Ops + Vehicle Photo Thumbnail */}
             <div className="pt-0.5 flex items-center justify-between gap-3 min-w-0">
               <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
+                <h1 className="text-base sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate">
                   {currentJob.vehicleName || 'Vehicle Service'}
                 </h1>
                 <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">

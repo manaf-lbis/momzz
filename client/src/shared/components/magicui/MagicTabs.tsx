@@ -26,9 +26,9 @@ export function MagicTabs<T extends string = string>({
   size = 'md',
 }: MagicTabsProps<T>) {
   const sizeStyles = {
-    sm: 'py-1.5 px-2.5 text-xs gap-1.5',
-    md: 'py-2 px-3 text-xs sm:text-sm gap-2',
-    lg: 'py-2.5 px-4 text-sm font-bold gap-2.5',
+    sm: 'py-1 sm:py-1.5 px-2 sm:px-2.5 text-[11px] sm:text-xs gap-1.5',
+    md: 'py-1.5 sm:py-2 px-2.5 sm:px-3 text-[11px] sm:text-sm gap-1.5 sm:gap-2',
+    lg: 'py-2 sm:py-2.5 px-3 sm:px-4 text-xs sm:text-sm font-bold gap-2 sm:gap-2.5',
   }[size];
 
   return (

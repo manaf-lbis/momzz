@@ -161,7 +161,7 @@ export const ProfilePage: React.FC = () => {
 
                 {/* Name, Role & Mobile */}
                 <div>
-                  <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
                     {currentUser?.name || 'Technician'}
                   </h2>
                   <div className="flex items-center justify-center gap-2 mt-1">

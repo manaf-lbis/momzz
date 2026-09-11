@@ -93,37 +93,37 @@ export const UserManagementPage: React.FC = () => {
         />
 
         {/* ── METRIC TILES ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div className="p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+          <div className="p-2.5 sm:p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
             <div>
-              <p className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Total Staff</p>
-              <p className="text-lg font-black text-slate-900 dark:text-white">{rawUsers.length}</p>
+              <p className="text-[9px] sm:text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Total Staff</p>
+              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{rawUsers.length}</p>
             </div>
-            <Users className="w-5 h-5 text-amber-500" />
+            <Users className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
           </div>
 
-          <div className="p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
+          <div className="p-2.5 sm:p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
             <div>
-              <p className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Live Active</p>
-              <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{onlineCount}</p>
+              <p className="text-[9px] sm:text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Live Active</p>
+              <p className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">{onlineCount}</p>
             </div>
-            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
+            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 animate-ping" />
           </div>
 
-          <div className="p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
+          <div className="p-2.5 sm:p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
             <div>
-              <p className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Admins</p>
-              <p className="text-lg font-black text-purple-600 dark:text-purple-300">{adminCount}</p>
+              <p className="text-[9px] sm:text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Admins</p>
+              <p className="text-base sm:text-lg font-black text-purple-600 dark:text-purple-300">{adminCount}</p>
             </div>
-            <ShieldCheck className="w-5 h-5 text-purple-500" />
+            <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
           </div>
 
-          <div className="p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
+          <div className="p-2.5 sm:p-3 rounded-2xl glass-modern-card flex items-center justify-between shadow-2xs">
             <div>
-              <p className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Mechanics</p>
-              <p className="text-lg font-black text-amber-600 dark:text-amber-300">{workerCount}</p>
+              <p className="text-[9px] sm:text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">Mechanics</p>
+              <p className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-300">{workerCount}</p>
             </div>
-            <UserIcon className="w-5 h-5 text-amber-500" />
+            <UserIcon className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
           </div>
         </div>
 
