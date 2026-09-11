@@ -98,9 +98,14 @@ const mapTaskImages = (taskObj: any) => {
       return entry;
     });
   }
-  // inventoryItem thumbnail
-  if (taskObj.inventoryItem?.thumbnailUrl) {
-    taskObj.inventoryItem.thumbnailUrl = getCloudinaryUrl(taskObj.inventoryItem.thumbnailUrl);
+  // inventoryItem thumbnail & images
+  if (taskObj.inventoryItem) {
+    if (taskObj.inventoryItem.thumbnailUrl) {
+      taskObj.inventoryItem.thumbnailUrl = getCloudinaryUrl(taskObj.inventoryItem.thumbnailUrl);
+    }
+    if (Array.isArray(taskObj.inventoryItem.images)) {
+      taskObj.inventoryItem.images = taskObj.inventoryItem.images.map((img: string) => getCloudinaryUrl(img));
+    }
   }
   return taskObj;
 };

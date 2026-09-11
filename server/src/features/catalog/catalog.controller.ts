@@ -55,18 +55,36 @@ export const createCatalogItem = async (req: Request, res: Response) => {
       categoryId = categories[0]?._id;
     }
 
+    const base64Map = new Map<string, string>();
+    const uploadCached = async (base64Str: string): Promise<string> => {
+      if (base64Map.has(base64Str)) return base64Map.get(base64Str)!;
+      const { publicId } = await uploadToCloudinary(base64Str, 'momzz/catalog');
+      base64Map.set(base64Str, publicId);
+      return publicId;
+    };
+
     const processedImages: string[] = [];
     const incomingImages = req.body.images?.length ? req.body.images : (req.body.thumbnailUrl ? [req.body.thumbnailUrl] : []);
     for (const img of incomingImages) {
-      if (img.startsWith('data:image')) {
-        const { publicId } = await uploadToCloudinary(img, 'momzz/catalog');
+      if (typeof img === 'string' && img.startsWith('data:image')) {
+        const publicId = await uploadCached(img);
         processedImages.push(publicId);
-      } else {
+      } else if (img) {
         processedImages.push(extractPublicId(img));
       }
     }
-    const finalImages = Array.from(new Set(processedImages));
-    const thumbnailUrl = finalImages.length > 0 ? finalImages[0] : '';
+    const finalImages = Array.from(new Set(processedImages.filter(Boolean)));
+    
+    let thumbnailUrl = '';
+    if (req.body.thumbnailUrl) {
+      if (typeof req.body.thumbnailUrl === 'string' && req.body.thumbnailUrl.startsWith('data:image')) {
+        thumbnailUrl = await uploadCached(req.body.thumbnailUrl);
+      } else {
+        thumbnailUrl = extractPublicId(req.body.thumbnailUrl);
+      }
+    } else if (finalImages.length > 0) {
+      thumbnailUrl = finalImages[0];
+    }
     
     const payload = { 
       ...req.body, 
@@ -135,27 +153,36 @@ export const updateCatalogItem = async (req: Request, res: Response) => {
   try {
     if (req.body.itemType === 'PRODUCT' && Number(req.body.stockQuantity) < 0) return sendError(res, 'Stock cannot be negative.', 400);
     const updates: any = { ...req.body, ...(req.body.price !== undefined ? { price: Number(req.body.price) } : {}), ...(req.body.stockQuantity !== undefined ? { stockQuantity: Number(req.body.stockQuantity), trackStock: true } : {}) };
-    
-    if (updates.thumbnailUrl && updates.thumbnailUrl.startsWith('data:image')) {
-      const { publicId } = await uploadToCloudinary(updates.thumbnailUrl, 'momzz/catalog');
-      updates.thumbnailUrl = publicId;
-    } else if (updates.thumbnailUrl) {
-      updates.thumbnailUrl = extractPublicId(updates.thumbnailUrl);
-    }
+
+    const base64Map = new Map<string, string>();
+    const uploadCached = async (base64Str: string): Promise<string> => {
+      if (base64Map.has(base64Str)) return base64Map.get(base64Str)!;
+      const { publicId } = await uploadToCloudinary(base64Str, 'momzz/catalog');
+      base64Map.set(base64Str, publicId);
+      return publicId;
+    };
 
     if (Array.isArray(updates.images)) {
       const processedImages: string[] = [];
       for (const img of updates.images) {
-        if (img.startsWith('data:image')) {
-          const { publicId } = await uploadToCloudinary(img, 'momzz/catalog');
+        if (typeof img === 'string' && img.startsWith('data:image')) {
+          const publicId = await uploadCached(img);
           processedImages.push(publicId);
-        } else {
+        } else if (img) {
           processedImages.push(extractPublicId(img));
         }
       }
-      updates.images = Array.from(new Set(processedImages));
+      updates.images = Array.from(new Set(processedImages.filter(Boolean)));
       if (updates.images.length > 0 && !updates.thumbnailUrl) {
         updates.thumbnailUrl = updates.images[0];
+      }
+    }
+
+    if (updates.thumbnailUrl) {
+      if (typeof updates.thumbnailUrl === 'string' && updates.thumbnailUrl.startsWith('data:image')) {
+        updates.thumbnailUrl = await uploadCached(updates.thumbnailUrl);
+      } else {
+        updates.thumbnailUrl = extractPublicId(updates.thumbnailUrl);
       }
     }
     

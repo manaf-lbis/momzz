@@ -2,6 +2,12 @@ import Category, { ICategory } from '../../models/Category.model';
 import Item, { IItem } from '../../models/Item.model';
 import Sale, { ISale } from '../../models/Sale.model';
 import { advancedSearch, findDuplicateCandidates } from '../../shared/utils/search.algorithm';
+import { extractPublicId } from '../../shared/utils/cloudinary.helper';
+
+const sanitizePublicId = (input?: string): string => {
+  if (!input || typeof input !== 'string') return '';
+  return extractPublicId(input.trim());
+};
 
 export class CatalogRepository {
   async getCategories(): Promise<ICategory[]> {
@@ -55,11 +61,31 @@ export class CatalogRepository {
   }
 
   async createItem(data: Partial<IItem>) {
-    return Item.create(data);
+    const payload: Partial<IItem> = { ...data };
+    if (payload.thumbnailUrl !== undefined) {
+      payload.thumbnailUrl = sanitizePublicId(payload.thumbnailUrl);
+    }
+    if (Array.isArray(payload.images)) {
+      payload.images = payload.images.map(sanitizePublicId).filter(Boolean);
+      if (!payload.thumbnailUrl && payload.images.length > 0) {
+        payload.thumbnailUrl = payload.images[0];
+      }
+    }
+    return Item.create(payload);
   }
 
   async updateItem(id: string, data: Partial<IItem>) {
-    return Item.findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true }).populate('category', 'name type');
+    const updates: Partial<IItem> = { ...data };
+    if (updates.thumbnailUrl !== undefined) {
+      updates.thumbnailUrl = sanitizePublicId(updates.thumbnailUrl);
+    }
+    if (Array.isArray(updates.images)) {
+      updates.images = updates.images.map(sanitizePublicId).filter(Boolean);
+      if (!updates.thumbnailUrl && updates.images.length > 0) {
+        updates.thumbnailUrl = updates.images[0];
+      }
+    }
+    return Item.findByIdAndUpdate(id, { $set: updates }, { new: true, runValidators: true }).populate('category', 'name type');
   }
 
   async deleteItem(id: string) {
