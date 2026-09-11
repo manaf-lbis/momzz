@@ -171,10 +171,6 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col transition-colors duration-300 font-sans">
-
-      {/* ── Fluid Organic Wave Canvas Background ── */}
-      <FluidCanvasBackground />
-
       <Navbar glass />
 
       <main className="app-container relative z-10 flex-1 pt-5 pb-32 md:pb-16 flex flex-col gap-4">

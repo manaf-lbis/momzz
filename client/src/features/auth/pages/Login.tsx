@@ -47,9 +47,6 @@ export const Login: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 overflow-hidden font-sans">
-      {/* ── Background Canvas ── */}
-      <FluidCanvasBackground />
-
       {/* ── Top Floating Controls ── */}
       <div className="absolute top-4 right-4 z-20">
         <AnimatedThemeToggle variant="icon-only" />
