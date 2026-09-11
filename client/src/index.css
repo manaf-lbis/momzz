@@ -75,17 +75,17 @@
   }
 
   body {
-    background-color: #eff1f5;
+    background-color: #fbf8f7;
     color: #0f172a;
   }
 
   html.light body {
-    background: linear-gradient(160deg, #f5f6fa 0%, #eef0f6 60%, #f2f0fb 100%);
+    background-color: #fbf8f7;
     min-height: 100vh;
   }
 
   html.dark body {
-    background-color: #090a12;
+    background-color: #080911;
     color: #f8fafc;
   }
 }
