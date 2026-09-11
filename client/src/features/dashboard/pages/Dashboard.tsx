@@ -978,9 +978,6 @@ export const Dashboard: React.FC = () => {
           </section>
         )}
 
-        {/* Mobile scroll-fade gradient indicator so content doesn't abruptly clip before dock */}
-        <div className="sm:hidden fixed bottom-16 inset-x-0 h-10 bg-gradient-to-t from-[#eff1f5]/90 dark:from-[#090a12]/90 to-transparent pointer-events-none z-20" />
-
       </main>
 
       <GlobalSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
