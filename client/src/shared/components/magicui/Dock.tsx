@@ -189,16 +189,6 @@ export const DockIcon = ({
             className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.9)]"
           />
         )}
-        {active && title && (
-          <motion.span
-            layoutId="dock-active-label"
-            initial={{ opacity: 0, y: -2 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 pointer-events-none whitespace-nowrap"
-          >
-            {title.split(' ')[0]}
-          </motion.span>
-        )}
       </motion.button>
     </div>
   );
