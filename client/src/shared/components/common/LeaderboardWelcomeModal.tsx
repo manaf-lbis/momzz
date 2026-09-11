@@ -5,12 +5,13 @@ import { useNavigate } from 'react-router-dom';
 import { useGetLeaderboardQuery } from '../../../features/auth/api/authApi';
 import { useAuth } from '../../hooks/useAuth';
 import { NumberTicker } from '../magicui/NumberTicker';
+import { LEGAL_METADATA } from '../legal/legalContent';
 
 const SESSION_KEY = 'podium_welcome_shown_v7';
 
 export const LeaderboardWelcomeModal: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { data: leaderboardData } = useGetLeaderboardQuery(undefined, { skip: !isAuthenticated });
   const leaderboard = leaderboardData?.data || [];
 
@@ -36,8 +37,9 @@ export const LeaderboardWelcomeModal: React.FC = () => {
     const handleManualOpen = () => setIsOpen(true);
     window.addEventListener('open-top-performers-modal', handleManualOpen);
 
-    // Auto-show once per session
-    if (isAuthenticated && leaderboard.length && !hasOpened.current) {
+    // Auto-show once per session only if terms are accepted
+    const needsTerms = user && (user.needsTermsAcceptance || user.acceptedTermsVersion !== LEGAL_METADATA.version);
+    if (isAuthenticated && !needsTerms && leaderboard.length && !hasOpened.current) {
       if (!sessionStorage.getItem(SESSION_KEY)) {
         hasOpened.current = true;
         sessionStorage.setItem(SESSION_KEY, '1');

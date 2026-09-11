@@ -1,9 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { LEGAL_METADATA } from '../legal/legalContent';
 
 const CREDIT = 'MANAF';
 
 export const Footer: React.FC = () => {
+  const { user } = useAuth();
+
+  if (user && (user.needsTermsAcceptance || user.acceptedTermsVersion !== LEGAL_METADATA.version)) {
+    return null;
+  }
+
   return (
     <footer className="relative w-full border-t border-slate-200/80 dark:border-white/[0.08] bg-white/60 dark:bg-[#08090f]/70 backdrop-blur-xl transition-colors duration-300 font-sans">
       <div className="app-container py-5 pb-28 sm:pb-24 md:pb-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
