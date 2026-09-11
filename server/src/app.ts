@@ -5,8 +5,8 @@ import mongoSanitize from 'express-mongo-sanitize';
 import cookieParser from 'cookie-parser';
 import { ENV } from './config/env';
 import { connectDB } from './config/db';
-import authRouter from './router/authRouter';
-import { requestLogger } from './middleware/requestLogger';
+import authRouter from './features/authentication/auth.router';
+import { requestLogger } from './shared/middleware/request-logger.middleware';
 
 const app: Application = express();
 
@@ -101,10 +101,10 @@ app.get('/.well-known/*', (req: Request, res: Response) => {
   res.status(200).json({ status: 'OK' });
 });
 
-import jobRouter from './router/jobRouter';
-import inventoryRouter from './router/inventoryRouter';
-import publicRouter from './router/publicRouter';
-import catalogRouter from './router/catalogRouter';
+import jobRouter from './features/jobs/job.router';
+import inventoryRouter from './features/inventory/inventory.router';
+import publicRouter from './features/users/public.router';
+import catalogRouter from './features/catalog/catalog.router';
 
 // API Routes
 app.use('/api/auth', authRouter);
@@ -150,6 +150,10 @@ initSocket(server);
 
 connectDB().then(async () => {
   await testRedisConnection();
+  try {
+    const { cacheService } = await import('./features/cache/cache.service');
+    await cacheService.delByPrefix('cache:jobs');
+  } catch {}
   server.listen(ENV.PORT, () => {
     console.log(`[SERVER] Momzz backend listening on http://localhost:${ENV.PORT}`);
     console.log(`[SERVER] Configured Client URLs: ${ENV.CLIENT_URLS.join(', ') || ENV.CLIENT_URL || 'None'}`);
@@ -158,4 +162,3 @@ connectDB().then(async () => {
 });
 
 export default app;
-

@@ -2,8 +2,8 @@ import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { ENV } from './env';
-import { userRepository } from '../repository/userRepository';
-import { cacheService } from '../service/cacheService';
+import { userRepository } from '../features/users/user.repository';
+import { cacheService } from '../features/cache/cache.service';
 
 let io: Server | null = null;
 
@@ -150,7 +150,7 @@ export const emitTaskUpdated = (
   jobCardId: string,
   taskId: string,
   task: any,
-  action: 'COMPLETE' | 'REOPEN' | 'PIN_TOGGLED'
+  action: 'COMPLETE' | 'REOPEN' | 'PIN_TOGGLED' | 'EDITED'
 ) => {
   if (io) {
     io.emit('task:updated', { jobCardId, taskId, task, action });

@@ -2,443 +2,399 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Live Ticker Marquee ── */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 22s linear infinite;
+  will-change: transform;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
 @layer base {
+  @font-face {
+    font-family: 'BankGothic Md BT Medium';
+    src: url('/fonts/BankGothic-Md-BT-Medium.ttf') format('truetype'),
+         url('/fonts/BankGothicMediumBT.ttf') format('truetype'),
+         local('BankGothic Md BT Medium'),
+         local('BankGothic Md BT'),
+         local('Bank Gothic Medium'),
+         local('BankGothic-Medium'),
+         local('BankGothic');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'BankGothic Md BT';
+    src: url('/fonts/BankGothic-Md-BT-Medium.ttf') format('truetype'),
+         url('/fonts/BankGothicMediumBT.ttf') format('truetype'),
+         local('BankGothic Md BT Medium'),
+         local('BankGothic Md BT'),
+         local('Bank Gothic Medium'),
+         local('BankGothic-Medium'),
+         local('BankGothic');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'Bank Gothic';
+    src: url('/fonts/BankGothic-Md-BT-Medium.ttf') format('truetype'),
+         url('/fonts/BankGothicMediumBT.ttf') format('truetype'),
+         local('BankGothic Md BT Medium'),
+         local('BankGothic Md BT'),
+         local('Bank Gothic Medium');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+
   html {
     scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
   }
 
   html, body, #root {
     min-height: 100vh;
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    transition: background-color 0.25s ease, color 0.25s ease;
+    font-family: "DM Sans", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  html, body {
+    overflow-x: clip;
+    max-width: 100vw;
   }
 
   body {
-    background-color: #f4f4f5;
-    color: #18181b;
+    background-color: #eff1f5;
+    color: #0f172a;
+  }
+
+  html.light body {
+    background: linear-gradient(160deg, #f5f6fa 0%, #eef0f6 60%, #f2f0fb 100%);
+    min-height: 100vh;
   }
 
   html.dark body {
-    background-color: #0B0F17;
-    color: #f4f4f5;
+    background-color: #090a12;
+    color: #f8fafc;
   }
 }
-
-/* ── Glassmorphism Design System ── */
-.glass-page {
-  position: relative;
-  min-height: 100vh;
-  background: radial-gradient(circle at 50% 0%, #f8fafc 0%, #edf2f7 50%, #e2e8f0 100%);
-}
-
-.dark .glass-page {
-  background: radial-gradient(circle at 50% 0%, #0d1527 0%, #080d1a 60%, #030712 100%);
-}
-
-.glass-page::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(ellipse 80% 50% at 15% -10%, rgba(99, 102, 241, 0.22), transparent 60%),
-    radial-gradient(ellipse 65% 45% at 88% 5%, rgba(245, 158, 11, 0.16), transparent 55%),
-    radial-gradient(ellipse 70% 60% at 50% 110%, rgba(14, 165, 233, 0.18), transparent 60%);
-}
-
-.dark .glass-page::before {
-  background:
-    radial-gradient(ellipse 85% 55% at 10% -10%, rgba(99, 102, 241, 0.35), transparent 65%),
-    radial-gradient(ellipse 70% 50% at 90% 5%, rgba(245, 158, 11, 0.22), transparent 60%),
-    radial-gradient(ellipse 80% 65% at 50% 115%, rgba(14, 165, 233, 0.25), transparent 65%);
-}
-
-.glass-orb {
-  position: fixed;
-  border-radius: 9999px;
-  pointer-events: none;
-  z-index: 0;
-  filter: blur(90px);
-}
-
-.glass-card {
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow:
-    0 10px 30px -10px rgba(0, 0, 0, 0.06),
-    0 4px 12px -2px rgba(0, 0, 0, 0.04),
-    inset 0 1px 1px rgba(255, 255, 255, 0.95),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.03);
-  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dark .glass-card {
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(32px) saturate(190%);
-  -webkit-backdrop-filter: blur(32px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 16px 36px -10px rgba(0, 0, 0, 0.65),
-    0 4px 12px -2px rgba(0, 0, 0, 0.4),
-    inset 0 1px 1px rgba(255, 255, 255, 0.15),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.4);
-}
-
-.glass-card:hover {
-  background: rgba(255, 255, 255, 0.75);
-  border-color: rgba(245, 158, 11, 0.45);
-  box-shadow:
-    0 20px 45px -12px rgba(245, 158, 11, 0.2),
-    0 8px 20px -4px rgba(0, 0, 0, 0.06),
-    inset 0 1px 2px rgba(255, 255, 255, 1);
-}
-
-.dark .glass-card:hover {
-  background: rgba(26, 38, 66, 0.65);
-  border-color: rgba(245, 158, 11, 0.4);
-  box-shadow:
-    0 24px 50px -12px rgba(0, 0, 0, 0.8),
-    0 0 25px -4px rgba(245, 158, 11, 0.25),
-    inset 0 1px 2px rgba(255, 255, 255, 0.25);
-}
-
-.glass-panel {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  box-shadow:
-    0 12px 36px -8px rgba(0, 0, 0, 0.06),
-    inset 0 1px 2px rgba(255, 255, 255, 0.95);
-}
-
-.dark .glass-panel {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(36px) saturate(190%);
-  -webkit-backdrop-filter: blur(36px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 20px 40px -12px rgba(0, 0, 0, 0.6),
-    inset 0 1px 1.5px rgba(255, 255, 255, 0.15);
-}
-
-.glass-banner {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0.08));
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  box-shadow:
-    0 8px 24px -6px rgba(245, 158, 11, 0.18),
-    inset 0 1px 1px rgba(255, 255, 255, 0.3);
-}
-
-.dark .glass-banner {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.04));
-  border: 1px solid rgba(245, 158, 11, 0.28);
-  box-shadow:
-    0 12px 30px -8px rgba(0, 0, 0, 0.45),
-    0 0 20px -4px rgba(245, 158, 11, 0.15),
-    inset 0 1px 1px rgba(255, 255, 255, 0.1);
-}
-
-.glass-navbar {
-  background: rgba(255, 255, 255, 0.72) !important;
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.65) !important;
-  box-shadow: 0 4px 28px -4px rgba(0, 0, 0, 0.06);
-}
-
-.dark .glass-navbar {
-  background: rgba(11, 17, 33, 0.72) !important;
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.5);
-}
-
-.glass-icon-wrap {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow:
-    0 4px 12px -2px rgba(0, 0, 0, 0.05),
-    inset 0 1px 1px rgba(255, 255, 255, 1);
-}
-
-.dark .glass-icon-wrap {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow:
-    0 4px 14px -2px rgba(0, 0, 0, 0.35),
-    inset 0 1px 1px rgba(255, 255, 255, 0.18);
-}
-
-.glass-section-label {
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.04);
-}
-
-.dark .glass-section-label {
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.3);
-}
-
-.glass-btn {
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow:
-    0 2px 8px -1px rgba(0, 0, 0, 0.05),
-    inset 0 1px 1px rgba(255, 255, 255, 0.8);
-}
-
-.dark .glass-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow:
-    0 4px 12px -2px rgba(0, 0, 0, 0.3),
-    inset 0 1px 1px rgba(255, 255, 255, 0.1);
-}
-
-/* Custom Card & Input Utility Classes */
-.industrial-card {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease-in-out;
-}
-
-.industrial-card:hover {
-  border-color: rgba(217, 119, 6, 0.4);
-  box-shadow: 0 4px 15px -3px rgba(217, 119, 6, 0.12);
-}
-
-.dark .industrial-card {
-  background-color: rgba(30, 41, 59, 0.96);
-  border: 1px solid #334155;
-  box-shadow: 0 4px 15px -2px rgba(0, 0, 0, 0.4);
-}
-
-/* Shared Momz'Z visual language for all application pages. */
-.dark [class*='dark:bg-zinc-950'],
-.dark [class*='dark:bg-slate-950'] { background-color: #0B0F17 !important; }
-.dark [class*='dark:bg-zinc-900'],
-.dark [class*='dark:bg-slate-900'] { background-color: #1E293B !important; }
-.dark [class*='dark:bg-zinc-800'],
-.dark [class*='dark:bg-slate-800'] { background-color: #26354B !important; }
-.dark [class*='dark:border-zinc-800'],
-.dark [class*='dark:border-zinc-700'],
-.dark [class*='dark:border-slate-800'],
-.dark [class*='dark:border-slate-700'] { border-color: #334155 !important; }
 
 @layer components {
-  .app-surface {
-    @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800;
+  /* Universal responsive page container for identical device width across all pages */
+  .app-container {
+    width: 100%;
+    max-width: 80rem; /* 1280px / max-w-7xl */
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
-  .app-panel {
-    @apply rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50;
+  @media (min-width: 640px) {
+    .app-container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
   }
-  .app-primary {
-    @apply rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 active:scale-[.98];
+  @media (min-width: 1024px) {
+    .app-container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
   }
 }
 
-.dark .industrial-card:hover {
-  border-color: rgba(250, 204, 21, 0.4);
-  box-shadow: 0 4px 20px -3px rgba(250, 204, 21, 0.15);
+/* ──────────────────────────────────────────────
+   GLASS CANVAS (page background utility)
+────────────────────────────────────────────── */
+.glass-canvas {
+  position: relative;
+  min-height: 100vh;
+  background-color: transparent;
+}
+.dark .glass-canvas {
+  background-color: transparent;
 }
 
-.industrial-input {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  color: #111827;
-  transition: all 0.15s ease-in-out;
+/* ──────────────────────────────────────────────
+   FROSTED GLASS CARDS — Universal Global Style
+   Authentic frosted glass matching the empty state
+   card with blur, saturation, and ambient glow.
+────────────────────────────────────────────── */
+.glass-modern-card,
+.frosted-glass-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.72) 100%);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.industrial-input:focus {
-  outline: none;
+.dark .glass-modern-card,
+.dark .frosted-glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.035) 50%, rgba(245, 158, 11, 0.02) 100%);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.16);
+}
+
+.glass-modern-card:hover,
+.frosted-glass-card:hover {
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 12px 40px -4px rgba(245, 158, 11, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 1);
+}
+
+.dark .glass-modern-card:hover,
+.dark .frosted-glass-card:hover {
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 16px 48px -8px rgba(0, 0, 0, 0.8), 0 0 24px -2px rgba(245, 158, 11, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
+}
+
+/* Luxury Frosted Head Card for Command Center & Hero Sections */
+.glass-head-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.72) 60%, rgba(254, 243, 199, 0.35) 100%);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 12px 40px -6px rgba(0, 0, 0, 0.07);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .glass-head-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.025) 50%, rgba(245, 158, 11, 0.045) 100%);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 14px 48px -10px rgba(0, 0, 0, 0.65), 0 0 30px -4px rgba(245, 158, 11, 0.12);
+}
+
+/* ──────────────────────────────────────────────
+   GLASS PANELS (Modals, Drawers, Sheets)
+────────────────────────────────────────────── */
+.glass-modern-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.15);
+}
+
+.dark .glass-modern-panel {
+  background: rgba(12, 13, 22, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.8);
+}
+
+/* ──────────────────────────────────────────────
+   BOTTOM DOCK
+────────────────────────────────────────────── */
+.glass-modern-dock {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 -4px 24px -4px rgba(0, 0, 0, 0.08);
+}
+
+.dark .glass-modern-dock {
+  background: rgba(12, 13, 22, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -8px 32px -8px rgba(0, 0, 0, 0.7);
+}
+
+/* ──────────────────────────────────────────────
+   TOP HEADER & STICKY PAGE HEADERS — Universal Glassmorphic Header
+────────────────────────────────────────────── */
+.glass-modern-header,
+.frosted-glass-header,
+.glass-sticky-header {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 30 !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-radius: 0 !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.72) 100%) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85) !important;
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.05), inset 0 -1px 0 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+@media (min-width: 640px) {
+  .glass-modern-header,
+  .frosted-glass-header,
+  .glass-sticky-header {
+    top: 3.5rem !important; /* 56px (h-14) flush under desktop navbar */
+  }
+}
+
+.dark .glass-modern-header,
+.dark .frosted-glass-header,
+.dark .glass-sticky-header {
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-radius: 0 !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.035) 50%, rgba(245, 158, 11, 0.02) 100%), rgba(8, 9, 18, 0.78) !important;
+  backdrop-filter: blur(24px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.55), inset 0 -1px 0 0 rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Desktop Navbar itself remains fixed at top: 0, z-index: 40 */
+header.sticky.top-0.z-40,
+header#desktop-navbar,
+.desktop-navbar {
+  top: 0 !important;
+  z-index: 40 !important;
+}
+
+/* Ensure sticky cards stay sticky */
+.glass-modern-card.sticky,
+.frosted-glass-card.sticky {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+}
+
+/* ──────────────────────────────────────────────
+   AMBIENT GLOW — handled globally by ModernAppBackground
+────────────────────────────────────────────── */
+.glass-ambient-glow {
+  display: none !important;
+}
+
+/* ──────────────────────────────────────────────
+   PRIMARY BUTTON — Amber Gold
+────────────────────────────────────────────── */
+.glass-gold-btn {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #fff;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px -2px rgba(201, 168, 76, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-gold-btn:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px -2px rgba(201, 168, 76, 0.5);
+}
+
+.glass-gold-btn:active {
+  transform: scale(0.97);
+}
+
+/* ──────────────────────────────────────────────
+   GHOST BUTTON
+────────────────────────────────────────────── */
+.glass-ghost-btn {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  transition: all 0.2s ease;
+}
+
+.dark .glass-ghost-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: #f1f5f9;
+}
+
+.glass-ghost-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.dark .glass-ghost-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* ──────────────────────────────────────────────
+   INPUTS
+────────────────────────────────────────────── */
+.glass-modern-input {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  transition: all 0.2s ease;
+}
+
+.glass-modern-input:focus {
   border-color: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
-}
-
-.dark .industrial-input {
-  background-color: #1e293b;
-  border: 1px solid #334155;
-  color: #f4f4f5;
-}
-
-.dark .industrial-input:focus {
   outline: none;
-  border-color: #facc15;
-  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.2);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
 }
 
-/* Forms in the job checklist and POS use plain inputs as well as industrial-input. */
-.dark .fixed input,
-.dark .fixed select,
-.dark .fixed textarea,
-.dark main input:not(.industrial-input),
-.dark main select:not(.industrial-input),
-.dark main textarea:not(.industrial-input) {
-  color: #f4f4f5;
+.dark .glass-modern-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #f8fafc;
 }
 
-.dark .fixed input:not([type='range']),
-.dark .fixed select,
-.dark .fixed textarea {
-  background-color: #1e293b;
-  border-color: #475569;
+.dark .glass-modern-input:focus {
+  border-color: #f59e0b;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
 }
 
-/* Hide scrollbars utility */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+/* ──────────────────────────────────────────────
+   LEGACY ALIASES (for existing pages)
+────────────────────────────────────────────── */
+.glass-card       { @apply glass-modern-card; }
+.glass-panel      { @apply glass-modern-panel; }
+.industrial-card  { @apply glass-modern-card; }
+.industrial-input { @apply glass-modern-input; }
+
+/* ──────────────────────────────────────────────
+   SCROLLBARS
+────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Keep catalogue search within reach on long inventory and POS lists. */
-main > section:has(> label input[placeholder='Search product or service']),
-main > section:has(> div > label input[placeholder='Search product or service']) {
-  position: sticky;
-  top: 3.5rem;
-  z-index: 40;
-}
-
-/* Profile page uses standard app surfaces and containers. */
-
-
-.pos-cart-scroll::-webkit-scrollbar { width: 6px; }
-.pos-cart-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
-.dark .pos-cart-scroll::-webkit-scrollbar-thumb { background: #475569; }
-
-/* Contain the job-card wizard beneath the compact navigation bar. */
-main:has([aria-label='Create job progress']) {
-  max-width: 1200px;
-  height: calc(100vh - 56px);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-
-/* Mobile uses one predictable page scroll; the fixed two-pane workspace is desktop-only. */
-@media (max-width: 1023px) {
-  main:has([aria-label='Create job progress']) {
-    display: block;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 1.25rem 1rem 7rem;
-  }
-
-  main:has([aria-label='Create job progress']) > section:has(aside) > aside {
-    min-height: auto;
-  }
-
-  main:has([aria-label='Create job progress']) > section:has(aside) > aside > div:nth-child(2) {
-    max-height: none;
-    overflow: visible;
-  }
-}
-
-@media (min-width: 1024px) {
-  /* Step 1 is a normal form; only the two-column checklist needs viewport locking. */
-  main:has([aria-label='Create job progress']):not(:has(section aside)) {
-    display: block;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 3rem;
-  }
-
-  main:has([aria-label='Create job progress']) > section:has(aside) {
-    flex: 1 1 0%;
-    height: auto;
-    min-height: 0;
-  }
-
-  main:has([aria-label='Create job progress']) > section:has(aside) > div:first-child,
-  main:has([aria-label='Create job progress']) > section:has(aside) > aside {
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  main:has([aria-label='Create job progress']) > section:has(aside) > div:first-child {
-    display: flex;
-    flex-direction: column;
-  }
-
-  main:has([aria-label='Create job progress']) > section:has(aside) > div:first-child > div:nth-child(4) {
-    flex: 1 1 0%;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: .5rem;
-  }
-
-  main:has([aria-label='Create job progress']) > section:has(aside) > aside {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-  }
-
-  main:has([aria-label='Create job progress']) > section:has(aside) > aside > div:nth-child(2) {
-    max-height: none;
-    flex: 1 1 0%;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: .5rem;
-  }
-}
-
-/* Thin, low-contrast scrollbar for contained workspaces. */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
-.dark ::-webkit-scrollbar-thumb { background: #334155; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-/* Application-wide dark palette: navy canvas, slate surfaces, yellow accent. */
-.dark .dark\:bg-zinc-950 { background-color: #0F172A !important; }
-.dark .dark\:bg-zinc-900 { background-color: #1E293B !important; }
-.dark .dark\:bg-zinc-800 { background-color: #26354B !important; }
-.dark .dark\:border-zinc-800,
-.dark .dark\:border-zinc-700 { border-color: #334155 !important; }
-.dark .dark\:text-zinc-400,
-.dark .dark\:text-zinc-500 { color: #94A3B8 !important; }
-.dark .dark\:text-amber-400 { color: #FACC15 !important; }
-.dark .dark\:bg-amber-400 { background-color: #FACC15 !important; }
-
-/* Inventory list stays open and airy; only its controls/cards are surfaced. */
-.inventory-shell > .inventory-container {
+::-webkit-scrollbar-track {
   background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  padding-left: 0;
-  padding-right: 0;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(201, 168, 76, 0.5);
 }
 
-/* Roles are informational in the management drawer; they are not editable here. */
-section:has(> select[value='ADMIN']),
-section:has(> select[value='WORKER']) {
-  display: none;
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Display / Hero typography */
+.font-display {
+  font-family: "Barlow Condensed", "Syne", "BankGothic Md BT Medium", "Bank Gothic", sans-serif;
 }
