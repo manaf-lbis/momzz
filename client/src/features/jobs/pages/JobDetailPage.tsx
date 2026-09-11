@@ -576,373 +576,298 @@ export const JobDetailPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            className="space-y-3.5 sm:space-y-4"
           >
-            {/* Quick Primary Actions Toolbar */}
-            <div className="col-span-1 md:col-span-2 p-4 sm:p-5 rounded-3xl glass-modern-card border border-amber-400/25 dark:border-amber-400/20 bg-gradient-to-r from-amber-500/[0.08] via-transparent to-sky-500/[0.05] shadow-md space-y-3">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-2xl bg-amber-400/20 text-amber-600 dark:text-amber-400 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-2xs">
-                    <Wrench className="w-4 h-4" />
+            {/* 1. Mobile-Optimized Quick Operations Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+              {/* Photo Studio Button */}
+              <button
+                type="button"
+                onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
+                className="p-3 sm:p-3.5 rounded-2xl glass-modern-card hover:border-amber-400/50 dark:hover:border-amber-400/40 active:scale-[0.98] transition-all flex items-center gap-2.5 cursor-pointer text-left shadow-2xs group"
+                title="Vehicle Inspection Photos"
+              >
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                  <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
+                    Inspection
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate">
+                    {vehicleViewerImages.length} Photo{vehicleViewerImages.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              </button>
+
+              {/* Pin Priority Button */}
+              <button
+                type="button"
+                onClick={() => setIsPinJobModalOpen(true)}
+                className="p-3 sm:p-3.5 rounded-2xl glass-modern-card hover:border-amber-400/50 dark:hover:border-amber-400/40 active:scale-[0.98] transition-all flex items-center gap-2.5 cursor-pointer text-left shadow-2xs group"
+                title="Priority Pin Configuration"
+              >
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs ${
+                  isPinned
+                    ? 'bg-amber-400/20 text-amber-600 dark:text-amber-300'
+                    : 'bg-slate-500/10 text-slate-400 dark:text-slate-500'
+                }`}>
+                  <Pin className={`w-4 h-4 sm:w-5 sm:h-5 ${isPinned ? 'fill-current' : ''}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
+                    Priority Pin
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate">
+                    {isJobPinnedForAll ? 'Garage Pin' : isJobPinnedForMe ? 'Pinned' : 'Normal'}
+                  </p>
+                </div>
+              </button>
+
+              {/* Edit Card Button (Admin) */}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
+                  className="p-3 sm:p-3.5 rounded-2xl glass-modern-card hover:border-sky-400/50 dark:hover:border-sky-400/40 active:scale-[0.98] transition-all flex items-center gap-2.5 cursor-pointer text-left shadow-2xs group"
+                  title="Edit Vehicle & Job Card"
+                >
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                    <Edit2 className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
-                      Job Actions & Operations Hub
-                    </h3>
-                    <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                      Vehicle camera inspections, card editing, priority pin & deletion
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
+                      Edit Specs
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate">
+                      Admin
                     </p>
                   </div>
-                </div>
+                </button>
+              )}
 
-                <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-                  {/* Photo Studio Button */}
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
-                    className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl sm:rounded-2xl glass-ghost-btn text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white border border-slate-200/90 dark:border-white/10 active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 text-xs font-mono font-bold shadow-2xs"
-                    title="Vehicle Inspection Photos"
-                  >
-                    <Camera className="w-4 h-4 text-amber-500" />
-                    <span>Photos ({vehicleViewerImages.length})</span>
-                  </button>
-
-                  {/* Pin Priority Button */}
-                  <button
-                    type="button"
-                    onClick={() => setIsPinJobModalOpen(true)}
-                    className={`flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl sm:rounded-2xl border text-xs font-mono font-bold transition active:scale-95 cursor-pointer flex items-center justify-center gap-2 shadow-2xs ${
-                      isPinned
-                        ? 'bg-amber-400/20 border-amber-400/40 text-amber-700 dark:text-amber-300'
-                        : 'glass-ghost-btn text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                    title="Pin Priority"
-                  >
-                    <Pin className={`w-4 h-4 ${isPinned ? 'fill-current text-amber-500' : ''}`} />
-                    <span>{isJobPinnedForAll ? 'Garage Pin' : isJobPinnedForMe ? 'Pinned' : 'Pin Priority'}</span>
-                  </button>
-
-                  {/* Edit Job Button (Admin) */}
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
-                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl sm:rounded-2xl glass-gold-btn text-slate-950 shadow-sm active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 text-xs font-mono font-black"
-                      title="Edit Job Card"
-                    >
-                      <Edit2 className="w-4 h-4 stroke-[2.5]" />
-                      <span>Edit Card</span>
-                    </button>
-                  )}
-
-                  {/* Delete Job Button (Admin) */}
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
-                      className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl sm:rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 text-xs font-mono font-bold shadow-2xs"
-                      title="Delete Job Card"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span>Delete</span>
-                    </button>
-                  )}
-                </div>
-              </div>
+              {/* Delete Job Button (Admin) */}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
+                  className="p-3 sm:p-3.5 rounded-2xl glass-modern-card hover:border-rose-400/50 dark:hover:border-rose-400/40 active:scale-[0.98] transition-all flex items-center gap-2.5 cursor-pointer text-left shadow-2xs group"
+                  title="Delete Vehicle Job Card"
+                >
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                    <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-black text-rose-600 dark:text-rose-400 truncate">
+                      Delete Card
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] font-mono text-rose-400/80 truncate">
+                      Remove
+                    </p>
+                  </div>
+                </button>
+              )}
             </div>
 
-            {/* Left Column: QA Verification Log + Client Contact */}
-            <div className="space-y-4">
-              {/* QA Sign-off Audit & Verification Log */}
-              <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-3.5">
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/40 dark:via-emerald-400/20 to-transparent pointer-events-none" />
-
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
-                      QA Sign-Off Audit
-                    </h3>
-                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                      Inspection & Clearance Log
-                    </p>
-                  </div>
-                  <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${
-                    currentJob.verifiedAt
-                      ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                      : isAllCompleted
-                      ? 'bg-amber-400/15 border-amber-400/30 text-amber-600 dark:text-amber-400 animate-pulse'
-                      : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
-                  }`}>
-                    {currentJob.verifiedAt ? 'QA Verified' : isAllCompleted ? 'Ready for Sign-Off' : 'In Progress'}
-                  </span>
-                </div>
-
-                {currentJob.verifiedAt ? (
-                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
+            {/* 2. Grid Layout for Client Info + Operations */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-4">
+              {/* Left Column: Client Contact & Direct Actions */}
+              <div className="space-y-3.5 sm:space-y-4">
+                {/* Client Profile Card */}
+                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3.5">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/60 dark:border-white/[0.06]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs">
+                        <UserIcon className="w-4 h-4" />
+                      </div>
                       <div>
-                        <p className="text-[10px] font-mono uppercase text-emerald-700 dark:text-emerald-300 font-bold">
-                          Verified & Signed Off By
-                        </p>
-                        <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5 flex items-center gap-2">
-                          <span>{currentJob.verifiedBy?.name || 'Authorized Supervisor'}</span>
-                          {currentJob.verifiedBy?.role && (
-                            <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 uppercase">
-                              {currentJob.verifiedBy.role}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-[10px] font-mono uppercase text-emerald-700 dark:text-emerald-300 font-bold">
-                          Timestamp
-                        </p>
-                        <p className="text-xs sm:text-sm font-mono font-bold text-slate-800 dark:text-white mt-0.5">
-                          {formatTaskDateTime(currentJob.verifiedAt)}
+                        <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                          Client Profile & Contact
+                        </h3>
+                        <p className="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                          Direct owner communication
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>Checklist fully inspected and vehicle cleared for customer handover.</span>
-                    </div>
+                    <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 shrink-0">
+                      {currentJob.customerMobile ? 'Verified' : 'Walk-in'}
+                    </span>
                   </div>
-                ) : (
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05] space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-                      <span>Operations Status</span>
-                      <span className="font-mono text-amber-500 font-black">{completedCount} / {totalTasks} Tasks</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      {isAllCompleted
-                        ? 'All operations completed. Use the slide button docked below to sign off QA inspection.'
-                        : 'Complete all checklist operations to enable QA sign-off and vehicle handover.'}
-                    </p>
-                  </div>
-                )}
-              </div>
 
-              {/* Client & Fast Communications Hub */}
-              <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
-                      Client Contact Info
-                    </h3>
-                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Direct Contact & Communications</p>
-                  </div>
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">
-                    {currentJob.customerMobile ? 'Verified' : 'Walk-in'}
-                  </span>
-                </div>
-
-                {/* Client Profile Box */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05] space-y-2.5">
-                  <div>
-                    <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Client Name</p>
-                    <p className="text-base font-black text-slate-900 dark:text-white">
-                      {currentJob.customerName || 'Walk-in Customer'}
-                    </p>
-                  </div>
-                  {currentJob.customerMobile && (
-                    <div>
-                      <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Mobile Phone</p>
-                      <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300">
-                        {currentJob.customerMobile}
+                  {/* Client Info Overview */}
+                  <div className="flex items-start gap-3 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05]">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 text-amber-700 dark:text-amber-300 font-black text-base flex items-center justify-center shrink-0 border border-amber-400/30 shadow-2xs">
+                      {(currentJob.customerName || 'W').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate leading-tight">
+                        {currentJob.customerName || 'Walk-in Customer'}
                       </p>
-                    </div>
-                  )}
-                  {currentJob.customerEmail && (
-                    <div>
-                      <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Email Address</p>
-                      <p className="text-sm font-mono text-slate-700 dark:text-slate-300 truncate">
-                        {currentJob.customerEmail}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Divider */}
-                  <div className="border-t border-slate-200/60 dark:border-white/[0.06]" />
-
-                  {/* Created By */}
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Card Created By</p>
-                      <p className="text-sm font-semibold text-slate-800 dark:text-white mt-0.5 truncate">
-                        {currentJob.createdBy?.name || 'Unknown'}
-                      </p>
-                      {currentJob.createdAt && (
-                        <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
-                          {formatTaskDateTime(currentJob.createdAt)}
+                      {currentJob.customerMobile && (
+                        <p className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                          <Phone className="w-3 h-3 text-amber-500 shrink-0" />
+                          <span>{currentJob.customerMobile}</span>
                         </p>
                       )}
+                      {currentJob.customerEmail && (
+                        <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5">
+                          <Mail className="w-3 h-3 text-sky-500 shrink-0" />
+                          <span className="truncate">{currentJob.customerEmail}</span>
+                        </p>
+                      )}
+                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 pt-0.5 border-t border-slate-200/50 dark:border-white/[0.04]">
+                        Intake by {currentJob.createdBy?.name || 'Staff'}{currentJob.createdAt ? ` • ${formatTaskDateTime(currentJob.createdAt)}` : ''}
+                      </p>
                     </div>
-                    <div className="shrink-0 flex flex-col items-end gap-1.5">
-                      {currentJob.createdBy?.profileImageUrl ? (
-                        <img
-                          src={currentJob.createdBy.profileImageUrl}
-                          alt={currentJob.createdBy.name}
-                          className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-white/10"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 flex items-center justify-center">
-                          <UserIcon className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                  </div>
+
+                  {/* 1-Click Fast Actions: WhatsApp, Call, Email */}
+                  {currentJob.customerMobile || currentJob.customerEmail ? (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold tracking-wider">
+                        1-Click Owner Actions
+                      </p>
+                      {currentJob.customerMobile && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <a
+                            href={`https://wa.me/${currentJob.customerMobile.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-2xs cursor-pointer"
+                          >
+                            <MessageCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                            <span>WhatsApp</span>
+                          </a>
+
+                          <a
+                            href={`tel:${currentJob.customerMobile}`}
+                            className="py-2.5 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-2xs cursor-pointer"
+                          >
+                            <Phone className="w-4 h-4 text-amber-500 shrink-0" />
+                            <span>Call</span>
+                          </a>
                         </div>
                       )}
-                      {currentJob.createdBy?.role && (
-                        <span className="text-[9px] font-mono font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-400/15 border border-amber-400/20 text-amber-700 dark:text-amber-400">
-                          {currentJob.createdBy.role}
-                        </span>
+
+                      {currentJob.customerEmail && (
+                        <a
+                          href={`mailto:${currentJob.customerEmail}`}
+                          className="w-full py-2.5 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-700 dark:text-sky-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-2xs cursor-pointer"
+                        >
+                          <Mail className="w-4 h-4 text-sky-500 shrink-0" />
+                          <span className="truncate">Email {currentJob.customerEmail}</span>
+                        </a>
                       )}
                     </div>
-                  </div>
-                </div>
-
-                {/* 1-Click Fast Actions: WhatsApp, Call, Email */}
-                <div className="space-y-2 pt-1">
-                  <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">1-Click Fast Actions</p>
-                  {currentJob.customerMobile && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <a
-                        href={`https://wa.me/${currentJob.customerMobile.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
-                      >
-                        <MessageCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                        <span>WhatsApp</span>
-                      </a>
-
-                      <a
-                        href={`tel:${currentJob.customerMobile}`}
-                        className="py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
-                      >
-                        <Phone className="w-4 h-4 text-emerald-500 shrink-0" />
-                        <span>Call</span>
-                      </a>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05] text-center">
+                      <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                        Walk-in service • No direct phone or email on file
+                      </p>
                     </div>
                   )}
-
-                  {currentJob.customerEmail && (
-                    <a
-                      href={`mailto:${currentJob.customerEmail}`}
-                      className="w-full py-2.5 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-700 dark:text-sky-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
-                    >
-                      <Mail className="w-4 h-4 text-sky-500 shrink-0" />
-                      <span className="truncate">Email {currentJob.customerEmail}</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Handover & Vehicle Management Hub */}
-            <div className="space-y-4">
-              {/* Delivery & Timeline Card */}
-              <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
-                      Timeline & Delivery
-                    </h3>
-                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">Service Bay Duration</p>
-                  </div>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-600 dark:text-amber-400">
-                    Schedule
-                  </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05]">
-                    <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Garage Duration</p>
-                    <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-white mt-0.5 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-amber-500" />
-                      <span>{getGarageDuration()}</span>
-                    </p>
-                  </div>
-
-                  <div className={`p-3 rounded-xl border ${
-                    deliveryInfo.isOverdue
-                      ? 'bg-rose-500/10 border-rose-500/30'
-                      : 'bg-slate-50 dark:bg-white/[0.025] border-slate-200/70 dark:border-white/[0.05]'
-                  }`}>
-                    <div className="flex items-center justify-between gap-1">
-                      <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Target Handover</p>
-                      {deliveryInfo.isOverdue && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[10px] font-mono font-bold animate-pulse">
-                          <AlertTriangle className="w-3 h-3 text-rose-500 stroke-[2.5]" />
-                          <span>Overdue</span>
-                        </span>
-                      )}
+                {/* QA Sign-off Audit & Verification Log */}
+                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
+                    <div>
+                      <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                        QA Sign-Off Audit
+                      </h3>
+                      <p className="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                        Inspection & Clearance Log
+                      </p>
                     </div>
-                    <p className={`text-xs sm:text-sm font-black mt-0.5 truncate ${
-                      deliveryInfo.isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border shrink-0 ${
+                      currentJob.verifiedAt
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                        : isAllCompleted
+                        ? 'bg-amber-400/15 border-amber-400/30 text-amber-600 dark:text-amber-400 animate-pulse'
+                        : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
                     }`}>
-                      {currentJob.expectedDeliveryDate
-                        ? new Date(currentJob.expectedDeliveryDate).toLocaleDateString('en-IN', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : 'Not specified'}
-                    </p>
+                      {currentJob.verifiedAt ? 'QA Verified' : isAllCompleted ? 'Ready for Sign-Off' : 'In Progress'}
+                    </span>
                   </div>
-                </div>
-              </div>
 
-              {/* Vehicle Operational Actions */}
-              <div className="relative overflow-hidden rounded-3xl glass-modern-card p-5 sm:p-6 space-y-4">
-                {/* Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
-                      Vehicle Actions
-                    </h3>
-                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                      Inspections & Controls
-                    </p>
-                  </div>
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-600 dark:text-amber-400">
-                    Workshop Hub
-                  </span>
-                </div>
-
-                {/* Actions Bento Stack */}
-                <div className="space-y-2.5">
-                  {/* 1. Vehicle Inspection Photos */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.07] space-y-2.5 shadow-2xs">
-                    <div
-                      onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
-                      className="group flex items-center justify-between gap-3 cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-400/30 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-                          <Camera className="w-5 h-5" />
+                  {currentJob.verifiedAt ? (
+                    <div className="p-3.5 rounded-xl sm:rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-mono uppercase text-emerald-700 dark:text-emerald-300 font-bold">
+                            Verified & Signed Off By
+                          </p>
+                          <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5 flex items-center gap-2">
+                            <span>{currentJob.verifiedBy?.name || 'Authorized Supervisor'}</span>
+                            {currentJob.verifiedBy?.role && (
+                              <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 uppercase">
+                                {currentJob.verifiedBy.role}
+                              </span>
+                            )}
+                          </p>
                         </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-500 dark:group-hover:text-amber-300 transition-colors truncate">
-                            Vehicle Inspection Photos
-                          </h4>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                            {vehicleViewerImages.length > 0
-                              ? `${vehicleViewerImages.length} inspection photo${vehicleViewerImages.length > 1 ? 's' : ''} • Studio ready`
-                              : 'Capture & upload multi-angle photos'}
+                        <div className="text-right shrink-0">
+                          <p className="text-[10px] font-mono uppercase text-emerald-700 dark:text-emerald-300 font-bold">
+                            Timestamp
+                          </p>
+                          <p className="text-xs font-mono font-bold text-slate-800 dark:text-white mt-0.5">
+                            {formatTaskDateTime(currentJob.verifiedAt)}
                           </p>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-lg bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-700 dark:text-amber-300 group-hover:bg-amber-400 group-hover:text-slate-950 transition-colors flex items-center gap-1">
-                          <span>Studio</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </span>
+                      <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>All checklist tasks inspected and vehicle cleared for handover.</span>
                       </div>
                     </div>
+                  ) : (
+                    <div className="p-3.5 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05] space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                        <span>Operations Status</span>
+                        <span className="font-mono text-amber-500 font-black">{completedCount} / {totalTasks} Done</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {isAllCompleted
+                          ? 'All operations completed. Tap QA Verify below to sign off inspection.'
+                          : 'Complete all checklist operations to enable QA sign-off and vehicle handover.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-                    {/* Horizontal Photo Strip (Click to open Lightbox) */}
-                    {vehicleViewerImages.length > 0 && (
-                      <div className="pt-2 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5">
+              {/* Right Column: Photos Strip & Delivery Timeline */}
+              <div className="space-y-3.5 sm:space-y-4">
+                {/* Vehicle Inspection Photos Gallery Card */}
+                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs">
+                        <Camera className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                          Inspection Gallery
+                        </h3>
+                        <p className="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                          {vehicleViewerImages.length} captured photo{vehicleViewerImages.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
+                      className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/25 font-mono text-xs font-bold flex items-center gap-1 transition active:scale-95 cursor-pointer"
+                    >
+                      <span>Studio</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {/* Horizontal Photo Strip */}
+                  {vehicleViewerImages.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
                         {vehicleViewerImages.map((img, idx) => (
                           <div
                             key={idx}
@@ -950,132 +875,92 @@ export const JobDetailPage: React.FC = () => {
                               e.stopPropagation();
                               openImageViewer(vehicleViewerImages, idx);
                             }}
-                            className="group/thumb relative w-14 h-11 sm:w-16 sm:h-12 rounded-xl overflow-hidden shrink-0 border border-slate-200/90 dark:border-white/10 cursor-pointer hover:border-amber-400 transition active:scale-95 shadow-2xs"
-                            title="Click to view photo fullscreen"
+                            className="group/thumb relative w-16 h-12 sm:w-20 sm:h-14 rounded-xl overflow-hidden shrink-0 border border-slate-200/90 dark:border-white/10 cursor-pointer hover:border-amber-400 transition active:scale-95 shadow-2xs"
+                            title="Tap to view fullscreen"
                           >
                             <img src={img.url} alt="" className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform" />
                             {img.isThumbnail && (
-                              <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-amber-400" />
+                              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-400 shadow-xs" />
                             )}
                             <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
-                              <Maximize2 className="w-3 h-3" />
+                              <Maximize2 className="w-3.5 h-3.5" />
                             </div>
                           </div>
                         ))}
                       </div>
-                    )}
-                  </div>
-
-                  {/* 2. Pin Priority Configuration */}
-                  <button
-                    type="button"
-                    onClick={() => setIsPinJobModalOpen(true)}
-                    className="group w-full p-3.5 rounded-2xl bg-slate-50/80 hover:bg-slate-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.07] hover:border-amber-400/40 dark:hover:border-amber-400/40 transition-all duration-200 text-left flex items-center justify-between gap-3 cursor-pointer shadow-2xs active:scale-[0.985]"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs ${
-                        isJobPinnedForAll
-                          ? 'bg-amber-400/20 text-amber-400 border border-amber-400/40'
-                          : isJobPinnedForMe
-                          ? 'bg-yellow-400/20 text-yellow-400 border border-yellow-400/40'
-                          : 'bg-slate-500/15 text-slate-400 border border-slate-500/20'
-                      }`}>
-                        <Pin className={`w-5 h-5 ${isPinned ? 'fill-current' : ''}`} />
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-500 dark:group-hover:text-amber-300 transition-colors truncate">
-                          Pin Priority Configuration
-                        </h4>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                          {isJobPinnedForAll
-                            ? 'Highlighted across all garage screens'
-                            : isJobPinnedForMe
-                            ? 'Pinned to your active technician view'
-                            : 'Standard queue • Tap to spotlight'}
-                        </p>
-                      </div>
+                      <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                        Tap any photo to view fullscreen lightbox • Stored securely on Cloudinary
+                      </p>
                     </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className={`text-[10px] font-mono font-bold px-2 py-1 rounded-lg border flex items-center gap-1 transition-colors ${
-                        isJobPinnedForAll
-                          ? 'bg-amber-400/15 border-amber-400/30 text-amber-700 dark:text-amber-300'
-                          : isJobPinnedForMe
-                          ? 'bg-yellow-400/15 border-yellow-400/30 text-yellow-700 dark:text-yellow-300'
-                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
-                      }`}>
-                        <span>{isJobPinnedForAll ? 'Garage Pin' : isJobPinnedForMe ? 'Priority Pin' : 'Configure'}</span>
-                        <ChevronRight className="w-3 h-3" />
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* 3. Edit Vehicle & Job Information (Admin Only) */}
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/jobs/edit/${currentJob.id || currentJob._id}`)}
-                      className="group w-full p-3.5 rounded-2xl bg-slate-50/80 hover:bg-slate-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.07] hover:border-sky-400/40 dark:hover:border-sky-400/40 transition-all duration-200 text-left flex items-center justify-between gap-3 cursor-pointer shadow-2xs active:scale-[0.985]"
+                  ) : (
+                    <div
+                      onClick={() => navigate(`/jobs/${currentJob.id || currentJob._id}/photo`)}
+                      className="p-5 rounded-xl border border-dashed border-slate-300 dark:border-white/15 text-center cursor-pointer hover:border-amber-400/50 transition active:scale-[0.99] space-y-1.5"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-500 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-                          <Edit2 className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-sky-500 dark:group-hover:text-sky-300 transition-colors truncate">
-                              Edit Vehicle & Job Specs
-                            </h4>
-                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 uppercase">
-                              Admin
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                            Update plate, color, client & delivery target
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-lg bg-sky-500/10 dark:bg-sky-500/15 border border-sky-500/20 text-sky-600 dark:text-sky-300 group-hover:bg-sky-500 group-hover:text-white transition-colors flex items-center gap-1">
-                          <span>Edit</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </span>
-                      </div>
-                    </button>
+                      <Camera className="w-6 h-6 text-amber-500/60 mx-auto" />
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        No inspection photos yet
+                      </p>
+                      <p className="text-[10px] font-mono text-slate-400">
+                        Tap to open Camera Studio & record vehicle condition
+                      </p>
+                    </div>
                   )}
                 </div>
 
-                {/* 4. Danger Zone: Delete Vehicle Job Card (Admin Only) */}
-                {isAdmin && (
-                  <div className="pt-2 border-t border-slate-200/60 dark:border-white/[0.06]">
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDeleteModal({ isOpen: true, type: 'JOB_CARD' })}
-                      className="group w-full p-3 rounded-2xl bg-rose-500/[0.05] hover:bg-rose-500/[0.12] border border-rose-500/20 hover:border-rose-500/40 transition-all duration-200 text-left flex items-center justify-between gap-3 cursor-pointer shadow-2xs active:scale-[0.985]"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/25 text-rose-500 dark:text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-                          <Trash2 className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400 transition-colors truncate">
-                            Delete Vehicle Job Card
-                          </h4>
-                          <p className="text-[10px] font-mono text-rose-500/70 dark:text-rose-400/60 truncate">
-                            Permanent removal • Cannot be undone
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="shrink-0">
-                        <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-300 group-hover:bg-rose-500 group-hover:text-white transition-colors">
-                          Delete
-                        </span>
-                      </div>
-                    </button>
+                {/* Delivery & Timeline Card */}
+                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.06]">
+                    <div>
+                      <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                        Timeline & Delivery
+                      </h3>
+                      <p className="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                        Service Bay Duration
+                      </p>
+                    </div>
+                    <span className="text-[10px] sm:text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-amber-400/10 dark:bg-amber-400/15 border border-amber-400/20 text-amber-600 dark:text-amber-400 shrink-0">
+                      Schedule
+                    </span>
                   </div>
-                )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.025] border border-slate-200/70 dark:border-white/[0.05]">
+                      <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Bay Duration</p>
+                      <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-white mt-0.5 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span>{getGarageDuration()}</span>
+                      </p>
+                    </div>
+
+                    <div className={`p-3 rounded-xl border ${
+                      deliveryInfo.isOverdue
+                        ? 'bg-rose-500/10 border-rose-500/30'
+                        : 'bg-slate-50 dark:bg-white/[0.025] border-slate-200/70 dark:border-white/[0.05]'
+                    }`}>
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-bold">Target Handover</p>
+                        {deliveryInfo.isOverdue && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[9px] font-mono font-bold animate-pulse">
+                            Overdue
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-xs sm:text-sm font-black mt-0.5 truncate ${
+                        deliveryInfo.isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'
+                      }`}>
+                        {currentJob.expectedDeliveryDate
+                          ? new Date(currentJob.expectedDeliveryDate).toLocaleDateString('en-IN', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : 'Not specified'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>

@@ -1,10 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IJobPhoto {
-  url: string;
-  publicId?: string;
+  publicId: string;
+  url?: string;
   remarks?: string;
-  capturedAt: Date;
+  capturedAt?: Date | string;
   isThumbnail?: boolean;
 }
 
@@ -16,7 +16,7 @@ export interface IJobCard extends Document {
   customerMobile?: string;
   customerEmail?: string;
   thumbnailUrl?: string;
-  photos?: IJobPhoto[];
+  photos?: (string | IJobPhoto)[];
   expectedDeliveryDate?: Date;
   status: 'IN_PROGRESS' | 'READY' | 'COMPLETED';
   createdBy?: mongoose.Types.ObjectId;
@@ -40,15 +40,10 @@ const JobCardSchema: Schema = new Schema(
     customerMobile: { type: String, trim: true },
     customerEmail: { type: String, trim: true, lowercase: true },
     thumbnailUrl: { type: String, trim: true, default: '' },
-    photos: [
-      {
-        url: { type: String, required: true },
-        publicId: { type: String, trim: true, default: '' },
-        remarks: { type: String, trim: true, default: '' },
-        capturedAt: { type: Date, default: Date.now },
-        isThumbnail: { type: Boolean, default: false },
-      },
-    ],
+    photos: {
+      type: [Schema.Types.Mixed],
+      default: [],
+    },
     expectedDeliveryDate: { type: Date, default: null, index: true },
     status: { type: String, enum: ['IN_PROGRESS', 'READY', 'COMPLETED'], default: 'IN_PROGRESS' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },

@@ -18,29 +18,39 @@ import { cacheService } from '../cache/cache.service';
  */
 const mapJobCardImages = (jobObj: any) => {
   if (!jobObj) return jobObj;
+  const rawThumb = jobObj.thumbnailUrl ? extractPublicId(jobObj.thumbnailUrl) : '';
   if (jobObj.thumbnailUrl) {
     jobObj.thumbnailUrl = getCloudinaryUrl(jobObj.thumbnailUrl);
   }
   if (Array.isArray(jobObj.photos)) {
     jobObj.photos = jobObj.photos
-      .filter((p: any) => Boolean(p && (p.url || p.publicId)))
+      .filter((p: any) => Boolean(p && (typeof p === 'string' || p.publicId || p.url)))
       .map((p: any) => {
+        if (typeof p === 'string') {
+          const cleanPublicId = extractPublicId(p);
+          return {
+            url: getCloudinaryUrl(cleanPublicId),
+            publicId: cleanPublicId,
+            remarks: '',
+            capturedAt: jobObj.createdAt || new Date(),
+            isThumbnail: cleanPublicId === rawThumb,
+          };
+        }
         const photoObj = p && typeof p.toObject === 'function' ? p.toObject() : { ...p };
-        const rawUrl = photoObj.url || '';
-        const resolvedUrl = (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('data:'))
-          ? rawUrl
-          : getCloudinaryUrl(photoObj.publicId || photoObj.url);
+        const cleanPublicId = extractPublicId(photoObj.publicId || photoObj.url);
         return {
           ...photoObj,
-          url: resolvedUrl,
+          publicId: cleanPublicId,
+          url: getCloudinaryUrl(cleanPublicId),
+          isThumbnail: Boolean(photoObj.isThumbnail || cleanPublicId === rawThumb),
         };
       })
       .filter((p: any) => Boolean(p.url));
 
-    if (jobObj.thumbnailUrl && !jobObj.photos.some((p: any) => p.url === jobObj.thumbnailUrl)) {
+    if (jobObj.thumbnailUrl && !jobObj.photos.some((p: any) => p.publicId === rawThumb || p.url === jobObj.thumbnailUrl)) {
       jobObj.photos.unshift({
         url: jobObj.thumbnailUrl,
-        publicId: extractPublicId(jobObj.thumbnailUrl),
+        publicId: rawThumb,
         remarks: 'Intake Photo',
         capturedAt: jobObj.createdAt || new Date(),
         isThumbnail: true,
@@ -50,7 +60,7 @@ const mapJobCardImages = (jobObj: any) => {
     jobObj.photos = [
       {
         url: jobObj.thumbnailUrl,
-        publicId: extractPublicId(jobObj.thumbnailUrl),
+        publicId: rawThumb,
         remarks: 'Intake Photo',
         capturedAt: jobObj.createdAt || new Date(),
         isThumbnail: true,
@@ -209,9 +219,8 @@ export const uploadJobImage = async (req: Request, res: Response) => {
       return sendError(res, 'Job card ID and image data are required.', 400);
     }
 
-    const { publicId, url } = await uploadToCloudinary(image, 'momzz/vehicles');
+    const { publicId } = await uploadToCloudinary(image, 'momzz/vehicles');
     const updatedJob = await jobRepository.addJobPhoto(jobCardId, {
-      url: url || publicId,
       publicId,
       remarks: remarks || '',
       isThumbnail: Boolean(isThumbnail),

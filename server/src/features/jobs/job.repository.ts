@@ -20,11 +20,11 @@ export class JobRepository {
     expectedDeliveryDate?: Date | string | null;
     createdBy: string;
   }): Promise<IJobCard> {
-    const photos = data.thumbnailUrl
+    const cleanThumb = data.thumbnailUrl ? extractPublicId(data.thumbnailUrl) : '';
+    const photos = cleanThumb
       ? [
           {
-            url: data.thumbnailUrl,
-            publicId: extractPublicId(data.thumbnailUrl),
+            publicId: cleanThumb,
             remarks: 'Intake Photo',
             capturedAt: new Date(),
             isThumbnail: true,
@@ -34,6 +34,7 @@ export class JobRepository {
 
     return await JobCard.create({
       ...data,
+      thumbnailUrl: cleanThumb,
       photos,
     });
   }
@@ -266,7 +267,7 @@ export class JobRepository {
 
   async addJobPhoto(
     jobCardId: string,
-    photoData: { url: string; publicId?: string; remarks?: string; isThumbnail?: boolean }
+    photoData: { url?: string; publicId?: string; remarks?: string; isThumbnail?: boolean }
   ): Promise<IJobCard | null> {
     const job = await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
     if (!job) return null;
@@ -275,38 +276,45 @@ export class JobRepository {
       job.photos = [];
     }
 
+    const cleanPublicId = extractPublicId(photoData.publicId || photoData.url);
+    if (!cleanPublicId) {
+      throw new Error('A valid Cloudinary public ID is required.');
+    }
+
     // Migration / Backwards Compatibility:
     // If the job already had a thumbnailUrl from initial creation, but photos array is empty,
     // preserve that initial thumbnailUrl as an existing photo so it is NEVER lost or overwritten!
     if (job.thumbnailUrl && job.photos.length === 0) {
       const existingId = extractPublicId(job.thumbnailUrl);
-      job.photos.push({
-        url: existingId || job.thumbnailUrl,
-        publicId: existingId,
-        remarks: 'Intake Photo',
-        capturedAt: job.createdAt || new Date(),
-        isThumbnail: true,
-      } as any);
+      if (existingId) {
+        job.photos.push({
+          publicId: existingId,
+          remarks: 'Intake Photo',
+          capturedAt: job.createdAt || new Date(),
+          isThumbnail: true,
+        } as any);
+      }
     }
 
     // The new photo should ONLY become the thumbnail if:
     // a) Explicitly requested (photoData.isThumbnail === true), OR
     // b) The vehicle currently has NO thumbnail AND no photos marked as thumbnail.
-    // Every new capture simply appends a new photo without changing the existing thumbnail!
-    const hasThumbnail = Boolean(job.thumbnailUrl || job.photos.some((p: any) => p.isThumbnail));
+    const hasThumbnail = Boolean(job.thumbnailUrl || job.photos.some((p: any) => p && (p.isThumbnail || p === job.thumbnailUrl)));
     const shouldBeThumbnail = Boolean(photoData.isThumbnail || !hasThumbnail);
 
     if (shouldBeThumbnail) {
       job.photos.forEach((p: any) => {
-        p.isThumbnail = false;
+        if (typeof p === 'object' && p !== null) {
+          p.isThumbnail = false;
+        }
       });
-      job.thumbnailUrl = photoData.publicId || photoData.url;
+      job.thumbnailUrl = cleanPublicId;
     }
 
+    // Save strictly publicId, remarks, capturedAt, isThumbnail (NO url stored in DB!)
     job.photos.push({
-      url: photoData.url,
-      publicId: photoData.publicId || '',
-      remarks: photoData.remarks || '',
+      publicId: cleanPublicId,
+      remarks: (photoData.remarks || '').trim(),
       capturedAt: new Date(),
       isThumbnail: shouldBeThumbnail,
     } as any);
@@ -325,21 +333,24 @@ export class JobRepository {
     const job = await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
     if (!job) return null;
 
+    const cleanIdentifier = extractPublicId(photoIdentifier);
+
     if (Array.isArray(job.photos)) {
       let matched = false;
       job.photos.forEach((p: any) => {
-        if (p.publicId === photoIdentifier || p.url === photoIdentifier) {
-          p.isThumbnail = true;
+        const pId = typeof p === 'string' ? p : p?.publicId || extractPublicId(p?.url);
+        if (pId === cleanIdentifier) {
+          if (typeof p === 'object' && p !== null) p.isThumbnail = true;
           matched = true;
-        } else {
+        } else if (typeof p === 'object' && p !== null) {
           p.isThumbnail = false;
         }
       });
       if (matched) {
-        job.thumbnailUrl = photoIdentifier;
+        job.thumbnailUrl = cleanIdentifier;
       }
     } else {
-      job.thumbnailUrl = photoIdentifier;
+      job.thumbnailUrl = cleanIdentifier;
     }
 
     job.markModified('photos');
@@ -359,18 +370,24 @@ export class JobRepository {
     const job = await JobCard.findOne({ _id: jobCardId, isDeleted: { $ne: true } });
     if (!job) return { job: null };
 
+    const cleanIdentifier = extractPublicId(photoIdentifier);
     let deletedPublicId: string | undefined = undefined;
 
     if (Array.isArray(job.photos)) {
-      const idx = job.photos.findIndex((p: any) => p.publicId === photoIdentifier || p.url === photoIdentifier);
+      const idx = job.photos.findIndex((p: any) => {
+        const pId = typeof p === 'string' ? p : p?.publicId || extractPublicId(p?.url);
+        return pId === cleanIdentifier;
+      });
       if (idx > -1) {
         const removed = job.photos.splice(idx, 1)[0];
-        deletedPublicId = removed.publicId || removed.url;
-        const wasThumb = removed.isThumbnail || job.thumbnailUrl === photoIdentifier || job.thumbnailUrl === removed.publicId;
+        deletedPublicId = typeof removed === 'string' ? removed : (removed?.publicId || extractPublicId(removed?.url));
+        const wasThumb = (typeof removed === 'object' && removed?.isThumbnail) || job.thumbnailUrl === cleanIdentifier || job.thumbnailUrl === deletedPublicId;
         if (wasThumb) {
           if (job.photos.length > 0) {
-            job.photos[0].isThumbnail = true;
-            job.thumbnailUrl = job.photos[0].publicId || job.photos[0].url;
+            const first = job.photos[0];
+            const firstId = typeof first === 'string' ? first : (first?.publicId || extractPublicId(first?.url));
+            if (typeof first === 'object' && first !== null) first.isThumbnail = true;
+            job.thumbnailUrl = firstId || '';
           } else {
             job.thumbnailUrl = '';
           }
