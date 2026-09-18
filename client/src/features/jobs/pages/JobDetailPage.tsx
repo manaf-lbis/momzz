@@ -1004,9 +1004,7 @@ export const JobDetailPage: React.FC = () => {
                         All Service Operations Complete
                       </p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {isAdmin
-                          ? 'Vehicle is ready for QA inspection. Slide the control below to certify sign-off.'
-                          : 'Ready for Quality Assurance inspection and manager sign-off.'}
+                        Vehicle is ready for QA inspection. Slide the control below to certify sign-off.
                       </p>
                     </div>
                   </div>
@@ -1015,16 +1013,14 @@ export const JobDetailPage: React.FC = () => {
                   </span>
                 </div>
 
-                {isAdmin && (
-                  <div className="pt-1">
-                    <SlideToSignoff
-                      onSignoff={handleVerify}
-                      isLoading={isVerifying}
-                      isVerified={Boolean(currentJob.verifiedAt)}
-                      verifierName={currentJob.verifiedBy?.name}
-                    />
-                  </div>
-                )}
+                <div className="pt-1">
+                  <SlideToSignoff
+                    onSignoff={handleVerify}
+                    isLoading={isVerifying}
+                    isVerified={Boolean(currentJob.verifiedAt)}
+                    verifierName={currentJob.verifiedBy?.name}
+                  />
+                </div>
               </motion.div>
             ) : null}
 
@@ -1310,26 +1306,6 @@ export const JobDetailPage: React.FC = () => {
                   })
                 )}
 
-                {/* Bottom QA Sign-off Action Bar (visible when scrolled down through checklist) */}
-                {isAllCompleted && !currentJob.verifiedAt && isAdmin && (
-                  <div className="pt-4 pb-2">
-                    <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/90 border border-emerald-500/30 text-center space-y-3 shadow-xl backdrop-blur-xl max-w-md mx-auto">
-                      <div className="flex items-center justify-center gap-2 text-emerald-400 font-mono text-xs font-black uppercase tracking-wider">
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>Ready for QA Sign-Off</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 font-mono">
-                        Slide below to approve and certify vehicle completion
-                      </p>
-                      <SlideToSignoff
-                        onSignoff={handleVerify}
-                        isLoading={isVerifying}
-                        isVerified={Boolean(currentJob.verifiedAt)}
-                        verifierName={currentJob.verifiedBy?.name}
-                      />
-                    </div>
-                  </div>
-                )}
 
                 {/* Move to Top Button at the end of checklist */}
                 {sortedTasks.length > 0 && (
