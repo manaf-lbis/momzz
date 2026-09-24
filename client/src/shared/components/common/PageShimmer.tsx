@@ -169,22 +169,3 @@ export const JobsListSkeleton: React.FC = () => (
   </div>
 );
 
-/* ── Leaderboard Bento Skeleton ── */
-export const LeaderboardSkeleton: React.FC = () => (
-  <div className="space-y-4 max-w-6xl w-full mx-auto" aria-label="Loading leaderboard" role="status">
-    {/* Timeframe Tabs */}
-    <div className="h-11 rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10" />
-    {/* User Standing Hero */}
-    <div className="h-20 rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10" />
-    {/* Grid: Podium (Left) + List (Right) */}
-    <div className="lg:grid lg:grid-cols-5 lg:gap-6 space-y-4 lg:space-y-0">
-      <div className="lg:col-span-2 h-72 rounded-3xl bg-white/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10" />
-      <div className="lg:col-span-3 space-y-2">
-        {Array.from({ length: 5 }, (_, i) => (
-          <div key={i} className="h-14 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10" />
-        ))}
-      </div>
-    </div>
-  </div>
-);
-

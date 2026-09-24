@@ -375,9 +375,8 @@ export const JobDetailPage: React.FC = () => {
     return `${Math.floor(minutes / 1440)}d ${Math.floor((minutes % 1440) / 60)}h`;
   };
 
-  // Live points split calculations for completion modal
+  // Co-workers calculation for completion modal
   const totalParticipating = 1 + (completeTaskModal.isShared ? completeTaskModal.partnerIds.length : 0);
-  const pointsPerWorker = (1 / totalParticipating).toFixed(2);
 
   if (isLoading) {
     return (
@@ -1221,9 +1220,11 @@ export const JobDetailPage: React.FC = () => {
                                   {isShared ? ` & ${partners.map((p: any) => p.name).join(', ')}` : ''}
                                 </span>
 
-                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-amber-600 dark:text-amber-300">
-                                  {isShared ? `${(1 / (1 + partners.length)).toFixed(2)} pts each` : '1.0 pt'}
-                                </span>
+                                {isShared && (
+                                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400">
+                                    Shared
+                                  </span>
+                                )}
 
                                 {task.completedAt && (
                                   <span className="text-[9px] font-mono text-slate-400 truncate">
@@ -1409,11 +1410,6 @@ export const JobDetailPage: React.FC = () => {
                           <p className="text-[8px] font-mono text-slate-400">Primary Lead</p>
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono font-bold text-amber-300 px-1.5 py-0.2 rounded bg-white/5 border border-white/10 shrink-0">
-                        {activityTask.isShared && activityTask.partners?.length
-                          ? `${(1 / (1 + activityTask.partners.length)).toFixed(2)} pts`
-                          : '1.0 pt'}
-                      </span>
                     </div>
 
                     {/* Shared Co-Workers */}
@@ -1435,9 +1431,6 @@ export const JobDetailPage: React.FC = () => {
                             <p className="text-[8px] font-mono text-amber-400">Partner</p>
                           </div>
                         </div>
-                        <span className="text-[10px] font-mono font-bold text-amber-300 px-1.5 py-0.2 rounded bg-white/5 border border-white/10 shrink-0">
-                          {(1 / (1 + (activityTask.partners?.length || 0))).toFixed(2)} pts
-                        </span>
                       </div>
                     ))}
                   </div>
@@ -1537,18 +1530,6 @@ export const JobDetailPage: React.FC = () => {
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
-              </div>
-
-              {/* Theme-Matched Points Highlight */}
-              <div className="py-2.5 px-3 rounded-2xl bg-amber-400/10 border border-amber-400/25 text-center space-y-0.5">
-                <div className="text-xl sm:text-2xl font-black font-mono text-amber-300 tracking-tight">
-                  +{pointsPerWorker} <span className="text-xs font-sans font-bold uppercase text-amber-400/80">QP</span>
-                </div>
-                <p className="text-[10px] font-mono text-slate-400 truncate">
-                  {completeTaskModal.partnerIds.length > 0
-                    ? `Split between ${totalParticipating} staff (${pointsPerWorker} QP each)`
-                    : 'Awarded directly to your score'}
-                </p>
               </div>
 
               {/* Scalable Staff Selector (Handles 1 to 50+ employees smoothly) */}
@@ -1653,7 +1634,7 @@ export const JobDetailPage: React.FC = () => {
                   ) : (
                     <Check className="w-4 h-4 stroke-[3]" />
                   )}
-                  <span>Complete Task (+{pointsPerWorker} QP)</span>
+                  <span>Complete Task</span>
                 </button>
               </div>
             </motion.div>

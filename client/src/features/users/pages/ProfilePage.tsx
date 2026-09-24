@@ -4,11 +4,9 @@ import { useAuth } from '../../../shared/hooks/useAuth';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import {
   Car,
-  BarChart3,
   Package,
   ShoppingCart,
   Users,
-  Trophy,
   KeyRound,
   LogOut,
   ChevronRight,
@@ -265,20 +263,20 @@ export const ProfilePage: React.FC = () => {
                   </div>
                 </button>
 
-                {/* 2. Leaderboard */}
+                {/* 2. Work Logs */}
                 <button
-                  onClick={() => navigate('/leaderboard')}
+                  onClick={() => navigate('/work-logs')}
                   className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-white/[0.02] dark:hover:bg-white/5 border border-slate-200/80 dark:border-white/[0.06] hover:border-amber-400/40 transition text-left flex items-start gap-3 group cursor-pointer"
                 >
                   <div className="w-9 h-9 rounded-xl bg-amber-400/15 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Trophy className="w-4.5 h-4.5" />
+                    <FileText className="w-4.5 h-4.5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-500 dark:group-hover:text-amber-300 transition-colors">
-                      Leaderboard
+                      Work Activity Logs
                     </h4>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                      Technician rankings & QP points
+                      Technician task history
                     </p>
                   </div>
                 </button>
@@ -286,23 +284,6 @@ export const ProfilePage: React.FC = () => {
                 {/* Admin Modules */}
                 {isAdmin && (
                   <>
-                    <button
-                      onClick={() => navigate('/analytics')}
-                      className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-white/[0.02] dark:hover:bg-white/5 border border-slate-200/80 dark:border-white/[0.06] hover:border-purple-400/40 transition text-left flex items-start gap-3 group cursor-pointer"
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-purple-500/15 text-purple-500 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                        <BarChart3 className="w-4.5 h-4.5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-500 dark:group-hover:text-purple-300 transition-colors">
-                          Analytics
-                        </h4>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                          Revenue trends & turnaround
-                        </p>
-                      </div>
-                    </button>
-
                     <button
                       onClick={() => navigate('/inventory')}
                       className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-white/[0.02] dark:hover:bg-white/5 border border-slate-200/80 dark:border-white/[0.06] hover:border-emerald-400/40 transition text-left flex items-start gap-3 group cursor-pointer"

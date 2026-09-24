@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { authService } from './auth.service';
-import { userRepository } from '../users/user.repository';
 import { sendSuccess, sendError } from '../../shared/utils/response.handler';
 import { clearFailedLoginAttempts, recordFailedLogin } from '../../shared/middleware/rate-limit.middleware';
 import { getCloudinaryUrl } from '../../shared/utils/cloudinary.helper';
@@ -173,17 +172,6 @@ export class AuthController {
       return sendSuccess(res, `Worker approval status set to ${isApproved}.`, updatedUser, 200);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to update approval status.', 400);
-    }
-  }
-
-  async getLeaderboard(req: Request, res: Response) {
-    try {
-      const timeframe = req.query.timeframe as string | undefined;
-      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-      const leaderboard = await userRepository.getLeaderboard(timeframe, limit);
-      return sendSuccess(res, 'Leaderboard fetched.', leaderboard, 200);
-    } catch (error: any) {
-      return sendError(res, error.message || 'Failed to fetch leaderboard.', 400);
     }
   }
 

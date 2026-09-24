@@ -6,7 +6,6 @@ import { AppRoutes } from './routes/AppRoutes';
 import { ThemeProvider } from './features/auth/context/ThemeContext';
 import { SocketProvider } from './features/auth/context/SocketContext';
 import { Footer } from './shared/components/common/Footer';
-import { LeaderboardWelcomeModal } from './shared/components/common/LeaderboardWelcomeModal';
 import { QuickAccessDock } from './shared/components/navigation/QuickAccessDock';
 import { KineticSplash } from './shared/components/common/KineticSplash';
 import { ModernAppBackground } from './shared/components/common/FluidCanvasBackground';
@@ -30,7 +29,6 @@ export const App: React.FC = () => {
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <SocketProvider>
             <ModernAppBackground />
-            <LeaderboardWelcomeModal />
             <AppRoutes />
             <Footer />
             <QuickAccessDock />

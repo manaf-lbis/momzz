@@ -46,9 +46,9 @@ const scenes = [
     title: 'Inventory & Parts Management'
   },
   {
-    id: 'leaderboard',
-    path: '/leaderboard',
-    title: 'Technician Leaderboard & Points'
+    id: 'work-logs',
+    path: '/work-logs',
+    title: 'Work Activity Logs'
   }
 ];
 

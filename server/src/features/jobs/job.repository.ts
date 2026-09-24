@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import { JobCard, IJobCard } from '../../models/JobCard.model';
 import { Task, ITask } from '../../models/Task.model';
-import User from '../../models/User.model';
 import { catalogRepository } from '../catalog/catalog.repository';
 import { cacheService } from '../cache/cache.service';
 
@@ -468,7 +467,7 @@ export class JobRepository {
 
   /**
    * Explicit set task status.
-   * Supports multiple co-workers: points = 1 / (1 + partners.length) for each person.
+   * Supports multiple co-workers on shared work (points calculation removed).
    */
   async setTaskStatus(
     taskId: string,
@@ -494,9 +493,6 @@ export class JobRepository {
       // Filter out the current user from partners list (safety guard)
       const validPartnerIds = (partnerIds || []).filter((id) => id && id !== userId);
       const isShared = validPartnerIds.length > 0;
-      // Total workers = primary + N partners; each gets an equal fraction
-      const totalWorkers = 1 + validPartnerIds.length;
-      const pointsEach = parseFloat((1 / totalWorkers).toFixed(4));
 
       task.status = 'COMPLETED';
       task.completedBy = userId as any;
@@ -504,14 +500,6 @@ export class JobRepository {
       task.isShared = isShared;
       task.completedAt = new Date();
       task.activityLog.push({ action: 'COMPLETED', user: userId as any, at: new Date() });
-
-      // Award points to primary worker
-      await User.findByIdAndUpdate(userId, { $inc: { taskCount: pointsEach } });
-
-      // Award equal points to each co-worker
-      for (const pid of validPartnerIds) {
-        await User.findByIdAndUpdate(pid, { $inc: { taskCount: pointsEach } });
-      }
     } else {
       // REOPEN
       if (task.status === 'OPEN') {
@@ -525,27 +513,12 @@ export class JobRepository {
           });
       }
 
-      const prevUser = task.completedBy;
-      const prevPartners: any[] = (task.partners as any) || [];
-      const wasShared = !!task.isShared;
-      const totalWorkers = 1 + prevPartners.length;
-      const pointsEach = parseFloat((1 / totalWorkers).toFixed(4));
-
       task.status = 'OPEN';
       task.completedBy = undefined;
       task.partners = [];
       task.isShared = false;
       task.completedAt = undefined;
       task.activityLog.push({ action: 'REOPENED', user: userId as any, at: new Date() });
-
-      if (wasShared) {
-        if (prevUser) await User.findByIdAndUpdate(prevUser, { $inc: { taskCount: -pointsEach } });
-        for (const pid of prevPartners) {
-          await User.findByIdAndUpdate(pid, { $inc: { taskCount: -pointsEach } });
-        }
-      } else {
-        if (prevUser) await User.findByIdAndUpdate(prevUser, { $inc: { taskCount: -1 } });
-      }
 
       await JobCard.findByIdAndUpdate(task.jobCardId, { $set: { verifiedBy: null, verifiedAt: null } });
     }
@@ -558,9 +531,6 @@ export class JobRepository {
     await JobCard.findByIdAndUpdate(task.jobCardId, {
       status: allCompleted ? 'COMPLETED' : 'IN_PROGRESS',
     });
-
-    // Invalidate cached leaderboard
-    cacheService.delByPrefix('cache:leaderboard').catch(() => {});
 
     return await Task.findById(taskId)
       .populate('completedBy', 'name mobile role profileImageUrl')
@@ -706,22 +676,6 @@ export class JobRepository {
     const task = await Task.findById(taskId);
     if (!task) return null;
 
-    // Fix: reverse correct fractional points for all workers
-    if (task.completedBy) {
-      const taskPartners: any[] = (task.partners as any) || [];
-      const wasShared = !!task.isShared && taskPartners.length > 0;
-      const totalWorkers = wasShared ? 1 + taskPartners.length : 1;
-      const deductEach = parseFloat((1 / totalWorkers).toFixed(4));
-
-      await User.findByIdAndUpdate(task.completedBy, { $inc: { taskCount: -deductEach } });
-      if (wasShared) {
-        for (const pid of taskPartners) {
-          const pidStr = pid?.toString();
-          if (pidStr) await User.findByIdAndUpdate(pidStr, { $inc: { taskCount: -deductEach } });
-        }
-      }
-    }
-
     const jobCardId = task.jobCardId;
     if (task.inventoryItem && task.itemType === 'PRODUCT' && task.stockTracked !== false) await catalogRepository.restoreStock(task.inventoryItem.toString(), task.quantityUsed || 1);
     await Task.findByIdAndDelete(taskId);
@@ -734,9 +688,6 @@ export class JobRepository {
         status: allCompleted ? 'COMPLETED' : 'IN_PROGRESS',
       });
     }
-
-    // Invalidate cached leaderboard
-    cacheService.delByPrefix('cache:leaderboard').catch(() => {});
 
     return task; // Return the task so the controller can access jobCardId
   }

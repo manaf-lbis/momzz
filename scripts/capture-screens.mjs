@@ -41,9 +41,9 @@ const scenes = [
     title: 'Inventory & Parts Management'
   },
   {
-    id: 'leaderboard',
-    path: '/leaderboard',
-    title: 'Technician Leaderboard & Points'
+    id: 'work-logs',
+    path: '/work-logs',
+    title: 'Work Activity Logs'
   }
 ];
 
@@ -119,17 +119,6 @@ async function capture() {
           const splash = document.querySelector('[class*="KineticSplash"]') || document.querySelector('.fixed.inset-0.z-50');
           if (splash && splash.textContent?.includes('WELCOME')) {
             splash.remove();
-          }
-
-          // Dismiss Monthly Leaderboard popup modal if present
-          const allButtons = Array.from(document.querySelectorAll('button'));
-          const continueBtn = allButtons.find(b => b.textContent && b.textContent.includes('Continue to Garage'));
-          if (continueBtn) {
-            continueBtn.click();
-          }
-          const closeX = document.querySelector('.fixed.inset-0 button');
-          if (closeX && document.body.textContent.includes('MONTHLY GARAGE LEADER')) {
-            closeX.click();
           }
         });
         await new Promise((r) => setTimeout(r, 2000));

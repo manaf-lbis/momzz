@@ -57,7 +57,6 @@ export class AuthService {
       password: hashedPassword,
       role,
       isApproved,
-      taskCount: 0,
       totalLoginAttempts: 0,
       isOnline: false,
     });
@@ -260,7 +259,6 @@ export class AuthService {
       role: user.role,
       isApproved: user.isApproved,
       status: user.status || 'ACTIVE',
-      taskCount: user.taskCount || 0,
       lastLoginAttempt: user.lastLoginAttempt,
       totalLoginAttempts: user.totalLoginAttempts || 0,
       isOnline: !!user.isOnline,
@@ -281,7 +279,6 @@ export class AuthService {
       role: user.role,
       isApproved: user.isApproved,
       status: user.status || 'ACTIVE',
-      taskCount: user.taskCount || 0,
       lastLoginAttempt: user.lastLoginAttempt,
       totalLoginAttempts: user.totalLoginAttempts || 0,
       failedLoginAttempts: user.failedLoginAttempts || 0,

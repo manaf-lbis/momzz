@@ -13,7 +13,6 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
-  Trophy,
   Users,
   Wrench,
   Zap,
@@ -29,7 +28,7 @@ import {
 import { useAuth } from "../../../shared/hooks/useAuth";
 import { Navbar } from "../../../shared/components/navbar/Navbar";
 import { useGetJobCardsQuery, useGetJobStatsQuery, JobCardData } from "../../jobs/api/jobApi";
-import { useGetPendingWorkersQuery, useGetAllUsersQuery, useGetLeaderboardQuery } from "../../auth/api/authApi";
+import { useGetPendingWorkersQuery, useGetAllUsersQuery } from "../../auth/api/authApi";
 import { useGetCatalogQuery } from "../../catalog/api/catalogApi";
 import { DashboardBentoSkeleton } from "../../../shared/components/common/PageShimmer";
 import { NumberTicker } from "../../../shared/components/magicui/NumberTicker";
@@ -40,7 +39,6 @@ import { FluidCanvasBackground } from "../../../shared/components/common/FluidCa
 const heroSlideMeta = [
   { title: "Live Garage Flow", badge: "Live Flow" },
   { title: "Quality Control & QA", badge: "QA Inspection" },
-  { title: "Garage Leaderboard", badge: "Leaderboard" },
   { title: "Inventory & Services", badge: "Catalog & Parts" },
 ];
 
@@ -59,7 +57,7 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     if (isCarouselHovered) return;
     const interval = setInterval(() => {
-      setHeroSlide((prev) => (prev + 1) % 4);
+      setHeroSlide((prev) => (prev + 1) % heroSlideMeta.length);
     }, 5500);
     return () => clearInterval(interval);
   }, [isCarouselHovered]);
@@ -87,7 +85,6 @@ export const Dashboard: React.FC = () => {
   const { data: statsRes }           = useGetJobStatsQuery(undefined, { refetchOnMountOrArgChange: true });
   const { data: pendingRes }         = useGetPendingWorkersQuery(undefined, { skip: !isAdmin });
   const { data: usersRes }           = useGetAllUsersQuery(undefined,       { skip: !isAdmin });
-  const { data: lbRes }              = useGetLeaderboardQuery({ timeframe: 'month' });
   const { data: catalogRes }         = useGetCatalogQuery();
 
   const allJobs: JobCardData[] = Array.isArray(jobsRes?.data)
@@ -141,8 +138,6 @@ export const Dashboard: React.FC = () => {
   const pendingWorkers = pendingRes?.data?.length || 0;
   const totalUsers     = usersRes?.data?.length   || 0;
   const catalogCount   = catalogRes?.data?.length || 0;
-  const topTech        = lbRes?.data?.[0];
-  const topScore       = topTech ? parseFloat(Number((topTech as any).taskCount ?? (topTech as any).points ?? 0).toFixed(1)) : 0;
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -500,16 +495,16 @@ export const Dashboard: React.FC = () => {
             {/* Prev / Next Arrows */}
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setHeroSlide((prev) => (prev === 0 ? 3 : prev - 1))}
+                onClick={() => setHeroSlide((prev) => (prev === 0 ? heroSlideMeta.length - 1 : prev - 1))}
                 className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition active:scale-90 cursor-pointer"
-                title={`Previous: ${heroSlideMeta[(heroSlide === 0 ? 3 : heroSlide - 1)].title}`}
+                title={`Previous: ${heroSlideMeta[(heroSlide === 0 ? heroSlideMeta.length - 1 : heroSlide - 1)].title}`}
               >
                 <ChevronLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
               <button
-                onClick={() => setHeroSlide((prev) => (prev + 1) % 4)}
+                onClick={() => setHeroSlide((prev) => (prev + 1) % heroSlideMeta.length)}
                 className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition active:scale-90 cursor-pointer"
-                title={`Next: ${heroSlideMeta[((heroSlide + 1) % 4)].title}`}
+                title={`Next: ${heroSlideMeta[((heroSlide + 1) % heroSlideMeta.length)].title}`}
               >
                 <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
@@ -632,61 +627,10 @@ export const Dashboard: React.FC = () => {
                 </motion.div>
               )}
 
-              {/* Slide 2: Garage Leaderboard */}
+              {/* Slide 2: Inventory & Master Catalog */}
               {heroSlide === 2 && (
                 <motion.div
-                  key="slide-2-lb"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.3 }}
-                  className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-5"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-2.5 flex-wrap">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
-                        <Trophy className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
-                        Garage Leaderboard
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
-                        {totalUsers} Staff Members
-                      </span>
-                    </div>
-
-                    <div className="flex items-end gap-2.5 sm:gap-3.5 mb-2 sm:mb-2.5">
-                      <span className="font-display font-black leading-none text-amber-500 dark:text-amber-400 tracking-tight text-3xl sm:text-5xl md:text-6xl tabular-nums">
-                        <NumberTicker value={topScore} />
-                      </span>
-                      <div className="pb-0.5 sm:pb-1">
-                        <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">
-                          {topTech ? (topTech as any).name : 'Top Technician'}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">leading technician points this month</p>
-                      </div>
-                    </div>
-
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
-                      Recognizing top garage mechanics with live task points, real-time speed bonuses, and technician rankings.
-                    </p>
-                  </div>
-
-                  <div className="hidden sm:flex flex-col gap-2 shrink-0 w-[130px]">
-                    <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
-                      <p className="text-2xl font-black text-amber-500 dark:text-amber-400">{topScore}</p>
-                      <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Top Points</p>
-                    </div>
-                    <div className="px-4 py-3 rounded-2xl text-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08]">
-                      <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{totalUsers}</p>
-                      <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">Active Staff</p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Slide 3: Inventory & Master Catalog */}
-              {heroSlide === 3 && (
-                <motion.div
-                  key="slide-3-inv"
+                  key="slide-2-inv"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
@@ -833,51 +777,39 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Tile 2: Leaderboard (1 col) */}
-            <div
-              onClick={() => navigate("/leaderboard")}
-              className={`col-span-1 lg:col-span-1 ${modernCard} p-3 sm:p-4 flex flex-col justify-between
-                          hover:border-amber-400/50 dark:hover:border-amber-400/40`}
-            >
-              <div className="flex items-start justify-between gap-1">
-                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs">
-                  <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-                <span className="px-1.5 py-0.5 sm:px-2 rounded-md text-[10px] sm:text-xs font-mono font-black bg-amber-500/15 text-amber-700 dark:text-amber-400">
-                  {topScore} QP
-                </span>
-              </div>
-              <div className="pt-2">
-                <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">Leaderboard</p>
-                <p className="text-[10px] sm:text-xs font-mono text-slate-400 dark:text-slate-500 truncate mt-0.5">
-                  🏆 #{1} {topTech?.name?.split(" ")[0] || "Technician"}
-                </p>
-              </div>
-            </div>
-
-            {/* Tile 3: Work Activity Logs (1 col) */}
+            {/* Tile 2: Work Activity Logs (2 cols) */}
             <div
               onClick={() => navigate("/work-logs")}
-              className={`col-span-1 lg:col-span-1 ${modernCard} p-3 sm:p-4 flex flex-col justify-between
+              className={`col-span-2 lg:col-span-2 ${modernCard} p-3.5 sm:p-5 flex flex-col justify-between
                           hover:border-rose-400/50 dark:hover:border-rose-400/40`}
             >
-              <div className="flex items-start justify-between gap-1">
-                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-xs">
-                  <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center bg-rose-500/15 text-rose-600 dark:text-rose-400 shadow-xs">
+                    <Flame className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight">Work Activity Logs</p>
+                    <p className="text-[10px] sm:text-xs font-mono text-slate-400 dark:text-slate-500">Live task activity & completions</p>
+                  </div>
                 </div>
-                <span className="px-1.5 py-0.5 sm:px-2 rounded-md text-[10px] sm:text-xs font-mono font-black bg-rose-500/15 text-rose-700 dark:text-rose-400">
+                <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-mono font-black bg-rose-500/15 text-rose-700 dark:text-rose-400">
                   {totalDone} Logged
                 </span>
               </div>
-              <div className="pt-2">
-                <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">Work Logs</p>
-                <p className="text-[10px] sm:text-xs font-mono text-slate-400 dark:text-slate-500 truncate mt-0.5">
-                  Live task activity
-                </p>
+
+              <div className="flex items-center gap-1.5 sm:gap-2 pt-2.5 sm:pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
+                <span className="text-[10px] sm:text-xs font-mono text-rose-700 dark:text-rose-300 bg-rose-500/10 px-1.5 py-0.5 sm:px-2 rounded-md font-semibold">
+                  Completed Tasks
+                </span>
+                <span className="text-[10px] sm:text-xs font-mono text-rose-700 dark:text-rose-300 bg-rose-500/10 px-1.5 py-0.5 sm:px-2 rounded-md font-semibold">
+                  Staff Audits
+                </span>
+                <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500 ml-auto" />
               </div>
             </div>
 
-            {/* Tile 4: Inventory (2 cols) */}
+            {/* Tile 3: Inventory (2 cols) */}
             <div
               onClick={() => navigate("/inventory")}
               className={`col-span-2 lg:col-span-2 ${modernCard} p-3.5 sm:p-5 flex flex-col justify-between
@@ -912,7 +844,7 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Tile 5: Vehicle Archives (2 cols) */}
+            {/* Tile 4: Vehicle Archives (2 cols) */}
             <div
               onClick={() => navigate("/jobs", { state: { view: "all" } })}
               className={`col-span-2 lg:col-span-2 ${modernCard} p-3.5 sm:p-5 flex flex-col justify-between

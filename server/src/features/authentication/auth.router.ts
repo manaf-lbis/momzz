@@ -23,7 +23,6 @@ router.get('/me', authMiddleware, authController.getMe);
 router.patch('/profile-image', authMiddleware, authController.updateProfileImage);
 router.get('/pending', authMiddleware, adminMiddleware, authController.getPendingWorkers);
 router.patch('/approve/:userId', authMiddleware, adminMiddleware, authController.approveWorker);
-router.get('/leaderboard', authMiddleware, authController.getLeaderboard);
 router.post('/accept-terms', authMiddleware, authController.acceptTerms);
 router.get('/terms-status', authMiddleware, authController.getTermsStatus);
 router.post('/change-password', authMiddleware, validateRequest({ body: changePasswordSchema }), authController.changePassword);

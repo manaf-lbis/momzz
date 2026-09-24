@@ -9,7 +9,7 @@ import {
   Calendar,
   Car,
   CheckCircle2,
-  Trophy,
+  Users,
   Activity,
   Sparkles,
   Search,
@@ -31,7 +31,6 @@ import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import {
   useGetAllUsersQuery,
-  useGetLeaderboardQuery,
   useUpdateUserByAdminMutation,
   useAdminResetPasswordMutation,
 } from '../../auth/api/authApi';
@@ -51,7 +50,6 @@ interface StaffWorkLog {
   jobId: string;
   completedAt: string;
   completedAtFormatted: string;
-  points: number;
   isShared: boolean;
   partnerNames: string[];
   durationMinutes: number;
@@ -106,7 +104,6 @@ export const StaffDetailPage: React.FC = () => {
   // Queries
   const { data: usersData, isLoading: isUsersLoading } = useGetAllUsersQuery();
   const { data: jobsData, isLoading: isJobsLoading } = useGetJobCardsQuery({ limit: 400 });
-  const { data: lbData } = useGetLeaderboardQuery();
 
   const [updateUserByAdmin, { isLoading: isUpdatingUser }] = useUpdateUserByAdminMutation();
   const [adminResetPassword, { isLoading: isResettingPassword }] = useAdminResetPasswordMutation();
@@ -122,13 +119,6 @@ export const StaffDetailPage: React.FC = () => {
     if ((jobsData.data as any).jobs) return (jobsData.data as any).jobs;
     return [];
   }, [jobsData]);
-
-  // Leaderboard info
-  const leaderboardUsers = lbData?.data || [];
-  const staffRank = leaderboardUsers.findIndex((entry: any) => {
-    const entryId = entry.id || entry._id || entry.user?.id || entry.user?._id;
-    return entryId === id;
-  }) + 1;
 
   // Extract all work logs performed by this staff member
   const staffWorkLogs: StaffWorkLog[] = useMemo(() => {
@@ -181,7 +171,6 @@ export const StaffDetailPage: React.FC = () => {
             jobId,
             completedAt: task.completedAt,
             completedAtFormatted: formatAuditDate(task.completedAt),
-            points: isShared ? 0.5 : 1.0,
             isShared,
             partnerNames,
             durationMinutes: durationMins,
@@ -241,10 +230,8 @@ export const StaffDetailPage: React.FC = () => {
   const totalTasksCompleted = staffWorkLogs.length;
   const soloTasksCompleted = staffWorkLogs.filter((l) => !l.isShared).length;
   const sharedTasksCompleted = staffWorkLogs.filter((l) => l.isShared).length;
-  const totalPointsEarned = staffWorkLogs.reduce((acc, l) => acc + l.points, 0);
   const totalVehiclesCount = vehiclesHandled.length;
   const periodTasksCount = filteredLogsByTimeframe.length;
-  const periodPointsCount = filteredLogsByTimeframe.reduce((acc, l) => acc + l.points, 0);
 
   const avgMinutesPerTask = totalTasksCompleted > 0
     ? Math.round(staffWorkLogs.reduce((acc, l) => acc + l.durationMinutes, 0) / totalTasksCompleted)
@@ -448,12 +435,6 @@ export const StaffDetailPage: React.FC = () => {
                       Blocked
                     </span>
                   )}
-                  {staffRank > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                      <Trophy className="w-3 h-3 text-amber-500" />
-                      Rank #{staffRank}
-                    </span>
-                  )}
                 </div>
 
                 <div className="flex items-center gap-3 text-xs font-mono text-slate-500 dark:text-slate-400 flex-wrap">
@@ -546,18 +527,18 @@ export const StaffDetailPage: React.FC = () => {
           <div className="p-4 rounded-2xl glass-modern-card flex flex-col justify-between shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">
-                Leaderboard Points
+                Co-Worked Tasks
               </span>
               <div className="w-7 h-7 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                <Trophy className="w-4 h-4" />
+                <Users className="w-4 h-4" />
               </div>
             </div>
             <div className="pt-3">
               <p className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400 tracking-tight">
-                {totalPointsEarned.toFixed(1)}
+                <NumberTicker value={sharedTasksCompleted} />
               </p>
               <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
-                {staffRank > 0 ? `Garage Rank #${staffRank}` : 'Unranked'}
+                collaborative shared tasks
               </p>
             </div>
           </div>
@@ -670,9 +651,9 @@ export const StaffDetailPage: React.FC = () => {
                   <p className="text-[11px] font-mono text-slate-500">completed during selected period</p>
                 </div>
                 <div className="p-4 rounded-2xl glass-modern-card space-y-2">
-                  <p className="text-[10px] font-mono uppercase text-slate-400 font-bold">Points in Timeframe</p>
-                  <p className="text-3xl font-black text-purple-500">{periodPointsCount.toFixed(1)}</p>
-                  <p className="text-[11px] font-mono text-slate-500">weighted speed score earned</p>
+                  <p className="text-[10px] font-mono uppercase text-slate-400 font-bold">Turnaround Pace</p>
+                  <p className="text-3xl font-black text-purple-500">{avgMinutesPerTask}m</p>
+                  <p className="text-[11px] font-mono text-slate-500">average minutes per task</p>
                 </div>
                 <div className="p-4 rounded-2xl glass-modern-card space-y-2">
                   <p className="text-[10px] font-mono uppercase text-slate-400 font-bold">Solo vs Co-work Ratio</p>
@@ -737,8 +718,8 @@ export const StaffDetailPage: React.FC = () => {
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
-                        +{log.points} pts
+                      <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        {log.durationMinutes}m
                       </span>
                       <p className="text-[10px] font-mono text-slate-400 mt-0.5">
                         {log.completedAtFormatted.split(' · ')[0]}
@@ -825,8 +806,8 @@ export const StaffDetailPage: React.FC = () => {
 
                       <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-white/5">
                         <div className="text-left sm:text-right">
-                          <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
-                            +{log.points} pts
+                          <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            {log.durationMinutes}m
                           </span>
                           <p className="text-[10px] font-mono text-slate-400 mt-0.5">
                             {log.completedAtFormatted}

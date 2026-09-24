@@ -102,17 +102,6 @@ export const authApi = apiSlice.injectEndpoints({
       query: () => '/dummy',
       providesTags: ['Dummy'],
     }),
-    getLeaderboard: builder.query<{ success: boolean; data: User[] }, { timeframe?: string; limit?: number } | void>({
-      query: (params) => {
-        if (!params) return '/auth/leaderboard';
-        const q = new URLSearchParams();
-        if (params.timeframe) q.append('timeframe', params.timeframe);
-        if (params.limit) q.append('limit', params.limit.toString());
-        const qs = q.toString();
-        return qs ? `/auth/leaderboard?${qs}` : '/auth/leaderboard';
-      },
-      providesTags: ['User'],
-    }),
     getAllUsers: builder.query<{ success: boolean; data: User[] }, void>({
       query: () => '/auth/users',
       providesTags: ['AllUsers', 'PendingWorkers', 'User'],
@@ -185,7 +174,6 @@ export const {
   useGetPendingWorkersQuery,
   useApproveWorkerMutation,
   useGetDummyQuery,
-  useGetLeaderboardQuery,
   useGetAllUsersQuery,
   useToggleUserStatusMutation,
   useUpdateUserRoleMutation,

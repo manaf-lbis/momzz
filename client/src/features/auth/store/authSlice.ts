@@ -9,7 +9,6 @@ export interface User {
   role: UserRole;
   isApproved: boolean;
   status?: 'ACTIVE' | 'BLOCKED';
-  taskCount?: number;
   lastLoginAttempt?: string;
   totalLoginAttempts?: number;
   failedLoginAttempts?: number;

@@ -16,8 +16,6 @@ const HomePage = lazy(() => import('../features/home/pages/HomePage').then((m) =
 const ProfilePage = lazy(() => import('../features/users/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const UserManagementPage = lazy(() => import('../features/users/pages/UserManagementPage').then((m) => ({ default: m.UserManagementPage })));
 const StaffDetailPage = lazy(() => import('../features/users/pages/StaffDetailPage').then((m) => ({ default: m.StaffDetailPage })));
-const AnalyticsPage = lazy(() => import('../features/analytics/pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
-const LeaderboardPage = lazy(() => import('../features/analytics/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const WorkLogsPage = lazy(() => import('../features/jobs/pages/WorkLogsPage').then((m) => ({ default: m.WorkLogsPage })));
 const CreateJobPage = lazy(() => import('../features/jobs/pages/CreateJobPage').then((m) => ({ default: m.CreateJobPage })));
 const EditJobPage = lazy(() => import('../features/jobs/pages/EditJobPage').then((m) => ({ default: m.EditJobPage })));
@@ -67,9 +65,9 @@ export const AppRoutes: React.FC = () => {
               <Route path="/jobs/:id" element={<JobDetailPage />} />
               <Route path="/jobs/:id/photo" element={<VehiclePhotoPage />} />
               <Route path="/jobs/:id/capture" element={<VehiclePhotoPage />} />
-              <Route path="/analytics" element={<LeaderboardPage />} />
-              <Route path="/leaderboard" element={<LeaderboardPage />} />
-              <Route path="/top-performers" element={<LeaderboardPage />} />
+              <Route path="/analytics" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/leaderboard" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/top-performers" element={<Navigate to="/dashboard" replace />} />
               <Route path="/work-logs" element={<WorkLogsPage />} />
               <Route path="/sales" element={<SalesPage />} />
               <Route path="/profile" element={<ProfilePage />} />

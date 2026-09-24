@@ -8,7 +8,6 @@ export interface IUser extends Document {
   role: UserRole;
   isApproved: boolean;
   status: 'ACTIVE' | 'BLOCKED';
-  taskCount: number;
   lastLoginAttempt?: Date;
   totalLoginAttempts: number;
   failedLoginAttempts: number;
@@ -53,10 +52,6 @@ const UserSchema: Schema = new Schema(
       type: String,
       enum: ['ACTIVE', 'BLOCKED'],
       default: 'ACTIVE',
-    },
-    taskCount: {
-      type: Number,
-      default: 0,
     },
     lastLoginAttempt: {
       type: Date,

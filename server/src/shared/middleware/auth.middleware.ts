@@ -14,7 +14,6 @@ export interface CachedUserSession {
   role: string;
   isApproved: boolean;
   status: 'ACTIVE' | 'BLOCKED';
-  taskCount?: number;
   profileImageUrl?: string;
   acceptedTermsVersion?: string;
 }
@@ -54,7 +53,6 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         role: dbUser.role,
         isApproved: dbUser.isApproved,
         status: dbUser.status,
-        taskCount: dbUser.taskCount,
         profileImageUrl: dbUser.profileImageUrl,
         acceptedTermsVersion: dbUser.acceptedTermsVersion || '',
       };

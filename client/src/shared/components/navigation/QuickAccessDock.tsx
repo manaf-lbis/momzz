@@ -5,7 +5,6 @@ import {
   Car,
   Clock,
   Package,
-  Trophy,
   Search,
   User as UserIcon,
 } from 'lucide-react';
@@ -40,7 +39,6 @@ export const QuickAccessDock: React.FC = () => {
     (currentPath.startsWith('/jobs/') && !currentPath.includes('/create'));
   const isLogsActive = currentPath === '/work-logs';
   const isInventoryActive = currentPath.startsWith('/inventory') || currentPath.startsWith('/sales');
-  const isLeaderboardActive = currentPath === '/leaderboard' || currentPath === '/analytics';
   const isProfileActive = currentPath === '/profile';
 
   const initialLetter = user.name?.charAt(0)?.toUpperCase() || 'U';
@@ -115,25 +113,10 @@ export const QuickAccessDock: React.FC = () => {
             />
           </DockIcon>
 
-          {/* 5. Leaderboard */}
-          <DockIcon
-            title="Leaderboard"
-            active={isLeaderboardActive}
-            onClick={() => navigate('/leaderboard')}
-          >
-            <Trophy
-              className={`w-5 h-5 transition-transform ${
-                isLeaderboardActive
-                  ? 'text-slate-950 dark:text-slate-950 stroke-[2.4]'
-                  : 'text-slate-600 dark:text-slate-300 group-hover:scale-110'
-              }`}
-            />
-          </DockIcon>
-
           {/* Divider */}
           <DockSeparator />
 
-          {/* 6. Quick Search */}
+          {/* 5. Quick Search */}
           <DockIcon
             title="Quick Search (⌘K)"
             onClick={() => setIsSearchOpen(true)}

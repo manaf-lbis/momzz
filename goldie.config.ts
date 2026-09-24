@@ -23,7 +23,7 @@ const config = {
     ageRating: "4+",
     price: "Free",
     description: {
-      "en-US": "Complete auto workshop management platform with real-time job cards, service progress tracking, technician leaderboard, vehicle photo studio, and inventory control."
+      "en-US": "Complete auto workshop management platform with real-time job cards, service progress tracking, team collaboration, vehicle photo studio, and inventory control."
     }
   },
   scenes: [
@@ -39,7 +39,7 @@ const config = {
       id: "job-detail",
       flow: "store-02-job-detail",
       headline: { "en-US": "Interactive Service Checklist" },
-      subhead: { "en-US": "Assign technicians, distribute points & audit repair milestones" }
+      subhead: { "en-US": "Assign technicians, collaborate on shared work & audit repair milestones" }
     },
     {
       kind: "screenshot",
@@ -57,10 +57,10 @@ const config = {
     },
     {
       kind: "screenshot",
-      id: "leaderboard",
-      flow: "store-05-leaderboard",
-      headline: { "en-US": "Team Leaderboard & Rewards" },
-      subhead: { "en-US": "Boost mechanic productivity with points, rankings & trophies" }
+      id: "work-logs",
+      flow: "store-05-work-logs",
+      headline: { "en-US": "Live Work Activity Logs" },
+      subhead: { "en-US": "Audit staff repair contributions, completed tasks and turnaround logs" }
     }
   ]
 };
