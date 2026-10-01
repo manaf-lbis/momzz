@@ -375,6 +375,9 @@ export class AuthService {
 
     await userRepository.setMcpToken(userId, token, tokenHash);
     await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
+    import('../mcp/mcp-auth.middleware').then(({ invalidateMcpTokenCache }) => {
+      invalidateMcpTokenCache(userId);
+    }).catch(() => {});
 
     return {
       clientId: user.mobile,
@@ -395,6 +398,9 @@ export class AuthService {
     }
     if (!user) throw new Error('User account not found.');
     await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
+    import('../mcp/mcp-auth.middleware').then(({ invalidateMcpTokenCache }) => {
+      invalidateMcpTokenCache(userId);
+    }).catch(() => {});
     return {
       success: true,
       message: 'MCP access token has been revoked.',

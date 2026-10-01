@@ -28,6 +28,25 @@ interface CachedTokenSession {
 const tokenSessionCache = new Map<string, CachedTokenSession>();
 
 /**
+ * Instantly evicts cached PAT sessions for a given userId or mobile number,
+ * or clears all cached tokens if no identifier is provided.
+ */
+export const invalidateMcpTokenCache = (userId?: string, mobile?: string): void => {
+  if (!userId && !mobile) {
+    tokenSessionCache.clear();
+    return;
+  }
+  for (const [key, session] of tokenSessionCache.entries()) {
+    if (
+      (userId && session.context.userId === userId) ||
+      (mobile && session.context.mobile === mobile)
+    ) {
+      tokenSessionCache.delete(key);
+    }
+  }
+};
+
+/**
  * Authenticates an incoming MCP request via PAT (Personal Access Token),
  * client credentials, or signed JWT session token.
  */

@@ -4,6 +4,7 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { AuthUserContext, ToolDefinition } from '../mcp.types';
 import { mcpService } from '../mcp.service';
 import { sanitizeErrorMessage } from '../mcp.utils';
+import { mcpAuditService } from '../mcp-audit.service';
 
 /**
  * Evaluates whether granted user scopes satisfy required tool scopes.
@@ -185,12 +186,13 @@ export const executeToolWithGuard = async (
     throw new McpError(ErrorCode.MethodNotFound, `Tool '${name}' was not found in the server registry.`);
   }
 
+  const startTime = performance.now();
+
   // 1. Hard RBAC check
   if (!isUserAuthorizedForTool(context, tool)) {
-    throw new McpError(
-      ErrorCode.InvalidRequest,
-      `Forbidden: User role '${context.role}' or granted scopes do not authorize invocation of tool '${name}'.`
-    );
+    const errorMsg = `Forbidden: User role '${context.role}' or granted scopes do not authorize invocation of tool '${name}'.`;
+    mcpAuditService.logToolExecution(context, name, rawArgs, startTime, 'FORBIDDEN', errorMsg);
+    throw new McpError(ErrorCode.InvalidRequest, errorMsg);
   }
 
   // 2. Strict Zod input schema validation
@@ -200,6 +202,7 @@ export const executeToolWithGuard = async (
     const errorDetails = issues
       .map((err: any) => `${(err.path || []).join('.')}: ${err.message}`)
       .join('; ');
+    mcpAuditService.logToolExecution(context, name, rawArgs, startTime, 'ERROR', errorDetails);
     throw new McpError(
       ErrorCode.InvalidParams,
       `Invalid arguments for tool '${name}': ${errorDetails}`
@@ -208,9 +211,12 @@ export const executeToolWithGuard = async (
 
   // 3. Safe Execution with sanitized error handling
   try {
-    return await tool.execute(validationResult.data, context);
+    const result = await tool.execute(validationResult.data, context);
+    mcpAuditService.logToolExecution(context, name, rawArgs, startTime, 'SUCCESS');
+    return result;
   } catch (executionError: any) {
     const safeError = sanitizeErrorMessage(executionError);
+    mcpAuditService.logToolExecution(context, name, rawArgs, startTime, 'ERROR', safeError);
     throw new McpError(
       ErrorCode.InternalError,
       `Error executing tool '${name}': ${safeError}`

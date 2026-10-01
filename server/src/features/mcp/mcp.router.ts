@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
@@ -7,6 +7,7 @@ import {
   CallToolRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
+import { ENV } from '../../config/env';
 import { AuthUserContext } from './mcp.types';
 import {
   mcpAuthMiddleware,
@@ -18,6 +19,7 @@ import {
   executeToolWithGuard,
 } from './tools/mcp-tools.registry';
 import { authService } from '../authentication/auth.service';
+import { mcpRateLimiter } from './mcp-rate-limiter';
 
 /**
  * Creates and configures an MCP Server protocol instance with dynamic capability gating
@@ -65,21 +67,116 @@ export const createMcpServerInstance = (): Server => {
   return server;
 };
 
+// --- Multi-User Session Isolation & Concurrency Store ---
+interface McpSessionRecord {
+  server: Server;
+  transport: StreamableHTTPServerTransport | SSEServerTransport;
+  user: AuthUserContext;
+  lastActiveAt: number;
+}
+
+const mcpSessionStore = new Map<string, McpSessionRecord>();
+
+// Periodically clean up stale sessions (inactive > 30 minutes)
+setInterval(() => {
+  const now = Date.now();
+  const maxIdle = 30 * 60 * 1000;
+  for (const [id, session] of mcpSessionStore.entries()) {
+    if (now - session.lastActiveAt > maxIdle) {
+      mcpSessionStore.delete(id);
+      try {
+        session.server.close();
+      } catch {}
+    }
+  }
+}, 300_000).unref();
+
+// --- DNS Rebinding Protection Middleware ---
+export const dnsRebindingGuard = (req: Request, res: Response, next: NextFunction): void => {
+  const hostHeader = (req.headers.host || '').toLowerCase().split(':')[0];
+  const localHosts = ['localhost', '127.0.0.1', '::1'];
+
+  const configuredHosts = [
+    ENV.CLIENT_URL,
+    ...ENV.CLIENT_URLS,
+    ...ENV.CORS_ORIGINS,
+  ]
+    .map((url) => {
+      try {
+        return new URL(url).hostname.toLowerCase();
+      } catch {
+        return url.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0].toLowerCase();
+      }
+    })
+    .filter(Boolean);
+
+  const allowedHosts = Array.from(new Set([...localHosts, ...configuredHosts]));
+
+  if (allowedHosts.length > 0 && !allowedHosts.includes(hostHeader) && !allowedHosts.includes('*')) {
+    console.warn(`[MCP SECURITY] DNS Rebinding blocked. Disallowed Host: ${req.headers.host}`);
+    res.status(403).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32002,
+        message: 'Forbidden: Invalid Host header (DNS Rebinding Protection).',
+      },
+    });
+    return;
+  }
+  next();
+};
+
 const mcpRouter = Router();
 
+// Apply DNS rebinding protection and per-user agent loop rate limiting
+mcpRouter.use(dnsRebindingGuard);
+mcpRouter.use(mcpRateLimiter.middleware());
+
 // 1. STREAMABLE HTTP TRANSPORT (/mcp) - Recommended Remote MCP Transport
-const streamableTransport = new StreamableHTTPServerTransport({
-  sessionIdGenerator: undefined, // Stateless per spec
-});
-
-const streamableServer = createMcpServerInstance();
-streamableServer.connect(streamableTransport).catch((err) => {
-  console.error('[MCP ERROR] Failed to connect StreamableHTTPServerTransport:', err);
-});
-
 mcpRouter.all('/mcp', mcpAuthMiddleware, async (req: Request, res: Response) => {
+  const user = getAuthContext();
+  const sessionId = (req.headers['mcp-session-id'] as string) || (req.query.sessionId as string);
+
   try {
-    await streamableTransport.handleRequest(req, res, req.body);
+    let session = sessionId ? mcpSessionStore.get(sessionId) : undefined;
+
+    // Verify session ownership if reusing an existing session ID
+    if (session && session.user.userId !== user.userId) {
+      res.status(403).json({
+        jsonrpc: '2.0',
+        error: { code: -32003, message: 'Forbidden: Session belongs to another user context.' },
+      });
+      return;
+    }
+
+    let transport: StreamableHTTPServerTransport;
+    let server: Server;
+
+    if (session && session.transport instanceof StreamableHTTPServerTransport) {
+      transport = session.transport;
+      server = session.server;
+      session.lastActiveAt = Date.now();
+    } else {
+      // Create isolated server and transport per request/session to eliminate race conditions
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined, // Stateless per specification
+      });
+      server = createMcpServerInstance();
+      await server.connect(transport);
+
+      if (sessionId) {
+        mcpSessionStore.set(sessionId, {
+          server,
+          transport,
+          user,
+          lastActiveAt: Date.now(),
+        });
+      }
+    }
+
+    // Pass parsed body directly to prevent stream-drained hangs from express.json()
+    const requestBody = req.body !== undefined && Object.keys(req.body).length > 0 ? req.body : undefined;
+    await transport.handleRequest(req, res, requestBody);
   } catch (err: any) {
     if (!res.headersSent) {
       res.status(500).json({
@@ -94,11 +191,6 @@ mcpRouter.all('/mcp', mcpAuthMiddleware, async (req: Request, res: Response) => 
 });
 
 // 2. HTTP + SSE TRANSPORT (/sse & /messages) - Backwards Compatibility
-const sseSessions = new Map<
-  string,
-  { transport: SSEServerTransport; user: AuthUserContext }
->();
-
 mcpRouter.get('/sse', mcpAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const user = getAuthContext();
@@ -106,11 +198,16 @@ mcpRouter.get('/sse', mcpAuthMiddleware, async (req: Request, res: Response) => 
     const sessionServer = createMcpServerInstance();
 
     const sessionId = sseTransport.sessionId;
-    sseSessions.set(sessionId, { transport: sseTransport, user });
+    mcpSessionStore.set(sessionId, {
+      server: sessionServer,
+      transport: sseTransport,
+      user,
+      lastActiveAt: Date.now(),
+    });
 
     sseTransport.onclose = () => {
-      sseSessions.delete(sessionId);
-      console.log(`[SSE] Session closed: ${sessionId}`);
+      mcpSessionStore.delete(sessionId);
+      console.log(`[SSE] Session closed and evicted: ${sessionId}`);
     };
 
     await sessionServer.connect(sseTransport);
@@ -135,8 +232,8 @@ mcpRouter.post('/messages', async (req: Request, res: Response) => {
     return;
   }
 
-  const session = sseSessions.get(sessionId);
-  if (!session) {
+  const session = mcpSessionStore.get(sessionId);
+  if (!session || !(session.transport instanceof SSEServerTransport)) {
     res.status(404).json({
       jsonrpc: '2.0',
       error: { code: -32602, message: 'SSE session not found or has expired.' },
@@ -144,10 +241,13 @@ mcpRouter.post('/messages', async (req: Request, res: Response) => {
     return;
   }
 
+  session.lastActiveAt = Date.now();
+
   // Run within user's established authentication context
   authContextStorage.run(session.user, async () => {
     try {
-      await session.transport.handlePostMessage(req, res, req.body);
+      const requestBody = req.body !== undefined && Object.keys(req.body).length > 0 ? req.body : undefined;
+      await (session.transport as SSEServerTransport).handlePostMessage(req, res, requestBody);
     } catch (err: any) {
       if (!res.headersSent) {
         res.status(500).json({
@@ -202,11 +302,15 @@ mcpRouter.get('/mcp/health', (_req: Request, res: Response) => {
       messages: '/messages',
       oauthToken: '/oauth/token',
     },
+    activeSessions: mcpSessionStore.size,
     security: {
-      strictCORS: true,
+      dnsRebindingProtection: true,
+      perUserRateLimiting: true,
+      sessionIsolation: true,
       antiConfusedDeputy: true,
       dynamicCapabilityGating: true,
       rbacEnforced: true,
+      instantPatCacheInvalidation: true,
     },
   });
 });
