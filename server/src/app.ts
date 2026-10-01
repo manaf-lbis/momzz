@@ -76,8 +76,23 @@ const corsOptions: cors.CorsOptions = {
   ],
 };
 
+export const isMcpPath = (path: string): boolean => {
+  return (
+    path === '/mcp' ||
+    path.startsWith('/mcp/') ||
+    path === '/sse' ||
+    path === '/messages' ||
+    path.startsWith('/oauth/') ||
+    path === '/token' ||
+    path.startsWith('/.well-known/')
+  );
+};
+
 app.use(cors(corsOptions));
 app.use((req: Request, res: Response, next: NextFunction) => {
+  if (isMcpPath(req.path)) {
+    return next();
+  }
   const origin = req.headers.origin;
   const isStateChanging = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
   if (isStateChanging && origin && !isAllowedOrigin(origin)) {
@@ -101,14 +116,12 @@ app.get('/', (req: Request, res: Response) => {
       health: '/api/health',
       dummy: '/api/dummy',
       auth: '/api/auth',
+      mcp: '/mcp',
+      oauthMetadata: '/.well-known/oauth-authorization-server',
     },
   });
 });
 
-// Handle Chrome devtools well-known probes gracefully
-app.get('/.well-known/*', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'OK' });
-});
 
 import jobRouter from './features/jobs/job.router';
 import inventoryRouter from './features/inventory/inventory.router';

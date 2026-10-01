@@ -175,10 +175,38 @@ async function runTests() {
   const goodRes: any = { status: () => goodRes, json: () => {} };
   dnsRebindingGuard(goodReq, goodRes, () => { allowedLocal = true; });
   assert.ok(allowedLocal, 'Localhost host header must be allowed');
-  console.log('PASS: DNS rebinding rejected attacker host and allowed valid localhost.');
+
+  let allowedRender = false;
+  const renderReq: any = {
+    headers: { host: 'momzz-server.onrender.com' },
+  };
+  dnsRebindingGuard(renderReq, goodRes, () => { allowedRender = true; });
+  assert.ok(allowedRender, 'momzz-server.onrender.com host header must be allowed');
+  console.log('PASS: DNS rebinding rejected attacker host and allowed localhost & momzz-server.onrender.com.');
+
+  // 11. OAuth 2.0 Discovery & Metadata
+  console.log('\n[TEST 11] RFC 8414 OAuth 2.0 Authorization Server Discovery...');
+  const mockMetaReq: any = {
+    get: (h: string) => (h === 'host' ? 'momzz-server.onrender.com' : 'https'),
+    protocol: 'https',
+  };
+  let metaJson: any = null;
+  const mockMetaRes: any = {
+    status(code: number) { assert.equal(code, 200); return this; },
+    json(d: any) { metaJson = d; },
+  };
+  const { default: router } = await import('../src/features/mcp/mcp.router');
+  // Trigger metadata route
+  const metaLayer = router.stack.find((l: any) => l.route?.path === '/.well-known/oauth-authorization-server');
+  assert.ok(metaLayer, 'Metadata route must be registered');
+  metaLayer.route.stack[0].handle(mockMetaReq, mockMetaRes);
+  assert.equal(metaJson.issuer, 'https://momzz-server.onrender.com');
+  assert.equal(metaJson.authorization_endpoint, 'https://momzz-server.onrender.com/oauth/authorize');
+  assert.equal(metaJson.token_endpoint, 'https://momzz-server.onrender.com/oauth/token');
+  console.log('PASS: RFC 8414 OAuth 2.0 Discovery returned valid authorization and token endpoints.');
 
   console.log('\n======================================================');
-  console.log('ALL 10 VERIFICATION & EDGE CASE TESTS PASSED CLEANLY');
+  console.log('ALL 11 VERIFICATION & EDGE CASE TESTS PASSED CLEANLY');
   console.log('======================================================\n');
 }
 

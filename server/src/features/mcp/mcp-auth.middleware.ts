@@ -165,11 +165,15 @@ export const mcpAuthMiddleware = async (
       next();
     });
   } catch (error: any) {
+    res.setHeader(
+      'WWW-Authenticate',
+      'Bearer realm="Momzz MCP", error="unauthorized", resource_metadata="/.well-known/oauth-authorization-server"'
+    );
     res.status(401).json({
       jsonrpc: '2.0',
       error: {
         code: -32001,
-        message: `Unauthorized: ${error.message || 'Authentication failed'}`,
+        message: `Unauthorized: ${error.message || 'Authentication failed'}. Connect via OAuth 2.0 or provide Authorization header.`,
       },
     });
   }
