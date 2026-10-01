@@ -440,7 +440,7 @@ export const McpTokensPage: React.FC = () => {
                       : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  OAuth UI
+                  Gemini / OAuth
                 </button>
                 <button
                   onClick={() => setActiveGuideTab('claude')}
