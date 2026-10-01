@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomBytes, randomUUID } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { ENV } from '../../config/env';
 import { ROLES } from '../../shared/constants/status';
@@ -356,6 +356,140 @@ export class AuthService {
     return this.formatUser(user);
   }
 
+  /**
+   * Generates a new cryptographically secure Personal Access Token (PAT) for the user.
+   * Client ID is the user's login username (mobile).
+   */
+  async generateMcpToken(userId: string) {
+    let user = await userRepository.findById(userId);
+    if (!user) {
+      const UserModel = (await import('../../models/User.model')).default;
+      user = await UserModel.findById(userId);
+    }
+    if (!user) throw new Error('User account not found.');
+
+    // Generate 32 bytes of secure entropy (64 hex characters)
+    const secret = randomBytes(32).toString('hex');
+    const token = `momzz_pat_${secret}`;
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+
+    await userRepository.setMcpToken(userId, token, tokenHash);
+    await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
+
+    return {
+      clientId: user.mobile,
+      clientSecret: token,
+      createdAt: new Date(),
+      message: 'New MCP token generated successfully. Copy your Client Secret now.',
+    };
+  }
+
+  /**
+   * Revokes the user's active MCP token.
+   */
+  async revokeMcpToken(userId: string) {
+    let user = await userRepository.revokeMcpToken(userId);
+    if (!user) {
+      const UserModel = (await import('../../models/User.model')).default;
+      user = await UserModel.findByIdAndUpdate(userId, { $set: { mcpTokenRevoked: true } }, { new: true });
+    }
+    if (!user) throw new Error('User account not found.');
+    await cacheService.del([`user:session:${userId}`, `user:profile:${userId}`]);
+    return {
+      success: true,
+      message: 'MCP access token has been revoked.',
+    };
+  }
+
+  /**
+   * Retrieves the current user's MCP token status for display in Profile.
+   */
+  async getMcpTokenStatus(userId: string) {
+    const rawUser = await (await import('../../models/User.model')).default.findById(userId);
+    if (!rawUser) throw new Error('User account not found.');
+
+    return {
+      clientId: rawUser.mobile,
+      hasToken: Boolean(rawUser.mcpToken),
+      isRevoked: Boolean(rawUser.mcpTokenRevoked),
+      tokenPreview: rawUser.mcpToken
+        ? `${rawUser.mcpToken.substring(0, 14)}...${rawUser.mcpToken.slice(-4)}`
+        : null,
+      fullToken: rawUser.mcpToken && !rawUser.mcpTokenRevoked ? rawUser.mcpToken : null,
+      createdAt: rawUser.mcpTokenCreatedAt,
+      lastUsedAt: rawUser.mcpTokenLastUsed,
+    };
+  }
+
+  /**
+   * MCP Server Authentication Exchange:
+   * Verifies the client credentials (clientId=mobile, clientSecret=token),
+   * and issues a signed JWT Bearer access token for upstream API requests.
+   */
+  async exchangeMcpToken(clientId: string, clientSecret: string) {
+    if (!clientId || !clientSecret) {
+      throw new Error('Both Client ID (username/mobile) and Client Secret are required.');
+    }
+
+    const cleanClientId = clientId.trim();
+    const cleanSecret = clientSecret.trim();
+
+    // 1. Look up user by mobile
+    const user = await userRepository.findByMobileWithMcp(cleanClientId);
+    if (!user) {
+      throw new Error('Invalid Client ID: No account associated with this username.');
+    }
+
+    // 2. Validate token matches and is not revoked
+    if (!user.mcpToken || user.mcpTokenRevoked) {
+      throw new Error('MCP token is not configured or has been revoked.');
+    }
+
+    const tokenHash = createHash('sha256').update(cleanSecret).digest('hex');
+    const matchesToken = user.mcpToken === cleanSecret || user.mcpTokenHash === tokenHash;
+
+    if (!matchesToken) {
+      throw new Error('Invalid Client Secret.');
+    }
+
+    // 3. Validate user status and approval
+    if (user.status === 'BLOCKED') {
+      throw new Error('Your user account has been blocked by an administrator.');
+    }
+
+    if (!user.isApproved && user.role !== 'ADMIN') {
+      throw new Error('Your user account is awaiting administrator approval.');
+    }
+
+    // Record last used timestamp asynchronously
+    userRepository.recordMcpTokenUse(user._id.toString()).catch(() => {});
+
+    // Issue signed JWT access token for the MCP server to use in Authorization header
+    const accessToken = jwt.sign(
+      {
+        id: user._id.toString(),
+        name: user.name,
+        mobile: user.mobile,
+        role: user.role,
+        isApproved: user.isApproved,
+      },
+      ENV.JWT_ACCESS_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    return {
+      success: true,
+      accessToken,
+      tokenType: 'Bearer',
+      expiresIn: 3600,
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        mobile: user.mobile,
+        role: user.role,
+      },
+    };
+  }
 }
 
 

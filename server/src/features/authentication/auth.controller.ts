@@ -282,6 +282,77 @@ export class AuthController {
       return sendError(res, error.message || 'Failed to fetch terms status.', 400);
     }
   }
+
+  async generateMcpToken(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return sendError(res, 'Unauthenticated user.', 401);
+      }
+      const userId = req.user.id || (req.user as any)._id || (req.user as any).userId;
+      if (!userId) {
+        return sendError(res, 'User ID missing from authentication session.', 401);
+      }
+      const result = await authService.generateMcpToken(String(userId));
+      return sendSuccess(res, result.message, result, 201);
+    } catch (error: any) {
+      console.error('[MCP TOKEN ERROR]', error);
+      return sendError(res, error.message || 'Failed to generate MCP token.', 400);
+    }
+  }
+
+  async revokeMcpToken(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return sendError(res, 'Unauthenticated user.', 401);
+      }
+      const userId = req.user.id || (req.user as any)._id || (req.user as any).userId;
+      if (!userId) {
+        return sendError(res, 'User ID missing from authentication session.', 401);
+      }
+      const result = await authService.revokeMcpToken(String(userId));
+      return sendSuccess(res, result.message, result, 200);
+    } catch (error: any) {
+      console.error('[MCP REVOKE ERROR]', error);
+      return sendError(res, error.message || 'Failed to revoke MCP token.', 400);
+    }
+  }
+
+  async getMcpTokenStatus(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return sendError(res, 'Unauthenticated user.', 401);
+      }
+      const userId = req.user.id || (req.user as any)._id || (req.user as any).userId;
+      if (!userId) {
+        return sendError(res, 'User ID missing from authentication session.', 401);
+      }
+      const status = await authService.getMcpTokenStatus(String(userId));
+      return sendSuccess(res, 'MCP token status retrieved.', status, 200);
+    } catch (error: any) {
+      console.error('[MCP STATUS ERROR]', error);
+      return sendError(res, error.message || 'Failed to retrieve MCP token status.', 400);
+    }
+  }
+
+  /**
+   * Endpoint used by MCP Server to verify user's token and receive an authorized Bearer JWT token.
+   * Can accept { clientId, clientSecret } or { token }.
+   */
+  async exchangeMcpToken(req: Request, res: Response) {
+    try {
+      const clientId = req.body.clientId || req.body.username || (req.query.clientId as string);
+      const clientSecret = req.body.clientSecret || req.body.token || (req.query.clientSecret as string) || (req.query.token as string);
+
+      if (!clientId || !clientSecret) {
+        return sendError(res, 'Missing clientId or clientSecret in request.', 400);
+      }
+
+      const result = await authService.exchangeMcpToken(clientId, clientSecret);
+      return sendSuccess(res, 'MCP token verified successfully.', result, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'MCP authentication failed.', 401);
+    }
+  }
 }
 
 export const authController = new AuthController();

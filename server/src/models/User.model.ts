@@ -18,6 +18,11 @@ export interface IUser extends Document {
   loginAudit: Array<{ timestamp: Date; status: 'SUCCESS' | 'FAILED'; ipAddress: string }>;
   acceptedTermsVersion?: string;
   acceptedTermsAt?: Date;
+  mcpToken?: string;
+  mcpTokenHash?: string;
+  mcpTokenCreatedAt?: Date;
+  mcpTokenRevoked?: boolean;
+  mcpTokenLastUsed?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -90,6 +95,27 @@ const UserSchema: Schema = new Schema(
       default: '',
     },
     acceptedTermsAt: {
+      type: Date,
+      default: null,
+    },
+    mcpToken: {
+      type: String,
+      default: null,
+    },
+    mcpTokenHash: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    mcpTokenCreatedAt: {
+      type: Date,
+      default: null,
+    },
+    mcpTokenRevoked: {
+      type: Boolean,
+      default: false,
+    },
+    mcpTokenLastUsed: {
       type: Date,
       default: null,
     },

@@ -89,6 +89,41 @@ export class UserRepository {
   async updateUserByAdmin(userId: string, updates: Partial<IUser>): Promise<IUser | null> {
     return await User.findByIdAndUpdate(userId, { $set: updates }, { new: true }).select('-password');
   }
+
+  async setMcpToken(userId: string, token: string, tokenHash: string): Promise<IUser | null> {
+    return await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          mcpToken: token,
+          mcpTokenHash: tokenHash,
+          mcpTokenCreatedAt: new Date(),
+          mcpTokenRevoked: false,
+        },
+      },
+      { new: true }
+    );
+  }
+
+  async revokeMcpToken(userId: string): Promise<IUser | null> {
+    return await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          mcpTokenRevoked: true,
+        },
+      },
+      { new: true }
+    );
+  }
+
+  async findByMobileWithMcp(mobile: string): Promise<IUser | null> {
+    return await User.findOne({ mobile });
+  }
+
+  async recordMcpTokenUse(userId: string): Promise<void> {
+    await User.updateOne({ _id: userId }, { $set: { mcpTokenLastUsed: new Date() } });
+  }
 }
 
 export const userRepository = new UserRepository();

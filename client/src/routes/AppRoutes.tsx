@@ -14,6 +14,7 @@ const JobDetailPage = lazy(() => import('../features/jobs/pages/JobDetailPage').
 const AdminApproval = lazy(() => import('../features/users/pages/AdminApproval').then((m) => ({ default: m.AdminApproval })));
 const HomePage = lazy(() => import('../features/home/pages/HomePage').then((m) => ({ default: m.HomePage })));
 const ProfilePage = lazy(() => import('../features/users/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const McpTokensPage = lazy(() => import('../features/users/pages/McpTokensPage').then((m) => ({ default: m.McpTokensPage })));
 const UserManagementPage = lazy(() => import('../features/users/pages/UserManagementPage').then((m) => ({ default: m.UserManagementPage })));
 const StaffDetailPage = lazy(() => import('../features/users/pages/StaffDetailPage').then((m) => ({ default: m.StaffDetailPage })));
 const WorkLogsPage = lazy(() => import('../features/jobs/pages/WorkLogsPage').then((m) => ({ default: m.WorkLogsPage })));
@@ -71,6 +72,8 @@ export const AppRoutes: React.FC = () => {
               <Route path="/work-logs" element={<WorkLogsPage />} />
               <Route path="/sales" element={<SalesPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/tokens" element={<McpTokensPage />} />
+              <Route path="/profile/tokens" element={<McpTokensPage />} />
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/inventory/:id" element={<InventoryDetailPage />} />
             </Route>

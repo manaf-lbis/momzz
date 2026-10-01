@@ -161,6 +161,43 @@ export const authApi = apiSlice.injectEndpoints({
       query: () => '/auth/terms-status',
       providesTags: ['User'],
     }),
+    getMcpTokenStatus: builder.query<{
+      success: boolean;
+      data: {
+        clientId: string;
+        hasToken: boolean;
+        isRevoked: boolean;
+        tokenPreview: string | null;
+        fullToken: string | null;
+        createdAt?: string;
+        lastUsedAt?: string;
+      };
+    }, void>({
+      query: () => '/auth/mcp/token-status',
+      providesTags: ['User'],
+    }),
+    generateMcpToken: builder.mutation<{
+      success: boolean;
+      message: string;
+      data: {
+        clientId: string;
+        clientSecret: string;
+        createdAt: string;
+      };
+    }, void>({
+      query: () => ({
+        url: '/auth/mcp/generate-token',
+        method: 'POST',
+      }),
+      invalidatesTags: ['User'],
+    }),
+    revokeMcpToken: builder.mutation<{ success: boolean; message: string }, void>({
+      query: () => ({
+        url: '/auth/mcp/revoke-token',
+        method: 'POST',
+      }),
+      invalidatesTags: ['User'],
+    }),
   }),
 });
 
@@ -182,4 +219,7 @@ export const {
   useChangePasswordMutation,
   useAcceptTermsMutation,
   useGetTermsStatusQuery,
+  useGetMcpTokenStatusQuery,
+  useGenerateMcpTokenMutation,
+  useRevokeMcpTokenMutation,
 } = authApi;

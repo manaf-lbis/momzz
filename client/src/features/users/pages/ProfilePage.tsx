@@ -18,6 +18,14 @@ import {
   Calendar,
   FileText,
   Database,
+  Bot,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 import { useAppDispatch } from '../../../shared/hooks/useAppDispatch';
 import { logout, updateUser } from '../../auth/store/authSlice';
@@ -26,6 +34,9 @@ import {
   useGetMeQuery,
   useChangePasswordMutation,
   useUpdateProfileImageMutation,
+  useGetMcpTokenStatusQuery,
+  useGenerateMcpTokenMutation,
+  useRevokeMcpTokenMutation,
 } from '../../auth/api/authApi';
 import { ImageCropperModal } from '../../../shared/components/common/ImageCropperModal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,6 +64,51 @@ export const ProfilePage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [cropSource, setCropSource] = useState<string | null>(null);
+
+  // MCP Token Integration State & Hooks
+  const { data: mcpData, isLoading: isLoadingMcp, refetch: refetchMcp } = useGetMcpTokenStatusQuery();
+  const [generateMcpToken, { isLoading: isGeneratingMcp }] = useGenerateMcpTokenMutation();
+  const [revokeMcpToken, { isLoading: isRevokingMcp }] = useRevokeMcpTokenMutation();
+  const [newlyGeneratedSecret, setNewlyGeneratedSecret] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [showSecret, setShowSecret] = useState(false);
+  const [isConfirmRevokeOpen, setIsConfirmRevokeOpen] = useState(false);
+  const [mcpMsg, setMcpMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const mcpServerUrl = `${window.location.protocol}//${window.location.hostname}:4000/mcp`;
+
+  const copyToClipboard = (text: string, fieldName: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const handleGenerateToken = async () => {
+    setMcpMsg(null);
+    try {
+      const res = await generateMcpToken().unwrap();
+      setNewlyGeneratedSecret(res.data.clientSecret);
+      setShowSecret(true);
+      setMcpMsg({ type: 'success', text: 'New MCP token generated! Copy your Client Secret now.' });
+      refetchMcp();
+    } catch (err: any) {
+      setMcpMsg({ type: 'error', text: err?.data?.message || 'Failed to generate MCP token.' });
+    }
+  };
+
+  const handleRevokeToken = async () => {
+    setMcpMsg(null);
+    try {
+      await revokeMcpToken().unwrap();
+      setNewlyGeneratedSecret(null);
+      setIsConfirmRevokeOpen(false);
+      setMcpMsg({ type: 'success', text: 'MCP access token revoked successfully.' });
+      refetchMcp();
+    } catch (err: any) {
+      setMcpMsg({ type: 'error', text: err?.data?.message || 'Failed to revoke token.' });
+    }
+  };
 
 
   const handleLogout = async () => {
@@ -339,6 +395,55 @@ export const ProfilePage: React.FC = () => {
               </div>
             </section>
 
+            {/* ── AI & MCP INTEGRATION SECTION (NAVIGATES TO DEDICATED /tokens PAGE) ── */}
+            <section className="rounded-3xl glass-modern-card shadow-xl p-4 sm:p-5 space-y-3 transition-colors border border-amber-400/25 relative overflow-hidden group">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400/15 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
+                      <span>AI & MCP Access Tokens</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                      Connect Claude Desktop, Cursor, and LLM coding assistants
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                {mcpData?.data?.hasToken && !mcpData?.data?.isRevoked ? (
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-mono text-[10px] font-bold border border-emerald-500/30 flex items-center gap-1.5 shadow-2xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Active
+                  </span>
+                ) : mcpData?.data?.isRevoked ? (
+                  <span className="px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 font-mono text-[10px] font-bold border border-rose-500/30">
+                    Revoked
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-full bg-amber-400/15 text-amber-600 dark:text-amber-400 font-mono text-[10px] font-bold border border-amber-400/30">
+                    Not Setup
+                  </span>
+                )}
+              </div>
+
+              <div className="pt-2 flex items-center justify-between gap-3 border-t border-slate-200/80 dark:border-white/[0.06]">
+                <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                  Client ID: <span className="font-bold text-slate-900 dark:text-white">{currentUser?.mobile}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/tokens')}
+                  className="py-2 px-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer"
+                >
+                  <span>Manage Tokens</span>
+                  <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+              </div>
+            </section>
+
 
             {/* Support Hotline Banner */}
             <section className="rounded-3xl glass-modern-card p-4 shadow-xl flex items-center justify-between gap-3 transition-colors">
@@ -475,6 +580,55 @@ export const ProfilePage: React.FC = () => {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Revoke MCP Token Confirmation Modal */}
+      <AnimatePresence>
+        {isConfirmRevokeOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pb-24 sm:pb-4 bg-black/60 dark:bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-sm rounded-3xl bg-white dark:bg-[#0f0f1e] border border-slate-200 dark:border-white/12 shadow-2xl p-5 sm:p-6 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-rose-600 dark:text-rose-400 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-rose-500" /> Revoke MCP Access
+                </h3>
+                <button
+                  onClick={() => setIsConfirmRevokeOpen(false)}
+                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Are you sure you want to revoke this MCP token? Any AI client (Claude Desktop, Cursor, etc.) currently using this Client Secret will immediately lose access to Momzz APIs.
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmRevokeOpen(false)}
+                  className="py-2.5 px-4 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isRevokingMcp}
+                  onClick={handleRevokeToken}
+                  className="py-2.5 px-4 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-black text-xs shadow-md shadow-rose-500/25 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {isRevokingMcp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Yes, Revoke</span>
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

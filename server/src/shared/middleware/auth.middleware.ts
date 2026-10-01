@@ -19,6 +19,39 @@ export interface CachedUserSession {
 }
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+  // 1. Check for authenticated internal service-to-service communication (e.g., Momzz MCP Server)
+  // Anti-Confused Deputy: User credentials verified at the MCP layer; internal calls carry explicit context
+  const internalServiceKey = req.headers['x-internal-service-key'];
+  const internalUserId = req.headers['x-authenticated-user-id'] as string;
+
+  if (internalServiceKey && internalServiceKey === ENV.INTERNAL_SERVICE_KEY && internalUserId) {
+    try {
+      const dbUser = await userRepository.findById(internalUserId);
+      if (!dbUser) {
+        return sendError(res, 'Internal service caller: Target user account does not exist.', 401);
+      }
+      if (dbUser.status === 'BLOCKED') {
+        return sendError(res, 'Target user account has been blocked by an administrator.', 403);
+      }
+      if (!dbUser.isApproved && dbUser.role !== 'ADMIN') {
+        return sendError(res, 'Target user account is awaiting administrator approval.', 403);
+      }
+
+      req.user = {
+        id: dbUser._id ? dbUser._id.toString() : (dbUser as any).id,
+        name: dbUser.name,
+        mobile: dbUser.mobile,
+        role: dbUser.role,
+        isApproved: dbUser.isApproved,
+        status: dbUser.status,
+      };
+
+      return next();
+    } catch (err) {
+      return sendError(res, 'Failed to authenticate internal service request.', 500, err);
+    }
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

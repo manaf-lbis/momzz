@@ -34,4 +34,10 @@ router.patch('/users/:userId/status', authMiddleware, adminMiddleware, validateR
 router.patch('/users/:userId/role', authMiddleware, adminMiddleware, validateRequest({ body: updateUserRoleSchema }), authController.updateUserRole);
 router.post('/users/:userId/reset-password', authMiddleware, adminMiddleware, validateRequest({ body: adminResetPasswordSchema }), authController.adminResetPassword);
 
+// MCP Token Management & Verification Routes
+router.post('/mcp-token', authController.exchangeMcpToken);
+router.post('/mcp/generate-token', authMiddleware, authController.generateMcpToken);
+router.post('/mcp/revoke-token', authMiddleware, authController.revokeMcpToken);
+router.get('/mcp/token-status', authMiddleware, authController.getMcpTokenStatus);
+
 export default router;
