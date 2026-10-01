@@ -1,19 +1,9 @@
-import { z, ZodObject, ZodRawShape } from 'zod';
+import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { AuthUserContext } from '../auth/middleware.js';
-import { upstreamApiClient, sanitizeErrorMessage } from '../services/apiClient.js';
-
-export type UserRole = 'ADMIN' | 'WORKER';
-
-export interface ToolDefinition<TShape extends ZodRawShape = ZodRawShape> {
-  name: string;
-  description: string;
-  parameters: ZodObject<TShape>;
-  requiredRole: 'ADMIN' | 'WORKER' | 'ANY';
-  requiredScopes: string[];
-  execute: (args: z.infer<ZodObject<TShape>>, context: AuthUserContext) => Promise<unknown>;
-}
+import { AuthUserContext, ToolDefinition } from '../mcp.types';
+import { mcpService } from '../mcp.service';
+import { sanitizeErrorMessage } from '../mcp.utils';
 
 /**
  * Evaluates whether granted user scopes satisfy required tool scopes.
@@ -58,14 +48,11 @@ const get_user_profile: ToolDefinition = {
   requiredRole: 'ANY',
   requiredScopes: ['profile:read'],
   execute: async (_args, context) => {
-    return upstreamApiClient.getUserProfile(context);
+    return mcpService.getUserProfile(context);
   },
 };
 
-const update_user_profile: ToolDefinition<{
-  name: z.ZodOptional<z.ZodString>;
-  profileImageUrl: z.ZodOptional<z.ZodString>;
-}> = {
+const update_user_profile: ToolDefinition = {
   name: 'update_user_profile',
   description:
     'Update safe profile fields (display name or avatar URL). Security credentials and roles cannot be modified.',
@@ -75,35 +62,28 @@ const update_user_profile: ToolDefinition<{
   }),
   requiredRole: 'ANY',
   requiredScopes: ['profile:write'],
-  execute: async (args, context) => {
-    return upstreamApiClient.updateUserProfile(args, context);
+  execute: async (args: any, context) => {
+    return mcpService.updateUserProfile(args, context);
   },
 };
 
-const list_jobs: ToolDefinition<{
-  status: z.ZodOptional<z.ZodEnum<['OPEN', 'IN_PROGRESS', 'COMPLETED']>>;
-  search: z.ZodOptional<z.ZodString>;
-  page: z.ZodDefault<z.ZodNumber>;
-  limit: z.ZodDefault<z.ZodNumber>;
-}> = {
+const list_jobs: ToolDefinition = {
   name: 'list_jobs',
   description: 'List and filter vehicle service job cards in Momzz garage.',
   parameters: z.object({
-    status: z.enum(['OPEN', 'IN_PROGRESS', 'COMPLETED']).optional(),
+    status: z.string().optional(),
     search: z.string().trim().max(100).optional(),
     page: z.number().int().min(1).default(1),
     limit: z.number().int().min(1).max(50).default(10),
   }),
   requiredRole: 'ANY',
   requiredScopes: ['jobs:read'],
-  execute: async (args, context) => {
-    return upstreamApiClient.listJobs(args, context);
+  execute: async (args: any, context) => {
+    return mcpService.listJobs(args, context);
   },
 };
 
-const get_job_details: ToolDefinition<{
-  jobId: z.ZodString;
-}> = {
+const get_job_details: ToolDefinition = {
   name: 'get_job_details',
   description: 'Retrieve detailed tasks, items, labor, and timeline for a specific job card.',
   parameters: z.object({
@@ -111,17 +91,12 @@ const get_job_details: ToolDefinition<{
   }),
   requiredRole: 'ANY',
   requiredScopes: ['jobs:read'],
-  execute: async (args, context) => {
-    return upstreamApiClient.getJobDetails(args.jobId, context);
+  execute: async (args: any, context) => {
+    return mcpService.getJobDetails(args.jobId, context);
   },
 };
 
-const search_inventory: ToolDefinition<{
-  query: z.ZodOptional<z.ZodString>;
-  category: z.ZodOptional<z.ZodString>;
-  page: z.ZodDefault<z.ZodNumber>;
-  limit: z.ZodDefault<z.ZodNumber>;
-}> = {
+const search_inventory: ToolDefinition = {
   name: 'search_inventory',
   description: 'Search garage spare parts, catalog items, unit prices, and live stock levels.',
   parameters: z.object({
@@ -132,8 +107,8 @@ const search_inventory: ToolDefinition<{
   }),
   requiredRole: 'ANY',
   requiredScopes: ['inventory:read'],
-  execute: async (args, context) => {
-    return upstreamApiClient.searchInventory(args, context);
+  execute: async (args: any, context) => {
+    return mcpService.searchInventory(args, context);
   },
 };
 
@@ -144,7 +119,7 @@ const admin_list_workers: ToolDefinition = {
   requiredRole: 'ADMIN',
   requiredScopes: ['admin:workers'],
   execute: async (_args, context) => {
-    return upstreamApiClient.adminListWorkers(context);
+    return mcpService.adminListWorkers(context);
   },
 };
 
@@ -155,7 +130,7 @@ const admin_get_system_overview: ToolDefinition = {
   requiredRole: 'ADMIN',
   requiredScopes: ['admin:overview'],
   execute: async (_args, context) => {
-    return upstreamApiClient.adminGetSystemOverview(context);
+    return mcpService.adminGetSystemOverview(context);
   },
 };
 
@@ -178,7 +153,7 @@ export const getVisibleToolsForUser = (context: AuthUserContext) => {
   return toolRegistry
     .filter((tool) => isUserAuthorizedForTool(context, tool))
     .map((tool) => {
-      const rawJsonSchema = zodToJsonSchema(tool.parameters, {
+      const rawJsonSchema = zodToJsonSchema(tool.parameters as any, {
         target: 'jsonSchema7',
         $refStrategy: 'none',
       }) as any;
@@ -221,8 +196,9 @@ export const executeToolWithGuard = async (
   // 2. Strict Zod input schema validation
   const validationResult = tool.parameters.safeParse(rawArgs || {});
   if (!validationResult.success) {
-    const errorDetails = validationResult.error.errors
-      .map((err) => `${err.path.join('.')}: ${err.message}`)
+    const issues = (validationResult.error as any).issues || (validationResult.error as any).errors || [];
+    const errorDetails = issues
+      .map((err: any) => `${(err.path || []).join('.')}: ${err.message}`)
       .join('; ');
     throw new McpError(
       ErrorCode.InvalidParams,

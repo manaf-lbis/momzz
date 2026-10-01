@@ -9,6 +9,7 @@
     "start": "node dist/app.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "@types/cookie-parser": "^1.4.10",
     "@upstash/redis": "^1.38.2",
     "bcryptjs": "^2.4.3",
@@ -21,7 +22,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.3.1",
     "socket.io": "^4.8.3",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

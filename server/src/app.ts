@@ -65,7 +65,15 @@ const corsOptions: cors.CorsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'mcp-session-id',
+    'X-Client-Id',
+    'X-Client-Secret',
+  ],
 };
 
 app.use(cors(corsOptions));
@@ -78,6 +86,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 app.use(express.json({ limit: '3mb' }));
+app.use(express.urlencoded({ extended: true }));
 app.use(mongoSanitize({ replaceWith: '_' }));
 app.use(cookieParser());
 
@@ -105,6 +114,7 @@ import jobRouter from './features/jobs/job.router';
 import inventoryRouter from './features/inventory/inventory.router';
 import publicRouter from './features/users/public.router';
 import catalogRouter from './features/catalog/catalog.router';
+import mcpRouter from './features/mcp/mcp.router';
 
 // API Routes
 app.use('/api/auth', authRouter);
@@ -112,6 +122,9 @@ app.use('/api/jobs', jobRouter);
 app.use('/api/inventory', inventoryRouter);
 app.use('/api/public', publicRouter);
 app.use('/api/catalog', catalogRouter);
+
+// Integrated Model Context Protocol (MCP) Endpoints (/mcp, /sse, /messages, /oauth/token)
+app.use(mcpRouter);
 
 
 // Health check
@@ -156,6 +169,8 @@ connectDB().then(async () => {
   } catch {}
   server.listen(ENV.PORT, () => {
     console.log(`[SERVER] Momzz backend listening on http://localhost:${ENV.PORT}`);
+    console.log(`[MCP SERVER] Streamable HTTP Transport: http://localhost:${ENV.PORT}/mcp`);
+    console.log(`[MCP SERVER] SSE Transport: http://localhost:${ENV.PORT}/sse`);
     console.log(`[SERVER] Configured Client URLs: ${ENV.CLIENT_URLS.join(', ') || ENV.CLIENT_URL || 'None'}`);
     console.log(`[SERVER] Allowed CORS Origins: ${ENV.CORS_ORIGINS.join(', ') || 'All'}`);
   });

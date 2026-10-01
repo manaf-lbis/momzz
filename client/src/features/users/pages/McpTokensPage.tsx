@@ -31,6 +31,7 @@ import {
   useGenerateMcpTokenMutation,
   useRevokeMcpTokenMutation,
 } from '../../auth/api/authApi';
+import { getBaseServerUrl } from '../../../shared/utils/serverUrl';
 
 export const McpTokensPage: React.FC = () => {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ export const McpTokensPage: React.FC = () => {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [activeGuideTab, setActiveGuideTab] = useState<'claude' | 'cursor' | 'oauth' | 'curl'>('oauth');
 
-  const mcpServerUrl = `${window.location.protocol}//${window.location.hostname}:4000/mcp`;
+  const mcpServerUrl = `${getBaseServerUrl()}/mcp`;
   const clientId = user?.mobile || '';
   const currentToken = newlyGeneratedSecret || mcpData?.data?.fullToken || mcpData?.data?.tokenPreview || '';
   const hasActiveToken = mcpData?.data?.hasToken && !mcpData?.data?.isRevoked;
