@@ -84,7 +84,10 @@ export const authenticateMcpRequest = async (req: Request): Promise<AuthUserCont
             name: decodedJwt.name || 'User',
             mobile: decodedJwt.mobile || '',
             role,
-            scopes: role === 'ADMIN' ? ['*'] : ['profile:read', 'profile:write', 'jobs:read', 'inventory:read'],
+            scopes:
+              role === 'ADMIN'
+                ? ['*']
+                : ['profile:read', 'jobs:read', 'inventory:read', 'catalog:read', 'sales:read', 'system:read'],
             accessToken: rawToken,
           };
         }
@@ -136,7 +139,10 @@ export const authenticateMcpRequest = async (req: Request): Promise<AuthUserCont
     name: user.name,
     mobile: user.mobile,
     role: user.role as any,
-    scopes: user.role === 'ADMIN' ? ['*'] : ['profile:read', 'profile:write', 'jobs:read', 'inventory:read'],
+    scopes:
+      user.role === 'ADMIN'
+        ? ['*']
+        : ['profile:read', 'jobs:read', 'inventory:read', 'catalog:read', 'sales:read', 'system:read'],
     accessToken: exchangeResult.accessToken,
   };
 

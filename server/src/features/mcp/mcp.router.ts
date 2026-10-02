@@ -203,11 +203,13 @@ const handleOAuthMetadata = (req: Request, res: Response) => {
     code_challenge_methods_supported: ['S256', 'plain'],
     scopes_supported: [
       'profile:read',
-      'profile:write',
       'jobs:read',
       'inventory:read',
+      'catalog:read',
+      'sales:read',
+      'system:read',
       'admin:workers',
-      'admin:overview',
+      'admin:analytics',
       '*',
     ],
     service_documentation: `${baseUrl}/api/health`,
@@ -309,7 +311,10 @@ const handleOAuthToken = async (req: Request, res: Response) => {
       access_token: result.accessToken,
       token_type: 'Bearer',
       expires_in: 3600,
-      scope: result.user.role === 'ADMIN' ? '*' : 'profile:read profile:write jobs:read inventory:read',
+      scope:
+        result.user.role === 'ADMIN'
+          ? '*'
+          : 'profile:read jobs:read inventory:read catalog:read sales:read system:read',
     });
   } catch (err: any) {
     return res.status(401).json({

@@ -125,7 +125,6 @@ const UserSchema: Schema = new Schema(
   }
 );
 
-UserSchema.index({ mobile: 1 }, { unique: true });
 UserSchema.index({ isApproved: 1, status: 1 });
 
 export default mongoose.model<IUser>('User', UserSchema);
