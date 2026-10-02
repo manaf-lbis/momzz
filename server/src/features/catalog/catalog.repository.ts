@@ -111,6 +111,51 @@ export class CatalogRepository {
   async createSale(data: Partial<ISale>) {
     return Sale.create(data);
   }
+
+  async findSale(id: string) {
+    return Sale.findById(id)
+      .populate({
+        path: 'items.item',
+        select: 'title sku price category unit thumbnailUrl images itemType trackStock stockQuantity',
+        populate: { path: 'category', select: 'name type' },
+      })
+      .populate('soldBy', 'name mobile role');
+  }
+
+  async getSales(filters: { q?: string; status?: string; limit?: number }) {
+    const query: any = {};
+    if (filters.status && filters.status !== 'ALL') {
+      query.status = filters.status;
+    }
+    if (filters.q && filters.q.trim()) {
+      const regex = new RegExp(filters.q.trim(), 'i');
+      query.$or = [
+        { invoiceNumber: regex },
+        { customerName: regex },
+        { customerMobile: regex },
+      ];
+    }
+    const limit = Math.min(filters.limit || 100, 200);
+    return Sale.find(query)
+      .populate({
+        path: 'items.item',
+        select: 'title sku price category unit thumbnailUrl images itemType trackStock stockQuantity',
+        populate: { path: 'category', select: 'name type' },
+      })
+      .populate('soldBy', 'name mobile role')
+      .sort({ createdAt: -1 })
+      .limit(limit);
+  }
+
+  async updateSale(id: string, data: Partial<ISale>) {
+    return Sale.findByIdAndUpdate(id, { $set: data }, { new: true })
+      .populate({
+        path: 'items.item',
+        select: 'title sku price category unit thumbnailUrl images itemType trackStock stockQuantity',
+        populate: { path: 'category', select: 'name type' },
+      })
+      .populate('soldBy', 'name mobile role');
+  }
 }
 
 export const catalogRepository = new CatalogRepository();

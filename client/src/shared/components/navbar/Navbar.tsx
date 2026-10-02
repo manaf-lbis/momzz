@@ -24,8 +24,8 @@ export const Navbar: React.FC<{ glass?: boolean }> = ({ glass = false }) => {
       >
         <div className="app-container">
           <div className="flex items-center justify-between h-13 sm:h-14">
-            {/* Logo & Brand */}
-            <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group">
+            {/* Logo & Brand (Shown on tablet, hidden on desktop where LeftPanel is always active) */}
+            <Link to="/" className="flex lg:hidden items-center gap-2 sm:gap-2.5 group">
               <img
                 src="/logo.png"
                 alt="MOMZ'Z Logo"
@@ -40,6 +40,14 @@ export const Navbar: React.FC<{ glass?: boolean }> = ({ glass = false }) => {
                 </span>
               </div>
             </Link>
+
+            {/* Desktop Left-side status badge on lg */}
+            <div className="hidden lg:flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100/90 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                MOMZ'Z GARAGE
+              </span>
+            </div>
 
             {/* Desktop Global Search Bar */}
             <button

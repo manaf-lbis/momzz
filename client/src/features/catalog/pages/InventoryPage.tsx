@@ -376,12 +376,12 @@ export const InventoryPage: React.FC = () => {
                   }`}
                 >
                   {/* -- LEFT SIDE: PART IMAGE / THUMBNAIL (Fixed Square Size) -- */}
-                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10 self-center">
+                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 min-w-[96px] sm:min-w-[112px] shrink-0 aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 flex items-center justify-center self-center">
                     {item.thumbnailUrl ? (
                       <img
                         src={item.thumbnailUrl}
                         alt={item.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -395,10 +395,10 @@ export const InventoryPage: React.FC = () => {
 
                     {/* Left overlay chip: Type */}
                     <span
-                      className={`absolute top-1.5 left-1.5 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-md ${
+                      className={`absolute top-1.5 left-1.5 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-md shadow-xs ${
                         isService
-                          ? 'bg-violet-500/80 text-white'
-                          : 'bg-amber-400/90 text-slate-950 font-black'
+                          ? 'bg-violet-600/90 text-white'
+                          : 'bg-amber-400/95 text-slate-950 font-black'
                       }`}
                     >
                       {isService ? 'SVC' : 'PART'}
@@ -442,14 +442,20 @@ export const InventoryPage: React.FC = () => {
                         {item.title}
                       </h2>
 
-                      {/* SKU / Part Identifier */}
+                      {/* SKU / Part Identifier & Description Snippet */}
                       <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono text-slate-400 dark:text-slate-500">
                         {item.sku ? (
-                          <span className="bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-white/5 truncate max-w-[130px]">
+                          <span className="bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-white/5 truncate max-w-[120px]">
                             SKU: {item.sku}
                           </span>
                         ) : (
                           <span>ID: {item.id.slice(-6).toUpperCase()}</span>
+                        )}
+
+                        {item.description && (
+                          <span className="truncate max-w-[160px] text-slate-500 dark:text-slate-400 font-sans" title={item.description}>
+                            • {item.description}
+                          </span>
                         )}
                       </div>
                     </div>
