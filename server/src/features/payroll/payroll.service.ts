@@ -155,6 +155,29 @@ export class PayrollService {
   /**
    * Mark a worker leave on a single date or date range.
    */
+  /**
+   * Batch mark leave across multiple selected workers
+   */
+  async markLeavesBatch(
+    workerIds: string[],
+    dateInput: string | Date,
+    leaveType: LeaveType,
+    reason: string | undefined,
+    adminId: string,
+    endDateInput?: string | Date
+  ): Promise<{ affectedWorkers: number; totalDaysMarked: number; affectedCount: number }> {
+    let totalDaysMarked = 0;
+    for (const wId of workerIds) {
+      const res = await this.markLeave(wId, dateInput, leaveType, reason, adminId, endDateInput);
+      totalDaysMarked += res.affectedCount;
+    }
+    return {
+      affectedWorkers: workerIds.length,
+      totalDaysMarked,
+      affectedCount: totalDaysMarked,
+    };
+  }
+
   async markLeave(
     workerId: string,
     dateInput: string | Date,
@@ -890,4 +913,171 @@ export class PayrollService {
 
     return settlement;
   }
+  /**
+   * Unified Money Flow Ledger (Giving & Taking Money)
+   * Detailed chronological audit of Cash Advances, Settlements, and Overtime
+   */
+  async getMoneyFlowLedger(filters: {
+    workerId?: string;
+    type?: 'ALL' | 'ADVANCE' | 'SETTLEMENT' | 'OT';
+    startDate?: string;
+    endDate?: string;
+  }): Promise<{
+    transactions: Array<{
+      id: string;
+      date: string;
+      workerId: string;
+      workerName: string;
+      workerMobile: string;
+      transactionType: 'CASH_ADVANCE' | 'SETTLEMENT_PAYOUT' | 'OVERTIME_CREDIT';
+      direction: 'GIVING_TO_WORKER' | 'CREDIT_TO_WAGE';
+      category: string;
+      amount: number;
+      paymentMethod: string;
+      status: string;
+      payoutType?: 'FULL' | 'PARTIAL';
+      notes?: string;
+      authorizedBy: string;
+      carriedForwardBalance?: number;
+      netPayable?: number;
+      settlementId?: string;
+    }>;
+    kpis: {
+      totalCashAdvances: number;
+      unsettledAdvancesTotal: number;
+      totalSettlementsDisbursed: number;
+      totalOtApproved: number;
+      netCashDisbursed: number;
+    };
+  }> {
+    const start = filters.startDate ? new Date(filters.startDate) : undefined;
+    if (start) start.setHours(0, 0, 0, 0);
+
+    const end = filters.endDate ? new Date(filters.endDate) : undefined;
+    if (end) end.setHours(23, 59, 59, 999);
+
+    const [allAdvances, allSettlements, allOtClaims] = await Promise.all([
+      this.repo.findCashAdvances({ workerId: filters.workerId }),
+      this.repo.findSettlements(filters.workerId),
+      this.repo.findOtClaims({ workerId: filters.workerId, status: 'APPROVED' }),
+    ]);
+
+    const transactions: any[] = [];
+    let totalCashAdvances = 0;
+    let unsettledAdvancesTotal = 0;
+    let totalSettlementsDisbursed = 0;
+    let totalOtApproved = 0;
+
+    // 1. Process Cash Advances (Giving money mid-cycle)
+    if (!filters.type || filters.type === 'ALL' || filters.type === 'ADVANCE') {
+      for (const adv of allAdvances) {
+        const advDate = new Date(adv.date);
+        if (start && advDate < start) continue;
+        if (end && advDate > end) continue;
+
+        totalCashAdvances += adv.amount;
+        if (!adv.isSettled) unsettledAdvancesTotal += adv.amount;
+
+        const wObj = adv.workerId as any;
+        const gObj = adv.givenBy as any;
+
+        transactions.push({
+          id: adv._id.toString(),
+          date: advDate.toISOString(),
+          workerId: wObj?._id?.toString() || adv.workerId?.toString(),
+          workerName: wObj?.name || 'Worker',
+          workerMobile: wObj?.mobile || '',
+          transactionType: 'CASH_ADVANCE',
+          direction: 'GIVING_TO_WORKER',
+          category: 'Cash Advance (Given Mid-Cycle)',
+          amount: adv.amount,
+          paymentMethod: 'CASH',
+          status: adv.isSettled ? 'SETTLED' : 'UNSETTLED',
+          notes: adv.reason || 'Mid-week cash advance',
+          authorizedBy: gObj?.name || 'Admin',
+          settlementId: adv.settlementId?.toString(),
+        });
+      }
+    }
+
+    // 2. Process Settlements (Paying wage cycles)
+    if (!filters.type || filters.type === 'ALL' || filters.type === 'SETTLEMENT') {
+      for (const s of allSettlements) {
+        const sDate = new Date(s.settledAt);
+        if (start && sDate < start) continue;
+        if (end && sDate > end) continue;
+
+        totalSettlementsDisbursed += s.amountPaid;
+
+        const wObj = s.workerId as any;
+        const sObj = s.settledBy as any;
+
+        transactions.push({
+          id: s._id.toString(),
+          date: sDate.toISOString(),
+          workerId: wObj?._id?.toString() || s.workerId?.toString(),
+          workerName: s.workerName || wObj?.name || 'Worker',
+          workerMobile: s.workerMobile || wObj?.mobile || '',
+          transactionType: 'SETTLEMENT_PAYOUT',
+          direction: 'GIVING_TO_WORKER',
+          category: s.payoutType === 'PARTIAL' ? 'Partial Wage Payout' : 'Full Wage Settlement',
+          amount: s.amountPaid,
+          netPayable: s.netPayable,
+          carriedForwardBalance: s.carriedForwardBalance || 0,
+          paymentMethod: s.paymentMethod,
+          status: 'COMPLETED',
+          payoutType: s.payoutType || (s.amountPaid < s.netPayable ? 'PARTIAL' : 'FULL'),
+          notes: s.referenceNote || `Settled across ${s.totalWorkingDays} worked days`,
+          authorizedBy: s.settledByName || sObj?.name || 'Admin',
+          settlementId: s._id.toString(),
+        });
+      }
+    }
+
+    // 3. Process Overtime Approved (Wage Credits)
+    if (!filters.type || filters.type === 'ALL' || filters.type === 'OT') {
+      for (const ot of allOtClaims) {
+        const otDate = new Date(ot.date);
+        if (start && otDate < start) continue;
+        if (end && otDate > end) continue;
+
+        totalOtApproved += ot.totalAmount;
+
+        const wObj = ot.workerId as any;
+        const rObj = ot.reviewedBy as any;
+
+        transactions.push({
+          id: ot._id.toString(),
+          date: otDate.toISOString(),
+          workerId: wObj?._id?.toString() || ot.workerId?.toString(),
+          workerName: wObj?.name || 'Worker',
+          workerMobile: wObj?.mobile || '',
+          transactionType: 'OVERTIME_CREDIT',
+          direction: 'CREDIT_TO_WAGE',
+          category: 'Overtime Approved',
+          amount: ot.totalAmount,
+          paymentMethod: 'WAGE_CREDIT',
+          status: ot.isSettled ? 'SETTLED' : 'APPROVED',
+          notes: ot.note ? `${ot.hours}h OT: ${ot.note}` : `${ot.hours}h OT @ ₹150/hr`,
+          authorizedBy: rObj?.name || 'Admin',
+          settlementId: ot.settlementId?.toString(),
+        });
+      }
+    }
+
+    // Sort descending by date (newest first)
+    transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return {
+      transactions,
+      kpis: {
+        totalCashAdvances,
+        unsettledAdvancesTotal,
+        totalSettlementsDisbursed,
+        totalOtApproved,
+        netCashDisbursed: totalCashAdvances + totalSettlementsDisbursed,
+      },
+    };
+  }
+
 }

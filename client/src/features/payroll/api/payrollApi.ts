@@ -29,6 +29,38 @@ export interface CashAdvanceItem {
   createdAt: string;
 }
 
+
+export interface MoneyFlowItem {
+  id: string;
+  date: string;
+  workerId: string;
+  workerName: string;
+  workerMobile: string;
+  transactionType: 'CASH_ADVANCE' | 'SETTLEMENT_PAYOUT' | 'OVERTIME_CREDIT';
+  direction: 'GIVING_TO_WORKER' | 'CREDIT_TO_WAGE';
+  category: string;
+  amount: number;
+  paymentMethod: string;
+  status: string;
+  payoutType?: 'FULL' | 'PARTIAL';
+  notes?: string;
+  authorizedBy: string;
+  carriedForwardBalance?: number;
+  netPayable?: number;
+  settlementId?: string;
+}
+
+export interface MoneyFlowData {
+  transactions: MoneyFlowItem[];
+  kpis: {
+    totalCashAdvances: number;
+    unsettledAdvancesTotal: number;
+    totalSettlementsDisbursed: number;
+    totalOtApproved: number;
+    netCashDisbursed: number;
+  };
+}
+
 export interface PayrollSettlementItem {
   _id: string;
   workerId: {
@@ -370,6 +402,17 @@ export const payrollApi = apiSlice.injectEndpoints({
       invalidatesTags: ['Payroll', 'OtClaim', 'Settlement'],
     }),
 
+    getMoneyFlow: builder.query<
+      { success: boolean; data: MoneyFlowData },
+      { workerId?: string; type?: 'ALL' | 'ADVANCE' | 'SETTLEMENT' | 'OT'; startDate?: string; endDate?: string } | void
+    >({
+      query: (params) => ({
+        url: '/payroll/admin/money-flow',
+        params: params || {},
+      }),
+      providesTags: ['Payroll', 'Settlement', 'OtClaim'],
+    }),
+
     getSettlements: builder.query<{ success: boolean; data: PayrollSettlementItem[] }, string | void>({
       query: (workerId) => ({
         url: workerId ? `/payroll/settlements/${workerId}` : '/payroll/settlements',
@@ -400,4 +443,5 @@ export const {
   useUpdateWorkerWageMutation,
   useSettlePayrollMutation,
   useGetSettlementsQuery,
+  useGetMoneyFlowQuery,
 } = payrollApi;

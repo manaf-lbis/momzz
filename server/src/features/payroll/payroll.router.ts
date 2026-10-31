@@ -90,4 +90,11 @@ router.post(
   PayrollController.settlePayroll
 );
 
+
+router.get(
+  '/admin/money-flow',
+  adminMiddleware,
+  PayrollController.getMoneyFlow
+);
+
 export default router;

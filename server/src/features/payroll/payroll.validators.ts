@@ -11,13 +11,19 @@ export const reviewOtClaimSchema = z.object({
   rejectionReason: z.string().trim().optional(),
 });
 
-export const markLeaveSchema = z.object({
-  workerId: z.string().min(1, 'Worker ID is required'),
-  date: z.string().min(1, 'Date is required'),
-  endDate: z.string().optional(),
-  leaveType: z.enum(['FULL', 'HALF'] as const).default('FULL'),
-  reason: z.string().trim().optional(),
-});
+export const markLeaveSchema = z
+  .object({
+    workerId: z.string().optional(),
+    workerIds: z.array(z.string()).optional(),
+    date: z.string().min(1, 'Date is required'),
+    endDate: z.string().optional(),
+    leaveType: z.enum(['FULL', 'HALF'] as const).default('FULL'),
+    reason: z.string().trim().optional(),
+  })
+  .refine((data) => data.workerId || (data.workerIds && data.workerIds.length > 0), {
+    message: 'At least one worker must be selected',
+    path: ['workerIds'],
+  });
 
 export const toggleLeaveSchema = z.object({
   workerId: z.string().min(1, 'Worker ID is required'),

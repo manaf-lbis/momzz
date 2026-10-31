@@ -122,9 +122,25 @@ export class PayrollController {
       const adminId = req.user?.id;
       if (!adminId) return sendError(res, 'Unauthorized', 401);
 
-      const { workerId, date, endDate, leaveType, reason } = req.body;
-      const result = await payrollService.markLeave(workerId, date, leaveType, reason, adminId, endDate);
-      return sendSuccess(res, `Leave recorded successfully for ${result.affectedCount} day(s).`, result, 201);
+      const { workerId, workerIds, date, endDate, leaveType, reason } = req.body;
+      const targetIds: string[] =
+        workerIds && Array.isArray(workerIds) && workerIds.length > 0
+          ? workerIds
+          : workerId
+          ? [workerId]
+          : [];
+
+      if (targetIds.length === 0) {
+        return sendError(res, 'At least one worker must be selected', 400);
+      }
+
+      const result = await payrollService.markLeavesBatch(targetIds, date, leaveType, reason, adminId, endDate);
+      return sendSuccess(
+        res,
+        `Leave recorded successfully for ${result.affectedWorkers} worker(s) across ${result.totalDaysMarked} day(s).`,
+        result,
+        201
+      );
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to record leave.', 400);
     }
@@ -293,4 +309,21 @@ export class PayrollController {
       return sendError(res, error.message || 'Failed to retrieve settlements.', 500);
     }
   }
+
+  // Admin unified Money Flow & Cashflow (Giving & Taking money)
+  static async getMoneyFlow(req: Request, res: Response) {
+    try {
+      const { workerId, type, startDate, endDate } = req.query as {
+        workerId?: string;
+        type?: 'ALL' | 'ADVANCE' | 'SETTLEMENT' | 'OT';
+        startDate?: string;
+        endDate?: string;
+      };
+      const result = await payrollService.getMoneyFlowLedger({ workerId, type, startDate, endDate });
+      return sendSuccess(res, 'Money flow transactions fetched successfully.', result);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to fetch money flow ledger.', 400);
+    }
+  }
+
 }

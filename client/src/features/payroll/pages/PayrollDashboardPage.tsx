@@ -22,6 +22,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Banknote,
+  ArrowDownRight,
+  Zap,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
@@ -30,6 +33,7 @@ import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
 import {
   useGetAdminOverviewQuery,
+  useGetMoneyFlowQuery,
   useGetCommonCalendarQuery,
   useGetAdminOtClaimsQuery,
   useReviewOtClaimMutation,
@@ -55,7 +59,9 @@ export const PayrollDashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
   // Primary Tab: ROSTER or COMMON_CALENDAR
-  const [activeTab, setActiveTab] = useState<'ROSTER' | 'COMMON_CALENDAR'>('ROSTER');
+  const [activeTab, setActiveTab] = useState<'ROSTER' | 'COMMON_CALENDAR' | 'MONEY_FLOW'>('ROSTER');
+  const [moneyFlowType, setMoneyFlowType] = useState<'ALL' | 'ADVANCE' | 'SETTLEMENT' | 'OT'>('ALL');
+  const [moneyFlowWorkerId, setMoneyFlowWorkerId] = useState<string>('');
 
   // Month navigation for Common Calendar
   const [calendarMonthDate, setCalendarMonthDate] = useState(() => {
@@ -74,6 +80,11 @@ export const PayrollDashboardPage: React.FC = () => {
   const { data: pendingOtData, isLoading: isOtLoading, refetch: refetchOt } =
     useGetAdminOtClaimsQuery({ status: 'PENDING' });
   const { data: holidaysData, refetch: refetchHolidays } = useGetHolidaysQuery();
+  const { data: moneyFlowData, isLoading: isMoneyFlowLoading, refetch: refetchMoneyFlow } =
+    useGetMoneyFlowQuery({
+      workerId: moneyFlowWorkerId || undefined,
+      type: moneyFlowType,
+    });
 
   const [reviewOtClaim, { isLoading: isReviewingOt }] = useReviewOtClaimMutation();
   const [markLeave, { isLoading: isMarkingLeave }] = useMarkLeaveMutation();
@@ -86,6 +97,7 @@ export const PayrollDashboardPage: React.FC = () => {
 
   // Active Modals & Dialogs
   const [selectedWorker, setSelectedWorker] = useState<AdminWorkerSummary | null>(null);
+  const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
 
   // Mark Leave Modal (Advanced single date / date range)
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
@@ -370,7 +382,7 @@ export const PayrollDashboardPage: React.FC = () => {
             <main className="app-container relative z-10 flex-1 pt-4 sm:pt-6 pb-12 flex flex-col gap-5">
         {/* ── Mobile Tab Bar (Hidden on sm+) ── */}
         <div className="sm:hidden flex items-center justify-between gap-2">
-          <div className="glass-modern-card p-1 rounded-xl flex items-center gap-1 w-full max-w-[260px]">
+          <div className="glass-modern-card p-1 rounded-xl flex items-center gap-1 w-full max-w-[340px]">
             <button
               onClick={() => setActiveTab('ROSTER')}
               className={`flex-1 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition ${
@@ -960,6 +972,303 @@ export const PayrollDashboardPage: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        
+        {/* ─── TAB 3: MONEY FLOW & CASHFLOW LEDGER (GIVING & TAKING MONEY) ─── */}
+        {activeTab === 'MONEY_FLOW' && (
+          <div className="space-y-6">
+            {/* Money Flow KPIs Bar */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="glass-modern-card rounded-3xl p-4 sm:p-5 group">
+                <div className="text-slate-500 dark:text-slate-400 text-xs font-medium mb-1 flex items-center justify-between">
+                  <span className="font-semibold tracking-wide uppercase text-[10px]">Net Cash Disbursed</span>
+                  <Banknote className="w-3.5 h-3.5 text-amber-500" />
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 font-display">
+                  {formatCurrency(moneyFlowData?.data?.kpis?.netCashDisbursed || 0)}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-mono">
+                  Advances + Settlement Payouts
+                </p>
+              </div>
+
+              <div className="glass-modern-card rounded-3xl p-4 sm:p-5 group">
+                <div className="text-slate-500 dark:text-slate-400 text-xs font-medium mb-1 flex items-center justify-between">
+                  <span className="font-semibold tracking-wide uppercase text-[10px]">Unsettled Advances</span>
+                  <ArrowDownRight className="w-3.5 h-3.5 text-rose-500" />
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400 font-display">
+                  {formatCurrency(moneyFlowData?.data?.kpis?.unsettledAdvancesTotal || 0)}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-mono">
+                  To be deducted on next payout
+                </p>
+              </div>
+
+              <div className="glass-modern-card rounded-3xl p-4 sm:p-5 group">
+                <div className="text-slate-500 dark:text-slate-400 text-xs font-medium mb-1 flex items-center justify-between">
+                  <span className="font-semibold tracking-wide uppercase text-[10px]">Settlements Paid</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 font-display">
+                  {formatCurrency(moneyFlowData?.data?.kpis?.totalSettlementsDisbursed || 0)}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-mono">
+                  Formal cycle disbursements
+                </p>
+              </div>
+
+              <div className="glass-modern-card rounded-3xl p-4 sm:p-5 group">
+                <div className="text-slate-500 dark:text-slate-400 text-xs font-medium mb-1 flex items-center justify-between">
+                  <span className="font-semibold tracking-wide uppercase text-[10px]">Approved Overtime</span>
+                  <Zap className="w-3.5 h-3.5 text-amber-500" />
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-display">
+                  {formatCurrency(moneyFlowData?.data?.kpis?.totalOtApproved || 0)}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-mono">
+                  Total wage overtime bonuses
+                </p>
+              </div>
+            </div>
+
+            {/* Filter & Action Bar */}
+            <div className="glass-modern-card rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Category Pills */}
+                {(['ALL', 'ADVANCE', 'SETTLEMENT', 'OT'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setMoneyFlowType(type)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                      moneyFlowType === type
+                        ? 'bg-amber-500 text-slate-950 shadow-xs'
+                        : 'bg-slate-100/70 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {type === 'ALL' && 'All Activity'}
+                    {type === 'ADVANCE' && 'Cash Advances (Giving)'}
+                    {type === 'SETTLEMENT' && 'Settlements (Payouts)'}
+                    {type === 'OT' && 'Overtime Credits'}
+                  </button>
+                ))}
+
+                {/* Worker Filter Dropdown */}
+                <select
+                  value={moneyFlowWorkerId}
+                  onChange={(e) => setMoneyFlowWorkerId(e.target.value)}
+                  className="bg-slate-100/70 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-bold focus:outline-none focus:border-amber-500"
+                >
+                  <option value="">All Workers</option>
+                  {overview?.workers.map((w) => (
+                    <option key={w.workerId} value={w.workerId}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (overview?.workers?.[0]) setSelectedWorker(overview.workers[0]);
+                    setIsAdvanceModalOpen(true);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 active:scale-95 transition flex items-center gap-1.5"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Give Cash Advance</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Money Flow Activity Table & Mobile Cards */}
+            <div className="glass-modern-card rounded-3xl overflow-hidden shadow-xl border border-slate-200/80 dark:border-white/10">
+              <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between">
+                <div>
+                  <h3 className="font-black text-slate-900 dark:text-white text-base font-display flex items-center gap-2">
+                    <Banknote className="w-4 h-4 text-amber-500" />
+                    Giving & Taking Money Activity Stream
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                    Audit trail of all cash disbursements, advance deductions, and overtime credits.
+                  </p>
+                </div>
+                <span className="text-xs font-mono font-bold text-slate-400">
+                  {moneyFlowData?.data?.transactions?.length || 0} Transactions
+                </span>
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200/80 dark:border-white/10 bg-slate-100/70 dark:bg-slate-950/40 text-slate-500 dark:text-slate-400 font-mono font-bold uppercase tracking-wider text-[11px]">
+                      <th className="py-3.5 px-4">Date / Time</th>
+                      <th className="py-3.5 px-4">Worker</th>
+                      <th className="py-3.5 px-4">Type & Flow Direction</th>
+                      <th className="py-3.5 px-4 text-right">Amount</th>
+                      <th className="py-3.5 px-4 text-center">Status</th>
+                      <th className="py-3.5 px-4">Method & Note</th>
+                      <th className="py-3.5 px-4 text-right">Authorized By</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200/60 dark:divide-white/[0.06] font-medium">
+                    {(!moneyFlowData?.data?.transactions || moneyFlowData.data.transactions.length === 0) ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-slate-500">
+                          No transactions found matching the selected filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      moneyFlowData.data.transactions.map((tx) => (
+                        <tr key={tx.id} className="hover:bg-amber-500/[0.03] transition-colors">
+                          <td className="py-3 px-4 whitespace-nowrap font-mono text-slate-800 dark:text-slate-200">
+                            <div className="font-bold">
+                              {new Date(tx.date).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {new Date(tx.date).toLocaleTimeString('en-IN', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <div className="font-bold text-slate-900 dark:text-white">{tx.workerName}</div>
+                            <div className="text-[11px] text-slate-500 font-mono">{tx.workerMobile}</div>
+                          </td>
+
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            {tx.transactionType === 'CASH_ADVANCE' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/20">
+                                <ArrowDownRight className="w-3 h-3" />
+                                <span>Giving Advance</span>
+                              </span>
+                            )}
+                            {tx.transactionType === 'SETTLEMENT_PAYOUT' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>{tx.category}</span>
+                              </span>
+                            )}
+                            {tx.transactionType === 'OVERTIME_CREDIT' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                                <Zap className="w-3 h-3" />
+                                <span>Overtime Credit</span>
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-4 text-right whitespace-nowrap font-bold">
+                            <span
+                              className={`text-sm font-display ${
+                                tx.direction === 'GIVING_TO_WORKER'
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-emerald-600 dark:text-emerald-400'
+                              }`}
+                            >
+                              {formatCurrency(tx.amount)}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                tx.status === 'SETTLED' || tx.status === 'COMPLETED'
+                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                                  : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              }`}
+                            >
+                              {tx.status}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-4 text-slate-700 dark:text-slate-300">
+                            <span className="font-mono text-[10px] uppercase font-bold text-slate-400 mr-1.5">
+                              {tx.paymentMethod}
+                            </span>
+                            <span>{tx.notes}</span>
+                          </td>
+
+                          <td className="py-3 px-4 text-right whitespace-nowrap text-slate-500 font-mono text-[11px]">
+                            {tx.authorizedBy}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Stacked Transactions View */}
+              <div className="md:hidden divide-y divide-slate-200/80 dark:divide-white/10">
+                {(!moneyFlowData?.data?.transactions || moneyFlowData.data.transactions.length === 0) ? (
+                  <p className="py-12 text-center text-xs text-slate-500">
+                    No transactions found.
+                  </p>
+                ) : (
+                  moneyFlowData.data.transactions.map((tx) => (
+                    <div key={tx.id} className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 dark:text-white text-xs">{tx.workerName}</span>
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                                tx.transactionType === 'CASH_ADVANCE'
+                                  ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                  : tx.transactionType === 'SETTLEMENT_PAYOUT'
+                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                              }`}
+                            >
+                              {tx.category}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            {new Date(tx.date).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })}{' '}
+                            • via {tx.paymentMethod}
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <span
+                            className={`text-sm font-black font-display ${
+                              tx.direction === 'GIVING_TO_WORKER'
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {formatCurrency(tx.amount)}
+                          </span>
+                          <span className="text-[9px] text-slate-400 block font-mono">
+                            {tx.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      {tx.notes && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-100/60 dark:bg-white/[0.02] p-1.5 rounded-lg border border-slate-200/50 dark:border-white/5">
+                          {tx.notes}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         )}
 

@@ -131,7 +131,10 @@ export class PayrollRepository implements IPayrollRepository {
       if (filter.startDate) query.date.$gte = filter.startDate;
       if (filter.endDate) query.date.$lte = filter.endDate;
     }
-    return OtClaim.find(query).populate('workerId', 'name mobile dailyWage').sort({ date: -1 });
+    return OtClaim.find(query)
+      .populate('workerId', 'name mobile dailyWage')
+      .populate('reviewedBy', 'name')
+      .sort({ date: -1 });
   }
 
   async updateOtClaim(id: string, update: Partial<IOtClaim>): Promise<IOtClaim | null> {
@@ -244,7 +247,10 @@ export class PayrollRepository implements IPayrollRepository {
     const query: Record<string, any> = {};
     if (filter.workerId) query.workerId = filter.workerId;
     if (filter.isSettled !== undefined) query.isSettled = filter.isSettled;
-    return CashAdvance.find(query).populate('workerId', 'name mobile').sort({ date: -1 });
+    return CashAdvance.find(query)
+      .populate('workerId', 'name mobile')
+      .populate('givenBy', 'name')
+      .sort({ date: -1 });
   }
 
   async findCashAdvanceById(id: string): Promise<ICashAdvance | null> {

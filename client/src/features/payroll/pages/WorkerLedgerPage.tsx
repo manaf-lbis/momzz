@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Wallet,
+  Banknote,
   Calendar as CalendarIcon,
   Clock,
   CheckCircle2,
@@ -568,6 +569,38 @@ export const WorkerLedgerPage: React.FC = () => {
           >
             {metrics.hasUsedMonthlyPaidLeave ? 'Used this month' : '1 Free Day Ready'}
           </span>
+        </div>
+
+                {/* ── Money Flow Breakdown (Giving & Taking Transparency) ── */}
+        <div className="glass-modern-card rounded-2xl p-4 border border-slate-200/80 dark:border-white/10 shadow-xs">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200/60 dark:border-white/5">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono flex items-center gap-1.5">
+              <Banknote className="w-4 h-4 text-amber-500" />
+              Earnings & Deductions Cashflow Breakdown
+            </span>
+            <span className="text-[11px] text-slate-400 font-mono">
+              Net: <strong className="text-emerald-600 dark:text-emerald-400 font-display">{formatCurrency(metrics.netUnsettledEarnings)}</strong>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+            <div className="p-2.5 rounded-xl bg-slate-100/50 dark:bg-white/[0.02] border border-slate-200/50 dark:border-white/5">
+              <span className="text-slate-400 text-[10px] uppercase font-mono block">Gross Wages Earned</span>
+              <span className="font-bold text-slate-900 dark:text-white">+{formatCurrency(metrics.totalGrossWages)}</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <span className="text-emerald-700 dark:text-emerald-300 text-[10px] uppercase font-mono block">Overtime Added</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">+{formatCurrency(metrics.totalOtAmount)}</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
+              <span className="text-rose-700 dark:text-rose-300 text-[10px] uppercase font-mono block">Leave Deductions</span>
+              <span className="font-bold text-rose-600 dark:text-rose-400">-{formatCurrency(metrics.totalLeaveDeduction)}</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
+              <span className="text-rose-700 dark:text-rose-300 text-[10px] uppercase font-mono block">Cash Advances Taken</span>
+              <span className="font-bold text-rose-600 dark:text-rose-400">-{formatCurrency(metrics.totalAdvances)}</span>
+            </div>
+          </div>
         </div>
 
         {/* ─── CALENDAR VIEW ─── */}
