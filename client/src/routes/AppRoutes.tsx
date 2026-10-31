@@ -27,6 +27,8 @@ const VehiclePhotoPage = lazy(() => import('../features/jobs/pages/VehiclePhotoP
 const TrackServicePage = lazy(() => import('../features/jobs/pages/TrackServicePage').then((m) => ({ default: m.TrackServicePage })));
 const SalesPage = lazy(() => import('../features/catalog/pages/SalesPage').then((m) => ({ default: m.SalesPage })));
 const TermsPage = lazy(() => import('../features/legal/pages/TermsPage').then((m) => ({ default: m.TermsPage })));
+const PayrollRoute = lazy(() => import('../features/payroll/pages/PayrollRoute').then((m) => ({ default: m.PayrollRoute })));
+const WorkerLedgerPage = lazy(() => import('../features/payroll/pages/WorkerLedgerPage').then((m) => ({ default: m.WorkerLedgerPage })));
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -71,6 +73,9 @@ export const AppRoutes: React.FC = () => {
               <Route path="/top-performers" element={<Navigate to="/dashboard" replace />} />
               <Route path="/work-logs" element={<WorkLogsPage />} />
               <Route path="/sales" element={<SalesPage />} />
+              <Route path="/payroll" element={<PayrollRoute />} />
+              <Route path="/payroll/:workerId" element={<WorkerLedgerPage />} />
+              <Route path="/my-earnings" element={<WorkerLedgerPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/tokens" element={<McpTokensPage />} />
               <Route path="/profile/tokens" element={<McpTokensPage />} />

@@ -14,6 +14,7 @@ import {
   FileText,
   ChevronRight,
   PackagePlus,
+  Wallet,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react';
@@ -135,6 +136,12 @@ export const LeftPanel: React.FC = () => {
       path: '/sales',
       icon: TrendingUp,
       exact: true,
+    },
+    {
+      label: isAdmin ? 'Payroll & Wages' : 'My Daily Earnings',
+      path: '/payroll',
+      icon: Wallet,
+      exact: false,
     },
   ];
 

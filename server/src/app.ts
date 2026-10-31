@@ -127,6 +127,7 @@ import jobRouter from './features/jobs/job.router';
 import inventoryRouter from './features/inventory/inventory.router';
 import publicRouter from './features/users/public.router';
 import catalogRouter from './features/catalog/catalog.router';
+import payrollRouter from './features/payroll/payroll.router';
 import mcpRouter from './features/mcp/mcp.router';
 
 // API Routes
@@ -135,6 +136,7 @@ app.use('/api/jobs', jobRouter);
 app.use('/api/inventory', inventoryRouter);
 app.use('/api/public', publicRouter);
 app.use('/api/catalog', catalogRouter);
+app.use('/api/payroll', payrollRouter);
 
 // Integrated Model Context Protocol (MCP) Endpoints (/mcp, /sse, /messages, /oauth/token)
 app.use(mcpRouter);

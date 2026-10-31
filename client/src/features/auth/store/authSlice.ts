@@ -22,6 +22,8 @@ export interface User {
   acceptedTermsVersion?: string;
   acceptedTermsAt?: string | null;
   needsTermsAcceptance?: boolean;
+  dailyWage?: number;
+  dailyWageEffectiveDate?: string;
 }
 
 interface AuthState {

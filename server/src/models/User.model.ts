@@ -1,6 +1,12 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { ROLES, UserRole } from '../shared/constants/status';
 
+export interface IWageHistoryItem {
+  wage: number;
+  effectiveDate: Date;
+  createdAt: Date;
+}
+
 export interface IUser extends Document {
   name: string;
   mobile: string;
@@ -18,6 +24,9 @@ export interface IUser extends Document {
   loginAudit: Array<{ timestamp: Date; status: 'SUCCESS' | 'FAILED'; ipAddress: string }>;
   acceptedTermsVersion?: string;
   acceptedTermsAt?: Date;
+  dailyWage?: number;
+  dailyWageEffectiveDate?: Date;
+  wageHistory?: IWageHistoryItem[];
   mcpToken?: string;
   mcpTokenHash?: string;
   mcpTokenCreatedAt?: Date;
@@ -98,6 +107,22 @@ const UserSchema: Schema = new Schema(
       type: Date,
       default: null,
     },
+    dailyWage: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    dailyWageEffectiveDate: {
+      type: Date,
+      default: null,
+    },
+    wageHistory: [
+      {
+        wage: { type: Number, required: true },
+        effectiveDate: { type: Date, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     mcpToken: {
       type: String,
       default: null,

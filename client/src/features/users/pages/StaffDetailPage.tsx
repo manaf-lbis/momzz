@@ -22,6 +22,7 @@ import {
   Timer,
   FileText,
   ShieldAlert,
+  Wallet,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
@@ -458,6 +459,14 @@ export const StaffDetailPage: React.FC = () => {
 
             {/* Right: Quick Action Controls */}
             <div className="flex items-center gap-2 flex-wrap shrink-0">
+              <button
+                type="button"
+                onClick={() => navigate(`/payroll/${staffId}`)}
+                className="px-3.5 py-2 rounded-xl glass-ghost-btn text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-2xs hover:border-amber-400/50"
+              >
+                <Wallet className="w-3.5 h-3.5 text-amber-500" />
+                <span>Payroll Ledger</span>
+              </button>
               <button
                 type="button"
                 onClick={() => {

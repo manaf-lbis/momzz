@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Home,
+  Wallet,
   Car,
   Clock,
   Package,
@@ -38,6 +39,7 @@ export const QuickAccessDock: React.FC = () => {
     currentPath === '/jobs' ||
     (currentPath.startsWith('/jobs/') && !currentPath.includes('/create'));
   const isLogsActive = currentPath === '/work-logs';
+  const isPayrollActive = currentPath.startsWith('/payroll') || currentPath.startsWith('/my-earnings');
   const isInventoryActive = currentPath.startsWith('/inventory') || currentPath.startsWith('/sales');
   const isProfileActive = currentPath === '/profile';
 
@@ -92,6 +94,21 @@ export const QuickAccessDock: React.FC = () => {
             <Clock
               className={`w-5 h-5 transition-transform ${
                 isLogsActive
+                  ? 'text-slate-950 dark:text-slate-950 stroke-[2.4]'
+                  : 'text-slate-600 dark:text-slate-300 group-hover:scale-110'
+              }`}
+            />
+          </DockIcon>
+
+          {/* Payroll / Daily Earnings */}
+          <DockIcon
+            title={user.role === 'ADMIN' ? 'Payroll' : 'Earnings'}
+            active={isPayrollActive}
+            onClick={() => navigate('/payroll')}
+          >
+            <Wallet
+              className={`w-5 h-5 transition-transform ${
+                isPayrollActive
                   ? 'text-slate-950 dark:text-slate-950 stroke-[2.4]'
                   : 'text-slate-600 dark:text-slate-300 group-hover:scale-110'
               }`}
