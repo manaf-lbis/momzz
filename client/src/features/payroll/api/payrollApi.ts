@@ -1,380 +1,217 @@
 import { apiSlice } from '../../auth/api/apiSlice';
 
-export interface LedgerDayEntry {
+export interface InlineTransactionItem {
+  id: string;
+  type: 'PAYOUT_SETTLEMENT' | 'ADVANCE_TAKEN';
+  amount: number;
+  notes?: string;
+  paymentMethod?: string;
+  referenceNote?: string;
+  carriedForwardBalance?: number;
+}
+
+export interface SingleSheetDayEntry {
   date: string; // YYYY-MM-DD
   dayName: string;
-  dayType: 'WORKING' | 'SUNDAY' | 'HOLIDAY' | 'PAID_LEAVE' | 'LEAVE' | 'HALF_DAY';
+  dayType: 'WORKING' | 'SUNDAY' | 'HOLIDAY' | 'FULL_LEAVE' | 'HALF_LEAVE';
   holidayTitle?: string;
-  leaveId?: string;
-  leaveReason?: string;
+  adjustmentId?: string;
+  adjustmentNote?: string;
   baseWage: number;
   leaveDeduction: number;
   netDayWage: number;
   otHours: number;
   otAmount: number;
   otStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
-  advancesAmount?: number;
-  settlementPaid?: number;
-  totalDayEarnings: number;
+  netDailyPay: number;
   isSettled: boolean;
+  inlineTransactions: InlineTransactionItem[];
+  runningCumulativeBalance: number;
 }
 
-export interface CashAdvanceItem {
-  _id: string;
-  workerId: string;
-  amount: number;
-  date: string;
-  reason?: string;
-  isSettled: boolean;
-  createdAt: string;
-}
-
-
-export interface MoneyFlowItem {
-  id: string;
-  date: string;
-  workerId: string;
-  workerName: string;
-  workerMobile: string;
-  transactionType: 'CASH_ADVANCE' | 'SETTLEMENT_PAYOUT' | 'OVERTIME_CREDIT';
-  direction: 'GIVING_TO_WORKER' | 'CREDIT_TO_WAGE';
-  category: string;
-  amount: number;
-  paymentMethod: string;
-  status: string;
-  payoutType?: 'FULL' | 'PARTIAL';
-  notes?: string;
-  authorizedBy: string;
-  carriedForwardBalance?: number;
-  netPayable?: number;
-  settlementId?: string;
-}
-
-export interface MoneyFlowData {
-  transactions: MoneyFlowItem[];
-  kpis: {
-    totalCashAdvances: number;
-    unsettledAdvancesTotal: number;
-    totalSettlementsDisbursed: number;
-    totalOtApproved: number;
-    netCashDisbursed: number;
-  };
-}
-
-export interface PayrollSettlementItem {
-  _id: string;
-  workerId: {
-    _id: string;
-    name: string;
-    mobile: string;
-    dailyWage: number;
-  } | string;
-  workerName?: string;
-  workerMobile?: string;
-  baseDailyWageRate?: number;
-  startDate: string;
-  endDate: string;
-  totalWorkingDays: number;
-  totalFullLeaveDays?: number;
-  totalHalfDays?: number;
-  totalPaidLeaveDays?: number;
-  totalHolidayDays: number;
-  totalSundayDays?: number;
-  totalPaidDays?: number;
-  totalCalendarDays?: number;
-  totalLeaveDays: number;
-  grossWages: number;
-  totalLeaveDeduction: number;
-  netBaseWage?: number;
-  totalOtHours: number;
-  otHourlyRate?: number;
-  totalOtAmount: number;
-  totalCashAdvances: number;
-  previousBalanceCarriedForward?: number;
-  netPayable: number;
-  amountPaid: number;
-  carriedForwardBalance?: number;
-  payoutType?: 'FULL' | 'PARTIAL';
-  paymentMethod: 'CASH' | 'UPI' | 'BANK_TRANSFER';
-  referenceNote?: string;
-  settledByName?: string;
-  settledAt: string;
-  itemizedDays?: Array<{
-    date: string;
-    dayName: string;
-    dayType: string;
-    baseWage: number;
-    leaveDeduction: number;
-    netDayWage: number;
-    otHours: number;
-    otAmount: number;
-    advancesDeducted?: number;
-    totalDayEarnings: number;
-    holidayTitle?: string;
-    leaveReason?: string;
-  }>;
-}
-
-export interface WorkerLedgerResult {
+export interface WorkerSingleSheetData {
   worker: {
-    _id: string;
+    id: string;
     name: string;
     mobile: string;
     dailyWage: number;
-    dailyWageEffectiveDate?: string;
-    profileImageUrl?: string;
+    lastSettledDate?: string;
   };
   period: {
     startDate: string;
     endDate: string;
+    totalDays: number;
   };
-  metrics: {
-    workingDays: number;
-    leaveDays: number;
-    halfDays: number;
-    paidLeaveDays: number;
-    holidayDays: number;
-    sundayDays: number;
-    totalGrossWages: number;
-    totalLeaveDeduction: number;
-    totalOtHours: number;
-    totalOtAmount: number;
-    totalAdvances: number;
-    carriedForwardBalance: number;
-    netUnsettledEarnings: number;
-    hasUsedMonthlyPaidLeave: boolean;
+  kpis: {
+    totalWorkingDays: number;
+    totalSundays: number;
+    totalHolidayDays: number;
+    totalFullLeaveDays: number;
+    totalHalfDays: number;
+    grossWages: number;
+    totalLeaveDeductions: number;
+    netBaseWages: number;
+    totalApprovedOtHours: number;
+    totalApprovedOtAmount: number;
+    totalEarnings: number;
+    totalUnsettledAdvances: number;
+    netPayable: number;
   };
-  ledger: LedgerDayEntry[];
-  unsettledAdvances: CashAdvanceItem[];
-  recentSettlements: PayrollSettlementItem[];
+  days: SingleSheetDayEntry[];
 }
 
-export interface AdminWorkerSummary {
+export interface WorkerSummaryItem {
   workerId: string;
   name: string;
   mobile: string;
+  role: string;
   dailyWage: number;
-  unsettledDaysCount: number;
-  unsettledBalance: number;
-  pendingOtHours: number;
-  lastSettlementDate?: string;
+  lastSettledDate?: string;
+  unsettledGross: number;
+  unsettledDeductions: number;
+  unsettledOtAmount: number;
+  unsettledAdvances: number;
+  netPayable: number;
+  pendingOtCount: number;
 }
 
-export interface AdminOverviewResult {
-  workers: AdminWorkerSummary[];
-  pendingOtClaimsCount: number;
-  totalUnsettledWages: number;
-}
-
-export interface OtClaimItem {
-  _id: string;
-  workerId: {
-    _id: string;
-    name: string;
-    mobile: string;
-    dailyWage: number;
-  };
+export interface PendingOtClaimItem {
+  id: string;
+  workerId: string;
+  workerName: string;
+  workerMobile: string;
   date: string;
-  hours: number;
-  ratePerHour: number;
-  totalAmount: number;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  otHours: number;
+  potentialAmount: number;
   note?: string;
-  rejectionReason?: string;
-  isSettled: boolean;
   createdAt: string;
 }
 
-export interface HolidayItem {
+export interface AdminOverviewData {
+  kpis: {
+    totalWorkers: number;
+    totalUnsettledNet: number;
+    totalPendingOtCount: number;
+  };
+  workers: WorkerSummaryItem[];
+  pendingOtClaims: PendingOtClaimItem[];
+}
+
+export interface GarageHolidayItem {
   _id: string;
   date: string;
   title: string;
-  createdAt: string;
-}
-
-export interface CommonCalendarResult {
-  holidays: HolidayItem[];
-  leaves: Array<{
-    _id: string;
-    workerId: string;
-    workerName: string;
-    date: string;
-    leaveType: 'FULL' | 'HALF';
-    isMonthlyPaidLeave: boolean;
-    reason?: string;
-  }>;
-  workers: Array<{ _id: string; name: string; mobile: string; dailyWage: number }>;
+  isPaid: boolean;
 }
 
 export const payrollApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getWorkerLedger: builder.query<
-      { success: boolean; data: WorkerLedgerResult },
-      { workerId?: string; startDate?: string; endDate?: string } | void
-    >({
-      query: (params) => ({
-        url: '/payroll/ledger',
-        params: params || {},
-      }),
-      providesTags: ['Payroll'],
-    }),
-
-    getAdminOverview: builder.query<{ success: boolean; data: AdminOverviewResult }, void>({
+    getAdminOverview: builder.query<{ success: boolean; data: AdminOverviewData }, void>({
       query: () => '/payroll/admin/overview',
-      providesTags: ['Payroll', 'OtClaim'],
+      providesTags: ['Payroll'],
     }),
 
-    getCommonCalendar: builder.query<
-      { success: boolean; data: CommonCalendarResult },
-      { year?: number; month?: number } | void
+    getWorkerSingleSheet: builder.query<
+      { success: boolean; data: WorkerSingleSheetData },
+      { workerId: string; startDate?: string; endDate?: string; includeSettledHistory?: boolean }
+    >({
+      query: ({ workerId, ...params }) => ({
+        url: `/payroll/worker/${workerId}/single-sheet`,
+        params,
+      }),
+      providesTags: (_result, _error, arg) => [{ type: 'Payroll', id: arg.workerId }],
+    }),
+
+    getMySingleSheet: builder.query<
+      { success: boolean; data: WorkerSingleSheetData },
+      { startDate?: string; endDate?: string; includeSettledHistory?: boolean } | void
     >({
       query: (params) => ({
-        url: '/payroll/admin/common-calendar',
+        url: '/payroll/worker/me/single-sheet',
         params: params || {},
       }),
       providesTags: ['Payroll'],
     }),
 
-    getAdminOtClaims: builder.query<
-      { success: boolean; data: OtClaimItem[] },
-      { status?: string; workerId?: string } | void
+    markBatchLeave: builder.mutation<
+      { success: boolean; data: any },
+      {
+        workerIds: string[];
+        dates: string[] | string | { startDate: string; endDate: string };
+        type?: 'FULL_LEAVE' | 'HALF_LEAVE';
+        note?: string;
+      }
     >({
-      query: (params) => ({
-        url: '/payroll/admin/ot-claims',
-        params: params || {},
+      query: (body) => ({
+        url: '/payroll/leave/batch',
+        method: 'POST',
+        body,
       }),
-      providesTags: ['OtClaim'],
-    }),
-
-    getWorkerOtClaims: builder.query<{ success: boolean; data: OtClaimItem[] }, void>({
-      query: () => '/payroll/my-ot-claims',
-      providesTags: ['OtClaim'],
+      invalidatesTags: ['Payroll'],
     }),
 
     claimOvertime: builder.mutation<
-      { success: boolean; data: OtClaimItem },
-      { date: string; hours: number; note?: string }
+      { success: boolean; data: any },
+      { date: string; otHours: number; note?: string }
     >({
       query: (body) => ({
-        url: '/payroll/ot-claim',
+        url: '/payroll/ot/claim',
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['OtClaim', 'Payroll'],
+      invalidatesTags: ['Payroll'],
     }),
 
-    cancelOtClaim: builder.mutation<{ success: boolean }, string>({
-      query: (id) => ({
-        url: `/payroll/ot-claim/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: ['OtClaim', 'Payroll'],
-    }),
-
-    reviewOtClaim: builder.mutation<
-      { success: boolean; data: OtClaimItem },
-      { id: string; status: 'APPROVED' | 'REJECTED'; rejectionReason?: string }
+    updateOtStatus: builder.mutation<
+      { success: boolean; data: any },
+      { id: string; status: 'APPROVED' | 'REJECTED'; note?: string }
     >({
       query: ({ id, ...body }) => ({
-        url: `/payroll/admin/ot-claim/${id}/review`,
-        method: 'PATCH',
-        body,
-      }),
-      invalidatesTags: ['OtClaim', 'Payroll'],
-    }),
-
-    markLeave: builder.mutation<
-      { success: boolean; data: any },
-      { workerId: string; date: string; endDate?: string; leaveType: 'FULL' | 'HALF'; reason?: string }
-    >({
-      query: (body) => ({
-        url: '/payroll/admin/leave',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['Payroll'],
-    }),
-
-    toggleLeave: builder.mutation<
-      { success: boolean; data: any },
-      { workerId: string; date: string; leaveType: 'FULL' | 'HALF' | 'CLEAR'; reason?: string }
-    >({
-      query: (body) => ({
-        url: '/payroll/admin/leave/toggle',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['Payroll'],
-    }),
-
-    deleteLeave: builder.mutation<{ success: boolean }, string>({
-      query: (id) => ({
-        url: `/payroll/admin/leave/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: ['Payroll'],
-    }),
-
-    recordCashAdvance: builder.mutation<
-      { success: boolean; data: CashAdvanceItem },
-      { workerId: string; amount: number; date: string; reason?: string }
-    >({
-      query: (body) => ({
-        url: '/payroll/admin/advance',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['Payroll'],
-    }),
-
-    updateCashAdvance: builder.mutation<
-      { success: boolean; data: CashAdvanceItem },
-      { id: string; amount: number; date: string; reason?: string }
-    >({
-      query: ({ id, ...body }) => ({
-        url: `/payroll/admin/advance/${id}`,
+        url: `/payroll/ot/${id}/status`,
         method: 'PATCH',
         body,
       }),
       invalidatesTags: ['Payroll'],
     }),
 
-    deleteCashAdvance: builder.mutation<{ success: boolean }, string>({
-      query: (id) => ({
-        url: `/payroll/admin/advance/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: ['Payroll'],
-    }),
-
-    getHolidays: builder.query<{ success: boolean; data: HolidayItem[] }, void>({
-      query: () => '/payroll/holidays',
-      providesTags: ['Payroll'],
-    }),
-
-    declareHoliday: builder.mutation<
-      { success: boolean; data: HolidayItem },
-      { date: string; title: string }
+    settlePayroll: builder.mutation<
+      { success: boolean; data: any },
+      {
+        workerId: string;
+        endDate?: string;
+        amountPaid?: number;
+        paymentMethod: 'CASH' | 'UPI' | 'BANK_TRANSFER';
+        referenceNote?: string;
+      }
     >({
       query: (body) => ({
-        url: '/payroll/admin/holiday',
+        url: '/payroll/settle',
         method: 'POST',
         body,
       }),
       invalidatesTags: ['Payroll'],
     }),
 
-    deleteHoliday: builder.mutation<{ success: boolean }, string>({
-      query: (id) => ({
-        url: `/payroll/admin/holiday/${id}`,
-        method: 'DELETE',
+    recordAdvance: builder.mutation<
+      { success: boolean; data: any },
+      {
+        workerId: string;
+        amount: number;
+        date?: string;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({
+        url: '/payroll/advance',
+        method: 'POST',
+        body,
       }),
       invalidatesTags: ['Payroll'],
     }),
 
     updateWorkerWage: builder.mutation<
       { success: boolean; data: any },
-      { workerId: string; dailyWage: number; effectiveDate?: string }
+      { workerId: string; dailyWage: number }
     >({
       query: (body) => ({
         url: '/payroll/admin/wage-rate',
@@ -384,64 +221,44 @@ export const payrollApi = apiSlice.injectEndpoints({
       invalidatesTags: ['Payroll', 'AllUsers'],
     }),
 
-    settlePayroll: builder.mutation<
-      { success: boolean; data: PayrollSettlementItem },
-      {
-        workerId: string;
-        endDate: string;
-        paymentMethod: 'CASH' | 'UPI' | 'BANK_TRANSFER';
-        referenceNote?: string;
-        amountPaid?: number;
-      }
+    getHolidays: builder.query<{ success: boolean; data: GarageHolidayItem[] }, void>({
+      query: () => '/payroll/holiday',
+      providesTags: ['Payroll'],
+    }),
+
+    declareHoliday: builder.mutation<
+      { success: boolean; data: GarageHolidayItem },
+      { date: string; title: string; isPaid?: boolean }
     >({
       query: (body) => ({
-        url: '/payroll/admin/settle',
+        url: '/payroll/holiday',
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Payroll', 'OtClaim', 'Settlement'],
+      invalidatesTags: ['Payroll'],
     }),
 
-    getMoneyFlow: builder.query<
-      { success: boolean; data: MoneyFlowData },
-      { workerId?: string; type?: 'ALL' | 'ADVANCE' | 'SETTLEMENT' | 'OT'; startDate?: string; endDate?: string } | void
-    >({
-      query: (params) => ({
-        url: '/payroll/admin/money-flow',
-        params: params || {},
+    deleteHoliday: builder.mutation<{ success: boolean }, string>({
+      query: (id) => ({
+        url: `/payroll/holiday/${id}`,
+        method: 'DELETE',
       }),
-      providesTags: ['Payroll', 'Settlement', 'OtClaim'],
-    }),
-
-    getSettlements: builder.query<{ success: boolean; data: PayrollSettlementItem[] }, string | void>({
-      query: (workerId) => ({
-        url: workerId ? `/payroll/settlements/${workerId}` : '/payroll/settlements',
-      }),
-      providesTags: ['Settlement'],
+      invalidatesTags: ['Payroll'],
     }),
   }),
 });
 
 export const {
-  useGetWorkerLedgerQuery,
   useGetAdminOverviewQuery,
-  useGetCommonCalendarQuery,
-  useGetAdminOtClaimsQuery,
-  useGetWorkerOtClaimsQuery,
+  useGetWorkerSingleSheetQuery,
+  useGetMySingleSheetQuery,
+  useMarkBatchLeaveMutation,
   useClaimOvertimeMutation,
-  useCancelOtClaimMutation,
-  useReviewOtClaimMutation,
-  useMarkLeaveMutation,
-  useToggleLeaveMutation,
-  useDeleteLeaveMutation,
-  useRecordCashAdvanceMutation,
-  useUpdateCashAdvanceMutation,
-  useDeleteCashAdvanceMutation,
+  useUpdateOtStatusMutation,
+  useSettlePayrollMutation,
+  useRecordAdvanceMutation,
+  useUpdateWorkerWageMutation,
   useGetHolidaysQuery,
   useDeclareHolidayMutation,
   useDeleteHolidayMutation,
-  useUpdateWorkerWageMutation,
-  useSettlePayrollMutation,
-  useGetSettlementsQuery,
-  useGetMoneyFlowQuery,
 } = payrollApi;

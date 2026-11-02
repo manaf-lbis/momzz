@@ -4,15 +4,13 @@ import { authMiddleware } from '../../shared/middleware/auth.middleware';
 import { adminMiddleware } from '../../shared/middleware/admin.middleware';
 import { validateRequest } from '../../shared/middleware/validate.middleware';
 import {
+  batchLeaveSchema,
   otClaimSchema,
-  reviewOtClaimSchema,
-  markLeaveSchema,
-  toggleLeaveSchema,
-  recordAdvanceSchema,
-  updateAdvanceSchema,
-  declareHolidaySchema,
-  updateWageSchema,
+  otStatusSchema,
   settlePayrollSchema,
+  advanceSchema,
+  holidaySchema,
+  updateWageSchema,
 } from './payroll.validators';
 
 const router = Router();
@@ -20,69 +18,62 @@ const router = Router();
 // Protect all payroll routes with authMiddleware
 router.use(authMiddleware);
 
-// --- Worker & Shared Endpoints ---
-router.get('/ledger', PayrollController.getLedger);
-router.post('/ot-claim', validateRequest({ body: otClaimSchema }), PayrollController.claimOvertime);
-router.delete('/ot-claim/:id', PayrollController.cancelOtClaim);
-router.get('/my-ot-claims', PayrollController.getWorkerOtClaims);
-router.get('/holidays', PayrollController.getHolidays);
-router.get('/settlements', PayrollController.getSettlements);
-router.get('/settlements/:workerId', PayrollController.getSettlements);
-
-// --- Admin Only Endpoints ---
-router.get('/admin/overview', adminMiddleware, PayrollController.getAdminOverview);
-router.get('/admin/common-calendar', adminMiddleware, PayrollController.getCommonCalendar);
-router.get('/admin/ot-claims', adminMiddleware, PayrollController.getAdminOtClaims);
-router.patch(
-  '/admin/ot-claim/:id/review',
+// --- 1. Leave Endpoints ---
+router.post(
+  '/leave/batch',
   adminMiddleware,
-  validateRequest({ body: reviewOtClaimSchema }),
-  PayrollController.reviewOtClaim
+  validateRequest({ body: batchLeaveSchema }),
+  PayrollController.markBatchLeave
 );
-
+router.post(
+  '/admin/leave/batch',
+  adminMiddleware,
+  validateRequest({ body: batchLeaveSchema }),
+  PayrollController.markBatchLeave
+);
 router.post(
   '/admin/leave',
   adminMiddleware,
-  validateRequest({ body: markLeaveSchema }),
-  PayrollController.markLeave
+  validateRequest({ body: batchLeaveSchema }),
+  PayrollController.markBatchLeave
 );
-router.post(
-  '/admin/leave/toggle',
-  adminMiddleware,
-  validateRequest({ body: toggleLeaveSchema }),
-  PayrollController.toggleLeave
-);
-router.delete('/admin/leave/:id', adminMiddleware, PayrollController.deleteLeave);
 
+// --- 2. Overtime Engine Endpoints ---
 router.post(
-  '/admin/advance',
-  adminMiddleware,
-  validateRequest({ body: recordAdvanceSchema }),
-  PayrollController.recordAdvance
+  '/ot/claim',
+  validateRequest({ body: otClaimSchema }),
+  PayrollController.claimOvertime
+);
+router.post(
+  '/ot-claim',
+  validateRequest({ body: otClaimSchema }),
+  PayrollController.claimOvertime
 );
 router.patch(
-  '/admin/advance/:id',
+  '/ot/:id/status',
   adminMiddleware,
-  validateRequest({ body: updateAdvanceSchema }),
-  PayrollController.updateAdvance
+  validateRequest({ body: otStatusSchema }),
+  PayrollController.updateOtStatus
 );
-router.delete('/admin/advance/:id', adminMiddleware, PayrollController.deleteAdvance);
-
-router.post(
-  '/admin/holiday',
-  adminMiddleware,
-  validateRequest({ body: declareHolidaySchema }),
-  PayrollController.declareHoliday
-);
-router.delete('/admin/holiday/:id', adminMiddleware, PayrollController.deleteHoliday);
-
 router.patch(
-  '/admin/wage-rate',
+  '/admin/ot-claim/:id/review',
   adminMiddleware,
-  validateRequest({ body: updateWageSchema }),
-  PayrollController.updateWorkerWage
+  validateRequest({ body: otStatusSchema }),
+  PayrollController.updateOtStatus
 );
 
+// --- 3. Single-Sheet Ledger Endpoints ---
+router.get('/worker/me/single-sheet', PayrollController.getMySingleSheet);
+router.get('/ledger', PayrollController.getMySingleSheet);
+router.get('/worker/:workerId/single-sheet', PayrollController.getWorkerSingleSheet);
+
+// --- 4. Settlement & Cash Advances ---
+router.post(
+  '/settle',
+  adminMiddleware,
+  validateRequest({ body: settlePayrollSchema }),
+  PayrollController.settlePayroll
+);
 router.post(
   '/admin/settle',
   adminMiddleware,
@@ -90,11 +81,48 @@ router.post(
   PayrollController.settlePayroll
 );
 
-
-router.get(
-  '/admin/money-flow',
+router.post(
+  '/advance',
   adminMiddleware,
-  PayrollController.getMoneyFlow
+  validateRequest({ body: advanceSchema }),
+  PayrollController.recordAdvance
 );
+router.post(
+  '/admin/advance',
+  adminMiddleware,
+  validateRequest({ body: advanceSchema }),
+  PayrollController.recordAdvance
+);
+
+// --- 5. Admin Overview & Management ---
+router.get('/admin/overview', adminMiddleware, PayrollController.getAdminOverview);
+router.patch(
+  '/admin/wage-rate',
+  adminMiddleware,
+  validateRequest({ body: updateWageSchema }),
+  PayrollController.updateWorkerWage
+);
+
+// --- 6. Garage Holidays ---
+router.get('/holiday', PayrollController.getHolidays);
+router.get('/holidays', PayrollController.getHolidays);
+router.post(
+  '/holiday',
+  adminMiddleware,
+  validateRequest({ body: holidaySchema }),
+  PayrollController.declareHoliday
+);
+router.post(
+  '/admin/holiday',
+  adminMiddleware,
+  validateRequest({ body: holidaySchema }),
+  PayrollController.declareHoliday
+);
+router.delete('/holiday/:id', adminMiddleware, PayrollController.deleteHoliday);
+router.delete('/admin/holiday/:id', adminMiddleware, PayrollController.deleteHoliday);
+
+// --- 7. Deletion & Cleanup ---
+router.delete('/adjustment/:id', adminMiddleware, PayrollController.deleteAdjustment);
+router.delete('/admin/leave/:id', adminMiddleware, PayrollController.deleteAdjustment);
 
 export default router;

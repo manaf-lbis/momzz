@@ -26,6 +26,7 @@ export interface IUser extends Document {
   acceptedTermsAt?: Date;
   dailyWage?: number;
   dailyWageEffectiveDate?: Date;
+  lastSettledDate?: Date;
   wageHistory?: IWageHistoryItem[];
   mcpToken?: string;
   mcpTokenHash?: string;

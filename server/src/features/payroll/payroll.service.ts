@@ -1,1083 +1,686 @@
 import mongoose from 'mongoose';
-import { IPayrollRepository, PayrollRepository } from './payroll.repository';
-import { IOtClaim, OtClaimStatus } from '../../models/OtClaim.model';
-import { IPayrollLeave, LeaveType } from '../../models/PayrollLeave.model';
-import { ICashAdvance } from '../../models/CashAdvance.model';
-import { IHoliday } from '../../models/Holiday.model';
-import { IPayrollSettlement, PaymentMethod, PayoutType } from '../../models/PayrollSettlement.model';
+import { PayrollRepository } from './payroll.repository';
 import { IUser } from '../../models/User.model';
+import { IWageAdjustment } from '../../models/WageAdjustment.model';
+import { IGarageHoliday } from '../../models/GarageHoliday.model';
+import { IWageTransaction } from '../../models/WageTransaction.model';
+import { AppError } from '../../shared/utils/appError';
 
-export interface LedgerDayEntry {
+export const OT_HOURLY_RATE = 150;
+
+/**
+ * Floor-100 leave penalty rule:
+ * Deduction = floor(dailyWage / 100) * 100
+ * e.g., ₹870 -> ₹800 deduction, net day wage = ₹70
+ */
+export function calculateFullLeaveDeduction(dailyWage: number): number {
+  if (dailyWage <= 0) return 0;
+  return Math.floor(dailyWage / 100) * 100;
+}
+
+/**
+ * Half-day leave rule:
+ * Worker earns half daily wage rounded to next 10.
+ * Deduction = dailyWage - earned
+ * e.g., ₹875 -> half = 437.5 -> rounded to next 10 = ₹440 earned, deduction = ₹435
+ */
+export function calculateHalfDayDeduction(dailyWage: number): number {
+  if (dailyWage <= 0) return 0;
+  const halfEarned = Math.ceil((dailyWage / 2) / 10) * 10;
+  return Math.max(0, dailyWage - halfEarned);
+}
+
+/**
+ * Finds the applicable daily wage for a worker on a specific date string (YYYY-MM-DD)
+ */
+export function getWageForDate(worker: IUser, dateStr: string): number {
+  if (!worker.wageHistory || worker.wageHistory.length === 0) {
+    return worker.dailyWage || 0;
+  }
+
+  const targetDate = new Date(`${dateStr}T23:59:59.999Z`);
+  const sorted = [...worker.wageHistory].sort(
+    (a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime()
+  );
+
+  for (const record of sorted) {
+    if (new Date(record.effectiveDate) <= targetDate) {
+      return record.wage;
+    }
+  }
+
+  // Fallback to earliest wage in history or current wage
+  const earliest = sorted[sorted.length - 1];
+  return earliest ? earliest.wage : worker.dailyWage || 0;
+}
+
+/**
+ * Format Date object to 'YYYY-MM-DD' in local/IST string
+ */
+export function formatDateStr(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Generate array of 'YYYY-MM-DD' dates between startDate and endDate inclusive
+ */
+export function getDatesBetween(startDateStr: string, endDateStr: string): string[] {
+  const dates: string[] = [];
+  const curr = new Date(`${startDateStr}T00:00:00`);
+  const stop = new Date(`${endDateStr}T00:00:00`);
+
+  while (curr <= stop) {
+    dates.push(formatDateStr(curr));
+    curr.setDate(curr.getDate() + 1);
+  }
+  return dates;
+}
+
+export interface SingleSheetDayEntry {
   date: string; // YYYY-MM-DD
-  dayName: string; // Mon, Tue, etc.
-  dayType: 'WORKING' | 'SUNDAY' | 'HOLIDAY' | 'PAID_LEAVE' | 'LEAVE' | 'HALF_DAY';
+  dayName: string;
+  dayType: 'WORKING' | 'SUNDAY' | 'HOLIDAY' | 'FULL_LEAVE' | 'HALF_LEAVE';
   holidayTitle?: string;
-  leaveId?: string;
-  leaveReason?: string;
+  adjustmentId?: string;
+  adjustmentNote?: string;
   baseWage: number;
   leaveDeduction: number;
   netDayWage: number;
   otHours: number;
   otAmount: number;
-  otStatus?: OtClaimStatus;
-  advancesAmount?: number;
-  settlementPaid?: number;
-  totalDayEarnings: number;
+  otStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  netDailyPay: number;
   isSettled: boolean;
-}
-
-export interface WorkerLedgerResult {
-  worker: {
-    _id: string;
-    name: string;
-    mobile: string;
-    dailyWage: number;
-    dailyWageEffectiveDate?: Date;
-    profileImageUrl?: string;
-  };
-  period: {
-    startDate: string;
-    endDate: string;
-  };
-  metrics: {
-    workingDays: number;
-    leaveDays: number;
-    halfDays: number;
-    paidLeaveDays: number;
-    holidayDays: number;
-    sundayDays: number;
-    totalGrossWages: number;
-    totalLeaveDeduction: number;
-    totalOtHours: number;
-    totalOtAmount: number;
-    totalAdvances: number;
-    carriedForwardBalance: number;
-    netUnsettledEarnings: number;
-    hasUsedMonthlyPaidLeave: boolean;
-  };
-  ledger: LedgerDayEntry[];
-  unsettledAdvances: ICashAdvance[];
-  recentSettlements: IPayrollSettlement[];
-}
-
-export interface AdminWorkerSummary {
-  workerId: string;
-  name: string;
-  mobile: string;
-  dailyWage: number;
-  unsettledDaysCount: number;
-  unsettledBalance: number;
-  pendingOtHours: number;
-  lastSettlementDate?: Date;
-}
-
-export interface CommonCalendarResult {
-  holidays: IHoliday[];
-  leaves: Array<{
-    _id: string;
-    workerId: string;
-    workerName: string;
-    date: string;
-    leaveType: LeaveType;
-    isMonthlyPaidLeave: boolean;
-    reason?: string;
+  inlineTransactions: Array<{
+    id: string;
+    type: 'PAYOUT_SETTLEMENT' | 'ADVANCE_TAKEN';
+    amount: number;
+    notes?: string;
+    paymentMethod?: string;
+    referenceNote?: string;
+    carriedForwardBalance?: number;
   }>;
-  workers: Array<{ _id: string; name: string; mobile: string; dailyWage: number }>;
+  runningCumulativeBalance: number;
 }
 
 export class PayrollService {
-  constructor(private repo: IPayrollRepository = new PayrollRepository()) {}
-
   /**
-   * Helper to normalize a date to midnight local date string YYYY-MM-DD
+   * Batch mark leave for one or more workers across one or more dates.
+   * Calculates Floor-100 deduction for each worker and stores in WageAdjustment.
    */
-  private formatDateKey(date: Date): string {
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
+  static async markBatchLeave(params: {
+    workerIds: string[];
+    dates: string[] | string | { startDate: string; endDate: string };
+    type?: 'FULL_LEAVE' | 'HALF_LEAVE';
+    note?: string;
+  }) {
+    const leaveType = params.type || 'FULL_LEAVE';
+    let targetDates: string[] = [];
 
-  /**
-   * Resolve historical wage for a specific date:
-   * Only calculates the new wage from its effectiveDate onwards;
-   * past dates retain their historical wage rate.
-   */
-  getWageForDate(worker: IUser, targetDate: Date): number {
-    const history = worker.wageHistory || [];
-    if (history.length === 0) {
-      return worker.dailyWage || 0;
+    if (Array.isArray(params.dates)) {
+      targetDates = params.dates;
+    } else if (typeof params.dates === 'string') {
+      targetDates = [params.dates];
+    } else if (params.dates && params.dates.startDate && params.dates.endDate) {
+      targetDates = getDatesBetween(params.dates.startDate, params.dates.endDate);
     }
 
-    const t = new Date(targetDate);
-    t.setHours(23, 59, 59, 999);
-
-    const applicable = history.filter((h) => new Date(h.effectiveDate) <= t);
-    if (applicable.length > 0) {
-      applicable.sort(
-        (a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime()
-      );
-      return applicable[0].wage;
+    if (targetDates.length === 0) {
+      throw new AppError('No valid dates provided for leave marking', 400);
     }
 
-    return history[0].wage;
-  }
+    const results = [];
 
-  /**
-   * Calculate leave deduction according to business rules:
-   * 1. If Monthly Paid Leave -> deduction = 0
-   * 2. If Half-Day -> earns ceil((wage / 2) / 10) * 10; deduction = wage - earned
-   * 3. If Full-Day unpaid -> deduction = floor(wage / 100) * 100; netDayWage = wage - deduction
-   */
-  calculateLeaveDeduction(
-    dailyWage: number,
-    leaveType: LeaveType,
-    isMonthlyPaidLeave: boolean
-  ): { deductionAmount: number; netDayWage: number } {
-    if (isMonthlyPaidLeave && leaveType === 'FULL') {
-      return { deductionAmount: 0, netDayWage: dailyWage };
+    for (const workerId of params.workerIds) {
+      const worker = await PayrollRepository.findWorkerById(workerId);
+      if (!worker) continue;
+
+      for (const date of targetDates) {
+        const dailyWage = getWageForDate(worker, date);
+        const deductionAmount =
+          leaveType === 'FULL_LEAVE'
+            ? calculateFullLeaveDeduction(dailyWage)
+            : calculateHalfDayDeduction(dailyWage);
+
+        const adj = await PayrollRepository.upsertLeaveAdjustment({
+          workerId: worker._id.toString(),
+          date,
+          type: leaveType,
+          deductionAmount,
+          note: params.note || '',
+        });
+
+        results.push({
+          workerId: worker._id,
+          workerName: worker.name,
+          date,
+          type: leaveType,
+          dailyWage,
+          deductionAmount,
+          netDayWage: Math.max(0, dailyWage - deductionAmount),
+          adjustmentId: adj._id,
+        });
+      }
     }
 
-    if (leaveType === 'HALF') {
-      const halfWage = dailyWage / 2;
-      const roundedEarned = Math.ceil(halfWage / 10) * 10;
-      const deduction = Math.max(0, dailyWage - roundedEarned);
-      return { deductionAmount: deduction, netDayWage: roundedEarned };
-    }
-
-    // Full day unpaid leave -> floor to 100
-    const deduction = Math.floor(dailyWage / 100) * 100;
-    const netDayWage = Math.max(0, dailyWage - deduction);
-    return { deductionAmount: deduction, netDayWage };
-  }
-
-  /**
-   * Mark a worker leave on a single date or date range.
-   */
-  /**
-   * Batch mark leave across multiple selected workers
-   */
-  async markLeavesBatch(
-    workerIds: string[],
-    dateInput: string | Date,
-    leaveType: LeaveType,
-    reason: string | undefined,
-    adminId: string,
-    endDateInput?: string | Date
-  ): Promise<{ affectedWorkers: number; totalDaysMarked: number; affectedCount: number }> {
-    let totalDaysMarked = 0;
-    for (const wId of workerIds) {
-      const res = await this.markLeave(wId, dateInput, leaveType, reason, adminId, endDateInput);
-      totalDaysMarked += res.affectedCount;
-    }
     return {
-      affectedWorkers: workerIds.length,
-      totalDaysMarked,
-      affectedCount: totalDaysMarked,
+      message: `Successfully processed ${results.length} leave entries across ${params.workerIds.length} workers`,
+      recordsCount: results.length,
+      results,
     };
   }
 
-  async markLeave(
-    workerId: string,
-    dateInput: string | Date,
-    leaveType: LeaveType,
-    reason: string | undefined,
-    adminId: string,
-    endDateInput?: string | Date
-  ): Promise<{ affectedCount: number; leave?: IPayrollLeave }> {
-    const worker = await this.repo.findWorkerById(workerId);
-    if (!worker) throw new Error('Worker not found');
-
-    const start = new Date(dateInput);
-    start.setHours(0, 0, 0, 0);
-
-    const end = endDateInput ? new Date(endDateInput) : new Date(start);
-    end.setHours(0, 0, 0, 0);
-
-    if (end < start) throw new Error('End date cannot be earlier than start date');
-
-    const holidays = await this.repo.findHolidays(start, end);
-    const holidayDates = new Set(holidays.map((h) => this.formatDateKey(h.date)));
-
-    let affectedCount = 0;
-    let lastLeave: IPayrollLeave | undefined;
-
-    const curr = new Date(start);
-    while (curr <= end) {
-      const dayOfWeek = curr.getDay(); // 0 is Sunday
-      const dateKey = this.formatDateKey(curr);
-
-      if (dayOfWeek !== 0 && !holidayDates.has(dateKey)) {
-        const res = await this.toggleLeave(
-          workerId,
-          new Date(curr),
-          leaveType,
-          adminId,
-          reason
-        );
-        if (res.leave) lastLeave = res.leave;
-        affectedCount++;
-      }
-      curr.setDate(curr.getDate() + 1);
+  /**
+   * Worker Overtime Claim: whole integer hours only, starts as PENDING
+   */
+  static async claimOvertime(params: {
+    workerId: string;
+    date: string;
+    otHours: number;
+    note?: string;
+  }) {
+    // Round to whole integer (truncate minutes)
+    const roundedHours = Math.floor(params.otHours);
+    if (roundedHours < 1) {
+      throw new AppError('Overtime must be at least 1 whole hour. Minutes are discarded.', 400);
     }
 
-    return { affectedCount, leave: lastLeave };
+    const worker = await PayrollRepository.findWorkerById(params.workerId);
+    if (!worker) throw new AppError('Worker not found', 404);
+
+    const claim = await PayrollRepository.createOtClaim({
+      workerId: params.workerId,
+      date: params.date,
+      otHours: roundedHours,
+      note: params.note,
+    });
+
+    return {
+      message: 'Overtime claim submitted successfully for admin review',
+      claim,
+      ratePerHour: OT_HOURLY_RATE,
+      potentialAmount: roundedHours * OT_HOURLY_RATE,
+    };
   }
 
   /**
-   * 1-click Leave Toggle:
-   * Sets FULL, HALF, or CLEAR (removes leave) on a specific day.
+   * Admin approves or rejects OT claim
    */
-  async toggleLeave(
-    workerId: string,
-    dateInput: string | Date,
-    leaveType: 'FULL' | 'HALF' | 'CLEAR',
-    adminId: string,
-    reason?: string
-  ): Promise<{ action: 'CREATED' | 'UPDATED' | 'DELETED'; leave?: IPayrollLeave | null }> {
-    const targetDate = new Date(dateInput);
-    targetDate.setHours(0, 0, 0, 0);
+  static async reviewOtClaim(params: {
+    claimId: string;
+    status: 'APPROVED' | 'REJECTED';
+    reviewedBy: string;
+    note?: string;
+  }) {
+    const claim = await PayrollRepository.findWageAdjustmentById(params.claimId);
+    if (!claim) throw new AppError('Overtime claim not found', 404);
+    if (claim.type !== 'OVERTIME') throw new AppError('Adjustment is not an overtime claim', 400);
 
-    const worker = await this.repo.findWorkerById(workerId);
-    if (!worker) throw new Error('Worker not found');
-
-    const existing = await this.repo.findLeaveByWorkerAndDate(workerId, targetDate);
-
-    if (leaveType === 'CLEAR') {
-      if (existing) {
-        if (existing.isSettled) throw new Error('Cannot delete a settled leave record');
-        await this.repo.deleteLeave(existing._id.toString());
-        return { action: 'DELETED' };
-      }
-      return { action: 'DELETED' };
-    }
-
-    const wage = this.getWageForDate(worker, targetDate);
-
-    let isMonthlyPaidLeave = false;
-    if (leaveType === 'FULL') {
-      const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-      const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
-      const usedPaidLeaves = await this.repo.countMonthlyPaidLeaves(workerId, startOfMonth, endOfMonth);
-      if (usedPaidLeaves === 0 || (existing && existing.isMonthlyPaidLeave)) {
-        isMonthlyPaidLeave = true;
-      }
-    }
-
-    const { deductionAmount, netDayWage } = this.calculateLeaveDeduction(
-      wage,
-      leaveType,
-      isMonthlyPaidLeave
+    const updated = await PayrollRepository.updateOtStatus(
+      params.claimId,
+      params.status,
+      params.reviewedBy,
+      params.note
     );
 
-    if (existing) {
-      if (existing.isSettled) throw new Error('Cannot modify a settled leave record');
-      existing.leaveType = leaveType;
-      existing.isMonthlyPaidLeave = isMonthlyPaidLeave;
-      existing.dailyWageSnapshot = wage;
-      existing.deductionAmount = deductionAmount;
-      existing.netDayWage = netDayWage;
-      if (reason !== undefined) existing.reason = reason;
-      await existing.save();
-      return { action: 'UPDATED', leave: existing };
-    }
-
-    const newLeave = await this.repo.createLeave({
-      workerId: new mongoose.Types.ObjectId(workerId),
-      date: targetDate,
-      leaveType,
-      isMonthlyPaidLeave,
-      dailyWageSnapshot: wage,
-      deductionAmount,
-      netDayWage,
-      reason,
-      markedBy: new mongoose.Types.ObjectId(adminId),
-      isSettled: false,
-    });
-
-    return { action: 'CREATED', leave: newLeave };
-  }
-
-  async removeLeave(leaveId: string): Promise<IPayrollLeave | null> {
-    const leave = await this.repo.findLeaveById(leaveId);
-    if (!leave) throw new Error('Leave record not found');
-    if (leave.isSettled) throw new Error('Cannot remove a settled leave record');
-    return this.repo.deleteLeave(leaveId);
-  }
-
-  /**
-   * Submit OT Claim by Worker
-   */
-  async claimOvertime(
-    workerId: string,
-    dateInput: string | Date,
-    hours: number,
-    note?: string
-  ): Promise<IOtClaim> {
-    if (!Number.isInteger(hours) || hours <= 0) {
-      throw new Error('Overtime hours must be a whole positive integer (1, 2, 3...)');
-    }
-
-    const targetDate = new Date(dateInput);
-    targetDate.setHours(0, 0, 0, 0);
-
-    const ratePerHour = 150;
-    const totalAmount = hours * ratePerHour;
-
-    return this.repo.createOtClaim({
-      workerId: new mongoose.Types.ObjectId(workerId),
-      date: targetDate,
-      hours,
-      ratePerHour,
-      totalAmount,
-      status: 'PENDING',
-      note,
-      isSettled: false,
-    });
-  }
-
-  /**
-   * Worker can cancel/delete their own PENDING OT Claim
-   */
-  async cancelOtClaim(claimId: string, workerId: string): Promise<IOtClaim | null> {
-    const claim = await this.repo.findOtClaimById(claimId);
-    if (!claim) throw new Error('Overtime claim not found');
-
-    const claimWorkerId = (claim.workerId as any)?._id?.toString() || claim.workerId?.toString();
-    if (claimWorkerId !== workerId) {
-      throw new Error('Unauthorized to cancel this overtime claim');
-    }
-
-    if (claim.status !== 'PENDING') {
-      throw new Error('Only pending overtime claims can be cancelled');
-    }
-
-    return this.repo.deleteOtClaim(claimId);
-  }
-
-  /**
-   * Admin reviews OT Claim (Approve or Reject with custom reason)
-   */
-  async reviewOtClaim(
-    claimId: string,
-    status: 'APPROVED' | 'REJECTED',
-    adminId: string,
-    rejectionReason?: string
-  ): Promise<IOtClaim> {
-    const claim = await this.repo.findOtClaimById(claimId);
-    if (!claim) throw new Error('Overtime claim not found');
-    if (claim.isSettled) throw new Error('Cannot modify a settled OT claim');
-
-    const updated = await this.repo.updateOtClaim(claimId, {
-      status,
-      reviewedBy: new mongoose.Types.ObjectId(adminId),
-      reviewedAt: new Date(),
-      rejectionReason: status === 'REJECTED' ? rejectionReason : undefined,
-    });
-
-    if (!updated) throw new Error('Failed to update overtime claim');
-    return updated;
-  }
-
-  /**
-   * Cash Advance
-   */
-  async recordCashAdvance(
-    workerId: string,
-    amount: number,
-    dateInput: string | Date,
-    reason: string | undefined,
-    adminId: string
-  ): Promise<ICashAdvance> {
-    if (amount <= 0) throw new Error('Advance amount must be greater than 0');
-
-    const date = new Date(dateInput);
-    return this.repo.createCashAdvance({
-      workerId: new mongoose.Types.ObjectId(workerId),
-      date,
-      amount,
-      reason,
-      givenBy: new mongoose.Types.ObjectId(adminId),
-      isSettled: false,
-    });
-  }
-
-  async updateCashAdvance(
-    advanceId: string,
-    amount: number,
-    dateInput: string | Date,
-    reason?: string
-  ): Promise<ICashAdvance | null> {
-    if (amount <= 0) throw new Error('Advance amount must be greater than 0');
-
-    const advance = await this.repo.findCashAdvanceById(advanceId);
-    if (!advance) throw new Error('Cash advance not found');
-    if (advance.isSettled) throw new Error('Cannot edit a settled cash advance');
-
-    const date = new Date(dateInput);
-    return this.repo.updateCashAdvance(advanceId, {
-      amount,
-      date,
-      reason,
-    });
-  }
-
-  async removeCashAdvance(advanceId: string): Promise<ICashAdvance | null> {
-    const advance = await this.repo.findCashAdvanceById(advanceId);
-    if (!advance) throw new Error('Cash advance not found');
-    if (advance.isSettled) throw new Error('Cannot delete a settled cash advance');
-    return this.repo.deleteCashAdvance(advanceId);
-  }
-
-  /**
-   * Holidays
-   */
-  async declareHoliday(dateInput: string | Date, title: string, adminId: string): Promise<IHoliday> {
-    const targetDate = new Date(dateInput);
-    targetDate.setHours(0, 0, 0, 0);
-
-    const existing = await this.repo.findHolidayByDate(targetDate);
-    if (existing) throw new Error('Holiday already declared for this date');
-
-    return this.repo.createHoliday({
-      date: targetDate,
-      title,
-      createdBy: new mongoose.Types.ObjectId(adminId),
-    });
-  }
-
-  async removeHoliday(holidayId: string): Promise<IHoliday | null> {
-    return this.repo.deleteHoliday(holidayId);
-  }
-
-  async getHolidays(startDate?: Date, endDate?: Date): Promise<IHoliday[]> {
-    return this.repo.findHolidays(startDate, endDate);
-  }
-
-  /**
-   * Common Calendar View across entire company
-   */
-  async getCommonCalendar(year: number, month: number): Promise<CommonCalendarResult> {
-    const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
-    const end = new Date(year, month, 0, 23, 59, 59, 999);
-
-    const [holidays, leaves, workers] = await Promise.all([
-      this.repo.findHolidays(start, end),
-      this.repo.findLeaves({ startDate: start, endDate: end }),
-      this.repo.findActiveWorkers(),
-    ]);
-
-    const formattedLeaves = leaves.map((l) => ({
-      _id: l._id.toString(),
-      workerId: ((l.workerId as any)?._id || l.workerId).toString(),
-      workerName: (l.workerId as any)?.name || 'Worker',
-      date: this.formatDateKey(l.date),
-      leaveType: l.leaveType,
-      isMonthlyPaidLeave: l.isMonthlyPaidLeave,
-      reason: l.reason,
-    }));
-
     return {
-      holidays,
-      leaves: formattedLeaves,
-      workers: workers.map((w) => ({
-        _id: w._id.toString(),
-        name: w.name,
-        mobile: w.mobile,
-        dailyWage: w.dailyWage || 0,
-      })),
+      message: `Overtime claim marked as ${params.status}`,
+      claim: updated,
     };
   }
 
   /**
-   * Update worker wage with effective date:
+   * Computes the dynamic Single-Sheet Ledger from lastSettledDate (or cycle start) to current date.
+   * Zero Cron Jobs: 100% on-the-fly computation.
    */
-  async updateWorkerWage(
-    workerId: string,
-    dailyWage: number,
-    effectiveDate?: string | Date
-  ): Promise<IUser | null> {
-    if (dailyWage < 0) throw new Error('Daily wage cannot be negative');
-    const eff = effectiveDate ? new Date(effectiveDate) : new Date();
-    return this.repo.updateWorkerWage(workerId, dailyWage, eff);
-  }
+  static async getWorkerSingleSheet(params: {
+    workerId: string;
+    startDate?: string;
+    endDate?: string;
+    includeSettledHistory?: boolean;
+  }) {
+    const worker = await PayrollRepository.findWorkerById(params.workerId);
+    if (!worker) throw new AppError('Worker not found', 404);
 
-  /**
-   * Build Continuous Single-Sheet & Calendar Ledger
-   */
-  async getWorkerLedger(
-    workerId: string,
-    customStartDate?: string | Date,
-    customEndDate?: string | Date
-  ): Promise<WorkerLedgerResult> {
-    const worker = await this.repo.findWorkerById(workerId);
-    if (!worker) throw new Error('Worker not found');
+    const todayStr = formatDateStr(new Date());
 
-    const latestSettlement = await this.repo.findLatestSettlement(workerId);
-    const recentSettlements = await this.repo.findSettlements(workerId);
-
-    let start: Date;
-    if (customStartDate) {
-      start = new Date(customStartDate);
-    } else if (latestSettlement) {
-      start = new Date(latestSettlement.endDate);
-      start.setDate(start.getDate() + 1);
-    } else {
-      start = new Date();
-      start.setDate(start.getDate() - 30);
-    }
-    start.setHours(0, 0, 0, 0);
-
-    let end: Date;
-    if (customEndDate) {
-      end = new Date(customEndDate);
-    } else {
-      end = new Date();
-    }
-    end.setHours(23, 59, 59, 999);
-
-    const [leaves, holidays, otClaims, allAdvances] = await Promise.all([
-      this.repo.findLeaves({ workerId }),
-      this.repo.findHolidays(),
-      this.repo.findOtClaims({ workerId }),
-      this.repo.findCashAdvances({ workerId }),
-    ]);
-
-    const unsettledAdvances = allAdvances.filter((a) => !a.isSettled);
-
-    const leaveMap = new Map<string, IPayrollLeave>();
-    for (const l of leaves) {
-      leaveMap.set(this.formatDateKey(l.date), l);
+    // Determine calculation window:
+    // If startDate not provided: start from day after lastSettledDate, or worker joining/30 days ago
+    let startStr = params.startDate;
+    if (!startStr) {
+      if (params.includeSettledHistory) {
+        // Look back 60 days or worker creation
+        const lookback = new Date();
+        lookback.setDate(lookback.getDate() - 60);
+        startStr = formatDateStr(lookback);
+      } else if (worker.lastSettledDate) {
+        const nextDay = new Date(worker.lastSettledDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        startStr = formatDateStr(nextDay);
+      } else {
+        // Start from beginning of current month or 30 days ago
+        const firstDayMonth = new Date();
+        firstDayMonth.setDate(1);
+        startStr = formatDateStr(firstDayMonth);
+      }
     }
 
-    const holidayMap = new Map<string, IHoliday>();
-    for (const h of holidays) {
-      holidayMap.set(this.formatDateKey(h.date), h);
+    const endStr = params.endDate || todayStr;
+
+    // If start is after end (e.g. settled today), ensure at least today is shown
+    if (startStr > endStr) {
+      startStr = endStr;
     }
 
-    const otMap = new Map<string, IOtClaim>();
-    for (const ot of otClaims) {
-      otMap.set(this.formatDateKey(ot.date), ot);
+    // Fetch garage holidays, adjustments, and transactions
+    const holidays = await PayrollRepository.findHolidays(startStr, endStr);
+    const holidayMap = new Map<string, IGarageHoliday>();
+    holidays.forEach((h) => holidayMap.set(h.date, h));
+
+    const adjustments = await PayrollRepository.findWageAdjustments({
+      workerId: params.workerId,
+      startDate: startStr,
+      endDate: endStr,
+    });
+
+    const leaveMap = new Map<string, IWageAdjustment>();
+    const otMap = new Map<string, IWageAdjustment[]>();
+
+    for (const adj of adjustments) {
+      if (adj.type === 'FULL_LEAVE' || adj.type === 'HALF_LEAVE') {
+        leaveMap.set(adj.date, adj);
+      } else if (adj.type === 'OVERTIME') {
+        const list = otMap.get(adj.date) || [];
+        list.push(adj);
+        otMap.set(adj.date, list);
+      }
     }
 
-    const advanceMap = new Map<string, number>();
-    for (const adv of allAdvances) {
-      const k = this.formatDateKey(adv.date);
-      advanceMap.set(k, (advanceMap.get(k) || 0) + adv.amount);
+    // Fetch transactions in this range for inline logging
+    const transactions = await PayrollRepository.findWageTransactions({
+      workerId: params.workerId,
+      startDate: new Date(`${startStr}T00:00:00.000Z`),
+      endDate: new Date(`${endStr}T23:59:59.999Z`),
+    });
+
+    const txMap = new Map<string, IWageTransaction[]>();
+    for (const tx of transactions) {
+      const txDateStr = formatDateStr(new Date(tx.date));
+      const list = txMap.get(txDateStr) || [];
+      list.push(tx);
+      txMap.set(txDateStr, list);
     }
 
-    const settlementMap = new Map<string, number>();
-    for (const s of recentSettlements) {
-      const k = this.formatDateKey(s.settledAt);
-      settlementMap.set(k, (settlementMap.get(k) || 0) + s.amountPaid);
-    }
+    // Fetch unsettled advances specifically (for KPI calculation)
+    const unsettledAdvances = await PayrollRepository.findWageTransactions({
+      workerId: params.workerId,
+      type: 'ADVANCE_TAKEN',
+      isSettled: false,
+    });
+    const totalUnsettledAdvances = unsettledAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
 
-    const ledger: LedgerDayEntry[] = [];
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    // Generate day-by-day continuous stream
+    const dateList = getDatesBetween(startStr, endStr);
+    const dayEntries: SingleSheetDayEntry[] = [];
 
-    let workingDays = 0;
-    let leaveDays = 0;
-    let halfDays = 0;
-    let paidLeaveDays = 0;
-    let holidayDays = 0;
-    let sundayDays = 0;
-    let totalGrossWages = 0;
-    let totalLeaveDeduction = 0;
-    let totalOtHours = 0;
-    let totalOtAmount = 0;
+    let grossWages = 0;
+    let totalLeaveDeductions = 0;
+    let netBaseWages = 0;
+    let totalApprovedOtHours = 0;
+    let totalApprovedOtAmount = 0;
+    let totalWorkingDays = 0;
+    let totalSundays = 0;
+    let totalHolidayDays = 0;
+    let totalFullLeaveDays = 0;
+    let totalHalfDays = 0;
+    let runningBalance = 0;
 
-    const curr = new Date(start);
-    while (curr <= end) {
-      const dateKey = this.formatDateKey(curr);
-      const dayOfWeek = curr.getDay(); // 0 is Sunday
-      const dayName = dayNames[dayOfWeek];
+    for (const dStr of dateList) {
+      const dObj = new Date(`${dStr}T00:00:00`);
+      const isSunday = dObj.getDay() === 0;
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayName = dayNames[dObj.getDay()];
 
-      const historicalWage = this.getWageForDate(worker, curr);
+      const holiday = holidayMap.get(dStr);
+      const leave = leaveMap.get(dStr);
+      const otClaims = otMap.get(dStr) || [];
 
-      const holiday = holidayMap.get(dateKey);
-      const leave = leaveMap.get(dateKey);
-      const ot = otMap.get(dateKey);
-      const dayAdvance = advanceMap.get(dateKey);
-      const daySettlement = settlementMap.get(dateKey);
+      const currentDailyWage = getWageForDate(worker, dStr);
 
-      let dayType: LedgerDayEntry['dayType'] = 'WORKING';
-      let holidayTitle: string | undefined;
-      let leaveId: string | undefined;
-      let leaveReason: string | undefined;
-      let baseWage = historicalWage;
+      let dayType: SingleSheetDayEntry['dayType'] = 'WORKING';
+      let baseWage = currentDailyWage;
       let leaveDeduction = 0;
-      let netDayWage = historicalWage;
-      let isSettled = false;
+      let netDayWage = currentDailyWage;
 
-      if (dayOfWeek === 0) {
+      if (leave) {
+        if (leave.type === 'FULL_LEAVE') {
+          dayType = 'FULL_LEAVE';
+          leaveDeduction = leave.deductionAmount || calculateFullLeaveDeduction(currentDailyWage);
+          netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
+          totalFullLeaveDays++;
+          totalLeaveDeductions += leaveDeduction;
+        } else if (leave.type === 'HALF_LEAVE') {
+          dayType = 'HALF_LEAVE';
+          leaveDeduction = leave.deductionAmount || calculateHalfDayDeduction(currentDailyWage);
+          netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
+          totalHalfDays++;
+          totalLeaveDeductions += leaveDeduction;
+        }
+      } else if (holiday && holiday.isPaid) {
+        dayType = 'HOLIDAY';
+        baseWage = currentDailyWage;
+        leaveDeduction = 0;
+        netDayWage = currentDailyWage;
+        totalHolidayDays++;
+      } else if (isSunday) {
         dayType = 'SUNDAY';
         baseWage = 0;
         leaveDeduction = 0;
         netDayWage = 0;
-        sundayDays++;
-      } else if (holiday) {
-        dayType = 'HOLIDAY';
-        holidayTitle = holiday.title;
-        baseWage = historicalWage;
-        leaveDeduction = 0;
-        netDayWage = historicalWage;
-        holidayDays++;
-        totalGrossWages += historicalWage;
-      } else if (leave) {
-        leaveId = leave._id.toString();
-        isSettled = leave.isSettled;
-        leaveReason = leave.reason;
-        if (leave.isMonthlyPaidLeave) {
-          dayType = 'PAID_LEAVE';
-          baseWage = historicalWage;
-          leaveDeduction = 0;
-          netDayWage = historicalWage;
-          paidLeaveDays++;
-          totalGrossWages += historicalWage;
-        } else if (leave.leaveType === 'HALF') {
-          dayType = 'HALF_DAY';
-          baseWage = historicalWage;
-          leaveDeduction = leave.deductionAmount;
-          netDayWage = leave.netDayWage;
-          halfDays++;
-          totalGrossWages += historicalWage;
-          totalLeaveDeduction += leaveDeduction;
-        } else {
-          dayType = 'LEAVE';
-          baseWage = historicalWage;
-          leaveDeduction = leave.deductionAmount;
-          netDayWage = leave.netDayWage;
-          leaveDays++;
-          totalGrossWages += historicalWage;
-          totalLeaveDeduction += leaveDeduction;
-        }
+        totalSundays++;
       } else {
         dayType = 'WORKING';
-        baseWage = historicalWage;
+        baseWage = currentDailyWage;
         leaveDeduction = 0;
-        netDayWage = historicalWage;
-        workingDays++;
-        totalGrossWages += historicalWage;
+        netDayWage = currentDailyWage;
+        totalWorkingDays++;
       }
 
+      grossWages += baseWage;
+      netBaseWages += netDayWage;
+
+      // Calculate Overtime on this day
       let dayOtHours = 0;
       let dayOtAmount = 0;
-      let otStatus: OtClaimStatus | undefined;
-      if (ot) {
-        dayOtHours = ot.hours;
-        otStatus = ot.status;
+      let otStatus: SingleSheetDayEntry['otStatus'] = undefined;
+
+      for (const ot of otClaims) {
+        dayOtHours += ot.otHours || 0;
         if (ot.status === 'APPROVED') {
-          dayOtAmount = ot.totalAmount;
-          totalOtHours += dayOtHours;
-          totalOtAmount += dayOtAmount;
-        }
-        if (ot.isSettled) {
-          isSettled = true;
+          dayOtAmount += (ot.otHours || 0) * OT_HOURLY_RATE;
+          otStatus = 'APPROVED';
+        } else if (ot.status === 'PENDING' && otStatus !== 'APPROVED') {
+          otStatus = 'PENDING';
+        } else if (ot.status === 'REJECTED' && !otStatus) {
+          otStatus = 'REJECTED';
         }
       }
 
-      ledger.push({
-        date: dateKey,
+      totalApprovedOtHours += otStatus === 'APPROVED' ? dayOtHours : 0;
+      totalApprovedOtAmount += dayOtAmount;
+
+      const netDailyPay = netDayWage + dayOtAmount;
+      runningBalance += netDailyPay;
+
+      // Inline transactions for this date
+      const inlineTxs = txMap.get(dStr) || [];
+      const formattedInline = inlineTxs.map((t) => {
+        if (t.type === 'ADVANCE_TAKEN') {
+          runningBalance -= t.amount;
+        } else if (t.type === 'PAYOUT_SETTLEMENT') {
+          runningBalance -= t.amount;
+        }
+        return {
+          id: t._id.toString(),
+          type: t.type,
+          amount: t.amount,
+          notes: t.notes,
+          paymentMethod: t.paymentMethod,
+          referenceNote: t.referenceNote,
+          carriedForwardBalance: t.carriedForwardBalance,
+        };
+      });
+
+      dayEntries.push({
+        date: dStr,
         dayName,
         dayType,
-        holidayTitle,
-        leaveId,
-        leaveReason,
+        holidayTitle: holiday?.title,
+        adjustmentId: leave?._id?.toString(),
+        adjustmentNote: leave?.note,
         baseWage,
         leaveDeduction,
         netDayWage,
         otHours: dayOtHours,
         otAmount: dayOtAmount,
         otStatus,
-        advancesAmount: dayAdvance,
-        settlementPaid: daySettlement,
-        totalDayEarnings: netDayWage + dayOtAmount,
-        isSettled,
+        netDailyPay,
+        isSettled: leave?.isSettled || false,
+        inlineTransactions: formattedInline,
+        runningCumulativeBalance: runningBalance,
       });
-
-      curr.setDate(curr.getDate() + 1);
     }
 
-    ledger.reverse();
-
-    const totalAdvances = unsettledAdvances.reduce((sum, a) => sum + a.amount, 0);
-    const carriedForwardBalance = latestSettlement?.carriedForwardBalance || 0;
-    const netUnsettledEarnings =
-      totalGrossWages - totalLeaveDeduction + totalOtAmount - totalAdvances + carriedForwardBalance;
-
-    const now = new Date();
-    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    const monthlyPaidLeaveCount = await this.repo.countMonthlyPaidLeaves(
-      workerId,
-      startOfCurrentMonth,
-      endOfCurrentMonth
-    );
+    // Dynamic Net Payable Calculation
+    const totalEarnings = netBaseWages + totalApprovedOtAmount;
+    const netPayable = Math.max(0, totalEarnings - totalUnsettledAdvances);
 
     return {
       worker: {
-        _id: worker._id.toString(),
+        id: worker._id,
         name: worker.name,
         mobile: worker.mobile,
         dailyWage: worker.dailyWage || 0,
-        dailyWageEffectiveDate: worker.dailyWageEffectiveDate,
-        profileImageUrl: worker.profileImageUrl,
+        lastSettledDate: worker.lastSettledDate,
       },
       period: {
-        startDate: this.formatDateKey(start),
-        endDate: this.formatDateKey(end),
+        startDate: startStr,
+        endDate: endStr,
+        totalDays: dateList.length,
       },
-      metrics: {
-        workingDays,
-        leaveDays,
-        halfDays,
-        paidLeaveDays,
-        holidayDays,
-        sundayDays,
-        totalGrossWages,
-        totalLeaveDeduction,
-        totalOtHours,
-        totalOtAmount,
-        totalAdvances,
-        carriedForwardBalance,
-        netUnsettledEarnings,
-        hasUsedMonthlyPaidLeave: monthlyPaidLeaveCount > 0,
+      kpis: {
+        totalWorkingDays,
+        totalSundays,
+        totalHolidayDays,
+        totalFullLeaveDays,
+        totalHalfDays,
+        grossWages,
+        totalLeaveDeductions,
+        netBaseWages,
+        totalApprovedOtHours,
+        totalApprovedOtAmount,
+        totalEarnings,
+        totalUnsettledAdvances,
+        netPayable,
       },
-      ledger,
-      unsettledAdvances,
-      recentSettlements: recentSettlements.slice(0, 10),
+      days: dayEntries.reverse(), // Newest date first for instant viewing
     };
   }
 
   /**
-   * Admin Overview across all workers
+   * Settle unsettled dues for a worker:
+   * 1. Calculates unsettled dues up to endDate
+   * 2. Logs PAYOUT_SETTLEMENT WageTransaction
+   * 3. Marks WageAdjustments and ADVANCE_TAKEN as settled
+   * 4. Updates worker.lastSettledDate
    */
-  async getAdminOverview(): Promise<{
-    workers: AdminWorkerSummary[];
-    pendingOtClaimsCount: number;
-    totalUnsettledWages: number;
-  }> {
-    const activeWorkers = await this.repo.findActiveWorkers();
-    const pendingOtClaims = await this.repo.findOtClaims({ status: 'PENDING' });
+  static async settlePayroll(params: {
+    workerId: string;
+    endDate?: string;
+    amountPaid?: number;
+    paymentMethod?: 'CASH' | 'UPI' | 'BANK_TRANSFER';
+    referenceNote?: string;
+    settledByName?: string;
+  }) {
+    const worker = await PayrollRepository.findWorkerById(params.workerId);
+    if (!worker) throw new AppError('Worker not found', 404);
 
-    let totalUnsettledWages = 0;
-    const workerSummaries: AdminWorkerSummary[] = [];
+    const endDateStr = params.endDate || formatDateStr(new Date());
 
-    for (const worker of activeWorkers) {
-      const ledgerResult = await this.getWorkerLedger(worker._id.toString());
-      const workerPendingOt = pendingOtClaims.filter(
-        (c) =>
-          c.workerId.toString() === worker._id.toString() ||
-          (c.workerId as any)?._id?.toString() === worker._id.toString()
-      );
-      const pendingHours = workerPendingOt.reduce((sum, c) => sum + c.hours, 0);
-
-      totalUnsettledWages += ledgerResult.metrics.netUnsettledEarnings;
-
-      const latestSettlement = ledgerResult.recentSettlements[0];
-
-      workerSummaries.push({
-        workerId: worker._id.toString(),
-        name: worker.name,
-        mobile: worker.mobile,
-        dailyWage: worker.dailyWage || 0,
-        unsettledDaysCount: ledgerResult.metrics.workingDays + ledgerResult.metrics.holidayDays,
-        unsettledBalance: ledgerResult.metrics.netUnsettledEarnings,
-        pendingOtHours: pendingHours,
-        lastSettlementDate: latestSettlement?.endDate,
-      });
-    }
-
-    return {
-      workers: workerSummaries,
-      pendingOtClaimsCount: pendingOtClaims.length,
-      totalUnsettledWages,
-    };
-  }
-
-  /**
-   * Settle and Payout (Supports Custom Partial Payout with complete audit metadata)
-   */
-  async settleWorkerPayroll(
-    workerId: string,
-    endDateInput: string | Date,
-    paymentMethod: PaymentMethod,
-    referenceNote: string | undefined,
-    adminId: string,
-    customAmountPaid?: number
-  ): Promise<IPayrollSettlement> {
-    const end = new Date(endDateInput);
-    end.setHours(23, 59, 59, 999);
-
-    const ledgerResult = await this.getWorkerLedger(workerId, undefined, end);
-    const { metrics, period, ledger } = ledgerResult;
-
-    if (metrics.netUnsettledEarnings < 0) {
-      throw new Error('Net payable is negative due to advances exceeding earnings');
-    }
-
-    const netPayable = metrics.netUnsettledEarnings;
-    const amountPaid = customAmountPaid !== undefined ? customAmountPaid : netPayable;
-    if (amountPaid < 0) {
-      throw new Error('Payout amount cannot be negative');
-    }
-    const carriedForwardBalance = Math.max(0, netPayable - amountPaid);
-    const payoutType: PayoutType = amountPaid < netPayable ? 'PARTIAL' : 'FULL';
-
-    const [workerUser, adminUser, leaves, approvedOt, advances] = await Promise.all([
-      this.repo.findWorkerById(workerId),
-      this.repo.findWorkerById(adminId),
-      this.repo.findLeaves({ workerId, isSettled: false, endDate: end }),
-      this.repo.findOtClaims({ workerId, status: 'APPROVED', isSettled: false, endDate: end }),
-      this.repo.findCashAdvances({ workerId, isSettled: false }),
-    ]);
-
-    const totalPaidDays =
-      metrics.workingDays + metrics.holidayDays + metrics.paidLeaveDays + metrics.halfDays * 0.5;
-    const totalCalendarDays =
-      metrics.workingDays +
-      metrics.holidayDays +
-      metrics.paidLeaveDays +
-      metrics.leaveDays +
-      metrics.halfDays +
-      metrics.sundayDays;
-    const netBaseWage = metrics.totalGrossWages - metrics.totalLeaveDeduction;
-
-    // Snapshot of every day in the cycle for complete audit trail
-    const itemizedDays = (ledger || []).map((entry) => ({
-      date: entry.date,
-      dayName: entry.dayName,
-      dayType: entry.dayType,
-      baseWage: entry.baseWage,
-      leaveDeduction: entry.leaveDeduction,
-      netDayWage: entry.netDayWage,
-      otHours: entry.otHours,
-      otAmount: entry.otAmount,
-      advancesDeducted: entry.advancesAmount || 0,
-      totalDayEarnings: entry.totalDayEarnings,
-      holidayTitle: entry.holidayTitle,
-      leaveReason: entry.leaveReason,
-    }));
-
-    const settlement = await this.repo.createSettlement({
-      workerId: new mongoose.Types.ObjectId(workerId),
-      workerName: workerUser?.name || ledgerResult.worker.name,
-      workerMobile: workerUser?.mobile || ledgerResult.worker.mobile,
-      baseDailyWageRate: workerUser?.dailyWage || ledgerResult.worker.dailyWage || 0,
-      startDate: new Date(period.startDate),
-      endDate: end,
-      // Day Counts Breakdown
-      totalWorkingDays: metrics.workingDays,
-      totalFullLeaveDays: metrics.leaveDays,
-      totalHalfDays: metrics.halfDays,
-      totalPaidLeaveDays: metrics.paidLeaveDays,
-      totalHolidayDays: metrics.holidayDays,
-      totalSundayDays: metrics.sundayDays,
-      totalPaidDays,
-      totalCalendarDays,
-      totalLeaveDays: metrics.leaveDays + metrics.halfDays,
-      // Wage & Earnings Math Metadata
-      grossWages: metrics.totalGrossWages,
-      totalLeaveDeduction: metrics.totalLeaveDeduction,
-      netBaseWage,
-      totalOtHours: metrics.totalOtHours,
-      otHourlyRate: 150,
-      totalOtAmount: metrics.totalOtAmount,
-      totalCashAdvances: metrics.totalAdvances,
-      previousBalanceCarriedForward: metrics.carriedForwardBalance || 0,
-      netPayable,
-      amountPaid,
-      carriedForwardBalance,
-      payoutType,
-      // Transaction Metadata
-      paymentMethod,
-      referenceNote,
-      settledBy: new mongoose.Types.ObjectId(adminId),
-      settledByName: adminUser?.name || 'Admin',
-      settledAt: new Date(),
-      // Linked Records & Snapshots
-      settledAdvanceIds: advances.map((a) => a._id),
-      settledOtClaimIds: approvedOt.map((o) => o._id),
-      settledLeaveIds: leaves.map((l) => l._id),
-      itemizedDays,
+    // Compute exact unsettled dues up to endDateStr
+    const sheet = await this.getWorkerSingleSheet({
+      workerId: params.workerId,
+      endDate: endDateStr,
+      includeSettledHistory: false,
     });
 
-    const settlementId = settlement._id.toString();
+    const netPayable = sheet.kpis.netPayable;
+    const amountToDisburse = params.amountPaid !== undefined ? params.amountPaid : netPayable;
+    const carriedForwardBalance = Math.max(0, netPayable - amountToDisburse);
 
-    await Promise.all([
-      this.repo.markLeavesSettled(leaves.map((l) => l._id.toString()), settlementId),
-      this.repo.markOtClaimsSettled(approvedOt.map((o) => o._id.toString()), settlementId),
-      this.repo.markAdvancesSettled(advances.map((a) => a._id.toString()), settlementId),
-    ]);
+    // Create Settlement WageTransaction
+    const settlementTx = await PayrollRepository.createWageTransaction({
+      workerId: params.workerId,
+      type: 'PAYOUT_SETTLEMENT',
+      amount: amountToDisburse,
+      date: new Date(),
+      periodCovered: {
+        startDate: new Date(`${sheet.period.startDate}T00:00:00.000Z`),
+        endDate: new Date(`${endDateStr}T23:59:59.999Z`),
+      },
+      notes: `Settlement payout for period ${sheet.period.startDate} to ${endDateStr}`,
+      paymentMethod: params.paymentMethod || 'CASH',
+      referenceNote: params.referenceNote || '',
+      settledByName: params.settledByName || 'Admin',
+      carriedForwardBalance,
+      itemizedSummary: {
+        totalWorkingDays: sheet.kpis.totalWorkingDays,
+        totalSundays: sheet.kpis.totalSundays,
+        totalHolidays: sheet.kpis.totalHolidayDays,
+        totalFullLeaves: sheet.kpis.totalFullLeaveDays,
+        totalHalfDays: sheet.kpis.totalHalfDays,
+        grossWages: sheet.kpis.grossWages,
+        totalLeaveDeduction: sheet.kpis.totalLeaveDeductions,
+        netBaseWage: sheet.kpis.netBaseWages,
+        totalOtHours: sheet.kpis.totalApprovedOtHours,
+        totalOtAmount: sheet.kpis.totalApprovedOtAmount,
+        totalAdvancesDeducted: sheet.kpis.totalUnsettledAdvances,
+        carriedForwardBalance,
+      },
+    });
 
-    return settlement;
-  }
-  /**
-   * Unified Money Flow Ledger (Giving & Taking Money)
-   * Detailed chronological audit of Cash Advances, Settlements, and Overtime
-   */
-  async getMoneyFlowLedger(filters: {
-    workerId?: string;
-    type?: 'ALL' | 'ADVANCE' | 'SETTLEMENT' | 'OT';
-    startDate?: string;
-    endDate?: string;
-  }): Promise<{
-    transactions: Array<{
-      id: string;
-      date: string;
-      workerId: string;
-      workerName: string;
-      workerMobile: string;
-      transactionType: 'CASH_ADVANCE' | 'SETTLEMENT_PAYOUT' | 'OVERTIME_CREDIT';
-      direction: 'GIVING_TO_WORKER' | 'CREDIT_TO_WAGE';
-      category: string;
-      amount: number;
-      paymentMethod: string;
-      status: string;
-      payoutType?: 'FULL' | 'PARTIAL';
-      notes?: string;
-      authorizedBy: string;
-      carriedForwardBalance?: number;
-      netPayable?: number;
-      settlementId?: string;
-    }>;
-    kpis: {
-      totalCashAdvances: number;
-      unsettledAdvancesTotal: number;
-      totalSettlementsDisbursed: number;
-      totalOtApproved: number;
-      netCashDisbursed: number;
-    };
-  }> {
-    const start = filters.startDate ? new Date(filters.startDate) : undefined;
-    if (start) start.setHours(0, 0, 0, 0);
+    // Mark adjustments and advances settled
+    await PayrollRepository.markAdjustmentsSettled(
+      params.workerId,
+      endDateStr,
+      settlementTx._id as mongoose.Types.ObjectId
+    );
 
-    const end = filters.endDate ? new Date(filters.endDate) : undefined;
-    if (end) end.setHours(23, 59, 59, 999);
+    await PayrollRepository.markAdvancesSettled(
+      params.workerId,
+      new Date(`${endDateStr}T23:59:59.999Z`),
+      settlementTx._id as mongoose.Types.ObjectId
+    );
 
-    const [allAdvances, allSettlements, allOtClaims] = await Promise.all([
-      this.repo.findCashAdvances({ workerId: filters.workerId }),
-      this.repo.findSettlements(filters.workerId),
-      this.repo.findOtClaims({ workerId: filters.workerId, status: 'APPROVED' }),
-    ]);
-
-    const transactions: any[] = [];
-    let totalCashAdvances = 0;
-    let unsettledAdvancesTotal = 0;
-    let totalSettlementsDisbursed = 0;
-    let totalOtApproved = 0;
-
-    // 1. Process Cash Advances (Giving money mid-cycle)
-    if (!filters.type || filters.type === 'ALL' || filters.type === 'ADVANCE') {
-      for (const adv of allAdvances) {
-        const advDate = new Date(adv.date);
-        if (start && advDate < start) continue;
-        if (end && advDate > end) continue;
-
-        totalCashAdvances += adv.amount;
-        if (!adv.isSettled) unsettledAdvancesTotal += adv.amount;
-
-        const wObj = adv.workerId as any;
-        const gObj = adv.givenBy as any;
-
-        transactions.push({
-          id: adv._id.toString(),
-          date: advDate.toISOString(),
-          workerId: wObj?._id?.toString() || adv.workerId?.toString(),
-          workerName: wObj?.name || 'Worker',
-          workerMobile: wObj?.mobile || '',
-          transactionType: 'CASH_ADVANCE',
-          direction: 'GIVING_TO_WORKER',
-          category: 'Cash Advance (Given Mid-Cycle)',
-          amount: adv.amount,
-          paymentMethod: 'CASH',
-          status: adv.isSettled ? 'SETTLED' : 'UNSETTLED',
-          notes: adv.reason || 'Mid-week cash advance',
-          authorizedBy: gObj?.name || 'Admin',
-          settlementId: adv.settlementId?.toString(),
-        });
-      }
-    }
-
-    // 2. Process Settlements (Paying wage cycles)
-    if (!filters.type || filters.type === 'ALL' || filters.type === 'SETTLEMENT') {
-      for (const s of allSettlements) {
-        const sDate = new Date(s.settledAt);
-        if (start && sDate < start) continue;
-        if (end && sDate > end) continue;
-
-        totalSettlementsDisbursed += s.amountPaid;
-
-        const wObj = s.workerId as any;
-        const sObj = s.settledBy as any;
-
-        transactions.push({
-          id: s._id.toString(),
-          date: sDate.toISOString(),
-          workerId: wObj?._id?.toString() || s.workerId?.toString(),
-          workerName: s.workerName || wObj?.name || 'Worker',
-          workerMobile: s.workerMobile || wObj?.mobile || '',
-          transactionType: 'SETTLEMENT_PAYOUT',
-          direction: 'GIVING_TO_WORKER',
-          category: s.payoutType === 'PARTIAL' ? 'Partial Wage Payout' : 'Full Wage Settlement',
-          amount: s.amountPaid,
-          netPayable: s.netPayable,
-          carriedForwardBalance: s.carriedForwardBalance || 0,
-          paymentMethod: s.paymentMethod,
-          status: 'COMPLETED',
-          payoutType: s.payoutType || (s.amountPaid < s.netPayable ? 'PARTIAL' : 'FULL'),
-          notes: s.referenceNote || `Settled across ${s.totalWorkingDays} worked days`,
-          authorizedBy: s.settledByName || sObj?.name || 'Admin',
-          settlementId: s._id.toString(),
-        });
-      }
-    }
-
-    // 3. Process Overtime Approved (Wage Credits)
-    if (!filters.type || filters.type === 'ALL' || filters.type === 'OT') {
-      for (const ot of allOtClaims) {
-        const otDate = new Date(ot.date);
-        if (start && otDate < start) continue;
-        if (end && otDate > end) continue;
-
-        totalOtApproved += ot.totalAmount;
-
-        const wObj = ot.workerId as any;
-        const rObj = ot.reviewedBy as any;
-
-        transactions.push({
-          id: ot._id.toString(),
-          date: otDate.toISOString(),
-          workerId: wObj?._id?.toString() || ot.workerId?.toString(),
-          workerName: wObj?.name || 'Worker',
-          workerMobile: wObj?.mobile || '',
-          transactionType: 'OVERTIME_CREDIT',
-          direction: 'CREDIT_TO_WAGE',
-          category: 'Overtime Approved',
-          amount: ot.totalAmount,
-          paymentMethod: 'WAGE_CREDIT',
-          status: ot.isSettled ? 'SETTLED' : 'APPROVED',
-          notes: ot.note ? `${ot.hours}h OT: ${ot.note}` : `${ot.hours}h OT @ ₹150/hr`,
-          authorizedBy: rObj?.name || 'Admin',
-          settlementId: ot.settlementId?.toString(),
-        });
-      }
-    }
-
-    // Sort descending by date (newest first)
-    transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Update worker's lastSettledDate
+    await PayrollRepository.updateWorkerLastSettledDate(params.workerId, new Date(`${endDateStr}T23:59:59.999Z`));
 
     return {
-      transactions,
-      kpis: {
-        totalCashAdvances,
-        unsettledAdvancesTotal,
-        totalSettlementsDisbursed,
-        totalOtApproved,
-        netCashDisbursed: totalCashAdvances + totalSettlementsDisbursed,
-      },
+      message: `Payroll successfully settled for ${worker.name}`,
+      settlement: settlementTx,
+      netPayable,
+      amountPaid: amountToDisburse,
+      carriedForwardBalance,
     };
   }
 
+  /**
+   * Record Cash Advance (ADVANCE_TAKEN)
+   */
+  static async recordCashAdvance(params: {
+    workerId: string;
+    amount: number;
+    date?: string;
+    notes?: string;
+    recordedByName?: string;
+  }) {
+    const worker = await PayrollRepository.findWorkerById(params.workerId);
+    if (!worker) throw new AppError('Worker not found', 404);
+
+    const advanceTx = await PayrollRepository.createWageTransaction({
+      workerId: params.workerId,
+      type: 'ADVANCE_TAKEN',
+      amount: params.amount,
+      date: params.date ? new Date(`${params.date}T12:00:00.000Z`) : new Date(),
+      notes: params.notes || 'Mid-cycle cash advance',
+      settledByName: params.recordedByName || 'Admin',
+    });
+
+    return {
+      message: `Cash advance of ₹${params.amount} recorded for ${worker.name}`,
+      advance: advanceTx,
+    };
+  }
+
+  /**
+   * Admin Roster Overview: lists all workers with current daily wage, last settlement, unsettled dues,
+   * and pending OT claim counts.
+   */
+  static async getAdminOverview() {
+    const workers = await PayrollRepository.findAllWorkers();
+    const pendingOtClaims = await PayrollRepository.findPendingOtClaims();
+
+    const pendingOtWorkerMap = new Map<string, number>();
+    for (const claim of pendingOtClaims) {
+      const wId = (claim.workerId as any)?._id?.toString() || claim.workerId?.toString();
+      pendingOtWorkerMap.set(wId, (pendingOtWorkerMap.get(wId) || 0) + 1);
+    }
+
+    const workerSummaries = await Promise.all(
+      workers.map(async (worker) => {
+        try {
+          const sheet = await this.getWorkerSingleSheet({
+            workerId: worker._id.toString(),
+            includeSettledHistory: false,
+          });
+
+          return {
+            workerId: worker._id,
+            name: worker.name,
+            mobile: worker.mobile,
+            role: worker.role,
+            dailyWage: worker.dailyWage || 0,
+            lastSettledDate: worker.lastSettledDate,
+            unsettledGross: sheet.kpis.grossWages,
+            unsettledDeductions: sheet.kpis.totalLeaveDeductions,
+            unsettledOtAmount: sheet.kpis.totalApprovedOtAmount,
+            unsettledAdvances: sheet.kpis.totalUnsettledAdvances,
+            netPayable: sheet.kpis.netPayable,
+            pendingOtCount: pendingOtWorkerMap.get(worker._id.toString()) || 0,
+          };
+        } catch {
+          return {
+            workerId: worker._id,
+            name: worker.name,
+            mobile: worker.mobile,
+            role: worker.role,
+            dailyWage: worker.dailyWage || 0,
+            lastSettledDate: worker.lastSettledDate,
+            unsettledGross: 0,
+            unsettledDeductions: 0,
+            unsettledOtAmount: 0,
+            unsettledAdvances: 0,
+            netPayable: 0,
+            pendingOtCount: pendingOtWorkerMap.get(worker._id.toString()) || 0,
+          };
+        }
+      })
+    );
+
+    const totalUnsettledNet = workerSummaries.reduce((sum, w) => sum + w.netPayable, 0);
+    const totalPendingOtCount = pendingOtClaims.length;
+
+    return {
+      kpis: {
+        totalWorkers: workers.length,
+        totalUnsettledNet,
+        totalPendingOtCount,
+      },
+      workers: workerSummaries,
+      pendingOtClaims: pendingOtClaims.map((c: any) => ({
+        id: c._id,
+        workerId: c.workerId?._id || c.workerId,
+        workerName: c.workerId?.name || 'Worker',
+        workerMobile: c.workerId?.mobile || '',
+        date: c.date,
+        otHours: c.otHours,
+        potentialAmount: (c.otHours || 0) * OT_HOURLY_RATE,
+        note: c.note,
+        createdAt: c.createdAt,
+      })),
+    };
+  }
 }

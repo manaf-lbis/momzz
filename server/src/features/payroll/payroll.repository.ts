@@ -1,292 +1,269 @@
 import mongoose from 'mongoose';
-import OtClaim, { IOtClaim, OtClaimStatus } from '../../models/OtClaim.model';
-import PayrollLeave, { IPayrollLeave, LeaveType } from '../../models/PayrollLeave.model';
-import CashAdvance, { ICashAdvance } from '../../models/CashAdvance.model';
-import Holiday, { IHoliday } from '../../models/Holiday.model';
-import PayrollSettlement, { IPayrollSettlement } from '../../models/PayrollSettlement.model';
 import User, { IUser } from '../../models/User.model';
+import WageAdjustment, { IWageAdjustment, WageAdjustmentType, WageAdjustmentStatus } from '../../models/WageAdjustment.model';
+import GarageHoliday, { IGarageHoliday } from '../../models/GarageHoliday.model';
+import WageTransaction, { IWageTransaction, WageTransactionType } from '../../models/WageTransaction.model';
+import { ROLES } from '../../shared/constants/status';
 
-export interface IPayrollRepository {
-  // Workers
-  findActiveWorkers(): Promise<IUser[]>;
-  findWorkerById(workerId: string): Promise<IUser | null>;
-  updateWorkerWage(workerId: string, dailyWage: number, effectiveDate?: Date): Promise<IUser | null>;
+export class PayrollRepository {
+  static async findWorkerById(workerId: string): Promise<IUser | null> {
+    if (!mongoose.Types.ObjectId.isValid(workerId)) return null;
+    return User.findById(workerId).select('-password');
+  }
 
-  // OT Claims
-  createOtClaim(data: Partial<IOtClaim>): Promise<IOtClaim>;
-  findOtClaimById(id: string): Promise<IOtClaim | null>;
-  findOtClaims(filter: {
-    workerId?: string;
-    status?: OtClaimStatus;
-    isSettled?: boolean;
-    startDate?: Date;
-    endDate?: Date;
-  }): Promise<IOtClaim[]>;
-  updateOtClaim(id: string, update: Partial<IOtClaim>): Promise<IOtClaim | null>;
-  deleteOtClaim(id: string): Promise<IOtClaim | null>;
-  markOtClaimsSettled(ids: string[], settlementId: string): Promise<void>;
-
-  // Leaves
-  createLeave(data: Partial<IPayrollLeave>): Promise<IPayrollLeave>;
-  findLeaveById(id: string): Promise<IPayrollLeave | null>;
-  findLeaves(filter: {
-    workerId?: string;
-    isSettled?: boolean;
-    startDate?: Date;
-    endDate?: Date;
-  }): Promise<IPayrollLeave[]>;
-  findLeaveByWorkerAndDate(workerId: string, date: Date): Promise<IPayrollLeave | null>;
-  countMonthlyPaidLeaves(workerId: string, startOfMonth: Date, endOfMonth: Date): Promise<number>;
-  deleteLeave(id: string): Promise<IPayrollLeave | null>;
-  markLeavesSettled(ids: string[], settlementId: string): Promise<void>;
-
-  // Holidays
-  createHoliday(data: Partial<IHoliday>): Promise<IHoliday>;
-  findHolidays(startDate?: Date, endDate?: Date): Promise<IHoliday[]>;
-  findHolidayByDate(date: Date): Promise<IHoliday | null>;
-  findHolidayById(id: string): Promise<IHoliday | null>;
-  deleteHoliday(id: string): Promise<IHoliday | null>;
-
-  // Cash Advances
-  createCashAdvance(data: Partial<ICashAdvance>): Promise<ICashAdvance>;
-  findCashAdvances(filter: { workerId?: string; isSettled?: boolean }): Promise<ICashAdvance[]>;
-  findCashAdvanceById(id: string): Promise<ICashAdvance | null>;
-  updateCashAdvance(id: string, update: Partial<ICashAdvance>): Promise<ICashAdvance | null>;
-  deleteCashAdvance(id: string): Promise<ICashAdvance | null>;
-  markAdvancesSettled(ids: string[], settlementId: string): Promise<void>;
-
-  // Settlements
-  createSettlement(data: Partial<IPayrollSettlement>): Promise<IPayrollSettlement>;
-  findSettlements(workerId?: string): Promise<IPayrollSettlement[]>;
-  findLatestSettlement(workerId: string): Promise<IPayrollSettlement | null>;
-}
-
-export class PayrollRepository implements IPayrollRepository {
-  async findActiveWorkers(): Promise<IUser[]> {
+  static async findAllWorkers(): Promise<IUser[]> {
     return User.find({
-      role: 'WORKER',
+      role: { $in: [ROLES.WORKER, ROLES.ADMIN] },
       isApproved: true,
       status: 'ACTIVE',
-    }).sort({ name: 1 });
+    })
+      .select('name mobile role dailyWage dailyWageEffectiveDate wageHistory lastSettledDate createdAt')
+      .sort({ name: 1 });
   }
 
-  async findWorkerById(workerId: string): Promise<IUser | null> {
-    return User.findById(workerId);
-  }
-
-  async updateWorkerWage(workerId: string, dailyWage: number, effectiveDate?: Date): Promise<IUser | null> {
-    const eff = effectiveDate ? new Date(effectiveDate) : new Date();
-    eff.setHours(0, 0, 0, 0);
-
+  static async updateWorkerWage(workerId: string, dailyWage: number): Promise<IUser | null> {
     const worker = await User.findById(workerId);
     if (!worker) return null;
 
-    // If no wageHistory exists yet, but previous dailyWage exists, preserve old wage with worker's createdAt
-    const history = worker.wageHistory || [];
-    if (history.length === 0 && worker.dailyWage && worker.dailyWage > 0) {
-      history.push({
-        wage: worker.dailyWage,
-        effectiveDate: worker.dailyWageEffectiveDate || worker.createdAt || new Date(2020, 0, 1),
-        createdAt: new Date(),
-      });
-    }
-
-    history.push({
+    if (!worker.wageHistory) worker.wageHistory = [];
+    worker.wageHistory.push({
       wage: dailyWage,
-      effectiveDate: eff,
+      effectiveDate: new Date(),
       createdAt: new Date(),
     });
-
-    // Sort by effectiveDate ascending
-    history.sort((a, b) => new Date(a.effectiveDate).getTime() - new Date(b.effectiveDate).getTime());
-
     worker.dailyWage = dailyWage;
-    worker.dailyWageEffectiveDate = eff;
-    worker.wageHistory = history;
+    worker.dailyWageEffectiveDate = new Date();
 
     return worker.save();
   }
 
-  async createOtClaim(data: Partial<IOtClaim>): Promise<IOtClaim> {
-    return OtClaim.create(data);
+  static async updateWorkerLastSettledDate(workerId: string, lastSettledDate: Date): Promise<IUser | null> {
+    return User.findByIdAndUpdate(workerId, { lastSettledDate }, { new: true });
   }
 
-  async findOtClaimById(id: string): Promise<IOtClaim | null> {
-    return OtClaim.findById(id).populate('workerId', 'name mobile dailyWage');
-  }
-
-  async findOtClaims(filter: {
+  static async findWageAdjustments(filter: {
     workerId?: string;
-    status?: OtClaimStatus;
+    workerIds?: string[];
+    startDate?: string;
+    endDate?: string;
+    type?: WageAdjustmentType;
+    types?: WageAdjustmentType[];
+    status?: WageAdjustmentStatus;
     isSettled?: boolean;
-    startDate?: Date;
-    endDate?: Date;
-  }): Promise<IOtClaim[]> {
-    const query: Record<string, any> = {};
-    if (filter.workerId) query.workerId = filter.workerId;
+  }): Promise<IWageAdjustment[]> {
+    const query: any = {};
+
+    if (filter.workerId && mongoose.Types.ObjectId.isValid(filter.workerId)) {
+      query.workerId = new mongoose.Types.ObjectId(filter.workerId);
+    } else if (filter.workerIds && filter.workerIds.length > 0) {
+      query.workerId = { $in: filter.workerIds.map((id) => new mongoose.Types.ObjectId(id)) };
+    }
+
+    if (filter.startDate && filter.endDate) {
+      query.date = { $gte: filter.startDate, $lte: filter.endDate };
+    } else if (filter.startDate) {
+      query.date = { $gte: filter.startDate };
+    } else if (filter.endDate) {
+      query.date = { $lte: filter.endDate };
+    }
+
+    if (filter.type) query.type = filter.type;
+    else if (filter.types) query.type = { $in: filter.types };
+
     if (filter.status) query.status = filter.status;
     if (filter.isSettled !== undefined) query.isSettled = filter.isSettled;
-    if (filter.startDate || filter.endDate) {
-      query.date = {};
-      if (filter.startDate) query.date.$gte = filter.startDate;
-      if (filter.endDate) query.date.$lte = filter.endDate;
-    }
-    return OtClaim.find(query)
+
+    return WageAdjustment.find(query).sort({ date: 1, createdAt: 1 });
+  }
+
+  static async findPendingOtClaims(): Promise<IWageAdjustment[]> {
+    return WageAdjustment.find({
+      type: 'OVERTIME',
+      status: 'PENDING',
+    })
       .populate('workerId', 'name mobile dailyWage')
-      .populate('reviewedBy', 'name')
-      .sort({ date: -1 });
+      .sort({ date: -1, createdAt: -1 });
   }
 
-  async updateOtClaim(id: string, update: Partial<IOtClaim>): Promise<IOtClaim | null> {
-    return OtClaim.findByIdAndUpdate(id, update, { new: true });
+  static async findWageAdjustmentById(id: string): Promise<IWageAdjustment | null> {
+    if (!mongoose.Types.ObjectId.isValid(id)) return null;
+    return WageAdjustment.findById(id).populate('workerId', 'name mobile dailyWage');
   }
 
-  async deleteOtClaim(id: string): Promise<IOtClaim | null> {
-    return OtClaim.findByIdAndDelete(id);
-  }
-
-  async markOtClaimsSettled(ids: string[], settlementId: string): Promise<void> {
-    if (ids.length === 0) return;
-    await OtClaim.updateMany(
-      { _id: { $in: ids } },
-      { isSettled: true, settlementId: new mongoose.Types.ObjectId(settlementId), settledAt: new Date() }
+  static async upsertLeaveAdjustment(data: {
+    workerId: string;
+    date: string;
+    type: 'FULL_LEAVE' | 'HALF_LEAVE';
+    deductionAmount: number;
+    note?: string;
+  }): Promise<IWageAdjustment> {
+    return WageAdjustment.findOneAndUpdate(
+      {
+        workerId: new mongoose.Types.ObjectId(data.workerId),
+        date: data.date,
+        type: { $in: ['FULL_LEAVE', 'HALF_LEAVE'] },
+      },
+      {
+        workerId: new mongoose.Types.ObjectId(data.workerId),
+        date: data.date,
+        type: data.type,
+        status: 'APPROVED',
+        deductionAmount: data.deductionAmount,
+        note: data.note || '',
+        otHours: 0,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
   }
 
-  async createLeave(data: Partial<IPayrollLeave>): Promise<IPayrollLeave> {
-    return PayrollLeave.create(data);
+  static async createOtClaim(data: {
+    workerId: string;
+    date: string;
+    otHours: number;
+    note?: string;
+  }): Promise<IWageAdjustment> {
+    return WageAdjustment.create({
+      workerId: new mongoose.Types.ObjectId(data.workerId),
+      date: data.date,
+      type: 'OVERTIME',
+      otHours: data.otHours,
+      status: 'PENDING',
+      deductionAmount: 0,
+      note: data.note || '',
+    });
   }
 
-  async findLeaveById(id: string): Promise<IPayrollLeave | null> {
-    return PayrollLeave.findById(id);
+  static async updateOtStatus(
+    id: string,
+    status: 'APPROVED' | 'REJECTED',
+    reviewedBy: string,
+    note?: string
+  ): Promise<IWageAdjustment | null> {
+    return WageAdjustment.findByIdAndUpdate(
+      id,
+      {
+        status,
+        reviewedBy: new mongoose.Types.ObjectId(reviewedBy),
+        reviewedAt: new Date(),
+        ...(note ? { note } : {}),
+      },
+      { new: true }
+    );
   }
 
-  async findLeaves(filter: {
+  static async deleteWageAdjustment(id: string): Promise<boolean> {
+    const res = await WageAdjustment.findByIdAndDelete(id);
+    return !!res;
+  }
+
+  // --- Garage Holidays ---
+  static async findHolidays(startDate?: string, endDate?: string): Promise<IGarageHoliday[]> {
+    const query: any = {};
+    if (startDate && endDate) {
+      query.date = { $gte: startDate, $lte: endDate };
+    } else if (startDate) {
+      query.date = { $gte: startDate };
+    } else if (endDate) {
+      query.date = { $lte: endDate };
+    }
+    return GarageHoliday.find(query).sort({ date: 1 });
+  }
+
+  static async createHoliday(date: string, title: string, isPaid: boolean = true, createdBy?: string): Promise<IGarageHoliday> {
+    return GarageHoliday.findOneAndUpdate(
+      { date },
+      { date, title, isPaid, ...(createdBy ? { createdBy: new mongoose.Types.ObjectId(createdBy) } : {}) },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  }
+
+  static async deleteHoliday(idOrDate: string): Promise<boolean> {
+    const res = mongoose.Types.ObjectId.isValid(idOrDate)
+      ? await GarageHoliday.findByIdAndDelete(idOrDate)
+      : await GarageHoliday.findOneAndDelete({ date: idOrDate });
+    return !!res;
+  }
+
+  // --- Wage Transactions (Advances & Settlements) ---
+  static async createWageTransaction(data: {
+    workerId: string;
+    type: WageTransactionType;
+    amount: number;
+    date?: Date;
+    periodCovered?: { startDate?: Date; endDate?: Date };
+    notes?: string;
+    paymentMethod?: 'CASH' | 'UPI' | 'BANK_TRANSFER';
+    referenceNote?: string;
+    settledByName?: string;
+    carriedForwardBalance?: number;
+    itemizedSummary?: any;
+  }): Promise<IWageTransaction> {
+    return WageTransaction.create({
+      workerId: new mongoose.Types.ObjectId(data.workerId),
+      type: data.type,
+      amount: data.amount,
+      date: data.date || new Date(),
+      periodCovered: data.periodCovered,
+      notes: data.notes || '',
+      paymentMethod: data.paymentMethod || 'CASH',
+      referenceNote: data.referenceNote || '',
+      settledByName: data.settledByName || 'Admin',
+      carriedForwardBalance: data.carriedForwardBalance || 0,
+      itemizedSummary: data.itemizedSummary,
+      isSettled: false,
+    });
+  }
+
+  static async findWageTransactions(filter: {
     workerId?: string;
+    type?: WageTransactionType;
     isSettled?: boolean;
     startDate?: Date;
     endDate?: Date;
-  }): Promise<IPayrollLeave[]> {
-    const query: Record<string, any> = {};
-    if (filter.workerId) query.workerId = filter.workerId;
+  }): Promise<IWageTransaction[]> {
+    const query: any = {};
+    if (filter.workerId && mongoose.Types.ObjectId.isValid(filter.workerId)) {
+      query.workerId = new mongoose.Types.ObjectId(filter.workerId);
+    }
+    if (filter.type) query.type = filter.type;
     if (filter.isSettled !== undefined) query.isSettled = filter.isSettled;
     if (filter.startDate || filter.endDate) {
       query.date = {};
       if (filter.startDate) query.date.$gte = filter.startDate;
       if (filter.endDate) query.date.$lte = filter.endDate;
     }
-    return PayrollLeave.find(query).populate('workerId', 'name mobile').sort({ date: -1 });
+    return WageTransaction.find(query).populate('workerId', 'name mobile dailyWage').sort({ date: -1 });
   }
 
-  async findLeaveByWorkerAndDate(workerId: string, date: Date): Promise<IPayrollLeave | null> {
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(date);
-    end.setHours(23, 59, 59, 999);
-    return PayrollLeave.findOne({
-      workerId,
-      date: { $gte: start, $lte: end },
-    });
-  }
-
-  async countMonthlyPaidLeaves(workerId: string, startOfMonth: Date, endOfMonth: Date): Promise<number> {
-    return PayrollLeave.countDocuments({
-      workerId,
-      isMonthlyPaidLeave: true,
-      date: { $gte: startOfMonth, $lte: endOfMonth },
-    });
-  }
-
-  async deleteLeave(id: string): Promise<IPayrollLeave | null> {
-    return PayrollLeave.findByIdAndDelete(id);
-  }
-
-  async markLeavesSettled(ids: string[], settlementId: string): Promise<void> {
-    if (ids.length === 0) return;
-    await PayrollLeave.updateMany(
-      { _id: { $in: ids } },
-      { isSettled: true, settlementId: new mongoose.Types.ObjectId(settlementId), settledAt: new Date() }
+  static async markAdjustmentsSettled(workerId: string, endDate: string, settlementId: mongoose.Types.ObjectId): Promise<number> {
+    const res = await WageAdjustment.updateMany(
+      {
+        workerId: new mongoose.Types.ObjectId(workerId),
+        date: { $lte: endDate },
+        isSettled: { $ne: true },
+      },
+      {
+        isSettled: true,
+        settlementId,
+        settledAt: new Date(),
+      }
     );
+    return res.modifiedCount;
   }
 
-  async createHoliday(data: Partial<IHoliday>): Promise<IHoliday> {
-    return Holiday.create(data);
-  }
-
-  async findHolidays(startDate?: Date, endDate?: Date): Promise<IHoliday[]> {
-    const query: Record<string, any> = {};
-    if (startDate || endDate) {
-      query.date = {};
-      if (startDate) query.date.$gte = startDate;
-      if (endDate) query.date.$lte = endDate;
-    }
-    return Holiday.find(query).sort({ date: 1 });
-  }
-
-  async findHolidayByDate(date: Date): Promise<IHoliday | null> {
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(date);
-    end.setHours(23, 59, 59, 999);
-    return Holiday.findOne({ date: { $gte: start, $lte: end } });
-  }
-
-  async findHolidayById(id: string): Promise<IHoliday | null> {
-    return Holiday.findById(id);
-  }
-
-  async deleteHoliday(id: string): Promise<IHoliday | null> {
-    return Holiday.findByIdAndDelete(id);
-  }
-
-  async createCashAdvance(data: Partial<ICashAdvance>): Promise<ICashAdvance> {
-    return CashAdvance.create(data);
-  }
-
-  async findCashAdvances(filter: { workerId?: string; isSettled?: boolean }): Promise<ICashAdvance[]> {
-    const query: Record<string, any> = {};
-    if (filter.workerId) query.workerId = filter.workerId;
-    if (filter.isSettled !== undefined) query.isSettled = filter.isSettled;
-    return CashAdvance.find(query)
-      .populate('workerId', 'name mobile')
-      .populate('givenBy', 'name')
-      .sort({ date: -1 });
-  }
-
-  async findCashAdvanceById(id: string): Promise<ICashAdvance | null> {
-    return CashAdvance.findById(id);
-  }
-
-  async updateCashAdvance(id: string, update: Partial<ICashAdvance>): Promise<ICashAdvance | null> {
-    return CashAdvance.findByIdAndUpdate(id, update, { new: true });
-  }
-
-  async deleteCashAdvance(id: string): Promise<ICashAdvance | null> {
-    return CashAdvance.findByIdAndDelete(id);
-  }
-
-  async markAdvancesSettled(ids: string[], settlementId: string): Promise<void> {
-    if (ids.length === 0) return;
-    await CashAdvance.updateMany(
-      { _id: { $in: ids } },
-      { isSettled: true, settlementId: new mongoose.Types.ObjectId(settlementId), settledAt: new Date() }
+  static async markAdvancesSettled(workerId: string, endDate: Date, settlementId: mongoose.Types.ObjectId): Promise<number> {
+    const res = await WageTransaction.updateMany(
+      {
+        workerId: new mongoose.Types.ObjectId(workerId),
+        type: 'ADVANCE_TAKEN',
+        date: { $lte: endDate },
+        isSettled: { $ne: true },
+      },
+      {
+        isSettled: true,
+        settlementId,
+      }
     );
-  }
-
-  async createSettlement(data: Partial<IPayrollSettlement>): Promise<IPayrollSettlement> {
-    return PayrollSettlement.create(data);
-  }
-
-  async findSettlements(workerId?: string): Promise<IPayrollSettlement[]> {
-    const query: Record<string, any> = {};
-    if (workerId) query.workerId = workerId;
-    return PayrollSettlement.find(query)
-      .populate('workerId', 'name mobile dailyWage')
-      .populate('settledBy', 'name')
-      .sort({ settledAt: -1 });
-  }
-
-  async findLatestSettlement(workerId: string): Promise<IPayrollSettlement | null> {
-    return PayrollSettlement.findOne({ workerId }).sort({ endDate: -1 });
+    return res.modifiedCount;
   }
 }
