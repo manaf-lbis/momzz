@@ -262,37 +262,38 @@ export const PayrollDashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Top Header & Navigation */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+      {/* ── Sticky Page Header ── */}
+      <header className="sticky top-0 z-20 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-slate-200 dark:border-zinc-800 px-4 sm:px-6 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          {/* Left: back + title */}
+          <div className="flex items-center gap-3 min-w-0">
             <BackButton />
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  <Wallet className="w-5 h-5" />
+                <span className="p-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                  <Wallet className="w-4 h-4" />
                 </span>
-                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
                   Payroll & Daily Wages
                 </h1>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 hidden sm:block">
                 Dynamic daily-wage engine &bull; Floor-100 leave penalty &bull; Unsettled single-sheet ledger
               </p>
             </div>
           </div>
 
-          {/* Action Toolbar */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          {/* Right: action buttons — desktop only */}
+          <div className="hidden md:flex items-center gap-2 shrink-0">
             <button
               onClick={() => {
                 setSelectedWorkerIds([]);
                 setShowBulkLeaveModal(true);
               }}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-sm shadow-amber-600/20 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-sm active:scale-95 transition-all"
             >
               <Users className="w-4 h-4" />
               <span>Mark Bulk Leave</span>
@@ -303,7 +304,7 @@ export const PayrollDashboardPage: React.FC = () => {
                 setAdvanceWorkerId(workers[0]?.workerId || '');
                 setShowAdvanceModal(true);
               }}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 text-white border border-slate-700/60 shadow-sm active:scale-95 transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white border border-zinc-700/60 shadow-sm active:scale-95 transition-all"
             >
               <Banknote className="w-4 h-4 text-emerald-400" />
               <span>Record Advance</span>
@@ -311,191 +312,209 @@ export const PayrollDashboardPage: React.FC = () => {
 
             <button
               onClick={() => setShowHolidayModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 shadow-sm active:scale-95 transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700/70 shadow-sm active:scale-95 transition-all"
             >
               <PartyPopper className="w-4 h-4 text-purple-500" />
-              <span>Garage Holidays</span>
+              <span>Holidays</span>
             </button>
 
             <AnimatedThemeToggle />
           </div>
-        </div>
 
-        {/* Pending OT Claims Alert Banner (Admin Instant Inline Review) */}
-        {pendingOtClaims.length > 0 && (
-          <div className="relative overflow-hidden rounded-2xl p-4 sm:p-5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 dark:border-amber-500/20 backdrop-blur-sm">
-            <Meteors number={10} />
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="p-2.5 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
-                  <Zap className="w-5 h-5 animate-pulse" />
-                </span>
-                <div>
-                  <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                    Pending Overtime Claims ({pendingOtClaims.length})
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                      Action Required
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                    Workers claim whole integer hours. Rate is strictly ₹150/hr. Unapproved OT is excluded from wages until approved.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Inline Claims Cards */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {pendingOtClaims.map((claim) => (
-                <div
-                  key={claim.id}
-                  className="bg-white/80 dark:bg-slate-800/80 rounded-xl p-3 border border-slate-200/80 dark:border-slate-700/60 shadow-sm flex flex-col justify-between gap-2.5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-bold text-xs text-slate-900 dark:text-white">
-                        {claim.workerName}
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                        <CalendarIcon className="w-3 h-3" />
-                        <span>{claim.date}</span>
-                        <span>&bull;</span>
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          {claim.otHours} hr OT (+{formatCurrency(claim.potentialAmount)})
-                        </span>
-                      </div>
-                      {claim.note && (
-                        <p className="text-[11px] text-slate-500 italic mt-1 bg-slate-50 dark:bg-slate-900/40 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
-                          "{claim.note}"
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-700/40">
-                    <button
-                      disabled={isUpdatingOt}
-                      onClick={() => handleReviewOt(claim.id, 'APPROVED')}
-                      className="flex-1 py-1.5 px-3 text-[11px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1 shadow-sm transition-all active:scale-95"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      Approve
-                    </button>
-                    <button
-                      disabled={isUpdatingOt}
-                      onClick={() => handleReviewOt(claim.id, 'REJECTED')}
-                      className="py-1.5 px-3 text-[11px] font-bold rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-1 transition-all active:scale-95"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* Right: theme toggle on mobile */}
+          <div className="flex md:hidden items-center gap-2">
+            <AnimatedThemeToggle />
           </div>
-        )}
+        </div>
+      </header>
 
-        {/* Top KPI Metrics Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-slate-800/60 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700/50 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 pb-28 md:pb-8 space-y-5">
+
+        {/* ── KPI Cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Active Staff */}
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-slate-200 dark:border-zinc-800 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Active Staff
               </span>
               <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
                 <Users className="w-4 h-4" />
               </span>
             </div>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+            <div className="text-2xl font-black tabular-nums text-slate-900 dark:text-white">
               {kpis.totalWorkers}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Active daily-wage staff members
-            </div>
+            </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-800/60 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700/50 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          {/* Total Unsettled Dues */}
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-slate-200 dark:border-zinc-800 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Total Unsettled Dues
               </span>
               <span className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
                 <Wallet className="w-4 h-4" />
               </span>
             </div>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">
+            <div className="text-2xl font-black tabular-nums text-amber-600 dark:text-amber-400">
               {formatCurrency(kpis.totalUnsettledNet)}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Calculated dynamically since last settlement
-            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Calculated since last settlement
+            </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-800/60 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700/50 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          {/* Pending OT */}
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-slate-200 dark:border-zinc-800 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Pending OT Verification
               </span>
-              <span className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+              <span className="p-2 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400">
                 <Clock className="w-4 h-4" />
               </span>
             </div>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+            <div className="text-2xl font-black tabular-nums text-violet-600 dark:text-violet-400">
               {kpis.totalPendingOtCount}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Claims awaiting approval at ₹150/hr
-            </div>
+            </p>
           </div>
         </div>
 
-        {/* Worker Roster Section */}
-        <div className="bg-white dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/50 shadow-sm overflow-hidden">
-          {/* Table Header & Controls */}
-          <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                Worker Roster & Dynamic Ledgers
-                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                  {filteredWorkers.length}
+        {/* ── Pending OT Claims Banner ── */}
+        {pendingOtClaims.length > 0 && (
+          <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 border border-amber-500/30 dark:border-amber-500/20 shadow-sm">
+            <Meteors number={10} />
+            <div className="p-4">
+              {/* Banner Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <span className="p-2.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
+                  <Zap className="w-5 h-5 animate-pulse" />
                 </span>
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Click any worker to open their continuous single-sheet ledger stream.
-              </p>
-            </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                    Pending Overtime Claims ({pendingOtClaims.length})
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse inline-block" />
+                      Action Required
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Workers claim whole integer hours. Rate is strictly ₹150/hr. Unapproved OT is excluded from wages.
+                  </p>
+                </div>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                placeholder="Search worker by name or phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full sm:w-64 px-3.5 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
+              {/* OT Claim Cards — full-width on mobile, 3-col on desktop */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {pendingOtClaims.map((claim) => (
+                  <div
+                    key={claim.id}
+                    className="bg-slate-50 dark:bg-zinc-800/70 rounded-xl p-3.5 border border-slate-200 dark:border-zinc-700 flex flex-col gap-3"
+                  >
+                    <div>
+                      <div className="font-bold text-sm text-slate-900 dark:text-white">
+                        {claim.workerName}
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-1">
+                        <CalendarIcon className="w-3 h-3" />
+                        <span>{claim.date}</span>
+                        <span>&bull;</span>
+                        <span className="font-semibold text-violet-600 dark:text-violet-400">
+                          {claim.otHours} hr OT
+                        </span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          +{formatCurrency(claim.potentialAmount)}
+                        </span>
+                      </div>
+                      {claim.note && (
+                        <p className="text-[11px] text-slate-500 italic mt-2 bg-white dark:bg-zinc-900/60 p-2 rounded-lg border border-slate-100 dark:border-zinc-700">
+                          "{claim.note}"
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-zinc-700/60">
+                      <button
+                        disabled={isUpdatingOt}
+                        onClick={() => handleReviewOt(claim.id, 'APPROVED')}
+                        className="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        Approve
+                      </button>
+                      <button
+                        disabled={isUpdatingOt}
+                        onClick={() => handleReviewOt(claim.id, 'REJECTED')}
+                        className="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Worker Roster Section ── */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+          {/* Section Header */}
+          <div className="p-4 border-b border-slate-200 dark:border-zinc-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  Worker Roster & Dynamic Ledgers
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300">
+                    {filteredWorkers.length}
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Tap any worker to open their continuous single-sheet ledger.
+                </p>
+              </div>
+
+              {/* Sticky search */}
+              <div className="relative w-full sm:w-64">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search by name or phone…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3.5 py-2 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Table View (Desktop) */}
+          {/* ── Desktop Table ── */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-200 dark:border-slate-700/50">
+              <thead className="bg-slate-50 dark:bg-zinc-800/60 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-200 dark:border-zinc-800">
                 <tr>
                   <th className="py-3 px-4">Worker</th>
-                  <th className="py-3 px-4">Daily Wage Rate</th>
-                  <th className="py-3 px-4">Unsettled Gross</th>
-                  <th className="py-3 px-4">Floor Deductions</th>
-                  <th className="py-3 px-4">Approved OT</th>
+                  <th className="py-3 px-4">Daily Wage</th>
+                  <th className="py-3 px-4">Gross</th>
+                  <th className="py-3 px-4">Deductions</th>
+                  <th className="py-3 px-4">OT Earned</th>
                   <th className="py-3 px-4">Advances</th>
-                  <th className="py-3 px-4">Net Unsettled Dues</th>
+                  <th className="py-3 px-4">Net Dues</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/40">
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
                 {filteredWorkers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-10 text-center text-slate-500 dark:text-slate-400">
+                    <td colSpan={8} className="py-12 text-center text-sm text-slate-400 dark:text-slate-500">
                       No workers found matching your search.
                     </td>
                   </tr>
@@ -503,24 +522,30 @@ export const PayrollDashboardPage: React.FC = () => {
                   filteredWorkers.map((w) => (
                     <tr
                       key={w.workerId}
-                      className="hover:bg-amber-500/[0.02] dark:hover:bg-amber-500/[0.04] transition-colors"
+                      className="hover:bg-amber-500/[0.03] dark:hover:bg-amber-500/[0.04] transition-colors"
                     >
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 dark:text-white text-sm">
-                          {w.name}
+                        <div className="flex items-center gap-2.5">
+                          {/* Avatar */}
+                          <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-black text-xs shrink-0">
+                            {w.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900 dark:text-white">{w.name}</div>
+                            <div className="text-[11px] text-slate-400">{w.mobile}</div>
+                            {w.pendingOtCount > 0 && (
+                              <span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                                <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse inline-block" />
+                                {w.pendingOtCount} pending OT
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-[11px] text-slate-400">{w.mobile}</div>
-                        {w.pendingOtCount > 0 && (
-                          <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                            <Clock className="w-2.5 h-2.5" />
-                            {w.pendingOtCount} pending OT
-                          </span>
-                        )}
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono">
+                      <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                          <span className="font-bold tabular-nums text-slate-800 dark:text-slate-200">
                             {formatCurrency(w.dailyWage)}
                           </span>
                           <button
@@ -530,7 +555,7 @@ export const PayrollDashboardPage: React.FC = () => {
                               setShowWageModal(true);
                             }}
                             title="Edit Daily Wage"
-                            className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                           >
                             <Edit2 className="w-3 h-3" />
                           </button>
@@ -538,24 +563,24 @@ export const PayrollDashboardPage: React.FC = () => {
                         <div className="text-[10px] text-slate-400">/ day</div>
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono text-slate-700 dark:text-slate-300">
+                      <td className="py-3.5 px-4 tabular-nums text-emerald-600 dark:text-emerald-400 font-medium">
                         {formatCurrency(w.unsettledGross)}
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono text-amber-600 dark:text-amber-400">
+                      <td className="py-3.5 px-4 tabular-nums text-amber-600 dark:text-amber-400 font-medium">
                         -{formatCurrency(w.unsettledDeductions)}
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono text-emerald-600 dark:text-emerald-400">
+                      <td className="py-3.5 px-4 tabular-nums text-emerald-600 dark:text-emerald-400 font-medium">
                         +{formatCurrency(w.unsettledOtAmount)}
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono text-rose-600 dark:text-rose-400">
+                      <td className="py-3.5 px-4 tabular-nums text-rose-600 dark:text-rose-400 font-medium">
                         -{formatCurrency(w.unsettledAdvances)}
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono font-extrabold text-sm text-slate-900 dark:text-white">
-                        <span className="px-2 py-1 rounded-lg bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                      <td className="py-3.5 px-4">
+                        <span className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white font-black text-xs tabular-nums">
                           {formatCurrency(w.netPayable)}
                         </span>
                       </td>
@@ -568,15 +593,15 @@ export const PayrollDashboardPage: React.FC = () => {
                               setSettleAmount(w.netPayable);
                               setShowSettleModal(true);
                             }}
-                            className="px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all active:scale-95"
+                            className="px-3 py-1.5 text-[11px] font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all active:scale-95"
                           >
                             Settle
                           </button>
                           <button
                             onClick={() => navigate(`/payroll/${w.workerId}`)}
-                            className="px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center gap-1 transition-all"
+                            className="px-3 py-1.5 text-[11px] font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-700 flex items-center gap-1 transition-all"
                           >
-                            <span>Single Sheet</span>
+                            <span>Ledger</span>
                             <ChevronRight className="w-3 h-3" />
                           </button>
                         </div>
@@ -588,91 +613,155 @@ export const PayrollDashboardPage: React.FC = () => {
             </table>
           </div>
 
-          {/* Mobile Card Roster View */}
-          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700/50">
-            {filteredWorkers.map((w) => (
-              <div key={w.workerId} className="p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">{w.name}</h3>
-                    <p className="text-xs text-slate-400">{w.mobile}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        Wage: {formatCurrency(w.dailyWage)}/day
-                      </span>
-                      <button
-                        onClick={() => {
-                          setSelectedWorker(w);
-                          setNewWage(w.dailyWage);
-                          setShowWageModal(true);
-                        }}
-                        className="p-1 text-slate-400 hover:text-slate-200"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </button>
+          {/* ── Mobile Card List ── */}
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-zinc-800">
+            {filteredWorkers.length === 0 ? (
+              <p className="py-10 text-center text-sm text-slate-400 dark:text-slate-500">
+                No workers found matching your search.
+              </p>
+            ) : (
+              filteredWorkers.map((w) => (
+                <div key={w.workerId} className="p-4 space-y-3">
+                  {/* Card Top Row */}
+                  <div className="flex items-start gap-3">
+                    {/* Initial Avatar */}
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-black text-sm shrink-0">
+                      {w.name.charAt(0).toUpperCase()}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-slate-900 dark:text-white text-sm truncate">
+                            {w.name}
+                          </h3>
+                          <p className="text-xs text-slate-400">{w.mobile}</p>
+                        </div>
+                        {/* Wage Badge */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="px-2 py-1 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[11px] font-bold tabular-nums">
+                            ₹{w.dailyWage}/day
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedWorker(w);
+                              setNewWage(w.dailyWage);
+                              setShowWageModal(true);
+                            }}
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Pending OT Badge */}
+                      {w.pendingOtCount > 0 && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse inline-block" />
+                          {w.pendingOtCount} pending OT
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block uppercase">Unsettled Dues</span>
-                    <span className="text-base font-extrabold text-amber-600 dark:text-amber-400 font-mono">
-                      {formatCurrency(w.netPayable)}
-                    </span>
+                  {/* Micro-stats row */}
+                  <div className="grid grid-cols-3 gap-1.5 bg-slate-50 dark:bg-zinc-800/60 rounded-2xl p-3 border border-slate-100 dark:border-zinc-800">
+                    <div className="text-center">
+                      <span className="text-[9px] font-medium uppercase tracking-wider text-slate-400 block mb-0.5">Gross</span>
+                      <span className="text-xs font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                        {formatCurrency(w.unsettledGross)}
+                      </span>
+                    </div>
+                    <div className="text-center border-x border-slate-200 dark:border-zinc-700">
+                      <span className="text-[9px] font-medium uppercase tracking-wider text-slate-400 block mb-0.5">Deductions</span>
+                      <span className="text-xs font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                        -{formatCurrency(w.unsettledDeductions)}
+                      </span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[9px] font-medium uppercase tracking-wider text-slate-400 block mb-0.5">Advances</span>
+                      <span className="text-xs font-bold tabular-nums text-rose-600 dark:text-rose-400">
+                        -{formatCurrency(w.unsettledAdvances)}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-3 gap-2 text-[11px] bg-slate-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <div>
-                    <span className="text-slate-400 block text-[9px]">Gross</span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300 font-mono">
-                      {formatCurrency(w.unsettledGross)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[9px]">Deductions</span>
-                    <span className="font-semibold text-amber-600 dark:text-amber-400 font-mono">
-                      -{formatCurrency(w.unsettledDeductions)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[9px]">Advances</span>
-                    <span className="font-semibold text-rose-600 dark:text-rose-400 font-mono">
-                      -{formatCurrency(w.unsettledAdvances)}
-                    </span>
+                  {/* Net dues + action buttons */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-slate-100 dark:bg-zinc-800 rounded-2xl px-3 py-2">
+                      <span className="text-[9px] font-medium uppercase tracking-wider text-slate-400 block">Net Dues</span>
+                      <span className="text-sm font-black tabular-nums text-slate-900 dark:text-white">
+                        {formatCurrency(w.netPayable)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/payroll/${w.workerId}`)}
+                      className="flex items-center gap-1 px-3 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all"
+                    >
+                      Ledger
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedWorker(w);
+                        setSettleAmount(w.netPayable);
+                        setShowSettleModal(true);
+                      }}
+                      className="flex items-center gap-1 px-3 py-2.5 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all active:scale-95"
+                    >
+                      Settle
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    onClick={() => {
-                      setSelectedWorker(w);
-                      setSettleAmount(w.netPayable);
-                      setShowSettleModal(true);
-                    }}
-                    className="flex-1 py-1.5 text-xs font-bold rounded-xl bg-emerald-600 text-white text-center shadow-sm"
-                  >
-                    Settle Dues
-                  </button>
-                  <button
-                    onClick={() => navigate(`/payroll/${w.workerId}`)}
-                    className="flex-1 py-1.5 text-xs font-bold rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-center"
-                  >
-                    View Single Sheet
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </main>
 
-      {/* --- MODAL 1: PRIMARY MARK BULK LEAVE MODAL --- */}
+      {/* ── Mobile Floating Bottom Action Bar ── */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-lg border-t border-slate-200 dark:border-zinc-800 flex items-center justify-around px-4 py-3">
+        <button
+          onClick={() => {
+            setSelectedWorkerIds([]);
+            setShowBulkLeaveModal(true);
+          }}
+          className="flex flex-col items-center gap-1 px-4 py-1 text-amber-600 dark:text-amber-400 active:opacity-70 transition"
+        >
+          <Users className="w-5 h-5" />
+          <span className="text-[10px] font-semibold">Bulk Leave</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setAdvanceWorkerId(workers[0]?.workerId || '');
+            setShowAdvanceModal(true);
+          }}
+          className="flex flex-col items-center gap-1 px-4 py-1 text-emerald-600 dark:text-emerald-400 active:opacity-70 transition"
+        >
+          <Banknote className="w-5 h-5" />
+          <span className="text-[10px] font-semibold">Advance</span>
+        </button>
+
+        <button
+          onClick={() => setShowHolidayModal(true)}
+          className="flex flex-col items-center gap-1 px-4 py-1 text-purple-600 dark:text-purple-400 active:opacity-70 transition"
+        >
+          <PartyPopper className="w-5 h-5" />
+          <span className="text-[10px] font-semibold">Holidays</span>
+        </button>
+      </div>
+
+      {/* ════════════════════════════════════════
+          MODAL 1 — Mark Bulk Leave
+      ════════════════════════════════════════ */}
       {showBulkLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-3xl max-w-xl w-full p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4 max-h-screen overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
               <div>
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Users className="w-5 h-5 text-amber-500" />
                   Mark Bulk Leave
                 </h3>
@@ -682,7 +771,7 @@ export const PayrollDashboardPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowBulkLeaveModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -704,29 +793,29 @@ export const PayrollDashboardPage: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-slate-50 dark:bg-zinc-800/50 rounded-2xl border border-slate-200 dark:border-zinc-700">
                   {workers.map((w) => {
                     const isSelected = selectedWorkerIds.includes(w.workerId);
                     return (
-                      <div
+                      <button
                         key={w.workerId}
+                        type="button"
                         onClick={() => toggleWorkerSelection(w.workerId)}
-                        className={`cursor-pointer p-2 rounded-lg border text-xs transition-all flex items-center justify-between gap-1.5 ${
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                           isSelected
-                            ? 'bg-amber-500/15 border-amber-500 text-amber-900 dark:text-amber-200 font-bold'
-                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
                         }`}
                       >
-                        <span className="truncate">{w.name}</span>
-                        <span className="text-[10px] opacity-75 font-mono">₹{w.dailyWage}</span>
-                      </div>
+                        {w.name}
+                      </button>
                     );
                   })}
                 </div>
               </div>
 
               {/* Leave Type Toggle */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Leave Penalty Mode
                 </label>
@@ -736,8 +825,8 @@ export const PayrollDashboardPage: React.FC = () => {
                     onClick={() => setLeaveType('FULL_LEAVE')}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
                       leaveType === 'FULL_LEAVE'
-                        ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                        : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                        ? 'bg-amber-600 text-white border-amber-600'
+                        : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-slate-300'
                     }`}
                   >
                     Full Leave (Floor 100)
@@ -747,8 +836,8 @@ export const PayrollDashboardPage: React.FC = () => {
                     onClick={() => setLeaveType('HALF_LEAVE')}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
                       leaveType === 'HALF_LEAVE'
-                        ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                        : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                        ? 'bg-amber-600 text-white border-amber-600'
+                        : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-slate-300'
                     }`}
                   >
                     Half Day (Half to Next 10)
@@ -757,33 +846,33 @@ export const PayrollDashboardPage: React.FC = () => {
               </div>
 
               {/* Date Selection Mode */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Target Dates (Supports Retroactive Dates)
+                    Target Dates (Supports Retroactive)
                   </label>
-                  <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-1 text-xs bg-slate-100 dark:bg-zinc-800 rounded-xl p-0.5">
                     <button
                       type="button"
                       onClick={() => setLeaveDateMode('SINGLE')}
-                      className={`px-2 py-0.5 rounded-md font-semibold ${
+                      className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
                         leaveDateMode === 'SINGLE'
-                          ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                          ? 'bg-white dark:bg-zinc-700 text-amber-600 dark:text-amber-300 shadow-sm'
                           : 'text-slate-400'
                       }`}
                     >
-                      Single Date
+                      Single
                     </button>
                     <button
                       type="button"
                       onClick={() => setLeaveDateMode('RANGE')}
-                      className={`px-2 py-0.5 rounded-md font-semibold ${
+                      className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
                         leaveDateMode === 'RANGE'
-                          ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                          ? 'bg-white dark:bg-zinc-700 text-amber-600 dark:text-amber-300 shadow-sm'
                           : 'text-slate-400'
                       }`}
                     >
-                      Date Range
+                      Range
                     </button>
                   </div>
                 </div>
@@ -794,7 +883,7 @@ export const PayrollDashboardPage: React.FC = () => {
                     required
                     value={singleDate}
                     onChange={(e) => setSingleDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                    className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
@@ -805,7 +894,7 @@ export const PayrollDashboardPage: React.FC = () => {
                         required
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                        className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                       />
                     </div>
                     <div>
@@ -815,7 +904,7 @@ export const PayrollDashboardPage: React.FC = () => {
                         required
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                        className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                       />
                     </div>
                   </div>
@@ -823,7 +912,7 @@ export const PayrollDashboardPage: React.FC = () => {
               </div>
 
               {/* Note / Reason */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Reason / Note (Optional)
                 </label>
@@ -832,23 +921,23 @@ export const PayrollDashboardPage: React.FC = () => {
                   placeholder="e.g. Personal work, family function..."
                   value={leaveNote}
                   onChange={(e) => setLeaveNote(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
-              {/* Submit Buttons */}
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+              {/* Submit */}
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setShowBulkLeaveModal(false)}
-                  className="flex-1 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isMarkingLeave || selectedWorkerIds.length === 0}
-                  className="flex-1 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white disabled:opacity-50 shadow-sm"
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white disabled:opacity-50 shadow-sm transition active:scale-95"
                 >
                   {isMarkingLeave ? 'Processing...' : `Mark Leave for ${selectedWorkerIds.length} Workers`}
                 </button>
@@ -858,32 +947,32 @@ export const PayrollDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* --- MODAL 2: RECORD CASH ADVANCE MODAL --- */}
+      {/* ════════════════════════════════════════
+          MODAL 2 — Record Cash Advance
+      ════════════════════════════════════════ */}
       {showAdvanceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4 max-h-screen overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Banknote className="w-5 h-5 text-emerald-500" />
                 Record Cash Advance Taken
               </h3>
               <button
                 onClick={() => setShowAdvanceModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleAdvanceSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Select Worker
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Select Worker</label>
                 <select
                   value={advanceWorkerId}
                   onChange={(e) => setAdvanceWorkerId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
                   {workers.map((w) => (
                     <option key={w.workerId} value={w.workerId}>
@@ -893,10 +982,8 @@ export const PayrollDashboardPage: React.FC = () => {
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Advance Amount (₹)
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Advance Amount (₹)</label>
                 <input
                   type="number"
                   min="1"
@@ -904,48 +991,44 @@ export const PayrollDashboardPage: React.FC = () => {
                   placeholder="e.g. 500, 1000..."
                   value={advanceAmount}
                   onChange={(e) => setAdvanceAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Date
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Date</label>
                 <input
                   type="date"
                   required
                   value={advanceDate}
                   onChange={(e) => setAdvanceDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Notes (Optional)
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Notes (Optional)</label>
                 <input
                   type="text"
                   placeholder="e.g. Mid-week cash advance..."
                   value={advanceNote}
                   onChange={(e) => setAdvanceNote(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setShowAdvanceModal(false)}
-                  className="flex-1 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isRecordingAdvance}
-                  className="flex-1 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition active:scale-95 disabled:opacity-50"
                 >
                   {isRecordingAdvance ? 'Saving...' : 'Record Advance'}
                 </button>
@@ -955,61 +1038,58 @@ export const PayrollDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* --- MODAL 3: SETTLEMENT PAYOUT MODAL --- */}
+      {/* ════════════════════════════════════════
+          MODAL 3 — Settlement Payout
+      ════════════════════════════════════════ */}
       {showSettleModal && selectedWorker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4 max-h-screen overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <CreditCard className="w-5 h-5 text-emerald-500" />
                   Settle Payroll Dues
                 </h3>
-                <p className="text-xs text-slate-400">Worker: {selectedWorker.name}</p>
+                <p className="text-xs text-slate-400 mt-0.5">Worker: {selectedWorker.name}</p>
               </div>
               <button
                 onClick={() => setShowSettleModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSettleSubmit} className="space-y-4">
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs">
-                <div className="flex justify-between font-bold text-slate-800 dark:text-slate-200">
-                  <span>Current Calculated Dues:</span>
-                  <span className="font-mono text-amber-600 dark:text-amber-400 text-sm">
-                    {formatCurrency(selectedWorker.netPayable)}
-                  </span>
-                </div>
+              {/* Current dues summary */}
+              <div className="p-3.5 rounded-2xl bg-amber-500/8 border border-amber-500/20 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Current Calculated Dues</span>
+                <span className="text-sm font-black tabular-nums text-amber-600 dark:text-amber-400">
+                  {formatCurrency(selectedWorker.netPayable)}
+                </span>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Amount to Disburse (₹)
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Amount to Disburse (₹)</label>
                 <input
                   type="number"
                   min="0"
                   required
                   value={settleAmount}
                   onChange={(e) => setSettleAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
                 <span className="text-[10px] text-slate-400 block">
                   Partial payment allowed. Remaining balance carries forward automatically.
                 </span>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Payment Method
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Payment Method</label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as any)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="CASH">Cash</option>
                   <option value="UPI">UPI</option>
@@ -1017,44 +1097,40 @@ export const PayrollDashboardPage: React.FC = () => {
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Settlement Through Date
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Settlement Through Date</label>
                 <input
                   type="date"
                   required
                   value={settleEndDate}
                   onChange={(e) => setSettleEndDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Reference / Note (Optional)
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Reference / Note (Optional)</label>
                 <input
                   type="text"
                   placeholder="e.g. UPI Ref / Cash voucher..."
                   value={settleReference}
                   onChange={(e) => setSettleReference(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setShowSettleModal(false)}
-                  className="flex-1 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSettling}
-                  className="flex-1 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition active:scale-95 disabled:opacity-50"
                 >
                   {isSettling ? 'Processing...' : 'Disburse & Settle'}
                 </button>
@@ -1064,55 +1140,57 @@ export const PayrollDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* --- MODAL 4: EDIT DAILY WAGE RATE --- */}
+      {/* ════════════════════════════════════════
+          MODAL 4 — Edit Daily Wage Rate
+      ════════════════════════════════════════ */}
       {showWageModal && selectedWorker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4 max-h-screen overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Edit2 className="w-4 h-4 text-amber-500" />
                 Update Daily Wage
               </h3>
               <button
                 onClick={() => setShowWageModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleWageSubmit} className="space-y-4">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Worker: <span className="font-bold text-slate-900 dark:text-white">{selectedWorker.name}</span>
               </p>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  New Daily Wage (₹)
-                </label>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">New Daily Wage (₹)</label>
                 <input
                   type="number"
                   min="0"
                   required
                   value={newWage}
                   onChange={(e) => setNewWage(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
                 <span className="text-[10px] text-slate-400 block">
                   Preserves past wage history intact. New wage calculates from today forward.
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setShowWageModal(false)}
-                  className="flex-1 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUpdatingWage}
-                  className="flex-1 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-sm"
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition active:scale-95 disabled:opacity-50"
                 >
                   {isUpdatingWage ? 'Updating...' : 'Save Wage'}
                 </button>
@@ -1122,24 +1200,27 @@ export const PayrollDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* --- MODAL 5: GARAGE HOLIDAYS MODAL --- */}
+      {/* ════════════════════════════════════════
+          MODAL 5 — Garage Holidays
+      ════════════════════════════════════════ */}
       {showHolidayModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-3xl max-w-lg w-full p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4 max-h-screen overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <PartyPopper className="w-5 h-5 text-purple-500" />
                 Garage Holidays (100% Paid)
               </h3>
               <button
                 onClick={() => setShowHolidayModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleHolidaySubmit} className="space-y-3 bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+            {/* Add Holiday Form */}
+            <form onSubmit={handleHolidaySubmit} className="space-y-3 bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-2xl border border-slate-200 dark:border-zinc-700">
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <span className="text-[10px] text-slate-400 block mb-0.5">Date</span>
@@ -1148,7 +1229,7 @@ export const PayrollDashboardPage: React.FC = () => {
                     required
                     value={holidayDate}
                     onChange={(e) => setHolidayDate(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
                 <div>
@@ -1159,13 +1240,13 @@ export const PayrollDashboardPage: React.FC = () => {
                     placeholder="e.g. Diwali, Onam..."
                     value={holidayTitle}
                     onChange={(e) => setHolidayTitle(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={holidayPaid}
@@ -1178,28 +1259,29 @@ export const PayrollDashboardPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isDeclaringHoliday}
-                  className="px-3 py-1.5 text-xs font-bold rounded-lg bg-purple-600 hover:bg-purple-500 text-white"
+                  className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow-sm transition active:scale-95 disabled:opacity-50"
                 >
                   {isDeclaringHoliday ? 'Adding...' : 'Add Holiday'}
                 </button>
               </div>
             </form>
 
+            {/* Holiday List */}
             <div className="space-y-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
                 Declared Holidays ({holidays.length})
               </span>
-              <div className="divide-y divide-slate-100 dark:divide-slate-700 max-h-48 overflow-y-auto">
+              <div className="divide-y divide-slate-100 dark:divide-zinc-800 max-h-48 overflow-y-auto">
                 {holidays.length === 0 ? (
                   <p className="text-xs text-slate-400 py-4 text-center">No holidays declared yet.</p>
                 ) : (
                   holidays.map((h) => (
-                    <div key={h._id} className="py-2 flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{h.title}</span>
-                        <span className="text-[11px] text-slate-400 ml-2 font-mono">{h.date}</span>
+                    <div key={h._id} className="py-2.5 flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{h.title}</span>
+                        <span className="text-xs text-slate-400 font-mono">{h.date}</span>
                         {h.isPaid && (
-                          <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400">
                             100% Paid
                           </span>
                         )}
@@ -1211,7 +1293,7 @@ export const PayrollDashboardPage: React.FC = () => {
                             refetch();
                           }
                         }}
-                        className="p-1 text-slate-400 hover:text-rose-500 transition-colors"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors ml-2 shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
