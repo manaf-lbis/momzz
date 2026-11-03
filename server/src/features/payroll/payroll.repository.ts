@@ -21,18 +21,28 @@ export class PayrollRepository {
       .sort({ name: 1 });
   }
 
-  static async updateWorkerWage(workerId: string, dailyWage: number): Promise<IUser | null> {
+  static async updateWorkerWage(workerId: string, dailyWage: number, effectiveDate?: Date): Promise<IUser | null> {
     const worker = await User.findById(workerId);
     if (!worker) return null;
 
-    if (!worker.wageHistory) worker.wageHistory = [];
+    if (!worker.wageHistory || worker.wageHistory.length === 0) {
+      worker.wageHistory = [
+        {
+          wage: worker.dailyWage || 0,
+          effectiveDate: worker.createdAt || new Date(0),
+          createdAt: worker.createdAt || new Date(0),
+        },
+      ];
+    }
+
+    const effDate = effectiveDate || new Date();
     worker.wageHistory.push({
       wage: dailyWage,
-      effectiveDate: new Date(),
+      effectiveDate: effDate,
       createdAt: new Date(),
     });
     worker.dailyWage = dailyWage;
-    worker.dailyWageEffectiveDate = new Date();
+    worker.dailyWageEffectiveDate = effDate;
 
     return worker.save();
   }
@@ -233,6 +243,14 @@ export class PayrollRepository {
       if (filter.endDate) query.date.$lte = filter.endDate;
     }
     return WageTransaction.find(query).populate('workerId', 'name mobile dailyWage').sort({ date: -1 });
+  }
+
+  static async findLastSettlement(workerId: string): Promise<IWageTransaction | null> {
+    if (!mongoose.Types.ObjectId.isValid(workerId)) return null;
+    return WageTransaction.findOne({
+      workerId: new mongoose.Types.ObjectId(workerId),
+      type: 'PAYOUT_SETTLEMENT',
+    }).sort({ date: -1 });
   }
 
   static async markAdjustmentsSettled(workerId: string, endDate: string, settlementId: mongoose.Types.ObjectId): Promise<number> {

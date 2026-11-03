@@ -261,6 +261,36 @@ export class PayrollController {
   }
 
   /**
+   * DELETE /api/payroll/ot/claim/:id
+   * Worker or Admin can cancel a pending OT claim
+   */
+  static async cancelOtClaim(req: Request, res: Response, next: NextFunction) {
+    try {
+      const workerId = (req as any).user?._id?.toString();
+      const userRole = (req as any).user?.role;
+      const claim = await PayrollRepository.findWageAdjustmentById(req.params.id);
+      if (!claim) throw new AppError('Overtime claim not found', 404);
+
+      const claimWorkerId = (claim.workerId as any)?._id?.toString() || claim.workerId?.toString();
+      if (claimWorkerId !== workerId && userRole !== 'ADMIN') {
+        throw new AppError('Access denied', 403);
+      }
+
+      if (claim.status !== 'PENDING' && userRole !== 'ADMIN') {
+        throw new AppError('Cannot cancel a claim that has already been reviewed', 400);
+      }
+
+      await PayrollRepository.deleteWageAdjustment(req.params.id);
+      res.status(200).json({
+        success: true,
+        message: 'Overtime claim cancelled successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * DELETE /api/payroll/adjustment/:id
    */
   static async deleteAdjustment(req: Request, res: Response, next: NextFunction) {

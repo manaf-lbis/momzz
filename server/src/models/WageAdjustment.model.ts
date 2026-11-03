@@ -46,9 +46,7 @@ const WageAdjustmentSchema: Schema = new Schema(
     status: {
       type: String,
       enum: ['PENDING', 'APPROVED', 'REJECTED'],
-      default: function (this: any) {
-        return this.type === 'OVERTIME' ? 'PENDING' : 'APPROVED';
-      },
+      default: 'APPROVED',
     },
     deductionAmount: {
       type: Number,

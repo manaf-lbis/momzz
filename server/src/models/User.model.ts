@@ -113,6 +113,10 @@ const UserSchema: Schema = new Schema(
       default: 0,
       min: 0,
     },
+    lastSettledDate: {
+      type: Date,
+      default: null,
+    },
     dailyWageEffectiveDate: {
       type: Date,
       default: null,

@@ -65,6 +65,15 @@ export function formatDateStr(d: Date): string {
 }
 
 /**
+ * Returns next day string in YYYY-MM-DD
+ */
+export function getNextDayStr(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + 1, 12, 0, 0));
+  return formatDateStr(dt);
+}
+
+/**
  * Generate array of 'YYYY-MM-DD' dates between startDate and endDate inclusive
  */
 export function getDatesBetween(startDateStr: string, endDateStr: string): string[] {
@@ -247,21 +256,24 @@ export class PayrollService {
 
     const todayStr = formatDateStr(new Date());
 
+    // Check if worker has previous settlement with carried forward balance
+    const lastSettlement = await PayrollRepository.findLastSettlement(params.workerId);
+    const previousBalanceCarriedForward = lastSettlement?.carriedForwardBalance || 0;
+    const lastSettledDateStr = worker.lastSettledDate ? formatDateStr(new Date(worker.lastSettledDate)) : null;
+
     // Determine calculation window:
-    // If startDate not provided: start from day after lastSettledDate, or worker joining/30 days ago
     let startStr = params.startDate;
     if (!startStr) {
       if (params.includeSettledHistory) {
-        // Look back 60 days or worker creation
+        // Look back 60 days
         const lookback = new Date();
         lookback.setDate(lookback.getDate() - 60);
         startStr = formatDateStr(lookback);
-      } else if (worker.lastSettledDate) {
-        const nextDay = new Date(worker.lastSettledDate);
-        nextDay.setDate(nextDay.getDate() + 1);
-        startStr = formatDateStr(nextDay);
+      } else if (lastSettledDateStr) {
+        startStr = getNextDayStr(lastSettledDateStr);
+      } else if (worker.createdAt) {
+        startStr = formatDateStr(new Date(worker.createdAt));
       } else {
-        // Start from beginning of current month or 30 days ago
         const firstDayMonth = new Date();
         firstDayMonth.setDate(1);
         startStr = formatDateStr(firstDayMonth);
@@ -269,11 +281,8 @@ export class PayrollService {
     }
 
     const endStr = params.endDate || todayStr;
-
-    // If start is after end (e.g. settled today), ensure at least today is shown
-    if (startStr > endStr) {
-      startStr = endStr;
-    }
+    const isFullySettled = !params.includeSettledHistory && startStr > endStr;
+    const dateList = isFullySettled ? [] : getDatesBetween(startStr, endStr);
 
     // Fetch garage holidays, adjustments, and transactions
     const holidays = await PayrollRepository.findHolidays(startStr, endStr);
@@ -323,7 +332,6 @@ export class PayrollService {
     const totalUnsettledAdvances = unsettledAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
 
     // Generate day-by-day continuous stream
-    const dateList = getDatesBetween(startStr, endStr);
     const dayEntries: SingleSheetDayEntry[] = [];
 
     let grossWages = 0;
@@ -448,14 +456,14 @@ export class PayrollService {
         otAmount: dayOtAmount,
         otStatus,
         netDailyPay,
-        isSettled: leave?.isSettled || false,
+        isSettled: Boolean(lastSettledDateStr && dStr <= lastSettledDateStr) || (leave?.isSettled || false),
         inlineTransactions: formattedInline,
         runningCumulativeBalance: runningBalance,
       });
     }
 
     // Dynamic Net Payable Calculation
-    const totalEarnings = netBaseWages + totalApprovedOtAmount;
+    const totalEarnings = netBaseWages + totalApprovedOtAmount + previousBalanceCarriedForward;
     const netPayable = Math.max(0, totalEarnings - totalUnsettledAdvances);
 
     return {
@@ -480,6 +488,7 @@ export class PayrollService {
         grossWages,
         totalLeaveDeductions,
         netBaseWages,
+        previousBalanceCarriedForward,
         totalApprovedOtHours,
         totalApprovedOtAmount,
         totalEarnings,
@@ -565,8 +574,10 @@ export class PayrollService {
       settlementTx._id as mongoose.Types.ObjectId
     );
 
-    // Update worker's lastSettledDate
-    await PayrollRepository.updateWorkerLastSettledDate(params.workerId, new Date(`${endDateStr}T23:59:59.999Z`));
+    // Update worker's lastSettledDate at clean midday UTC to prevent timezone rollover
+    const [sy, sm, sd] = endDateStr.split('-').map(Number);
+    const settledUtcDate = new Date(Date.UTC(sy, sm - 1, sd, 12, 0, 0));
+    await PayrollRepository.updateWorkerLastSettledDate(params.workerId, settledUtcDate);
 
     return {
       message: `Payroll successfully settled for ${worker.name}`,

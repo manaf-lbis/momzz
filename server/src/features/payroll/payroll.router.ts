@@ -61,6 +61,8 @@ router.patch(
   validateRequest({ body: otStatusSchema }),
   PayrollController.updateOtStatus
 );
+router.delete('/ot/claim/:id', PayrollController.cancelOtClaim);
+router.delete('/ot-claim/:id', PayrollController.cancelOtClaim);
 
 // --- 3. Single-Sheet Ledger Endpoints ---
 router.get('/worker/me/single-sheet', PayrollController.getMySingleSheet);
