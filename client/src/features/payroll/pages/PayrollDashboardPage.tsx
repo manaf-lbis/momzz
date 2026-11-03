@@ -4,12 +4,7 @@ import {
   Wallet,
   Clock,
   CheckCircle2,
-  XCircle,
   Calendar as CalendarIcon,
-  AlertCircle,
-  Plus,
-  ArrowRight,
-  Sparkles,
   CreditCard,
   Edit2,
   Trash2,
@@ -20,12 +15,13 @@ import {
   ChevronRight,
   Banknote,
   Zap,
-  Filter,
+  Search,
+  ArrowUpRight,
+  Info,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
-import { BackButton } from '../../../shared/components/common/BackButton';
+import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
-import { Meteors } from '../../../shared/components/magicui/Meteors';
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
 import {
   useGetAdminOverviewQuery,
@@ -38,7 +34,6 @@ import {
   useDeclareHolidayMutation,
   useDeleteHolidayMutation,
   WorkerSummaryItem,
-  PendingOtClaimItem,
 } from '../api/payrollApi';
 
 const formatCurrency = (val: number) =>
@@ -262,290 +257,272 @@ export const PayrollDashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans">
-      <Navbar />
+    <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col selection:bg-amber-400/20 transition-colors duration-200">
+      {/* Ambient background glow */}
+      <div className="glass-ambient-glow" aria-hidden="true" />
 
-      {/* ── Sticky Page Header ── */}
-      <header className="sticky top-0 z-20 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-slate-200 dark:border-zinc-800 px-4 sm:px-6 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-          {/* Left: back + title */}
-          <div className="flex items-center gap-3 min-w-0">
-            <BackButton />
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
-                  <Wallet className="w-4 h-4" />
-                </span>
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
-                  Payroll & Daily Wages
-                </h1>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 hidden sm:block">
-                Dynamic daily-wage engine &bull; Floor-100 leave penalty &bull; Unsettled single-sheet ledger
-              </p>
+      <Navbar glass />
+
+      <main className="app-container relative z-10 flex-1 py-3 sm:py-4 pb-36 sm:pb-40 md:pb-16 space-y-3 sm:space-y-4">
+        {/* Top Page Header */}
+        <PageHeader
+          backTo="/dashboard"
+          title="Payroll & Daily Wages"
+          count={kpis.totalWorkers}
+          badge={
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold">
+              <Wallet className="w-3.5 h-3.5" />
+              Dynamic Engine
+            </span>
+          }
+          actions={
+            <div className="hidden sm:flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setSelectedWorkerIds([]);
+                  setShowBulkLeaveModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs transition active:scale-95"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Mark Leave</span>
+              </button>
+              <button
+                onClick={() => {
+                  setAdvanceWorkerId(workers[0]?.workerId || '');
+                  setShowAdvanceModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white transition active:scale-95"
+              >
+                <Banknote className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Advance</span>
+              </button>
+              <button
+                onClick={() => setShowHolidayModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white transition active:scale-95"
+              >
+                <PartyPopper className="w-3.5 h-3.5 text-purple-500" />
+                <span>Holidays</span>
+              </button>
+              <AnimatedThemeToggle variant="icon-only" />
             </div>
-          </div>
+          }
+        />
 
-          {/* Right: action buttons — desktop only */}
-          <div className="hidden md:flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => {
-                setSelectedWorkerIds([]);
-                setShowBulkLeaveModal(true);
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-sm active:scale-95 transition-all"
-            >
+        {/* ── MOBILE QUICK ACTION TILES (Native 3-Button Row - Mobile Only) ── */}
+        <div className="grid sm:hidden grid-cols-3 gap-2">
+          <button
+            onClick={() => {
+              setSelectedWorkerIds([]);
+              setShowBulkLeaveModal(true);
+            }}
+            className="flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-2xl glass-modern-card text-center transition active:scale-95"
+          >
+            <span className="p-2 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
               <Users className="w-4 h-4" />
-              <span>Mark Bulk Leave</span>
-            </button>
+            </span>
+            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100">
+              Mark Leave
+            </span>
+          </button>
 
-            <button
-              onClick={() => {
-                setAdvanceWorkerId(workers[0]?.workerId || '');
-                setShowAdvanceModal(true);
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white border border-zinc-700/60 shadow-sm active:scale-95 transition-all"
-            >
-              <Banknote className="w-4 h-4 text-emerald-400" />
-              <span>Record Advance</span>
-            </button>
+          <button
+            onClick={() => {
+              setAdvanceWorkerId(workers[0]?.workerId || '');
+              setShowAdvanceModal(true);
+            }}
+            className="flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-2xl glass-modern-card text-center transition active:scale-95"
+          >
+            <span className="p-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <Banknote className="w-4 h-4" />
+            </span>
+            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100">
+              Give Advance
+            </span>
+          </button>
 
-            <button
-              onClick={() => setShowHolidayModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700/70 shadow-sm active:scale-95 transition-all"
-            >
-              <PartyPopper className="w-4 h-4 text-purple-500" />
-              <span>Holidays</span>
-            </button>
-
-            <AnimatedThemeToggle />
-          </div>
-
-          {/* Right: theme toggle on mobile */}
-          <div className="flex md:hidden items-center gap-2">
-            <AnimatedThemeToggle />
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 pb-28 md:pb-8 space-y-5">
-
-        {/* ── KPI Cards ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Active Staff */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-slate-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Active Staff
-              </span>
-              <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                <Users className="w-4 h-4" />
-              </span>
-            </div>
-            <div className="text-2xl font-black tabular-nums text-slate-900 dark:text-white">
-              {kpis.totalWorkers}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Active daily-wage staff members
-            </p>
-          </div>
-
-          {/* Total Unsettled Dues */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-slate-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Total Unsettled Dues
-              </span>
-              <span className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <Wallet className="w-4 h-4" />
-              </span>
-            </div>
-            <div className="text-2xl font-black tabular-nums text-amber-600 dark:text-amber-400">
-              {formatCurrency(kpis.totalUnsettledNet)}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Calculated since last settlement
-            </p>
-          </div>
-
-          {/* Pending OT */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-slate-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Pending OT Verification
-              </span>
-              <span className="p-2 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                <Clock className="w-4 h-4" />
-              </span>
-            </div>
-            <div className="text-2xl font-black tabular-nums text-violet-600 dark:text-violet-400">
-              {kpis.totalPendingOtCount}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Claims awaiting approval at ₹150/hr
-            </p>
-          </div>
+          <button
+            onClick={() => setShowHolidayModal(true)}
+            className="flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-2xl glass-modern-card text-center transition active:scale-95"
+          >
+            <span className="p-2 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
+              <PartyPopper className="w-4 h-4" />
+            </span>
+            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100">
+              Holidays
+            </span>
+          </button>
         </div>
 
-        {/* ── Pending OT Claims Banner ── */}
+        {/* ── PENDING OT CLAIMS ALERT BANNER ── */}
         {pendingOtClaims.length > 0 && (
-          <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 border border-amber-500/30 dark:border-amber-500/20 shadow-sm">
-            <Meteors number={10} />
-            <div className="p-4">
-              {/* Banner Header */}
-              <div className="flex items-center gap-3 mb-4">
-                <span className="p-2.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
-                  <Zap className="w-5 h-5 animate-pulse" />
+          <div className="p-3 sm:p-4 rounded-2xl glass-modern-card border-amber-500/30 bg-amber-500/[0.04] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
+                  <Zap className="w-4 h-4 animate-pulse" />
                 </span>
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
                     Pending Overtime Claims ({pendingOtClaims.length})
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse inline-block" />
-                      Action Required
-                    </span>
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Workers claim whole integer hours. Rate is strictly ₹150/hr. Unapproved OT is excluded from wages.
+                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
+                    Whole hours only @ ₹150/hr. Unapproved OT excluded from dues.
                   </p>
                 </div>
               </div>
+            </div>
 
-              {/* OT Claim Cards — full-width on mobile, 3-col on desktop */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {pendingOtClaims.map((claim) => (
-                  <div
-                    key={claim.id}
-                    className="bg-slate-50 dark:bg-zinc-800/70 rounded-xl p-3.5 border border-slate-200 dark:border-zinc-700 flex flex-col gap-3"
-                  >
-                    <div>
-                      <div className="font-bold text-sm text-slate-900 dark:text-white">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {pendingOtClaims.map((claim) => (
+                <div
+                  key={claim.id}
+                  className="p-2.5 rounded-xl bg-white/70 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 flex flex-col justify-between gap-2"
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-900 dark:text-white">
                         {claim.workerName}
-                      </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-1">
-                        <CalendarIcon className="w-3 h-3" />
-                        <span>{claim.date}</span>
-                        <span>&bull;</span>
-                        <span className="font-semibold text-violet-600 dark:text-violet-400">
-                          {claim.otHours} hr OT
-                        </span>
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          +{formatCurrency(claim.potentialAmount)}
-                        </span>
-                      </div>
-                      {claim.note && (
-                        <p className="text-[11px] text-slate-500 italic mt-2 bg-white dark:bg-zinc-900/60 p-2 rounded-lg border border-slate-100 dark:border-zinc-700">
-                          "{claim.note}"
-                        </p>
-                      )}
+                      </span>
+                      <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                        +{formatCurrency(claim.potentialAmount)}
+                      </span>
                     </div>
-
-                    <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-zinc-700/60">
-                      <button
-                        disabled={isUpdatingOt}
-                        onClick={() => handleReviewOt(claim.id, 'APPROVED')}
-                        className="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        Approve
-                      </button>
-                      <button
-                        disabled={isUpdatingOt}
-                        onClick={() => handleReviewOt(claim.id, 'REJECTED')}
-                        className="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                        Reject
-                      </button>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      {claim.date} &bull; <span className="font-semibold">{claim.otHours}h OT</span>
                     </div>
+                    {claim.note && (
+                      <p className="text-[10px] text-slate-500 italic mt-1 line-clamp-1">
+                        "{claim.note}"
+                      </p>
+                    )}
                   </div>
-                ))}
-              </div>
+
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-white/5">
+                    <button
+                      disabled={isUpdatingOt}
+                      onClick={() => handleReviewOt(claim.id, 'APPROVED')}
+                      className="flex-1 py-1.5 px-2 text-[11px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1 transition active:scale-95"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      Approve
+                    </button>
+                    <button
+                      disabled={isUpdatingOt}
+                      onClick={() => handleReviewOt(claim.id, 'REJECTED')}
+                      className="py-1.5 px-3 text-[11px] font-bold rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-1 transition active:scale-95"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* ── Worker Roster Section ── */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-          {/* Section Header */}
-          <div className="p-4 border-b border-slate-200 dark:border-zinc-800">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  Worker Roster & Dynamic Ledgers
-                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300">
-                    {filteredWorkers.length}
-                  </span>
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Tap any worker to open their continuous single-sheet ledger.
-                </p>
-              </div>
+        {/* ── KPI METRIC CARDS ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
+          <div className="p-3 sm:p-4 rounded-2xl glass-modern-card shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-xs font-mono uppercase text-slate-500 dark:text-slate-400">
+                Staff
+              </span>
+              <Users className="w-4 h-4 text-blue-500" />
+            </div>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
+              {kpis.totalWorkers}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Active workforce</p>
+          </div>
 
-              {/* Sticky search */}
-              <div className="relative w-full sm:w-64">
-                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Search by name or phone…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3.5 py-2 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
-                />
-              </div>
+          <div className="p-3 sm:p-4 rounded-2xl glass-modern-card shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-xs font-mono uppercase text-slate-500 dark:text-slate-400">
+                Pending OT
+              </span>
+              <Clock className="w-4 h-4 text-purple-500" />
+            </div>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
+              {kpis.totalPendingOtCount}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Awaiting review</p>
+          </div>
+
+          <div className="p-3 sm:p-4 rounded-2xl glass-modern-card shadow-2xs col-span-2 sm:col-span-1 border-amber-500/30">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-xs font-mono uppercase text-amber-600 dark:text-amber-400 font-bold">
+                Total Unsettled Dues
+              </span>
+              <Wallet className="w-4 h-4 text-amber-500" />
+            </div>
+            <p className="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400 mt-1">
+              {formatCurrency(kpis.totalUnsettledNet)}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Calculated dynamically</p>
+          </div>
+        </div>
+
+        {/* ── WORKER ROSTER SECTION ── */}
+        <section className="space-y-2.5">
+          {/* Section Header & Search */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <span>Staff Roster & Ledgers</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300">
+                {filteredWorkers.length}
+              </span>
+            </h2>
+
+            {/* Search Input */}
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search staff..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl glass-modern-card bg-transparent border-slate-200 dark:border-white/10 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              />
             </div>
           </div>
 
-          {/* ── Desktop Table ── */}
-          <div className="hidden md:block overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="hidden md:block rounded-2xl glass-modern-card overflow-hidden">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-zinc-800/60 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-200 dark:border-zinc-800">
+              <thead className="bg-slate-100/60 dark:bg-white/[0.03] text-slate-500 font-mono text-[10px] uppercase border-b border-slate-200 dark:border-white/10">
                 <tr>
-                  <th className="py-3 px-4">Worker</th>
-                  <th className="py-3 px-4">Daily Wage</th>
-                  <th className="py-3 px-4">Gross</th>
-                  <th className="py-3 px-4">Deductions</th>
-                  <th className="py-3 px-4">OT Earned</th>
-                  <th className="py-3 px-4">Advances</th>
-                  <th className="py-3 px-4">Net Dues</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-2.5 px-4">Worker</th>
+                  <th className="py-2.5 px-4">Daily Wage</th>
+                  <th className="py-2.5 px-4">Gross</th>
+                  <th className="py-2.5 px-4">Deductions</th>
+                  <th className="py-2.5 px-4">Approved OT</th>
+                  <th className="py-2.5 px-4">Advances</th>
+                  <th className="py-2.5 px-4">Net Dues</th>
+                  <th className="py-2.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {filteredWorkers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-sm text-slate-400 dark:text-slate-500">
-                      No workers found matching your search.
+                    <td colSpan={8} className="py-8 text-center text-slate-400">
+                      No workers found.
                     </td>
                   </tr>
                 ) : (
                   filteredWorkers.map((w) => (
-                    <tr
-                      key={w.workerId}
-                      className="hover:bg-amber-500/[0.03] dark:hover:bg-amber-500/[0.04] transition-colors"
-                    >
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2.5">
-                          {/* Avatar */}
-                          <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-black text-xs shrink-0">
-                            {w.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900 dark:text-white">{w.name}</div>
-                            <div className="text-[11px] text-slate-400">{w.mobile}</div>
-                            {w.pendingOtCount > 0 && (
-                              <span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse inline-block" />
-                                {w.pendingOtCount} pending OT
-                              </span>
-                            )}
-                          </div>
+                    <tr key={w.workerId} className="hover:bg-amber-500/[0.02] transition">
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-slate-900 dark:text-white">
+                          {w.name}
                         </div>
+                        <div className="text-[10px] text-slate-400">{w.mobile}</div>
                       </td>
 
-                      <td className="py-3.5 px-4">
+                      <td className="py-3 px-4 font-mono">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold tabular-nums text-slate-800 dark:text-slate-200">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
                             {formatCurrency(w.dailyWage)}
                           </span>
                           <button
@@ -554,38 +531,37 @@ export const PayrollDashboardPage: React.FC = () => {
                               setNewWage(w.dailyWage);
                               setShowWageModal(true);
                             }}
+                            className="p-1 text-slate-400 hover:text-amber-500 transition"
                             title="Edit Daily Wage"
-                            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                           >
                             <Edit2 className="w-3 h-3" />
                           </button>
                         </div>
-                        <div className="text-[10px] text-slate-400">/ day</div>
                       </td>
 
-                      <td className="py-3.5 px-4 tabular-nums text-emerald-600 dark:text-emerald-400 font-medium">
+                      <td className="py-3 px-4 font-mono text-slate-600 dark:text-slate-400">
                         {formatCurrency(w.unsettledGross)}
                       </td>
 
-                      <td className="py-3.5 px-4 tabular-nums text-amber-600 dark:text-amber-400 font-medium">
+                      <td className="py-3 px-4 font-mono text-amber-600 dark:text-amber-400">
                         -{formatCurrency(w.unsettledDeductions)}
                       </td>
 
-                      <td className="py-3.5 px-4 tabular-nums text-emerald-600 dark:text-emerald-400 font-medium">
+                      <td className="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400">
                         +{formatCurrency(w.unsettledOtAmount)}
                       </td>
 
-                      <td className="py-3.5 px-4 tabular-nums text-rose-600 dark:text-rose-400 font-medium">
+                      <td className="py-3 px-4 font-mono text-rose-600 dark:text-rose-400">
                         -{formatCurrency(w.unsettledAdvances)}
                       </td>
 
-                      <td className="py-3.5 px-4">
-                        <span className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white font-black text-xs tabular-nums">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white">
+                        <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
                           {formatCurrency(w.netPayable)}
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => {
@@ -593,16 +569,15 @@ export const PayrollDashboardPage: React.FC = () => {
                               setSettleAmount(w.netPayable);
                               setShowSettleModal(true);
                             }}
-                            className="px-3 py-1.5 text-[11px] font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all active:scale-95"
+                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition active:scale-95"
                           >
                             Settle
                           </button>
                           <button
                             onClick={() => navigate(`/payroll/${w.workerId}`)}
-                            className="px-3 py-1.5 text-[11px] font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-700 flex items-center gap-1 transition-all"
+                            className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 transition"
                           >
-                            <span>Ledger</span>
-                            <ChevronRight className="w-3 h-3" />
+                            Ledger &rarr;
                           </button>
                         </div>
                       </td>
@@ -613,209 +588,173 @@ export const PayrollDashboardPage: React.FC = () => {
             </table>
           </div>
 
-          {/* ── Mobile Card List ── */}
-          <div className="md:hidden divide-y divide-slate-100 dark:divide-zinc-800">
+          {/* Mobile Card List View (< md) */}
+          <div className="md:hidden space-y-2.5">
             {filteredWorkers.length === 0 ? (
-              <p className="py-10 text-center text-sm text-slate-400 dark:text-slate-500">
-                No workers found matching your search.
-              </p>
+              <div className="p-6 text-center text-xs text-slate-400 glass-modern-card rounded-2xl">
+                No workers found.
+              </div>
             ) : (
               filteredWorkers.map((w) => (
-                <div key={w.workerId} className="p-4 space-y-3">
-                  {/* Card Top Row */}
-                  <div className="flex items-start gap-3">
-                    {/* Initial Avatar */}
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-black text-sm shrink-0">
-                      {w.name.charAt(0).toUpperCase()}
+                <div
+                  key={w.workerId}
+                  className="p-3.5 rounded-2xl glass-modern-card space-y-2.5"
+                >
+                  {/* Top Row: Worker Info & Wage */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
+                        {w.name?.charAt(0)?.toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                          {w.name}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">{w.mobile}</p>
+                      </div>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-slate-900 dark:text-white text-sm truncate">
-                            {w.name}
-                          </h3>
-                          <p className="text-xs text-slate-400">{w.mobile}</p>
-                        </div>
-                        {/* Wage Badge */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span className="px-2 py-1 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[11px] font-bold tabular-nums">
-                            ₹{w.dailyWage}/day
-                          </span>
-                          <button
-                            onClick={() => {
-                              setSelectedWorker(w);
-                              setNewWage(w.dailyWage);
-                              setShowWageModal(true);
-                            }}
-                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Pending OT Badge */}
-                      {w.pendingOtCount > 0 && (
-                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                          <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse inline-block" />
-                          {w.pendingOtCount} pending OT
-                        </span>
-                      )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300">
+                        ₹{w.dailyWage}/d
+                      </span>
+                      <button
+                        onClick={() => {
+                          setSelectedWorker(w);
+                          setNewWage(w.dailyWage);
+                          setShowWageModal(true);
+                        }}
+                        className="p-1 text-slate-400 hover:text-amber-500 transition"
+                        title="Edit Daily Wage"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Micro-stats row */}
-                  <div className="grid grid-cols-3 gap-1.5 bg-slate-50 dark:bg-zinc-800/60 rounded-2xl p-3 border border-slate-100 dark:border-zinc-800">
-                    <div className="text-center">
-                      <span className="text-[9px] font-medium uppercase tracking-wider text-slate-400 block mb-0.5">Gross</span>
-                      <span className="text-xs font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                  {/* Micro Breakdown Row */}
+                  <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-slate-100/70 dark:bg-white/[0.03] text-center text-[10px] font-mono">
+                    <div>
+                      <span className="text-slate-400 block text-[9px] uppercase">Gross</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
                         {formatCurrency(w.unsettledGross)}
                       </span>
                     </div>
-                    <div className="text-center border-x border-slate-200 dark:border-zinc-700">
-                      <span className="text-[9px] font-medium uppercase tracking-wider text-slate-400 block mb-0.5">Deductions</span>
-                      <span className="text-xs font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                    <div>
+                      <span className="text-slate-400 block text-[9px] uppercase">Leaves</span>
+                      <span className="font-semibold text-amber-600 dark:text-amber-400">
                         -{formatCurrency(w.unsettledDeductions)}
                       </span>
                     </div>
-                    <div className="text-center">
-                      <span className="text-[9px] font-medium uppercase tracking-wider text-slate-400 block mb-0.5">Advances</span>
-                      <span className="text-xs font-bold tabular-nums text-rose-600 dark:text-rose-400">
+                    <div>
+                      <span className="text-slate-400 block text-[9px] uppercase">Advance</span>
+                      <span className="font-semibold text-rose-600 dark:text-rose-400">
                         -{formatCurrency(w.unsettledAdvances)}
                       </span>
                     </div>
                   </div>
 
-                  {/* Net dues + action buttons */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-slate-100 dark:bg-zinc-800 rounded-2xl px-3 py-2">
-                      <span className="text-[9px] font-medium uppercase tracking-wider text-slate-400 block">Net Dues</span>
-                      <span className="text-sm font-black tabular-nums text-slate-900 dark:text-white">
+                  {/* Net Dues & Actions Row */}
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <span className="text-[9px] text-slate-400 uppercase font-mono block">
+                        Net Unsettled
+                      </span>
+                      <span className="text-sm font-black font-mono text-amber-600 dark:text-amber-400">
                         {formatCurrency(w.netPayable)}
                       </span>
                     </div>
-                    <button
-                      onClick={() => navigate(`/payroll/${w.workerId}`)}
-                      className="flex items-center gap-1 px-3 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all"
-                    >
-                      Ledger
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedWorker(w);
-                        setSettleAmount(w.netPayable);
-                        setShowSettleModal(true);
-                      }}
-                      className="flex items-center gap-1 px-3 py-2.5 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all active:scale-95"
-                    >
-                      Settle
-                    </button>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          setSelectedWorker(w);
+                          setSettleAmount(w.netPayable);
+                          setShowSettleModal(true);
+                        }}
+                        className="px-3 py-1.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition active:scale-95"
+                      >
+                        Settle Dues
+                      </button>
+                      <button
+                        onClick={() => navigate(`/payroll/${w.workerId}`)}
+                        className="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-200 transition"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
             )}
           </div>
-        </div>
+        </section>
       </main>
 
-      {/* ── Mobile Floating Bottom Action Bar ── */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-lg border-t border-slate-200 dark:border-zinc-800 flex items-center justify-around px-4 py-3">
-        <button
-          onClick={() => {
-            setSelectedWorkerIds([]);
-            setShowBulkLeaveModal(true);
-          }}
-          className="flex flex-col items-center gap-1 px-4 py-1 text-amber-600 dark:text-amber-400 active:opacity-70 transition"
-        >
-          <Users className="w-5 h-5" />
-          <span className="text-[10px] font-semibold">Bulk Leave</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setAdvanceWorkerId(workers[0]?.workerId || '');
-            setShowAdvanceModal(true);
-          }}
-          className="flex flex-col items-center gap-1 px-4 py-1 text-emerald-600 dark:text-emerald-400 active:opacity-70 transition"
-        >
-          <Banknote className="w-5 h-5" />
-          <span className="text-[10px] font-semibold">Advance</span>
-        </button>
-
-        <button
-          onClick={() => setShowHolidayModal(true)}
-          className="flex flex-col items-center gap-1 px-4 py-1 text-purple-600 dark:text-purple-400 active:opacity-70 transition"
-        >
-          <PartyPopper className="w-5 h-5" />
-          <span className="text-[10px] font-semibold">Holidays</span>
-        </button>
-      </div>
-
-      {/* ════════════════════════════════════════
-          MODAL 1 — Mark Bulk Leave
-      ════════════════════════════════════════ */}
+      {/* ── MODAL 1: MARK BULK LEAVE (Responsive Bottom-Sheet) ── */}
       {showBulkLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-3xl max-w-xl w-full p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4 max-h-screen overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[88vh] overflow-y-auto space-y-4 shadow-2xl">
+            {/* Mobile Drag Handle */}
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Users className="w-5 h-5 text-amber-500" />
+                  <Users className="w-4 h-4 text-amber-500" />
                   Mark Bulk Leave
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Select workers & dates. Floor-100 deduction rule applies automatically.
+                <p className="text-[11px] text-slate-400">
+                  Floor-100 penalty calculates automatically
                 </p>
               </div>
               <button
                 onClick={() => setShowBulkLeaveModal(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleBulkLeaveSubmit} className="space-y-4">
+            <form onSubmit={handleBulkLeaveSubmit} className="space-y-3.5">
               {/* Worker Multi-Selection */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Select Workers ({selectedWorkerIds.length}/{workers.length})
+                    Select Staff ({selectedWorkerIds.length}/{workers.length})
                   </label>
                   <button
                     type="button"
                     onClick={toggleSelectAllWorkers}
                     className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline"
                   >
-                    {selectedWorkerIds.length === workers.length ? 'Deselect All' : 'Select All Workers'}
+                    {selectedWorkerIds.length === workers.length ? 'Deselect All' : 'Select All'}
                   </button>
                 </div>
 
-                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-slate-50 dark:bg-zinc-800/50 rounded-2xl border border-slate-200 dark:border-zinc-700">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto p-1.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10">
                   {workers.map((w) => {
                     const isSelected = selectedWorkerIds.includes(w.workerId);
                     return (
-                      <button
+                      <div
                         key={w.workerId}
-                        type="button"
                         onClick={() => toggleWorkerSelection(w.workerId)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                        className={`cursor-pointer p-2 rounded-lg border text-xs transition flex items-center justify-between gap-1 ${
                           isSelected
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
+                            ? 'bg-amber-500 text-white border-amber-500 font-bold shadow-xs'
+                            : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
                         }`}
                       >
-                        {w.name}
-                      </button>
+                        <span className="truncate">{w.name}</span>
+                        <span className="text-[10px] opacity-75 font-mono">₹{w.dailyWage}</span>
+                      </div>
                     );
                   })}
                 </div>
               </div>
 
               {/* Leave Type Toggle */}
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Leave Penalty Mode
                 </label>
@@ -823,10 +762,10 @@ export const PayrollDashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setLeaveType('FULL_LEAVE')}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition ${
                       leaveType === 'FULL_LEAVE'
-                        ? 'bg-amber-600 text-white border-amber-600'
-                        : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-slate-300'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                        : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
                     }`}
                   >
                     Full Leave (Floor 100)
@@ -834,45 +773,45 @@ export const PayrollDashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setLeaveType('HALF_LEAVE')}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition ${
                       leaveType === 'HALF_LEAVE'
-                        ? 'bg-amber-600 text-white border-amber-600'
-                        : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-slate-300'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                        : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
                     }`}
                   >
-                    Half Day (Half to Next 10)
+                    Half Day (Next 10)
                   </button>
                 </div>
               </div>
 
-              {/* Date Selection Mode */}
-              <div className="space-y-1.5">
+              {/* Date Selection */}
+              <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Target Dates (Supports Retroactive)
+                    Date(s)
                   </label>
-                  <div className="flex items-center gap-1 text-xs bg-slate-100 dark:bg-zinc-800 rounded-xl p-0.5">
+                  <div className="flex items-center gap-2 text-xs">
                     <button
                       type="button"
                       onClick={() => setLeaveDateMode('SINGLE')}
-                      className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                      className={`px-2 py-0.5 rounded-md font-semibold ${
                         leaveDateMode === 'SINGLE'
-                          ? 'bg-white dark:bg-zinc-700 text-amber-600 dark:text-amber-300 shadow-sm'
+                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
                           : 'text-slate-400'
                       }`}
                     >
-                      Single
+                      Single Date
                     </button>
                     <button
                       type="button"
                       onClick={() => setLeaveDateMode('RANGE')}
-                      className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                      className={`px-2 py-0.5 rounded-md font-semibold ${
                         leaveDateMode === 'RANGE'
-                          ? 'bg-white dark:bg-zinc-700 text-amber-600 dark:text-amber-300 shadow-sm'
+                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
                           : 'text-slate-400'
                       }`}
                     >
-                      Range
+                      Date Range
                     </button>
                   </div>
                 </div>
@@ -883,63 +822,63 @@ export const PayrollDashboardPage: React.FC = () => {
                     required
                     value={singleDate}
                     onChange={(e) => setSingleDate(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                   />
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <span className="text-[10px] text-slate-400 block mb-0.5">From Date</span>
+                      <span className="text-[10px] text-slate-400 block mb-0.5">Start</span>
                       <input
                         type="date"
                         required
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                       />
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 block mb-0.5">To Date</span>
+                      <span className="text-[10px] text-slate-400 block mb-0.5">End</span>
                       <input
                         type="date"
                         required
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                       />
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Note / Reason */}
-              <div className="space-y-1.5">
+              {/* Note */}
+              <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Reason / Note (Optional)
+                  Reason (Optional)
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Personal work, family function..."
+                  placeholder="e.g. Personal work..."
                   value={leaveNote}
                   onChange={(e) => setLeaveNote(e.target.value)}
-                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
-              {/* Submit */}
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+              {/* Submit Button */}
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => setShowBulkLeaveModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isMarkingLeave || selectedWorkerIds.length === 0}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white disabled:opacity-50 shadow-sm transition active:scale-95"
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white disabled:opacity-50 shadow-xs"
                 >
-                  {isMarkingLeave ? 'Processing...' : `Mark Leave for ${selectedWorkerIds.length} Workers`}
+                  {isMarkingLeave ? 'Processing...' : `Mark ${selectedWorkerIds.length} Staff`}
                 </button>
               </div>
             </form>
@@ -947,32 +886,34 @@ export const PayrollDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* ════════════════════════════════════════
-          MODAL 2 — Record Cash Advance
-      ════════════════════════════════════════ */}
+      {/* ── MODAL 2: RECORD ADVANCE ── */}
       {showAdvanceModal && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4 max-h-screen overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Banknote className="w-5 h-5 text-emerald-500" />
-                Record Cash Advance Taken
+                <Banknote className="w-4 h-4 text-emerald-500" />
+                Record Cash Advance
               </h3>
               <button
                 onClick={() => setShowAdvanceModal(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAdvanceSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Select Worker</label>
+            <form onSubmit={handleAdvanceSubmit} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Select Staff
+                </label>
                 <select
                   value={advanceWorkerId}
                   onChange={(e) => setAdvanceWorkerId(e.target.value)}
-                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 >
                   {workers.map((w) => (
                     <option key={w.workerId} value={w.workerId}>
@@ -982,8 +923,10 @@ export const PayrollDashboardPage: React.FC = () => {
                 </select>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Advance Amount (₹)</label>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Advance Amount (₹)
+                </label>
                 <input
                   type="number"
                   min="1"
@@ -991,44 +934,48 @@ export const PayrollDashboardPage: React.FC = () => {
                   placeholder="e.g. 500, 1000..."
                   value={advanceAmount}
                   onChange={(e) => setAdvanceAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Date</label>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Date
+                </label>
                 <input
                   type="date"
                   required
                   value={advanceDate}
                   onChange={(e) => setAdvanceDate(e.target.value)}
-                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Notes (Optional)</label>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Notes (Optional)
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Mid-week cash advance..."
                   value={advanceNote}
                   onChange={(e) => setAdvanceNote(e.target.value)}
-                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => setShowAdvanceModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isRecordingAdvance}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition active:scale-95 disabled:opacity-50"
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
                 >
                   {isRecordingAdvance ? 'Saving...' : 'Record Advance'}
                 </button>
@@ -1038,58 +985,60 @@ export const PayrollDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* ════════════════════════════════════════
-          MODAL 3 — Settlement Payout
-      ════════════════════════════════════════ */}
+      {/* ── MODAL 3: SETTLE DUES ── */}
       {showSettleModal && selectedWorker && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4 max-h-screen overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-emerald-500" />
+                  <CreditCard className="w-4 h-4 text-emerald-500" />
                   Settle Payroll Dues
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">Worker: {selectedWorker.name}</p>
+                <p className="text-xs text-slate-400">Worker: {selectedWorker.name}</p>
               </div>
               <button
                 onClick={() => setShowSettleModal(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSettleSubmit} className="space-y-4">
-              {/* Current dues summary */}
-              <div className="p-3.5 rounded-2xl bg-amber-500/8 border border-amber-500/20 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Current Calculated Dues</span>
-                <span className="text-sm font-black tabular-nums text-amber-600 dark:text-amber-400">
-                  {formatCurrency(selectedWorker.netPayable)}
-                </span>
+            <form onSubmit={handleSettleSubmit} className="space-y-3.5">
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs">
+                <div className="flex justify-between font-bold text-slate-800 dark:text-slate-200">
+                  <span>Current Calculated Dues:</span>
+                  <span className="font-mono text-amber-600 dark:text-amber-400 text-sm">
+                    {formatCurrency(selectedWorker.netPayable)}
+                  </span>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Amount to Disburse (₹)</label>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Amount to Disburse (₹)
+                </label>
                 <input
                   type="number"
                   min="0"
                   required
                   value={settleAmount}
                   onChange={(e) => setSettleAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
-                <span className="text-[10px] text-slate-400 block">
-                  Partial payment allowed. Remaining balance carries forward automatically.
-                </span>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Payment Method</label>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Payment Method
+                </label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as any)}
-                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 >
                   <option value="CASH">Cash</option>
                   <option value="UPI">UPI</option>
@@ -1097,40 +1046,44 @@ export const PayrollDashboardPage: React.FC = () => {
                 </select>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Settlement Through Date</label>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Through Date
+                </label>
                 <input
                   type="date"
                   required
                   value={settleEndDate}
                   onChange={(e) => setSettleEndDate(e.target.value)}
-                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Reference / Note (Optional)</label>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Reference / Note (Optional)
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. UPI Ref / Cash voucher..."
                   value={settleReference}
                   onChange={(e) => setSettleReference(e.target.value)}
-                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => setShowSettleModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSettling}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition active:scale-95 disabled:opacity-50"
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
                 >
                   {isSettling ? 'Processing...' : 'Disburse & Settle'}
                 </button>
@@ -1140,57 +1093,57 @@ export const PayrollDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* ════════════════════════════════════════
-          MODAL 4 — Edit Daily Wage Rate
-      ════════════════════════════════════════ */}
+      {/* ── MODAL 4: EDIT DAILY WAGE ── */}
       {showWageModal && selectedWorker && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4 max-h-screen overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Edit2 className="w-4 h-4 text-amber-500" />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-sm bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 Update Daily Wage
               </h3>
               <button
                 onClick={() => setShowWageModal(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleWageSubmit} className="space-y-4">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Worker: <span className="font-bold text-slate-900 dark:text-white">{selectedWorker.name}</span>
+            <form onSubmit={handleWageSubmit} className="space-y-3.5">
+              <p className="text-xs text-slate-500">
+                Staff: <span className="font-bold text-slate-900 dark:text-white">{selectedWorker.name}</span>
               </p>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">New Daily Wage (₹)</label>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  New Daily Wage (₹)
+                </label>
                 <input
                   type="number"
                   min="0"
                   required
                   value={newWage}
                   onChange={(e) => setNewWage(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
                 <span className="text-[10px] text-slate-400 block">
-                  Preserves past wage history intact. New wage calculates from today forward.
+                  Takes effect from today onwards without modifying past settled records.
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => setShowWageModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUpdatingWage}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition active:scale-95 disabled:opacity-50"
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
                 >
                   {isUpdatingWage ? 'Updating...' : 'Save Wage'}
                 </button>
@@ -1200,27 +1153,26 @@ export const PayrollDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* ════════════════════════════════════════
-          MODAL 5 — Garage Holidays
-      ════════════════════════════════════════ */}
+      {/* ── MODAL 5: GARAGE HOLIDAYS ── */}
       {showHolidayModal && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl md:rounded-3xl max-w-lg w-full p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4 max-h-screen overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <PartyPopper className="w-5 h-5 text-purple-500" />
+                <PartyPopper className="w-4 h-4 text-purple-500" />
                 Garage Holidays (100% Paid)
               </h3>
               <button
                 onClick={() => setShowHolidayModal(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Add Holiday Form */}
-            <form onSubmit={handleHolidaySubmit} className="space-y-3 bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-2xl border border-slate-200 dark:border-zinc-700">
+            <form onSubmit={handleHolidaySubmit} className="space-y-3 p-3 rounded-xl bg-slate-100/70 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10">
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <span className="text-[10px] text-slate-400 block mb-0.5">Date</span>
@@ -1229,60 +1181,59 @@ export const PayrollDashboardPage: React.FC = () => {
                     required
                     value={holidayDate}
                     onChange={(e) => setHolidayDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block mb-0.5">Holiday Title</span>
+                  <span className="text-[10px] text-slate-400 block mb-0.5">Title</span>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Diwali, Onam..."
+                    placeholder="e.g. Eid, Onam..."
                     value={holidayTitle}
                     onChange={(e) => setHolidayTitle(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
                   <input
                     type="checkbox"
                     checked={holidayPaid}
                     onChange={(e) => setHolidayPaid(e.target.checked)}
                     className="rounded text-amber-600 focus:ring-amber-500"
                   />
-                  <span>100% Paid Holiday (Full daily wage)</span>
+                  <span>100% Paid Holiday</span>
                 </label>
 
                 <button
                   type="submit"
                   disabled={isDeclaringHoliday}
-                  className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow-sm transition active:scale-95 disabled:opacity-50"
+                  className="px-3 py-1.5 text-xs font-bold rounded-lg bg-purple-600 hover:bg-purple-500 text-white shadow-xs"
                 >
-                  {isDeclaringHoliday ? 'Adding...' : 'Add Holiday'}
+                  {isDeclaringHoliday ? 'Adding...' : 'Add'}
                 </button>
               </div>
             </form>
 
-            {/* Holiday List */}
-            <div className="space-y-2">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                Declared Holidays ({holidays.length})
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Existing Holidays ({holidays.length})
               </span>
-              <div className="divide-y divide-slate-100 dark:divide-zinc-800 max-h-48 overflow-y-auto">
+              <div className="divide-y divide-slate-100 dark:divide-white/5 max-h-44 overflow-y-auto">
                 {holidays.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-4 text-center">No holidays declared yet.</p>
+                  <p className="text-xs text-slate-400 py-3 text-center">No holidays declared yet.</p>
                 ) : (
                   holidays.map((h) => (
-                    <div key={h._id} className="py-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{h.title}</span>
-                        <span className="text-xs text-slate-400 font-mono">{h.date}</span>
+                    <div key={h._id} className="py-2 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{h.title}</span>
+                        <span className="text-[10px] text-slate-400 ml-2 font-mono">{h.date}</span>
                         {h.isPaid && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                            100% Paid
+                          <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                            Paid
                           </span>
                         )}
                       </div>
@@ -1293,7 +1244,7 @@ export const PayrollDashboardPage: React.FC = () => {
                             refetch();
                           }
                         }}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors ml-2 shrink-0"
+                        className="p-1 text-slate-400 hover:text-rose-500 transition"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
