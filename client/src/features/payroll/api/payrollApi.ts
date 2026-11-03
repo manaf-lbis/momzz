@@ -20,6 +20,8 @@ export interface SingleSheetDayEntry {
   baseWage: number;
   leaveDeduction: number;
   netDayWage: number;
+  shiftStatus?: 'IN_PROGRESS' | 'COMPLETED' | 'SUNDAY' | 'HOLIDAY' | 'LEAVE';
+  shiftNote?: string;
   otHours: number;
   otAmount: number;
   otStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -29,12 +31,32 @@ export interface SingleSheetDayEntry {
   runningCumulativeBalance: number;
 }
 
+export interface MonthlyBreakdownItem {
+  monthKey: string;
+  monthLabel: string;
+  totalDays: number;
+  workingDays: number;
+  sundays: number;
+  holidays: number;
+  leaveDays: number;
+  grossWages: number;
+  leaveDeductions: number;
+  netBaseWages: number;
+  otHours: number;
+  otAmount: number;
+  advances: number;
+  payouts: number;
+  netEarnings: number;
+  isSettled: boolean;
+}
+
 export interface WorkerSingleSheetData {
   worker: {
     id: string;
     name: string;
     mobile: string;
     dailyWage: number;
+    dailyWageEffectiveDate?: string;
     lastSettledDate?: string;
   };
   period: {
@@ -57,6 +79,7 @@ export interface WorkerSingleSheetData {
     totalUnsettledAdvances: number;
     netPayable: number;
   };
+  monthlyBreakdown?: MonthlyBreakdownItem[];
   days: SingleSheetDayEntry[];
 }
 

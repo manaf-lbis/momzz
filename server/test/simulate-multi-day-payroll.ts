@@ -279,8 +279,74 @@ async function runMultiDaySimulation() {
   assert.strictEqual(sheetOct29.days[0].baseWage, 1000, 'Wage on Oct 29 must be new wage ₹1000');
   console.log('✓ PASS: Historical wage versioning applies new wage strictly from effective date forward.');
 
+  console.log('\n--- [STAGE 12] Zero Net Dues After Settlement (Even With includeSettledHistory=true) ---');
+  // Full settlement through 2026-10-28 (dues were ₹3100)
+  const fullSettleRes = await PayrollService.settlePayroll({
+    workerId,
+    endDate: '2026-10-28',
+    amountPaid: 3100,
+    paymentMethod: 'CASH',
+  });
+  assert.strictEqual(fullSettleRes.carriedForwardBalance, 0);
+
+  // Single sheet query with includeSettledHistory: true (past 60 days)
+  const historySheet = await PayrollService.getWorkerSingleSheet({
+    workerId,
+    endDate: '2026-10-28',
+    includeSettledHistory: true,
+  });
+  assert.strictEqual(historySheet.kpis.netPayable, 0, 'Net payable MUST BE 0 after full settlement, even when viewing history!');
+  assert.strictEqual(historySheet.kpis.unsettledNetBaseWages, 0, 'Unsettled base wages must be 0');
+  console.log('✓ PASS: Post-settlement net dues reset strictly to 0 down to the rupee, even when viewing historical days.');
+
+  console.log('\n--- [STAGE 13] Date Before Wage Decided Has ₹0 Wage (No Ancient Phantom Earnings) ---');
+  const worker3Mobile = '9999900003';
+  await User.deleteOne({ mobile: worker3Mobile });
+  const worker3 = await User.create({
+    name: 'New Joinee',
+    mobile: worker3Mobile,
+    password: 'password123',
+    role: 'WORKER',
+    dailyWage: 900,
+    dailyWageEffectiveDate: new Date('2026-11-01T00:00:00Z'),
+    isApproved: true,
+    status: 'ACTIVE',
+    createdAt: new Date('2026-05-01T00:00:00Z'), // Created 6 months ago!
+  });
+
+  // Query single sheet on a date BEFORE wage effective date (e.g. 2026-10-15)
+  const preWageSheet = await PayrollService.getWorkerSingleSheet({
+    workerId: worker3._id.toString(),
+    startDate: '2026-10-15',
+    endDate: '2026-10-15',
+  });
+  assert.strictEqual(preWageSheet.days[0].baseWage, 0, 'Date before wage effective date must have ₹0 base wage');
+  assert.strictEqual(preWageSheet.days[0].netDailyPay, 0, 'Date before wage effective date must have ₹0 net pay');
+  console.log('✓ PASS: Days prior to wage decision correctly yield ₹0 wage without ancient phantom accruals.');
+
+  console.log('\n--- [STAGE 14] Current Day Shift 5 PM Cutoff Rule & Monthly Breakdown ---');
+  const todayStr = formatDateStr(new Date());
+  const todaySheet = await PayrollService.getWorkerSingleSheet({
+    workerId: worker3._id.toString(),
+    startDate: todayStr,
+    endDate: todayStr,
+  });
+  const todayEntry = todaySheet.days[0];
+  const currentHour = parseInt(
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', hour: '2-digit', hour12: false })
+      .format(new Date()),
+    10
+  );
+
+  if (currentHour < 17 && new Date().getDay() !== 0) {
+    assert.strictEqual(todayEntry.shiftStatus, 'IN_PROGRESS');
+    assert.strictEqual(todayEntry.netDayWage, 0, 'Shift in progress must not credit day wage before 5 PM');
+  }
+  assert(todaySheet.monthlyBreakdown !== undefined, 'Monthly breakdown must be present');
+  console.log('✓ PASS: Shift timing rule and monthly breakdown aggregation verified successfully.');
+
   // Cleanup test accounts
-  await User.deleteMany({ mobile: { $in: [testWorkerMobile, testWorker2Mobile, testAdminMobile] } });
+  await User.deleteMany({ mobile: { $in: [testWorkerMobile, testWorker2Mobile, worker3Mobile, testAdminMobile] } });
   await WageAdjustment.deleteMany({ workerId: { $in: [worker._id, worker2._id] } });
   await WageTransaction.deleteMany({ workerId: { $in: [worker._id, worker2._id] } });
   await GarageHoliday.deleteMany({ date: { $in: ['2026-10-22', '2026-10-25'] } });

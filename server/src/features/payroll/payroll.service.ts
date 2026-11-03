@@ -31,10 +31,20 @@ export function calculateHalfDayDeduction(dailyWage: number): number {
 }
 
 /**
- * Finds the applicable daily wage for a worker on a specific date string (YYYY-MM-DD)
+ * Finds the applicable daily wage for a worker on a specific date string (YYYY-MM-DD).
+ * If the date is earlier than worker's first wage effective date, returns 0.
  */
 export function getWageForDate(worker: IUser, dateStr: string): number {
+  if (worker.dailyWageEffectiveDate) {
+    const effStr = formatDateStr(new Date(worker.dailyWageEffectiveDate));
+    if (dateStr < effStr) return 0;
+  }
+
   if (!worker.wageHistory || worker.wageHistory.length === 0) {
+    if (worker.createdAt) {
+      const createdStr = formatDateStr(new Date(worker.createdAt));
+      if (dateStr < createdStr) return 0;
+    }
     return worker.dailyWage || 0;
   }
 
@@ -49,9 +59,36 @@ export function getWageForDate(worker: IUser, dateStr: string): number {
     }
   }
 
-  // Fallback to earliest wage in history or current wage
-  const earliest = sorted[sorted.length - 1];
-  return earliest ? earliest.wage : worker.dailyWage || 0;
+  // Target date is before earliest wage in history: wage is 0
+  return 0;
+}
+
+/**
+ * Get current date and time parts in Indian Standard Time (IST / Asia/Kolkata)
+ */
+export function getIstDateTime(): { dateStr: string; hour: number; minute: number } {
+  const now = new Date();
+  const istFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = istFormatter.formatToParts(now);
+  const year = parts.find((p) => p.type === 'year')?.value || '';
+  const month = parts.find((p) => p.type === 'month')?.value || '';
+  const day = parts.find((p) => p.type === 'day')?.value || '';
+  const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
+  const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
+
+  return {
+    dateStr: `${year}-${month}-${day}`,
+    hour,
+    minute,
+  };
 }
 
 /**
@@ -98,6 +135,8 @@ export interface SingleSheetDayEntry {
   baseWage: number;
   leaveDeduction: number;
   netDayWage: number;
+  shiftStatus?: 'IN_PROGRESS' | 'COMPLETED' | 'SUNDAY' | 'HOLIDAY' | 'LEAVE';
+  shiftNote?: string;
   otHours: number;
   otAmount: number;
   otStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -113,6 +152,25 @@ export interface SingleSheetDayEntry {
     carriedForwardBalance?: number;
   }>;
   runningCumulativeBalance: number;
+}
+
+export interface MonthlyBreakdownItem {
+  monthKey: string; // 'YYYY-MM'
+  monthLabel: string; // 'November 2026'
+  totalDays: number;
+  workingDays: number;
+  sundays: number;
+  holidays: number;
+  leaveDays: number;
+  grossWages: number;
+  leaveDeductions: number;
+  netBaseWages: number;
+  otHours: number;
+  otAmount: number;
+  advances: number;
+  payouts: number;
+  netEarnings: number;
+  isSettled: boolean;
 }
 
 export class PayrollService {
@@ -265,18 +323,26 @@ export class PayrollService {
     let startStr = params.startDate;
     if (!startStr) {
       if (params.includeSettledHistory) {
-        // Look back 60 days
+        // Look back up to 60 days, but never earlier than worker's wage effective date or creation
         const lookback = new Date();
         lookback.setDate(lookback.getDate() - 60);
-        startStr = formatDateStr(lookback);
+        let lookbackStr = formatDateStr(lookback);
+        const earliestWageDate = worker.dailyWageEffectiveDate || (worker.dailyWage ? worker.createdAt : null);
+        if (earliestWageDate) {
+          const effStr = formatDateStr(new Date(earliestWageDate));
+          if (lookbackStr < effStr) {
+            lookbackStr = effStr;
+          }
+        }
+        startStr = lookbackStr;
       } else if (lastSettledDateStr) {
         startStr = getNextDayStr(lastSettledDateStr);
-      } else if (worker.createdAt) {
+      } else if (worker.dailyWageEffectiveDate) {
+        startStr = formatDateStr(new Date(worker.dailyWageEffectiveDate));
+      } else if (worker.dailyWage && worker.createdAt) {
         startStr = formatDateStr(new Date(worker.createdAt));
       } else {
-        const firstDayMonth = new Date();
-        firstDayMonth.setDate(1);
-        startStr = formatDateStr(firstDayMonth);
+        startStr = todayStr;
       }
     }
 
@@ -331,20 +397,33 @@ export class PayrollService {
     });
     const totalUnsettledAdvances = unsettledAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
 
-    // Generate day-by-day continuous stream
-    const dayEntries: SingleSheetDayEntry[] = [];
+    // Current IST time for shift cutoff (wage accrues after 5:00 PM / 17:00 IST)
+    const istNow = getIstDateTime();
+    const todayIstStr = istNow.dateStr;
+    const currentIstHour = istNow.hour;
 
-    let grossWages = 0;
-    let totalLeaveDeductions = 0;
-    let netBaseWages = 0;
-    let totalApprovedOtHours = 0;
-    let totalApprovedOtAmount = 0;
+    // Period metrics (all days in the queried range)
     let totalWorkingDays = 0;
     let totalSundays = 0;
     let totalHolidayDays = 0;
     let totalFullLeaveDays = 0;
     let totalHalfDays = 0;
+    let grossWages = 0;
+    let totalLeaveDeductions = 0;
+    let netBaseWages = 0;
+    let totalApprovedOtHours = 0;
+    let totalApprovedOtAmount = 0;
+
+    // Unsettled metrics (strictly for days/adjustments that are NOT settled yet)
+    let unsettledWorkingDays = 0;
+    let unsettledGrossWages = 0;
+    let unsettledLeaveDeductions = 0;
+    let unsettledNetBaseWages = 0;
+    let unsettledApprovedOtHours = 0;
+    let unsettledApprovedOtAmount = 0;
+
     let runningBalance = 0;
+    const dayEntries: SingleSheetDayEntry[] = [];
 
     for (const dStr of dateList) {
       const dObj = new Date(`${dStr}T00:00:00`);
@@ -358,10 +437,16 @@ export class PayrollService {
 
       const currentDailyWage = getWageForDate(worker, dStr);
 
+      const isToday = dStr === todayIstStr;
+      // Shift is in progress if it is today and current time is before 5:00 PM IST (17:00)
+      const isShiftInProgress = isToday && currentIstHour < 17;
+
       let dayType: SingleSheetDayEntry['dayType'] = 'WORKING';
       let baseWage = currentDailyWage;
       let leaveDeduction = 0;
       let netDayWage = currentDailyWage;
+      let shiftStatus: SingleSheetDayEntry['shiftStatus'] = undefined;
+      let shiftNote: string | undefined = undefined;
 
       if (leave) {
         if (leave.type === 'FULL_LEAVE') {
@@ -370,12 +455,14 @@ export class PayrollService {
           netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
           totalFullLeaveDays++;
           totalLeaveDeductions += leaveDeduction;
+          shiftStatus = 'LEAVE';
         } else if (leave.type === 'HALF_LEAVE') {
           dayType = 'HALF_LEAVE';
           leaveDeduction = leave.deductionAmount || calculateHalfDayDeduction(currentDailyWage);
           netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
           totalHalfDays++;
           totalLeaveDeductions += leaveDeduction;
+          shiftStatus = 'LEAVE';
         }
       } else if (holiday && holiday.isPaid) {
         dayType = 'HOLIDAY';
@@ -383,18 +470,30 @@ export class PayrollService {
         leaveDeduction = 0;
         netDayWage = currentDailyWage;
         totalHolidayDays++;
+        shiftStatus = 'HOLIDAY';
       } else if (isSunday) {
         dayType = 'SUNDAY';
         baseWage = 0;
         leaveDeduction = 0;
         netDayWage = 0;
         totalSundays++;
+        shiftStatus = 'SUNDAY';
       } else {
         dayType = 'WORKING';
-        baseWage = currentDailyWage;
-        leaveDeduction = 0;
-        netDayWage = currentDailyWage;
         totalWorkingDays++;
+        if (isShiftInProgress) {
+          // Worker is currently working shift: wage accrues after 5:00 PM
+          baseWage = currentDailyWage;
+          leaveDeduction = 0;
+          netDayWage = 0;
+          shiftStatus = 'IN_PROGRESS';
+          shiftNote = 'Shift in progress (accrues after 5:00 PM)';
+        } else {
+          baseWage = currentDailyWage;
+          leaveDeduction = 0;
+          netDayWage = currentDailyWage;
+          shiftStatus = 'COMPLETED';
+        }
       }
 
       grossWages += baseWage;
@@ -442,6 +541,22 @@ export class PayrollService {
         };
       });
 
+      const isDaySettled = Boolean(lastSettledDateStr && dStr <= lastSettledDateStr) || (leave?.isSettled || false);
+
+      // Unsettled tallies strictly for days not settled
+      if (!isDaySettled) {
+        if (dayType === 'WORKING' && !isShiftInProgress) {
+          unsettledWorkingDays++;
+        }
+        unsettledGrossWages += baseWage;
+        unsettledLeaveDeductions += leaveDeduction;
+        unsettledNetBaseWages += netDayWage;
+        if (otStatus === 'APPROVED') {
+          unsettledApprovedOtHours += dayOtHours;
+          unsettledApprovedOtAmount += dayOtAmount;
+        }
+      }
+
       dayEntries.push({
         date: dStr,
         dayName,
@@ -452,19 +567,78 @@ export class PayrollService {
         baseWage,
         leaveDeduction,
         netDayWage,
+        shiftStatus,
+        shiftNote,
         otHours: dayOtHours,
         otAmount: dayOtAmount,
         otStatus,
         netDailyPay,
-        isSettled: Boolean(lastSettledDateStr && dStr <= lastSettledDateStr) || (leave?.isSettled || false),
+        isSettled: isDaySettled,
         inlineTransactions: formattedInline,
         runningCumulativeBalance: runningBalance,
       });
     }
 
-    // Dynamic Net Payable Calculation
-    const totalEarnings = netBaseWages + totalApprovedOtAmount + previousBalanceCarriedForward;
-    const netPayable = Math.max(0, totalEarnings - totalUnsettledAdvances);
+    // Dynamic Net Payable Calculation: strictly unsettled earnings minus unsettled advances
+    const unsettledEarnings = unsettledNetBaseWages + unsettledApprovedOtAmount + previousBalanceCarriedForward;
+    const netPayable = Math.max(0, unsettledEarnings - totalUnsettledAdvances);
+
+    // Monthly breakdown aggregation
+    const monthGroups = new Map<string, MonthlyBreakdownItem>();
+
+    for (const entry of dayEntries) {
+      const monthKey = entry.date.slice(0, 7); // 'YYYY-MM'
+      const [y, m] = monthKey.split('-').map(Number);
+      const mDate = new Date(y, m - 1, 1);
+      const monthLabel = mDate.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+
+      let group = monthGroups.get(monthKey);
+      if (!group) {
+        group = {
+          monthKey,
+          monthLabel,
+          totalDays: 0,
+          workingDays: 0,
+          sundays: 0,
+          holidays: 0,
+          leaveDays: 0,
+          grossWages: 0,
+          leaveDeductions: 0,
+          netBaseWages: 0,
+          otHours: 0,
+          otAmount: 0,
+          advances: 0,
+          payouts: 0,
+          netEarnings: 0,
+          isSettled: true,
+        };
+        monthGroups.set(monthKey, group);
+      }
+
+      group.totalDays++;
+      if (entry.dayType === 'WORKING' && entry.shiftStatus !== 'IN_PROGRESS') group.workingDays++;
+      if (entry.dayType === 'SUNDAY') group.sundays++;
+      if (entry.dayType === 'HOLIDAY') group.holidays++;
+      if (entry.dayType === 'FULL_LEAVE' || entry.dayType === 'HALF_LEAVE') group.leaveDays++;
+
+      group.grossWages += entry.baseWage;
+      group.leaveDeductions += entry.leaveDeduction;
+      group.netBaseWages += entry.netDayWage;
+      group.otHours += entry.otHours;
+      group.otAmount += entry.otAmount;
+      group.netEarnings += entry.netDailyPay;
+
+      if (!entry.isSettled) {
+        group.isSettled = false;
+      }
+
+      for (const tx of entry.inlineTransactions) {
+        if (tx.type === 'ADVANCE_TAKEN') group.advances += tx.amount;
+        if (tx.type === 'PAYOUT_SETTLEMENT') group.payouts += tx.amount;
+      }
+    }
+
+    const monthlyBreakdown = Array.from(monthGroups.values()).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
 
     return {
       worker: {
@@ -472,6 +646,7 @@ export class PayrollService {
         name: worker.name,
         mobile: worker.mobile,
         dailyWage: worker.dailyWage || 0,
+        dailyWageEffectiveDate: worker.dailyWageEffectiveDate,
         lastSettledDate: worker.lastSettledDate,
       },
       period: {
@@ -491,10 +666,17 @@ export class PayrollService {
         previousBalanceCarriedForward,
         totalApprovedOtHours,
         totalApprovedOtAmount,
-        totalEarnings,
+        totalEarnings: unsettledEarnings,
         totalUnsettledAdvances,
         netPayable,
+        unsettledWorkingDays,
+        unsettledGrossWages,
+        unsettledLeaveDeductions,
+        unsettledNetBaseWages,
+        unsettledApprovedOtHours,
+        unsettledApprovedOtAmount,
       },
+      monthlyBreakdown,
       days: dayEntries.reverse(), // Newest date first for instant viewing
     };
   }
@@ -645,9 +827,9 @@ export class PayrollService {
             role: worker.role,
             dailyWage: worker.dailyWage || 0,
             lastSettledDate: worker.lastSettledDate,
-            unsettledGross: sheet.kpis.grossWages,
-            unsettledDeductions: sheet.kpis.totalLeaveDeductions,
-            unsettledOtAmount: sheet.kpis.totalApprovedOtAmount,
+            unsettledGross: sheet.kpis.unsettledGrossWages ?? sheet.kpis.grossWages,
+            unsettledDeductions: sheet.kpis.unsettledLeaveDeductions ?? sheet.kpis.totalLeaveDeductions,
+            unsettledOtAmount: sheet.kpis.unsettledApprovedOtAmount ?? sheet.kpis.totalApprovedOtAmount,
             unsettledAdvances: sheet.kpis.totalUnsettledAdvances,
             netPayable: sheet.kpis.netPayable,
             pendingOtCount: pendingOtWorkerMap.get(worker._id.toString()) || 0,

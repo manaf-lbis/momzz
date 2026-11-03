@@ -25,24 +25,29 @@ export class PayrollRepository {
     const worker = await User.findById(workerId);
     if (!worker) return null;
 
+    const effDate = effectiveDate || new Date();
+
     if (!worker.wageHistory || worker.wageHistory.length === 0) {
-      worker.wageHistory = [
-        {
-          wage: worker.dailyWage || 0,
-          effectiveDate: worker.createdAt || new Date(0),
-          createdAt: worker.createdAt || new Date(0),
-        },
-      ];
+      worker.wageHistory = [];
+      if (worker.dailyWage && worker.dailyWage > 0) {
+        worker.wageHistory.push({
+          wage: worker.dailyWage,
+          effectiveDate: worker.dailyWageEffectiveDate || worker.createdAt || new Date(0),
+          createdAt: worker.createdAt || new Date(),
+        });
+      }
     }
 
-    const effDate = effectiveDate || new Date();
     worker.wageHistory.push({
       wage: dailyWage,
       effectiveDate: effDate,
       createdAt: new Date(),
     });
+
     worker.dailyWage = dailyWage;
-    worker.dailyWageEffectiveDate = effDate;
+    if (!worker.dailyWageEffectiveDate) {
+      worker.dailyWageEffectiveDate = worker.createdAt || effDate;
+    }
 
     return worker.save();
   }

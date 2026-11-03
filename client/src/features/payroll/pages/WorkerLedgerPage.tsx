@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Wallet,
@@ -13,6 +13,9 @@ import {
   Zap,
   Info,
   CalendarDays,
+  Filter,
+  Layers,
+  ChevronRight,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
@@ -26,6 +29,7 @@ import {
   useSettlePayrollMutation,
   useRecordAdvanceMutation,
   SingleSheetDayEntry,
+  MonthlyBreakdownItem,
 } from '../api/payrollApi';
 
 const formatCurrency = (val: number) =>
@@ -97,18 +101,65 @@ export const WorkerLedgerPage: React.FC = () => {
     netPayable: 0,
   };
   const days = data?.data?.days || [];
+  const monthlyBreakdown = data?.data?.monthlyBreakdown || [];
 
-  // Group days by Month-Year for continuous sticky sectioning
+  // Month filter state ('ALL' or 'YYYY-MM')
+  const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
+
+  // Progressive Infinite Scroll state
+  const [visibleLimit, setVisibleLimit] = useState<number>(30);
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Filter days by month if selected
+  const filteredDays = useMemo(() => {
+    if (selectedMonth === 'ALL') return days;
+    return days.filter((d) => d.date.startsWith(selectedMonth));
+  }, [days, selectedMonth]);
+
+  // Progressive items to render
+  const visibleDays = useMemo(() => {
+    return filteredDays.slice(0, visibleLimit);
+  }, [filteredDays, visibleLimit]);
+
+  // Group visible days by Month-Year for continuous sticky sectioning
   const groupedDays = useMemo(() => {
     const groups: { [key: string]: SingleSheetDayEntry[] } = {};
-    days.forEach((day) => {
+    visibleDays.forEach((day) => {
       const d = new Date(`${day.date}T00:00:00`);
       const monthYear = d.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
       if (!groups[monthYear]) groups[monthYear] = [];
       groups[monthYear].push(day);
     });
     return groups;
-  }, [days]);
+  }, [visibleDays]);
+
+  // Infinite Scroll IntersectionObserver
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleLimit < filteredDays.length) {
+          setVisibleLimit((prev) => Math.min(prev + 20, filteredDays.length));
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [filteredDays.length, visibleLimit]);
+
+  const handleSelectMonth = (mKey: string) => {
+    setSelectedMonth(mKey);
+    setVisibleLimit(30);
+  };
 
   // Handle OT Claim Submit
   const handleOtSubmit = async (e: React.FormEvent) => {
@@ -236,9 +287,21 @@ export const WorkerLedgerPage: React.FC = () => {
         <div className="p-4 sm:p-5 rounded-2xl glass-modern-card border-amber-500/30 space-y-3 shadow-2xs">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <span className="text-[10px] sm:text-xs font-mono uppercase text-slate-500 dark:text-slate-400 block font-semibold">
-                Unsettled Payable Dues
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] sm:text-xs font-mono uppercase text-slate-500 dark:text-slate-400 block font-semibold">
+                  Unsettled Payable Dues
+                </span>
+                {kpis.netPayable === 0 ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
+                    <span>All Dues Settled</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+                    <span>Active Dues</span>
+                  </span>
+                )}
+              </div>
               <p className="text-2xl sm:text-4xl font-black font-mono text-amber-600 dark:text-amber-400 mt-0.5">
                 {formatCurrency(kpis.netPayable)}
               </p>
@@ -339,21 +402,105 @@ export const WorkerLedgerPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ── CONTINUOUS SINGLE-SHEET STREAM ── */}
+        {/* ── MONTHLY BREAKDOWN CAROUSEL / SPLIT-UP ── */}
+        {monthlyBreakdown.length > 0 && (
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-blue-500" />
+                <span>Monthly Earnings Split-Up</span>
+              </h3>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {monthlyBreakdown.length} months recorded
+              </span>
+            </div>
+
+            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
+              {monthlyBreakdown.map((m) => {
+                const isSelected = selectedMonth === m.monthKey;
+                return (
+                  <button
+                    key={m.monthKey}
+                    onClick={() => handleSelectMonth(isSelected ? 'ALL' : m.monthKey)}
+                    className={`snap-start shrink-0 w-64 p-3 rounded-2xl glass-modern-card text-left transition-all active:scale-[0.98] border ${
+                      isSelected
+                        ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-500/5'
+                        : 'border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        {m.monthLabel}
+                      </span>
+                      {m.isSettled ? (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-mono">
+                          Settled
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono">
+                          Active
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-lg font-black font-mono text-slate-900 dark:text-white">
+                      {formatCurrency(m.netEarnings)}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2 pt-2 border-t border-slate-100 dark:border-white/5 text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                      <div>Days: <span className="font-semibold text-slate-800 dark:text-slate-200">{m.workingDays}d</span></div>
+                      <div>OT: <span className="font-semibold text-emerald-600">+{formatCurrency(m.otAmount)}</span></div>
+                      <div>Leaves: <span className="font-semibold text-amber-600">-{formatCurrency(m.leaveDeductions)}</span></div>
+                      <div>Adv: <span className="font-semibold text-rose-600">-{formatCurrency(m.advances)}</span></div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── CONTINUOUS SINGLE-SHEET STREAM & FILTERS ── */}
         <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
               <CalendarDays className="w-3.5 h-3.5 text-amber-500" />
-              <span>Daily Transaction Stream</span>
-            </h2>
-            <span className="text-[10px] font-mono text-slate-400">
-              {days.length} entries recorded
-            </span>
+              <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400">
+                Daily Transaction Stream
+              </h2>
+            </div>
+
+            {/* Month Filter Selector Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              <button
+                onClick={() => handleSelectMonth('ALL')}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold font-mono transition whitespace-nowrap ${
+                  selectedMonth === 'ALL'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                }`}
+              >
+                All Months ({days.length})
+              </button>
+              {monthlyBreakdown.map((m) => (
+                <button
+                  key={m.monthKey}
+                  onClick={() => handleSelectMonth(m.monthKey)}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold font-mono transition whitespace-nowrap ${
+                    selectedMonth === m.monthKey
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  }`}
+                >
+                  {m.monthLabel.split(' ')[0]} ({m.totalDays})
+                </button>
+              ))}
+            </div>
           </div>
 
-          {days.length === 0 ? (
+          {filteredDays.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400 glass-modern-card rounded-2xl">
-              No daily entries recorded yet.
+              No daily entries recorded for this view.
             </div>
           ) : (
             Object.entries(groupedDays).map(([monthYear, monthDays]) => (
@@ -374,6 +521,7 @@ export const WorkerLedgerPage: React.FC = () => {
                     const isSun = day.dayType === 'SUNDAY';
                     const isHol = day.dayType === 'HOLIDAY';
                     const isLeave = day.dayType === 'FULL_LEAVE' || day.dayType === 'HALF_LEAVE';
+                    const isInProgress = day.shiftStatus === 'IN_PROGRESS';
 
                     return (
                       <div
@@ -385,6 +533,8 @@ export const WorkerLedgerPage: React.FC = () => {
                             ? 'border-l-4 border-amber-500'
                             : isHol
                             ? 'border-l-4 border-purple-500'
+                            : isInProgress
+                            ? 'border-l-4 border-sky-500'
                             : 'border-l-4 border-emerald-500/60'
                         }`}
                       >
@@ -414,6 +564,11 @@ export const WorkerLedgerPage: React.FC = () => {
                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300">
                                   {day.dayType === 'FULL_LEAVE' ? 'Full Leave' : 'Half Day'} (-₹{day.leaveDeduction})
                                 </span>
+                              ) : isInProgress ? (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 flex items-center gap-1">
+                                  <Clock className="w-2.5 h-2.5 animate-pulse text-sky-500" />
+                                  <span>Shift In Progress (accrues 5 PM)</span>
+                                </span>
                               ) : (
                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300">
                                   Present (+₹{day.baseWage})
@@ -438,6 +593,13 @@ export const WorkerLedgerPage: React.FC = () => {
                                   )}
                                 </span>
                               )}
+
+                              {/* Settled Badge */}
+                              {day.isSettled && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                  Settled
+                                </span>
+                              )}
                             </div>
                           </div>
 
@@ -445,12 +607,14 @@ export const WorkerLedgerPage: React.FC = () => {
                           <div className="text-right shrink-0 font-mono">
                             <span
                               className={`text-xs font-bold block ${
-                                day.netDailyPay > 0
+                                isInProgress
+                                  ? 'text-sky-600 dark:text-sky-400 font-semibold'
+                                  : day.netDailyPay > 0
                                   ? 'text-slate-900 dark:text-white'
                                   : 'text-slate-400'
                               }`}
                             >
-                              +{formatCurrency(day.netDailyPay)}
+                              {isInProgress ? '₹0 (shift active)' : `+${formatCurrency(day.netDailyPay)}`}
                             </span>
                             <span className="text-[9px] text-amber-600 dark:text-amber-400 font-semibold block">
                               bal {formatCurrency(day.runningCumulativeBalance)}
@@ -459,9 +623,9 @@ export const WorkerLedgerPage: React.FC = () => {
                         </div>
 
                         {/* Note if any */}
-                        {day.adjustmentNote && (
+                        {(day.adjustmentNote || day.shiftNote) && (
                           <p className="text-[10px] text-slate-400 italic pl-10">
-                            Note: {day.adjustmentNote}
+                            Note: {day.shiftNote || day.adjustmentNote}
                           </p>
                         )}
 
@@ -507,6 +671,29 @@ export const WorkerLedgerPage: React.FC = () => {
                 </div>
               </div>
             ))
+          )}
+
+          {/* ── INFINITE SCROLL SENTINEL & LOAD MORE ── */}
+          {filteredDays.length > 0 && (
+            <div className="pt-2 pb-4 text-center">
+              {visibleLimit < filteredDays.length ? (
+                <div ref={observerTarget} className="space-y-2">
+                  <button
+                    onClick={() => setVisibleLimit((prev) => Math.min(prev + 25, filteredDays.length))}
+                    className="px-4 py-2 text-xs font-bold font-mono rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 transition active:scale-95"
+                  >
+                    Load More Days ({filteredDays.length - visibleLimit} remaining)
+                  </button>
+                  <p className="text-[10px] text-slate-400 font-mono">
+                    Showing {visibleDays.length} of {filteredDays.length} days • Scroll down to auto-load
+                  </p>
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-400 font-mono">
+                  ✓ All {filteredDays.length} days loaded in ledger stream
+                </p>
+              )}
+            </div>
           )}
         </section>
       </main>
