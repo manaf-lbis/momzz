@@ -11,6 +11,9 @@ import {
   advanceSchema,
   holidaySchema,
   updateWageSchema,
+  incentiveSchema,
+  updateLeaveSchema,
+  updateOtClaimSchema,
 } from './payroll.validators';
 
 const router = Router();
@@ -37,6 +40,19 @@ router.post(
   validateRequest({ body: batchLeaveSchema }),
   PayrollController.markBatchLeave
 );
+router.put(
+  '/leave/:id',
+  adminMiddleware,
+  validateRequest({ body: updateLeaveSchema }),
+  PayrollController.updateLeaveAdjustment
+);
+router.put(
+  '/admin/leave/:id',
+  adminMiddleware,
+  validateRequest({ body: updateLeaveSchema }),
+  PayrollController.updateLeaveAdjustment
+);
+router.delete('/leave/:id', adminMiddleware, PayrollController.deleteAdjustment);
 
 // --- 2. Overtime Engine Endpoints ---
 router.post(
@@ -48,6 +64,16 @@ router.post(
   '/ot-claim',
   validateRequest({ body: otClaimSchema }),
   PayrollController.claimOvertime
+);
+router.put(
+  '/ot/claim/:id',
+  validateRequest({ body: updateOtClaimSchema }),
+  PayrollController.updateOtClaim
+);
+router.put(
+  '/ot-claim/:id',
+  validateRequest({ body: updateOtClaimSchema }),
+  PayrollController.updateOtClaim
 );
 router.patch(
   '/ot/:id/status',
@@ -69,7 +95,7 @@ router.get('/worker/me/single-sheet', PayrollController.getMySingleSheet);
 router.get('/ledger', PayrollController.getMySingleSheet);
 router.get('/worker/:workerId/single-sheet', PayrollController.getWorkerSingleSheet);
 
-// --- 4. Settlement & Cash Advances ---
+// --- 4. Settlement, Incentives & Cash Advances ---
 router.post(
   '/settle',
   adminMiddleware,
@@ -94,6 +120,24 @@ router.post(
   adminMiddleware,
   validateRequest({ body: advanceSchema }),
   PayrollController.recordAdvance
+);
+
+router.post(
+  '/incentive',
+  adminMiddleware,
+  validateRequest({ body: incentiveSchema }),
+  PayrollController.recordIncentive
+);
+router.post(
+  '/admin/incentive',
+  adminMiddleware,
+  validateRequest({ body: incentiveSchema }),
+  PayrollController.recordIncentive
+);
+router.delete(
+  '/transaction/:id',
+  adminMiddleware,
+  PayrollController.deleteWageTransaction
 );
 
 // --- 5. Admin Overview & Management ---

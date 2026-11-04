@@ -50,3 +50,23 @@ export const updateWageSchema = z.object({
   workerId: z.string().min(1, 'Worker ID is required'),
   dailyWage: z.number().min(0, 'Daily wage cannot be negative'),
 });
+
+export const incentiveSchema = z.object({
+  workerId: z.string().min(1, 'Worker ID is required'),
+  amount: z.number().positive('Incentive amount must be greater than 0'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
+  notes: z.string().min(1, 'Remarks/notes are required for incentive').trim(),
+});
+
+export const updateLeaveSchema = z.object({
+  type: z.enum(['FULL_LEAVE', 'HALF_LEAVE']).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
+  note: z.string().optional(),
+});
+
+export const updateOtClaimSchema = z.object({
+  otHours: z.number().int().min(1).max(24).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
+  note: z.string().optional(),
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
+});

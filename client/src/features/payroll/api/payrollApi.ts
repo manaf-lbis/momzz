@@ -2,7 +2,7 @@ import { apiSlice } from '../../auth/api/apiSlice';
 
 export interface InlineTransactionItem {
   id: string;
-  type: 'PAYOUT_SETTLEMENT' | 'ADVANCE_TAKEN';
+  type: 'PAYOUT_SETTLEMENT' | 'ADVANCE_TAKEN' | 'INCENTIVE';
   amount: number;
   notes?: string;
   paymentMethod?: string;
@@ -45,6 +45,7 @@ export interface MonthlyBreakdownItem {
   otHours: number;
   otAmount: number;
   advances: number;
+  incentives?: number;
   payouts: number;
   netEarnings: number;
   isSettled: boolean;
@@ -55,6 +56,7 @@ export interface WorkerSingleSheetData {
     id: string;
     name: string;
     mobile: string;
+    profileImageUrl?: string;
     dailyWage: number;
     dailyWageEffectiveDate?: string;
     lastSettledDate?: string;
@@ -77,6 +79,7 @@ export interface WorkerSingleSheetData {
     totalApprovedOtAmount: number;
     totalEarnings: number;
     totalUnsettledAdvances: number;
+    totalUnsettledIncentives?: number;
     netPayable: number;
   };
   monthlyBreakdown?: MonthlyBreakdownItem[];
@@ -87,6 +90,7 @@ export interface WorkerSummaryItem {
   workerId: string;
   name: string;
   mobile: string;
+  profileImageUrl?: string;
   role: string;
   dailyWage: number;
   lastSettledDate?: string;
@@ -94,6 +98,7 @@ export interface WorkerSummaryItem {
   unsettledDeductions: number;
   unsettledOtAmount: number;
   unsettledAdvances: number;
+  unsettledIncentives?: number;
   netPayable: number;
   pendingOtCount: number;
 }
@@ -103,6 +108,7 @@ export interface PendingOtClaimItem {
   workerId: string;
   workerName: string;
   workerMobile: string;
+  workerProfileImageUrl?: string;
   date: string;
   otHours: number;
   potentialAmount: number;
@@ -261,6 +267,82 @@ export const payrollApi = apiSlice.injectEndpoints({
       invalidatesTags: ['Payroll'],
     }),
 
+    recordIncentive: builder.mutation<
+      { success: boolean; data: any },
+      {
+        workerId: string;
+        amount: number;
+        date?: string;
+        notes: string;
+      }
+    >({
+      query: (body) => ({
+        url: '/payroll/incentive',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Payroll'],
+    }),
+
+    updateLeave: builder.mutation<
+      { success: boolean; data: any },
+      {
+        id: string;
+        type?: 'FULL_LEAVE' | 'HALF_LEAVE';
+        date?: string;
+        note?: string;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/payroll/leave/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['Payroll'],
+    }),
+
+    deleteLeave: builder.mutation<{ success: boolean; message: string }, string>({
+      query: (id) => ({
+        url: `/payroll/leave/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Payroll'],
+    }),
+
+    updateOtClaim: builder.mutation<
+      { success: boolean; data: any },
+      {
+        id: string;
+        otHours?: number;
+        date?: string;
+        note?: string;
+        status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/payroll/ot/claim/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['Payroll'],
+    }),
+
+    deleteOtClaim: builder.mutation<{ success: boolean; message: string }, string>({
+      query: (id) => ({
+        url: `/payroll/ot/claim/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Payroll'],
+    }),
+
+    deleteTransaction: builder.mutation<{ success: boolean; message: string }, string>({
+      query: (id) => ({
+        url: `/payroll/transaction/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Payroll'],
+    }),
+
     deleteHoliday: builder.mutation<{ success: boolean }, string>({
       query: (id) => ({
         url: `/payroll/holiday/${id}`,
@@ -280,6 +362,12 @@ export const {
   useUpdateOtStatusMutation,
   useSettlePayrollMutation,
   useRecordAdvanceMutation,
+  useRecordIncentiveMutation,
+  useUpdateLeaveMutation,
+  useDeleteLeaveMutation,
+  useUpdateOtClaimMutation,
+  useDeleteOtClaimMutation,
+  useDeleteTransactionMutation,
   useUpdateWorkerWageMutation,
   useGetHolidaysQuery,
   useDeclareHolidayMutation,

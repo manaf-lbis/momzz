@@ -3,7 +3,7 @@ import { PayrollRepository } from './payroll.repository';
 import { IUser } from '../../models/User.model';
 import { IWageAdjustment } from '../../models/WageAdjustment.model';
 import { IGarageHoliday } from '../../models/GarageHoliday.model';
-import { IWageTransaction } from '../../models/WageTransaction.model';
+import { IWageTransaction, WageTransactionType } from '../../models/WageTransaction.model';
 import { AppError } from '../../shared/utils/appError';
 
 export const OT_HOURLY_RATE = 150;
@@ -144,7 +144,7 @@ export interface SingleSheetDayEntry {
   isSettled: boolean;
   inlineTransactions: Array<{
     id: string;
-    type: 'PAYOUT_SETTLEMENT' | 'ADVANCE_TAKEN';
+    type: WageTransactionType;
     amount: number;
     notes?: string;
     paymentMethod?: string;
@@ -168,6 +168,7 @@ export interface MonthlyBreakdownItem {
   otHours: number;
   otAmount: number;
   advances: number;
+  incentives: number;
   payouts: number;
   netEarnings: number;
   isSettled: boolean;
@@ -397,6 +398,14 @@ export class PayrollService {
     });
     const totalUnsettledAdvances = unsettledAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
 
+    // Fetch unsettled incentives (increases net payable & earnings)
+    const unsettledIncentives = await PayrollRepository.findWageTransactions({
+      workerId: params.workerId,
+      type: 'INCENTIVE',
+      isSettled: false,
+    });
+    const totalUnsettledIncentives = unsettledIncentives.reduce((sum, a) => sum + (a.amount || 0), 0);
+
     // Current IST time for shift cutoff (wage accrues after 5:00 PM / 17:00 IST)
     const istNow = getIstDateTime();
     const todayIstStr = istNow.dateStr;
@@ -459,10 +468,19 @@ export class PayrollService {
         } else if (leave.type === 'HALF_LEAVE') {
           dayType = 'HALF_LEAVE';
           leaveDeduction = leave.deductionAmount || calculateHalfDayDeduction(currentDailyWage);
-          netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
+          if (isShiftInProgress) {
+            // Worker marked half-day on running day: balance wage ONLY accrues after 5:00 PM IST
+            baseWage = currentDailyWage;
+            netDayWage = 0;
+            shiftStatus = 'IN_PROGRESS';
+            shiftNote = 'Half-day shift in progress (accrues after 5:00 PM)';
+          } else {
+            baseWage = currentDailyWage;
+            netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
+            shiftStatus = 'COMPLETED';
+          }
           totalHalfDays++;
           totalLeaveDeductions += leaveDeduction;
-          shiftStatus = 'LEAVE';
         }
       } else if (holiday && holiday.isPaid) {
         dayType = 'HOLIDAY';
@@ -529,6 +547,8 @@ export class PayrollService {
           runningBalance -= t.amount;
         } else if (t.type === 'PAYOUT_SETTLEMENT') {
           runningBalance -= t.amount;
+        } else if (t.type === 'INCENTIVE') {
+          runningBalance += t.amount;
         }
         return {
           id: t._id.toString(),
@@ -547,6 +567,8 @@ export class PayrollService {
       if (!isDaySettled) {
         if (dayType === 'WORKING' && !isShiftInProgress) {
           unsettledWorkingDays++;
+        } else if (dayType === 'HALF_LEAVE' && !isShiftInProgress) {
+          unsettledWorkingDays += 0.5;
         }
         unsettledGrossWages += baseWage;
         unsettledLeaveDeductions += leaveDeduction;
@@ -579,8 +601,8 @@ export class PayrollService {
       });
     }
 
-    // Dynamic Net Payable Calculation: strictly unsettled earnings minus unsettled advances
-    const unsettledEarnings = unsettledNetBaseWages + unsettledApprovedOtAmount + previousBalanceCarriedForward;
+    // Dynamic Net Payable Calculation: strictly unsettled earnings (wages + OT + incentives) minus unsettled advances
+    const unsettledEarnings = unsettledNetBaseWages + unsettledApprovedOtAmount + totalUnsettledIncentives + previousBalanceCarriedForward;
     const netPayable = Math.max(0, unsettledEarnings - totalUnsettledAdvances);
 
     // Monthly breakdown aggregation
@@ -608,6 +630,7 @@ export class PayrollService {
           otHours: 0,
           otAmount: 0,
           advances: 0,
+          incentives: 0,
           payouts: 0,
           netEarnings: 0,
           isSettled: true,
@@ -634,6 +657,7 @@ export class PayrollService {
 
       for (const tx of entry.inlineTransactions) {
         if (tx.type === 'ADVANCE_TAKEN') group.advances += tx.amount;
+        if (tx.type === 'INCENTIVE') group.incentives += tx.amount;
         if (tx.type === 'PAYOUT_SETTLEMENT') group.payouts += tx.amount;
       }
     }
@@ -645,6 +669,7 @@ export class PayrollService {
         id: worker._id,
         name: worker.name,
         mobile: worker.mobile,
+        profileImageUrl: worker.profileImageUrl || '',
         dailyWage: worker.dailyWage || 0,
         dailyWageEffectiveDate: worker.dailyWageEffectiveDate,
         lastSettledDate: worker.lastSettledDate,
@@ -668,6 +693,7 @@ export class PayrollService {
         totalApprovedOtAmount,
         totalEarnings: unsettledEarnings,
         totalUnsettledAdvances,
+        totalUnsettledIncentives,
         netPayable,
         unsettledWorkingDays,
         unsettledGrossWages,
@@ -685,7 +711,7 @@ export class PayrollService {
    * Settle unsettled dues for a worker:
    * 1. Calculates unsettled dues up to endDate
    * 2. Logs PAYOUT_SETTLEMENT WageTransaction
-   * 3. Marks WageAdjustments and ADVANCE_TAKEN as settled
+   * 3. Marks WageAdjustments, ADVANCE_TAKEN, and INCENTIVE as settled
    * 4. Updates worker.lastSettledDate
    */
   static async settlePayroll(params: {
@@ -739,11 +765,12 @@ export class PayrollService {
         totalOtHours: sheet.kpis.totalApprovedOtHours,
         totalOtAmount: sheet.kpis.totalApprovedOtAmount,
         totalAdvancesDeducted: sheet.kpis.totalUnsettledAdvances,
+        totalIncentives: (sheet.kpis as any).totalUnsettledIncentives || 0,
         carriedForwardBalance,
       },
     });
 
-    // Mark adjustments and advances settled
+    // Mark adjustments, advances, and incentives settled
     await PayrollRepository.markAdjustmentsSettled(
       params.workerId,
       endDateStr,
@@ -751,6 +778,12 @@ export class PayrollService {
     );
 
     await PayrollRepository.markAdvancesSettled(
+      params.workerId,
+      new Date(`${endDateStr}T23:59:59.999Z`),
+      settlementTx._id as mongoose.Types.ObjectId
+    );
+
+    await PayrollRepository.markIncentivesSettled(
       params.workerId,
       new Date(`${endDateStr}T23:59:59.999Z`),
       settlementTx._id as mongoose.Types.ObjectId
@@ -799,6 +832,129 @@ export class PayrollService {
   }
 
   /**
+   * Record Performance/Special Incentive (INCENTIVE)
+   * Decided by Admin with proper remarks, reflects directly on payable & ledger
+   */
+  static async recordIncentive(params: {
+    workerId: string;
+    amount: number;
+    date?: string;
+    notes?: string;
+    recordedByName?: string;
+  }) {
+    const worker = await PayrollRepository.findWorkerById(params.workerId);
+    if (!worker) throw new AppError('Worker not found', 404);
+    if (!params.amount || params.amount <= 0) {
+      throw new AppError('Incentive amount must be greater than zero', 400);
+    }
+
+    const incentiveTx = await PayrollRepository.createWageTransaction({
+      workerId: params.workerId,
+      type: 'INCENTIVE',
+      amount: params.amount,
+      date: params.date ? new Date(`${params.date}T12:00:00.000Z`) : new Date(),
+      notes: params.notes || 'Performance Incentive',
+      settledByName: params.recordedByName || 'Admin',
+      isSettled: false,
+    });
+
+    return {
+      message: `Incentive of ₹${params.amount} awarded to ${worker.name}`,
+      incentive: incentiveTx,
+    };
+  }
+
+  /**
+   * Edit existing leave adjustment (Full Leave <-> Half Day, Date, Note)
+   */
+  static async updateLeaveAdjustment(params: {
+    adjustmentId: string;
+    type?: 'FULL_LEAVE' | 'HALF_LEAVE';
+    date?: string;
+    note?: string;
+  }) {
+    const adj = await PayrollRepository.findWageAdjustmentById(params.adjustmentId);
+    if (!adj) throw new AppError('Leave record not found', 404);
+    if (adj.isSettled) throw new AppError('Cannot edit settled leave', 400);
+
+    const workerIdStr = (adj.workerId as any)?._id?.toString() || adj.workerId?.toString();
+    const worker = await PayrollRepository.findWorkerById(workerIdStr);
+    if (!worker) throw new AppError('Worker not found', 404);
+
+    const targetDate = params.date || adj.date;
+    const leaveType = params.type || (adj.type as 'FULL_LEAVE' | 'HALF_LEAVE');
+    const dailyWage = getWageForDate(worker, targetDate);
+
+    let deductionAmount = adj.deductionAmount;
+    if (leaveType === 'FULL_LEAVE') {
+      deductionAmount = calculateFullLeaveDeduction(dailyWage);
+    } else if (leaveType === 'HALF_LEAVE') {
+      deductionAmount = calculateHalfDayDeduction(dailyWage);
+    }
+
+    const updated = await PayrollRepository.updateWageAdjustment(params.adjustmentId, {
+      type: leaveType,
+      date: targetDate,
+      deductionAmount,
+      note: params.note !== undefined ? params.note : adj.note,
+    });
+
+    return {
+      message: 'Leave updated successfully',
+      adjustment: updated,
+    };
+  }
+
+  /**
+   * Edit OT claim (hours, date, note, status)
+   */
+  static async updateOtClaim(params: {
+    claimId: string;
+    otHours?: number;
+    date?: string;
+    note?: string;
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+    reviewedBy?: string;
+  }) {
+    const claim = await PayrollRepository.findWageAdjustmentById(params.claimId);
+    if (!claim) throw new AppError('Overtime claim not found', 404);
+    if (claim.isSettled) throw new AppError('Cannot edit settled overtime claim', 400);
+
+    const updates: any = {};
+    if (params.otHours !== undefined) {
+      const roundedHours = Math.floor(params.otHours);
+      if (roundedHours < 1) throw new AppError('Overtime must be at least 1 whole hour', 400);
+      updates.otHours = roundedHours;
+    }
+    if (params.date) updates.date = params.date;
+    if (params.note !== undefined) updates.note = params.note;
+    if (params.status) {
+      updates.status = params.status;
+      if (params.reviewedBy) updates.reviewedBy = new mongoose.Types.ObjectId(params.reviewedBy);
+      updates.reviewedAt = new Date();
+    }
+
+    const updated = await PayrollRepository.updateWageAdjustment(params.claimId, updates);
+    return {
+      message: 'Overtime claim updated successfully',
+      claim: updated,
+    };
+  }
+
+  /**
+   * Delete unsettled wage transaction (accidental cash advance or incentive)
+   */
+  static async deleteWageTransaction(id: string) {
+    const tx = await PayrollRepository.findWageTransactionById(id);
+    if (!tx) throw new AppError('Transaction not found', 404);
+    if (tx.isSettled || tx.type === 'PAYOUT_SETTLEMENT') {
+      throw new AppError('Cannot delete settled transaction or settlement payout', 400);
+    }
+    await PayrollRepository.deleteWageTransaction(id);
+    return { message: 'Transaction removed successfully' };
+  }
+
+  /**
    * Admin Roster Overview: lists all workers with current daily wage, last settlement, unsettled dues,
    * and pending OT claim counts.
    */
@@ -824,6 +980,7 @@ export class PayrollService {
             workerId: worker._id,
             name: worker.name,
             mobile: worker.mobile,
+            profileImageUrl: worker.profileImageUrl || '',
             role: worker.role,
             dailyWage: worker.dailyWage || 0,
             lastSettledDate: worker.lastSettledDate,
@@ -831,6 +988,7 @@ export class PayrollService {
             unsettledDeductions: sheet.kpis.unsettledLeaveDeductions ?? sheet.kpis.totalLeaveDeductions,
             unsettledOtAmount: sheet.kpis.unsettledApprovedOtAmount ?? sheet.kpis.totalApprovedOtAmount,
             unsettledAdvances: sheet.kpis.totalUnsettledAdvances,
+            unsettledIncentives: (sheet.kpis as any).totalUnsettledIncentives || 0,
             netPayable: sheet.kpis.netPayable,
             pendingOtCount: pendingOtWorkerMap.get(worker._id.toString()) || 0,
           };
@@ -839,6 +997,7 @@ export class PayrollService {
             workerId: worker._id,
             name: worker.name,
             mobile: worker.mobile,
+            profileImageUrl: worker.profileImageUrl || '',
             role: worker.role,
             dailyWage: worker.dailyWage || 0,
             lastSettledDate: worker.lastSettledDate,
@@ -846,6 +1005,7 @@ export class PayrollService {
             unsettledDeductions: 0,
             unsettledOtAmount: 0,
             unsettledAdvances: 0,
+            unsettledIncentives: 0,
             netPayable: 0,
             pendingOtCount: pendingOtWorkerMap.get(worker._id.toString()) || 0,
           };
@@ -868,6 +1028,7 @@ export class PayrollService {
         workerId: c.workerId?._id || c.workerId,
         workerName: c.workerId?.name || 'Worker',
         workerMobile: c.workerId?.mobile || '',
+        workerProfileImageUrl: c.workerId?.profileImageUrl || '',
         date: c.date,
         otHours: c.otHours,
         potentialAmount: (c.otHours || 0) * OT_HOURLY_RATE,

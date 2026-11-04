@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type WageTransactionType = 'PAYOUT_SETTLEMENT' | 'ADVANCE_TAKEN';
+export type WageTransactionType = 'PAYOUT_SETTLEMENT' | 'ADVANCE_TAKEN' | 'INCENTIVE';
 
 export interface IWageTransaction extends Document {
   workerId: mongoose.Types.ObjectId;
@@ -15,7 +15,7 @@ export interface IWageTransaction extends Document {
   paymentMethod?: 'CASH' | 'UPI' | 'BANK_TRANSFER';
   referenceNote?: string;
   settledByName?: string;
-  isSettled?: boolean; // For ADVANCE_TAKEN: whether this advance has been settled in a payout
+  isSettled?: boolean; // For ADVANCE_TAKEN / INCENTIVE: whether this item has been settled in a payout
   settlementId?: mongoose.Types.ObjectId;
   carriedForwardBalance?: number;
   itemizedSummary?: {
@@ -30,6 +30,7 @@ export interface IWageTransaction extends Document {
     totalOtHours?: number;
     totalOtAmount?: number;
     totalAdvancesDeducted?: number;
+    totalIncentives?: number;
     carriedForwardBalance?: number;
   };
   createdAt: Date;
@@ -52,7 +53,7 @@ const WageTransactionSchema: Schema = new Schema(
     },
     type: {
       type: String,
-      enum: ['PAYOUT_SETTLEMENT', 'ADVANCE_TAKEN'],
+      enum: ['PAYOUT_SETTLEMENT', 'ADVANCE_TAKEN', 'INCENTIVE'],
       required: true,
       index: true,
     },

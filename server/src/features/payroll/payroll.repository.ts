@@ -13,11 +13,11 @@ export class PayrollRepository {
 
   static async findAllWorkers(): Promise<IUser[]> {
     return User.find({
-      role: { $in: [ROLES.WORKER, ROLES.ADMIN] },
+      role: ROLES.WORKER,
       isApproved: true,
       status: 'ACTIVE',
     })
-      .select('name mobile role dailyWage dailyWageEffectiveDate wageHistory lastSettledDate createdAt')
+      .select('name mobile role dailyWage dailyWageEffectiveDate wageHistory lastSettledDate profileImageUrl createdAt')
       .sort({ name: 1 });
   }
 
@@ -96,13 +96,13 @@ export class PayrollRepository {
       type: 'OVERTIME',
       status: 'PENDING',
     })
-      .populate('workerId', 'name mobile dailyWage')
+      .populate('workerId', 'name mobile dailyWage profileImageUrl')
       .sort({ date: -1, createdAt: -1 });
   }
 
   static async findWageAdjustmentById(id: string): Promise<IWageAdjustment | null> {
     if (!mongoose.Types.ObjectId.isValid(id)) return null;
-    return WageAdjustment.findById(id).populate('workerId', 'name mobile dailyWage');
+    return WageAdjustment.findById(id).populate('workerId', 'name mobile dailyWage profileImageUrl');
   }
 
   static async upsertLeaveAdjustment(data: {
@@ -166,6 +166,22 @@ export class PayrollRepository {
     );
   }
 
+  static async updateWageAdjustment(
+    id: string,
+    updates: Partial<{
+      type: WageAdjustmentType;
+      otHours: number;
+      status: WageAdjustmentStatus;
+      deductionAmount: number;
+      note: string;
+      date: string;
+      reviewedBy?: mongoose.Types.ObjectId;
+      reviewedAt?: Date;
+    }>
+  ): Promise<IWageAdjustment | null> {
+    return WageAdjustment.findByIdAndUpdate(id, { $set: updates }, { new: true });
+  }
+
   static async deleteWageAdjustment(id: string): Promise<boolean> {
     const res = await WageAdjustment.findByIdAndDelete(id);
     return !!res;
@@ -199,7 +215,7 @@ export class PayrollRepository {
     return !!res;
   }
 
-  // --- Wage Transactions (Advances & Settlements) ---
+  // --- Wage Transactions (Advances, Incentives & Settlements) ---
   static async createWageTransaction(data: {
     workerId: string;
     type: WageTransactionType;
@@ -212,6 +228,7 @@ export class PayrollRepository {
     settledByName?: string;
     carriedForwardBalance?: number;
     itemizedSummary?: any;
+    isSettled?: boolean;
   }): Promise<IWageTransaction> {
     return WageTransaction.create({
       workerId: new mongoose.Types.ObjectId(data.workerId),
@@ -225,7 +242,7 @@ export class PayrollRepository {
       settledByName: data.settledByName || 'Admin',
       carriedForwardBalance: data.carriedForwardBalance || 0,
       itemizedSummary: data.itemizedSummary,
-      isSettled: false,
+      isSettled: data.isSettled !== undefined ? data.isSettled : false,
     });
   }
 
@@ -288,5 +305,32 @@ export class PayrollRepository {
       }
     );
     return res.modifiedCount;
+  }
+
+  static async markIncentivesSettled(workerId: string, endDate: Date, settlementId: mongoose.Types.ObjectId): Promise<number> {
+    const res = await WageTransaction.updateMany(
+      {
+        workerId: new mongoose.Types.ObjectId(workerId),
+        type: 'INCENTIVE',
+        date: { $lte: endDate },
+        isSettled: { $ne: true },
+      },
+      {
+        isSettled: true,
+        settlementId,
+      }
+    );
+    return res.modifiedCount;
+  }
+
+  static async findWageTransactionById(id: string): Promise<IWageTransaction | null> {
+    if (!mongoose.Types.ObjectId.isValid(id)) return null;
+    return WageTransaction.findById(id).populate('workerId', 'name mobile dailyWage profileImageUrl');
+  }
+
+  static async deleteWageTransaction(id: string): Promise<boolean> {
+    if (!mongoose.Types.ObjectId.isValid(id)) return false;
+    const res = await WageTransaction.findByIdAndDelete(id);
+    return Boolean(res);
   }
 }

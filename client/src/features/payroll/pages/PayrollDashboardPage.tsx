@@ -18,6 +18,8 @@ import {
   Search,
   ArrowUpRight,
   Info,
+  Gift,
+  Sparkles,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
@@ -29,6 +31,7 @@ import {
   useUpdateOtStatusMutation,
   useSettlePayrollMutation,
   useRecordAdvanceMutation,
+  useRecordIncentiveMutation,
   useUpdateWorkerWageMutation,
   useGetHolidaysQuery,
   useDeclareHolidayMutation,
@@ -55,6 +58,7 @@ export const PayrollDashboardPage: React.FC = () => {
   const [updateOtStatus, { isLoading: isUpdatingOt }] = useUpdateOtStatusMutation();
   const [settlePayroll, { isLoading: isSettling }] = useSettlePayrollMutation();
   const [recordAdvance, { isLoading: isRecordingAdvance }] = useRecordAdvanceMutation();
+  const [recordIncentive, { isLoading: isRecordingIncentive }] = useRecordIncentiveMutation();
   const [updateWorkerWage, { isLoading: isUpdatingWage }] = useUpdateWorkerWageMutation();
   const [declareHoliday, { isLoading: isDeclaringHoliday }] = useDeclareHolidayMutation();
   const [deleteHoliday] = useDeleteHolidayMutation();
@@ -62,6 +66,7 @@ export const PayrollDashboardPage: React.FC = () => {
   // Modals
   const [showBulkLeaveModal, setShowBulkLeaveModal] = useState(false);
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
+  const [showIncentiveModal, setShowIncentiveModal] = useState(false);
   const [showSettleModal, setShowSettleModal] = useState(false);
   const [showWageModal, setShowWageModal] = useState(false);
   const [showHolidayModal, setShowHolidayModal] = useState(false);
@@ -84,6 +89,12 @@ export const PayrollDashboardPage: React.FC = () => {
   const [advanceDate, setAdvanceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [advanceNote, setAdvanceNote] = useState('');
 
+  // Incentive Form State
+  const [incentiveWorkerId, setIncentiveWorkerId] = useState('');
+  const [incentiveAmount, setIncentiveAmount] = useState<number | ''>('');
+  const [incentiveDate, setIncentiveDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [incentiveNotes, setIncentiveNotes] = useState('');
+
   // Settle Form State
   const [settleAmount, setSettleAmount] = useState<number | ''>('');
   const [settleEndDate, setSettleEndDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -101,7 +112,9 @@ export const PayrollDashboardPage: React.FC = () => {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
 
-  const workers = overviewData?.data?.workers || [];
+  // Exclude Admin: ONLY Workers are shown in the salary list/roster
+  const allRawWorkers = overviewData?.data?.workers || [];
+  const workers = useMemo(() => allRawWorkers.filter((w) => w.role !== 'ADMIN'), [allRawWorkers]);
   const pendingOtClaims = overviewData?.data?.pendingOtClaims || [];
   const kpis = overviewData?.data?.kpis || { totalWorkers: 0, totalUnsettledNet: 0, totalPendingOtCount: 0 };
   const holidays = holidaysData?.data || [];
@@ -185,6 +198,28 @@ export const PayrollDashboardPage: React.FC = () => {
       refetch();
     } catch (err: any) {
       alert(err?.data?.message || 'Failed to record cash advance');
+    }
+  };
+
+  // Handle Incentive Submit
+  const handleIncentiveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!incentiveWorkerId || !incentiveAmount || Number(incentiveAmount) <= 0 || !incentiveNotes.trim()) return;
+
+    try {
+      await recordIncentive({
+        workerId: incentiveWorkerId,
+        amount: Number(incentiveAmount),
+        date: incentiveDate,
+        notes: incentiveNotes.trim(),
+      }).unwrap();
+
+      setShowIncentiveModal(false);
+      setIncentiveAmount('');
+      setIncentiveNotes('');
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to award incentive');
     }
   };
 
@@ -298,6 +333,16 @@ export const PayrollDashboardPage: React.FC = () => {
                 <span>Advance</span>
               </button>
               <button
+                onClick={() => {
+                  setIncentiveWorkerId(workers[0]?.workerId || '');
+                  setShowIncentiveModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white transition active:scale-95"
+              >
+                <Gift className="w-3.5 h-3.5 text-amber-500" />
+                <span>Incentive</span>
+              </button>
+              <button
                 onClick={() => setShowHolidayModal(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white transition active:scale-95"
               >
@@ -309,20 +354,20 @@ export const PayrollDashboardPage: React.FC = () => {
           }
         />
 
-        {/* ── MOBILE QUICK ACTION TILES (Native 3-Button Row - Mobile Only) ── */}
-        <div className="grid sm:hidden grid-cols-3 gap-2">
+        {/* ── MOBILE QUICK ACTION TILES (Native 4-Button Row - Mobile Only) ── */}
+        <div className="grid sm:hidden grid-cols-4 gap-1.5">
           <button
             onClick={() => {
               setSelectedWorkerIds([]);
               setShowBulkLeaveModal(true);
             }}
-            className="flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-2xl glass-modern-card text-center transition active:scale-95"
+            className="flex flex-col items-center justify-center gap-1 p-2 rounded-2xl glass-modern-card text-center transition active:scale-95"
           >
-            <span className="p-2 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
-              <Users className="w-4 h-4" />
+            <span className="p-1.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <Users className="w-3.5 h-3.5" />
             </span>
-            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100">
-              Mark Leave
+            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
+              Leave
             </span>
           </button>
 
@@ -331,24 +376,39 @@ export const PayrollDashboardPage: React.FC = () => {
               setAdvanceWorkerId(workers[0]?.workerId || '');
               setShowAdvanceModal(true);
             }}
-            className="flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-2xl glass-modern-card text-center transition active:scale-95"
+            className="flex flex-col items-center justify-center gap-1 p-2 rounded-2xl glass-modern-card text-center transition active:scale-95"
           >
-            <span className="p-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <Banknote className="w-4 h-4" />
+            <span className="p-1.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <Banknote className="w-3.5 h-3.5" />
             </span>
-            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100">
-              Give Advance
+            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
+              Advance
+            </span>
+          </button>
+
+          <button
+            onClick={() => {
+              setIncentiveWorkerId(workers[0]?.workerId || '');
+              setShowIncentiveModal(true);
+            }}
+            className="flex flex-col items-center justify-center gap-1 p-2 rounded-2xl glass-modern-card text-center transition active:scale-95"
+          >
+            <span className="p-1.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <Gift className="w-3.5 h-3.5" />
+            </span>
+            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
+              Incentive
             </span>
           </button>
 
           <button
             onClick={() => setShowHolidayModal(true)}
-            className="flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-2xl glass-modern-card text-center transition active:scale-95"
+            className="flex flex-col items-center justify-center gap-1 p-2 rounded-2xl glass-modern-card text-center transition active:scale-95"
           >
-            <span className="p-2 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
-              <PartyPopper className="w-4 h-4" />
+            <span className="p-1.5 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
+              <PartyPopper className="w-3.5 h-3.5" />
             </span>
-            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100">
+            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
               Holidays
             </span>
           </button>
@@ -381,10 +441,19 @@ export const PayrollDashboardPage: React.FC = () => {
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-slate-900 dark:text-white">
-                        {claim.workerName}
-                      </span>
-                      <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-6 h-6 rounded-lg overflow-hidden shrink-0 bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-[10px] flex items-center justify-center shadow-2xs">
+                          {claim.workerProfileImageUrl ? (
+                            <img src={claim.workerProfileImageUrl} alt={claim.workerName} className="w-full h-full object-cover" />
+                          ) : (
+                            <span>{claim.workerName?.charAt(0)?.toUpperCase()}</span>
+                          )}
+                        </div>
+                        <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                          {claim.workerName}
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
                         +{formatCurrency(claim.potentialAmount)}
                       </span>
                     </div>
@@ -514,10 +583,28 @@ export const PayrollDashboardPage: React.FC = () => {
                   filteredWorkers.map((w) => (
                     <tr key={w.workerId} className="hover:bg-amber-500/[0.02] transition">
                       <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900 dark:text-white">
-                          {w.name}
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-xs flex items-center justify-center">
+                            {w.profileImageUrl ? (
+                              <img
+                                src={w.profileImageUrl}
+                                alt={w.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <span>{w.name?.charAt(0)?.toUpperCase()}</span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 dark:text-white truncate">
+                              {w.name}
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate">{w.mobile}</div>
+                          </div>
                         </div>
-                        <div className="text-[10px] text-slate-400">{w.mobile}</div>
                       </td>
 
                       <td className="py-3 px-4 font-mono">
@@ -603,8 +690,19 @@ export const PayrollDashboardPage: React.FC = () => {
                   {/* Top Row: Worker Info & Wage */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
-                        {w.name?.charAt(0)?.toUpperCase()}
+                      <div className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
+                        {w.profileImageUrl ? (
+                          <img
+                            src={w.profileImageUrl}
+                            alt={w.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <span>{w.name?.charAt(0)?.toUpperCase()}</span>
+                        )}
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
@@ -693,8 +791,8 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL 1: MARK BULK LEAVE (Responsive Bottom-Sheet) ── */}
       {showBulkLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[88vh] overflow-y-auto space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
             {/* Mobile Drag Handle */}
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
@@ -888,8 +986,8 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL 2: RECORD ADVANCE ── */}
       {showAdvanceModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -985,10 +1083,113 @@ export const PayrollDashboardPage: React.FC = () => {
         </div>
       )}
 
+      {/* ── MODAL: GIVE INCENTIVE (Reflects directly on payable & ledger) ── */}
+      {showIncentiveModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Gift className="w-4 h-4 text-amber-500" />
+                Award Staff Incentive
+              </h3>
+              <button
+                onClick={() => setShowIncentiveModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleIncentiveSubmit} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Select Staff
+                </label>
+                <select
+                  value={incentiveWorkerId}
+                  onChange={(e) => setIncentiveWorkerId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                >
+                  {workers.map((w) => (
+                    <option key={w.workerId} value={w.workerId}>
+                      {w.name} ({w.mobile})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Incentive Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  placeholder="e.g. 500, 1000..."
+                  value={incentiveAmount}
+                  onChange={(e) => setIncentiveAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={incentiveDate}
+                  onChange={(e) => setIncentiveDate(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Remarks / Reason (Required)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Festival bonus, exceptional job on paint repair..."
+                  value={incentiveNotes}
+                  onChange={(e) => setIncentiveNotes(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                />
+                <span className="text-[10px] text-slate-400 block">
+                  Reflects directly on worker's payable dues and ledger stream with these remarks.
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowIncentiveModal(false)}
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isRecordingIncentive}
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                >
+                  {isRecordingIncentive ? 'Saving...' : 'Award Incentive'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ── MODAL 3: SETTLE DUES ── */}
       {showSettleModal && selectedWorker && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -1095,8 +1296,8 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL 4: EDIT DAILY WAGE ── */}
       {showWageModal && selectedWorker && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-sm bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-sm bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -1155,8 +1356,8 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL 5: GARAGE HOLIDAYS ── */}
       {showHolidayModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">

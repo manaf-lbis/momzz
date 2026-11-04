@@ -16,6 +16,10 @@ import {
   Filter,
   Layers,
   ChevronRight,
+  Edit2,
+  Trash2,
+  Gift,
+  Sparkles,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
@@ -28,6 +32,12 @@ import {
   useClaimOvertimeMutation,
   useSettlePayrollMutation,
   useRecordAdvanceMutation,
+  useRecordIncentiveMutation,
+  useUpdateLeaveMutation,
+  useDeleteLeaveMutation,
+  useUpdateOtClaimMutation,
+  useDeleteOtClaimMutation,
+  useDeleteTransactionMutation,
   SingleSheetDayEntry,
   MonthlyBreakdownItem,
 } from '../api/payrollApi';
@@ -62,11 +72,21 @@ export const WorkerLedgerPage: React.FC = () => {
   const [claimOvertime, { isLoading: isClaimingOt }] = useClaimOvertimeMutation();
   const [settlePayroll, { isLoading: isSettling }] = useSettlePayrollMutation();
   const [recordAdvance, { isLoading: isRecordingAdvance }] = useRecordAdvanceMutation();
+  const [recordIncentive, { isLoading: isRecordingIncentive }] = useRecordIncentiveMutation();
+  const [updateLeave, { isLoading: isUpdatingLeave }] = useUpdateLeaveMutation();
+  const [deleteLeave, { isLoading: isDeletingLeave }] = useDeleteLeaveMutation();
+  const [updateOtClaim, { isLoading: isUpdatingOt }] = useUpdateOtClaimMutation();
+  const [deleteOtClaim, { isLoading: isDeletingOt }] = useDeleteOtClaimMutation();
+  const [deleteTransaction] = useDeleteTransactionMutation();
 
   // Modals
   const [showOtModal, setShowOtModal] = useState(false);
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [showSettleModal, setShowSettleModal] = useState(false);
+  const [showIncentiveModal, setShowIncentiveModal] = useState(false);
+  const [showEditLeaveModal, setShowEditLeaveModal] = useState(false);
+  const [showEditOtModal, setShowEditOtModal] = useState(false);
+  const [showMobileActionSheet, setShowMobileActionSheet] = useState(false);
 
   // OT Form State
   const [otDate, setOtDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -77,6 +97,24 @@ export const WorkerLedgerPage: React.FC = () => {
   const [advanceAmount, setAdvanceAmount] = useState<number | ''>('');
   const [advanceDate, setAdvanceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [advanceNote, setAdvanceNote] = useState('');
+
+  // Incentive Form State
+  const [incentiveAmount, setIncentiveAmount] = useState<number | ''>('');
+  const [incentiveDate, setIncentiveDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [incentiveNotes, setIncentiveNotes] = useState('');
+
+  // Edit Leave Form State
+  const [editingAdjustmentId, setEditingAdjustmentId] = useState('');
+  const [editingLeaveDate, setEditingLeaveDate] = useState('');
+  const [editingLeaveType, setEditingLeaveType] = useState<'FULL_LEAVE' | 'HALF_LEAVE'>('FULL_LEAVE');
+  const [editingLeaveNote, setEditingLeaveNote] = useState('');
+
+  // Edit OT Form State
+  const [editingOtClaimId, setEditingOtClaimId] = useState('');
+  const [editingOtDate, setEditingOtDate] = useState('');
+  const [editingOtHours, setEditingOtHours] = useState<number>(1);
+  const [editingOtNote, setEditingOtNote] = useState('');
+  const [editingOtStatus, setEditingOtStatus] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
 
   // Settle Form State
   const [settleAmount, setSettleAmount] = useState<number | ''>('');
@@ -227,6 +265,111 @@ export const WorkerLedgerPage: React.FC = () => {
     }
   };
 
+  // Handle Incentive Submit (Admin only)
+  const handleIncentiveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!worker || !incentiveAmount || Number(incentiveAmount) <= 0 || !incentiveNotes.trim()) return;
+
+    try {
+      await recordIncentive({
+        workerId: worker.id,
+        amount: Number(incentiveAmount),
+        date: incentiveDate,
+        notes: incentiveNotes.trim(),
+      }).unwrap();
+
+      setShowIncentiveModal(false);
+      setIncentiveAmount('');
+      setIncentiveNotes('');
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to award incentive');
+    }
+  };
+
+  // Handle Edit Leave Submit
+  const handleEditLeaveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAdjustmentId) return;
+
+    try {
+      await updateLeave({
+        id: editingAdjustmentId,
+        type: editingLeaveType,
+        date: editingLeaveDate,
+        note: editingLeaveNote,
+      }).unwrap();
+
+      setShowEditLeaveModal(false);
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to update leave');
+    }
+  };
+
+  // Handle Delete Leave
+  const handleDeleteLeave = async () => {
+    if (!editingAdjustmentId) return;
+    if (!confirm('Are you sure you want to remove this leave record? The worker will be marked present for this day.')) return;
+
+    try {
+      await deleteLeave(editingAdjustmentId).unwrap();
+      setShowEditLeaveModal(false);
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to remove leave');
+    }
+  };
+
+  // Handle Edit OT Claim Submit
+  const handleEditOtSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOtClaimId || editingOtHours < 1) return;
+
+    try {
+      await updateOtClaim({
+        id: editingOtClaimId,
+        otHours: Math.floor(editingOtHours),
+        date: editingOtDate,
+        note: editingOtNote,
+        status: isAdmin ? editingOtStatus : undefined,
+      }).unwrap();
+
+      setShowEditOtModal(false);
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to update overtime claim');
+    }
+  };
+
+  // Handle Delete OT Claim
+  const handleDeleteOtClaim = async (claimId?: string) => {
+    const targetId = claimId || editingOtClaimId;
+    if (!targetId) return;
+    if (!confirm('Are you sure you want to cancel this overtime claim?')) return;
+
+    try {
+      await deleteOtClaim(targetId).unwrap();
+      setShowEditOtModal(false);
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to cancel overtime claim');
+    }
+  };
+
+  // Handle Delete Wage Transaction (Advance or Incentive)
+  const handleDeleteTransaction = async (id: string, type: string, amount: number) => {
+    const label = type === 'INCENTIVE' ? 'incentive' : 'cash advance';
+    if (!confirm(`Are you sure you want to remove this ${label} of ${formatCurrency(amount)}?`)) return;
+
+    try {
+      await deleteTransaction(id).unwrap();
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.message || `Failed to delete ${label}`);
+    }
+  };
+
   if (isLoading) {
     return <PageShimmer />;
   }
@@ -243,13 +386,29 @@ export const WorkerLedgerPage: React.FC = () => {
           backTo="/payroll"
           title={worker?.name || 'Worker Ledger'}
           description="Continuous single-sheet financial ledger"
+          icon={
+            worker?.profileImageUrl ? (
+              <img
+                src={worker.profileImageUrl}
+                alt={worker.name}
+                className="w-full h-full object-cover rounded-lg"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center font-bold text-xs">
+                {worker?.name?.charAt(0)?.toUpperCase()}
+              </div>
+            )
+          }
           badge={
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold font-mono">
               ₹{worker?.dailyWage || 0}/day
             </span>
           }
           actions={
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               <button
                 onClick={() => setShowOtModal(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs transition active:scale-95"
@@ -261,10 +420,21 @@ export const WorkerLedgerPage: React.FC = () => {
                 <>
                   <button
                     onClick={() => setShowAdvanceModal(true)}
-                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white transition active:scale-95"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white transition active:scale-95"
                   >
                     <Banknote className="w-3.5 h-3.5 text-emerald-500" />
                     <span>Advance</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIncentiveAmount('');
+                      setIncentiveNotes('');
+                      setShowIncentiveModal(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white transition active:scale-95"
+                  >
+                    <Gift className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Incentive</span>
                   </button>
                   <button
                     onClick={() => {
@@ -292,12 +462,12 @@ export const WorkerLedgerPage: React.FC = () => {
                   Unsettled Payable Dues
                 </span>
                 {kpis.netPayable === 0 ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
                     <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
                     <span>All Dues Settled</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
                     <span>Active Dues</span>
                   </span>
                 )}
@@ -307,24 +477,25 @@ export const WorkerLedgerPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 sm:hidden">
-              <button
-                onClick={() => setShowOtModal(true)}
-                className="px-2.5 py-1.5 text-[11px] font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white flex items-center gap-1 active:scale-95 transition"
-              >
-                <Zap className="w-3 h-3" />
-                <span>Claim OT</span>
-              </button>
-              {isAdmin && (
+            {/* Single button on mobile devices */}
+            <div className="sm:hidden">
+              {isAdmin ? (
                 <button
-                  onClick={() => {
-                    setSettleAmount(kpis.netPayable);
-                    setShowSettleModal(true);
-                  }}
-                  className="px-2.5 py-1.5 text-[11px] font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1 active:scale-95 transition"
+                  type="button"
+                  onClick={() => setShowMobileActionSheet(true)}
+                  className="px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white flex items-center gap-1.5 active:scale-95 transition shadow-xs"
                 >
-                  <CreditCard className="w-3 h-3" />
-                  <span>Settle</span>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Actions</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowOtModal(true)}
+                  className="px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white flex items-center gap-1.5 active:scale-95 transition shadow-xs"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Claim OT</span>
                 </button>
               )}
             </div>
@@ -356,6 +527,12 @@ export const WorkerLedgerPage: React.FC = () => {
                 -{formatCurrency(kpis.totalUnsettledAdvances)}
               </span>
             </div>
+            {kpis.totalUnsettledIncentives && kpis.totalUnsettledIncentives > 0 ? (
+              <div className="col-span-2 sm:col-span-4 pt-1 border-t border-slate-200/50 dark:border-white/5 flex items-center justify-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+                <Gift className="w-3.5 h-3.5" />
+                <span>Includes {formatCurrency(kpis.totalUnsettledIncentives)} in Special Incentives</span>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -561,8 +738,24 @@ export const WorkerLedgerPage: React.FC = () => {
                                   {day.holidayTitle || 'Holiday'} (100% Paid)
                                 </span>
                               ) : isLeave ? (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                                  {day.dayType === 'FULL_LEAVE' ? 'Full Leave' : 'Half Day'} (-₹{day.leaveDeduction})
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                                  <span>{day.dayType === 'FULL_LEAVE' ? 'Full Leave' : 'Half Day'} (-₹{day.leaveDeduction})</span>
+                                  {isAdmin && !day.isSettled && day.adjustmentId && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingAdjustmentId(day.adjustmentId!);
+                                        setEditingLeaveDate(day.date);
+                                        setEditingLeaveType(day.dayType as 'FULL_LEAVE' | 'HALF_LEAVE');
+                                        setEditingLeaveNote(day.adjustmentNote || '');
+                                        setShowEditLeaveModal(true);
+                                      }}
+                                      title="Edit or Remove Leave"
+                                      className="p-0.5 rounded hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 transition"
+                                    >
+                                      <Edit2 className="w-2.5 h-2.5" />
+                                    </button>
+                                  )}
                                 </span>
                               ) : isInProgress ? (
                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 flex items-center gap-1">
@@ -590,6 +783,23 @@ export const WorkerLedgerPage: React.FC = () => {
                                   <span>{day.otHours}h OT</span>
                                   {day.otStatus === 'APPROVED' && (
                                     <span className="font-mono">+{formatCurrency(day.otAmount)}</span>
+                                  )}
+                                  {!day.isSettled && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingOtClaimId(day.adjustmentId || '');
+                                        setEditingOtDate(day.date);
+                                        setEditingOtHours(day.otHours);
+                                        setEditingOtNote(day.adjustmentNote || '');
+                                        setEditingOtStatus(day.otStatus || 'PENDING');
+                                        setShowEditOtModal(true);
+                                      }}
+                                      title="Edit Overtime Claim"
+                                      className="p-0.5 ml-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition"
+                                    >
+                                      <Edit2 className="w-2.5 h-2.5" />
+                                    </button>
                                   )}
                                 </span>
                               )}
@@ -629,7 +839,7 @@ export const WorkerLedgerPage: React.FC = () => {
                           </p>
                         )}
 
-                        {/* Inline Transactions (Cash Advances taken / Settlement Payouts) */}
+                        {/* Inline Transactions (Advances / Incentives / Settlements) */}
                         {day.inlineTransactions && day.inlineTransactions.length > 0 && (
                           <div className="pl-10 space-y-1">
                             {day.inlineTransactions.map((tx) => (
@@ -638,29 +848,47 @@ export const WorkerLedgerPage: React.FC = () => {
                                 className={`p-2 rounded-xl text-xs flex items-center justify-between gap-2 ${
                                   tx.type === 'PAYOUT_SETTLEMENT'
                                     ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 border border-emerald-500/20'
+                                    : tx.type === 'INCENTIVE'
+                                    ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/25'
                                     : 'bg-rose-500/10 text-rose-800 dark:text-rose-200 border border-rose-500/20'
                                 }`}
                               >
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5 min-w-0">
                                   {tx.type === 'PAYOUT_SETTLEMENT' ? (
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  ) : tx.type === 'INCENTIVE' ? (
+                                    <Gift className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                                   ) : (
-                                    <Banknote className="w-3.5 h-3.5 text-rose-600" />
+                                    <Banknote className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                                   )}
-                                  <span className="font-bold text-[11px]">
+                                  <span className="font-bold text-[11px] truncate">
                                     {tx.type === 'PAYOUT_SETTLEMENT'
                                       ? 'Settlement Paid'
+                                      : tx.type === 'INCENTIVE'
+                                      ? `Incentive: ${tx.notes || 'Performance Incentive'}`
                                       : 'Cash Advance Taken'}
                                   </span>
-                                  {tx.paymentMethod && (
+                                  {tx.paymentMethod && tx.type !== 'INCENTIVE' && (
                                     <span className="text-[10px] opacity-75">
                                       ({tx.paymentMethod})
                                     </span>
                                   )}
                                 </div>
-                                <span className="font-mono font-bold text-xs">
-                                  -{formatCurrency(tx.amount)}
-                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className={`font-mono font-bold text-xs ${tx.type === 'INCENTIVE' ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+                                    {tx.type === 'INCENTIVE' ? `+${formatCurrency(tx.amount)}` : `-${formatCurrency(tx.amount)}`}
+                                  </span>
+                                  {isAdmin && !day.isSettled && tx.type !== 'PAYOUT_SETTLEMENT' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteTransaction(tx.id, tx.type, tx.amount)}
+                                      title={`Delete ${tx.type === 'INCENTIVE' ? 'Incentive' : 'Advance'}`}
+                                      className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-500/10 transition"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -698,10 +926,83 @@ export const WorkerLedgerPage: React.FC = () => {
         </section>
       </main>
 
+      {/* ── MODAL: MOBILE QUICK ACTIONS SHEET ── */}
+      {showMobileActionSheet && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn sm:hidden">
+          <div className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 mx-1 rounded-3xl p-4 space-y-3 shadow-2xl">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto" />
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/10">
+              <span className="text-xs font-bold uppercase tracking-wider font-mono text-slate-500">
+                Quick Actions • {worker?.name}
+              </span>
+              <button
+                onClick={() => setShowMobileActionSheet(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileActionSheet(false);
+                  setSettleAmount(kpis.netPayable);
+                  setShowSettleModal(true);
+                }}
+                className="p-3 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 flex flex-col items-center gap-1.5 active:scale-95 transition"
+              >
+                <CreditCard className="w-5 h-5" />
+                <span className="text-xs font-bold">Settle Dues</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileActionSheet(false);
+                  setIncentiveAmount('');
+                  setIncentiveNotes('');
+                  setShowIncentiveModal(true);
+                }}
+                className="p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20 flex flex-col items-center gap-1.5 active:scale-95 transition"
+              >
+                <Gift className="w-5 h-5" />
+                <span className="text-xs font-bold">Incentive</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileActionSheet(false);
+                  setShowAdvanceModal(true);
+                }}
+                className="p-3 rounded-2xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 flex flex-col items-center gap-1.5 active:scale-95 transition"
+              >
+                <Banknote className="w-5 h-5 text-rose-500" />
+                <span className="text-xs font-bold">Advance</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileActionSheet(false);
+                  setShowOtModal(true);
+                }}
+                className="p-3 rounded-2xl bg-amber-600/10 hover:bg-amber-600/20 text-amber-700 dark:text-amber-400 border border-amber-600/20 flex flex-col items-center gap-1.5 active:scale-95 transition"
+              >
+                <Zap className="w-5 h-5" />
+                <span className="text-xs font-bold">Claim OT</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── MODAL 1: WORKER CLAIM OVERTIME (Responsive Bottom-Sheet) ── */}
       {showOtModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -804,8 +1105,8 @@ export const WorkerLedgerPage: React.FC = () => {
 
       {/* ── MODAL 2: ADMIN GIVE ADVANCE ── */}
       {showAdvanceModal && worker && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -885,8 +1186,8 @@ export const WorkerLedgerPage: React.FC = () => {
 
       {/* ── MODAL 3: ADMIN SETTLE DUES ── */}
       {showSettleModal && worker && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border-t sm:border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -985,6 +1286,312 @@ export const WorkerLedgerPage: React.FC = () => {
                 >
                   {isSettling ? 'Processing...' : 'Disburse & Settle'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 4: ADMIN AWARD INCENTIVE ── */}
+      {showIncentiveModal && worker && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-amber-500" />
+                  Award Staff Incentive
+                </h3>
+                <p className="text-xs text-slate-400">Worker: {worker.name}</p>
+              </div>
+              <button
+                onClick={() => setShowIncentiveModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-200">
+              Incentives directly increase the worker&apos;s payable balance and reflect on the continuous ledger with admin remarks.
+            </div>
+
+            <form onSubmit={handleIncentiveSubmit} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Incentive Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  placeholder="e.g. 500"
+                  value={incentiveAmount}
+                  onChange={(e) => setIncentiveAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Award Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={incentiveDate}
+                  onChange={(e) => setIncentiveDate(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Remarks / Reason (Required)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Festival bonus, exceptional vehicle overhaul..."
+                  value={incentiveNotes}
+                  onChange={(e) => setIncentiveNotes(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowIncentiveModal(false)}
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isRecordingIncentive}
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                >
+                  {isRecordingIncentive ? 'Awarding...' : 'Award Incentive'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 5: EDIT OR REMOVE LEAVE ── */}
+      {showEditLeaveModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Edit2 className="w-4 h-4 text-amber-500" />
+                  Edit or Remove Leave
+                </h3>
+                <p className="text-xs text-slate-400">Date: {editingLeaveDate}</p>
+              </div>
+              <button
+                onClick={() => setShowEditLeaveModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditLeaveSubmit} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Leave Type
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingLeaveType('FULL_LEAVE')}
+                    className={`p-2.5 rounded-xl text-xs font-bold border transition ${
+                      editingLeaveType === 'FULL_LEAVE'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                        : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    Full Leave (100% Floor)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingLeaveType('HALF_LEAVE')}
+                    className={`p-2.5 rounded-xl text-xs font-bold border transition ${
+                      editingLeaveType === 'HALF_LEAVE'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                        : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    Half Day (50% Floor)
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Leave Note / Reason
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Personal emergency, doctor appointment..."
+                  value={editingLeaveNote}
+                  onChange={(e) => setEditingLeaveNote(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={handleDeleteLeave}
+                  disabled={isDeletingLeave}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl text-rose-600 hover:bg-rose-500/10 transition"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isDeletingLeave ? 'Removing...' : 'Delete Leave (Mark Present)'}</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditLeaveModal(false)}
+                    className="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdatingLeave}
+                    className="px-4 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                  >
+                    {isUpdatingLeave ? 'Saving...' : 'Update Leave'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 6: EDIT OR REMOVE OT CLAIM ── */}
+      {showEditOtModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-emerald-500" />
+                  Edit Overtime Claim
+                </h3>
+                <p className="text-xs text-slate-400">Date: {editingOtDate}</p>
+              </div>
+              <button
+                onClick={() => setShowEditOtModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditOtSubmit} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Select Whole Hours
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((hr) => (
+                    <button
+                      key={hr}
+                      type="button"
+                      onClick={() => setEditingOtHours(hr)}
+                      className={`py-2 rounded-xl text-xs font-bold border transition ${
+                        editingOtHours === hr
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      {hr}h (+₹{hr * 150})
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {isAdmin && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Status (Admin)
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(['PENDING', 'APPROVED', 'REJECTED'] as const).map((st) => (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setEditingOtStatus(st)}
+                        className={`py-1.5 rounded-xl text-xs font-bold border transition capitalize ${
+                          editingOtStatus === st
+                            ? st === 'APPROVED'
+                              ? 'bg-emerald-600 text-white border-emerald-600'
+                              : st === 'REJECTED'
+                              ? 'bg-rose-600 text-white border-rose-600'
+                              : 'bg-amber-600 text-white border-amber-600'
+                            : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {st.toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Reason / Work Note
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Engine disassembly..."
+                  value={editingOtNote}
+                  onChange={(e) => setEditingOtNote(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteOtClaim()}
+                  disabled={isDeletingOt}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl text-rose-600 hover:bg-rose-500/10 transition"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isDeletingOt ? 'Cancelling...' : 'Cancel Claim'}</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditOtModal(false)}
+                    className="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdatingOt}
+                    className="px-4 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                  >
+                    {isUpdatingOt ? 'Saving...' : 'Update Claim'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

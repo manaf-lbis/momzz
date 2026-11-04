@@ -304,4 +304,92 @@ export class PayrollController {
       next(error);
     }
   }
+
+  /**
+   * POST /api/payroll/incentive
+   */
+  static async recordIncentive(req: Request, res: Response, next: NextFunction) {
+    try {
+      const adminName = (req as any).user?.name || 'Admin';
+      const result = await PayrollService.recordIncentive({
+        workerId: req.body.workerId,
+        amount: req.body.amount,
+        date: req.body.date,
+        notes: req.body.notes,
+        recordedByName: adminName,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: result.message,
+        data: result.incentive,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * PUT /api/payroll/leave/:id
+   */
+  static async updateLeaveAdjustment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await PayrollService.updateLeaveAdjustment({
+        adjustmentId: req.params.id,
+        type: req.body.type,
+        date: req.body.date,
+        note: req.body.note,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result.adjustment,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * PUT /api/payroll/ot/claim/:id
+   */
+  static async updateOtClaim(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userRole = (req as any).user?.role;
+      const userId = (req as any).user?._id?.toString();
+
+      const result = await PayrollService.updateOtClaim({
+        claimId: req.params.id,
+        otHours: req.body.otHours,
+        date: req.body.date,
+        note: req.body.note,
+        status: req.body.status,
+        reviewedBy: userRole === 'ADMIN' ? userId : undefined,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result.claim,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * DELETE /api/payroll/transaction/:id
+   */
+  static async deleteWageTransaction(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await PayrollService.deleteWageTransaction(req.params.id);
+      res.status(200).json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
