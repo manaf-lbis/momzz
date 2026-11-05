@@ -247,7 +247,11 @@ export const payrollApi = apiSlice.injectEndpoints({
         method: 'PATCH',
         body,
       }),
-      invalidatesTags: ['Payroll', 'AllUsers'],
+      invalidatesTags: (_result, _error, arg) => [
+        'Payroll',
+        { type: 'Payroll', id: arg.workerId },
+        'AllUsers',
+      ],
     }),
 
     getHolidays: builder.query<{ success: boolean; data: GarageHolidayItem[] }, void>({

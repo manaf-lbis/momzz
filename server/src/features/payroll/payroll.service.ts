@@ -32,19 +32,15 @@ export function calculateHalfDayDeduction(dailyWage: number): number {
 
 /**
  * Finds the applicable daily wage for a worker on a specific date string (YYYY-MM-DD).
- * If the date is earlier than worker's first wage effective date, returns 0.
+ * If the date is earlier than worker's registration / employment creation, returns 0.
  */
 export function getWageForDate(worker: IUser, dateStr: string): number {
-  if (worker.dailyWageEffectiveDate) {
-    const effStr = formatDateStr(new Date(worker.dailyWageEffectiveDate));
-    if (dateStr < effStr) return 0;
+  if (worker.createdAt) {
+    const createdStr = formatDateStr(new Date(worker.createdAt));
+    if (dateStr < createdStr) return 0;
   }
 
   if (!worker.wageHistory || worker.wageHistory.length === 0) {
-    if (worker.createdAt) {
-      const createdStr = formatDateStr(new Date(worker.createdAt));
-      if (dateStr < createdStr) return 0;
-    }
     return worker.dailyWage || 0;
   }
 
@@ -59,8 +55,9 @@ export function getWageForDate(worker: IUser, dateStr: string): number {
     }
   }
 
-  // Target date is before earliest wage in history: wage is 0
-  return 0;
+  // Target date is before earliest wage in history: fallback to earliest recorded wage or current dailyWage
+  const earliestWage = sorted[sorted.length - 1]?.wage;
+  return earliestWage !== undefined ? earliestWage : (worker.dailyWage || 0);
 }
 
 /**
@@ -324,26 +321,31 @@ export class PayrollService {
     let startStr = params.startDate;
     if (!startStr) {
       if (params.includeSettledHistory) {
-        // Look back up to 60 days, but never earlier than worker's wage effective date or creation
+        // Look back up to 60 days, but never earlier than worker's registration
         const lookback = new Date();
         lookback.setDate(lookback.getDate() - 60);
         let lookbackStr = formatDateStr(lookback);
-        const earliestWageDate = worker.dailyWageEffectiveDate || (worker.dailyWage ? worker.createdAt : null);
-        if (earliestWageDate) {
-          const effStr = formatDateStr(new Date(earliestWageDate));
-          if (lookbackStr < effStr) {
-            lookbackStr = effStr;
+        if (worker.createdAt) {
+          const createdStr = formatDateStr(new Date(worker.createdAt));
+          if (lookbackStr < createdStr) {
+            lookbackStr = createdStr;
           }
         }
         startStr = lookbackStr;
       } else if (lastSettledDateStr) {
         startStr = getNextDayStr(lastSettledDateStr);
-      } else if (worker.dailyWageEffectiveDate) {
-        startStr = formatDateStr(new Date(worker.dailyWageEffectiveDate));
-      } else if (worker.dailyWage && worker.createdAt) {
-        startStr = formatDateStr(new Date(worker.createdAt));
       } else {
-        startStr = todayStr;
+        // Unsettled: start from up to 30 days ago or worker's registration
+        const lookback = new Date();
+        lookback.setDate(lookback.getDate() - 30);
+        let lookbackStr = formatDateStr(lookback);
+        if (worker.createdAt) {
+          const createdStr = formatDateStr(new Date(worker.createdAt));
+          if (lookbackStr < createdStr) {
+            lookbackStr = createdStr;
+          }
+        }
+        startStr = lookbackStr;
       }
     }
 

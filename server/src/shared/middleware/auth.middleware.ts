@@ -9,6 +9,7 @@ import { CURRENT_TERMS_VERSION } from '../../features/authentication/auth.servic
 
 export interface CachedUserSession {
   id: string;
+  _id?: string;
   name: string;
   mobile: string;
   role: string;
@@ -16,6 +17,8 @@ export interface CachedUserSession {
   status: 'ACTIVE' | 'BLOCKED';
   profileImageUrl?: string;
   acceptedTermsVersion?: string;
+  dailyWage?: number;
+  dailyWageEffectiveDate?: Date;
 }
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
@@ -39,11 +42,13 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 
       req.user = {
         id: dbUser._id ? dbUser._id.toString() : (dbUser as any).id,
+        _id: dbUser._id ? dbUser._id.toString() : (dbUser as any).id,
         name: dbUser.name,
         mobile: dbUser.mobile,
         role: dbUser.role,
         isApproved: dbUser.isApproved,
         status: dbUser.status,
+        dailyWage: dbUser.dailyWage || 0,
       };
 
       return next();
@@ -81,6 +86,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       }
       userDoc = {
         id: dbUser._id ? dbUser._id.toString() : (dbUser as any).id,
+        _id: dbUser._id ? dbUser._id.toString() : (dbUser as any).id,
         name: dbUser.name,
         mobile: dbUser.mobile,
         role: dbUser.role,
@@ -88,6 +94,8 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         status: dbUser.status,
         profileImageUrl: dbUser.profileImageUrl,
         acceptedTermsVersion: dbUser.acceptedTermsVersion || '',
+        dailyWage: dbUser.dailyWage || 0,
+        dailyWageEffectiveDate: dbUser.dailyWageEffectiveDate,
       };
       await cacheService.set(sessionKey, userDoc, 86400); // 24 hours
     }
@@ -125,6 +133,9 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 
     req.user = {
       ...decoded,
+      _id: decoded.id,
+      id: decoded.id,
+      dailyWage: userDoc.dailyWage,
       isApproved: userDoc.isApproved,
       status: userDoc.status,
       role: userDoc.role as any,

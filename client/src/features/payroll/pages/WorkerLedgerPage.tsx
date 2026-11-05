@@ -383,14 +383,14 @@ export const WorkerLedgerPage: React.FC = () => {
       <main className="app-container relative z-10 flex-1 py-3 sm:py-4 pb-36 sm:pb-40 md:pb-16 space-y-3 sm:space-y-4">
         {/* Top Header */}
         <PageHeader
-          backTo="/payroll"
-          title={worker?.name || 'Worker Ledger'}
+          backTo={isAdmin ? "/payroll" : "/dashboard"}
+          title={worker?.name || (!isAdmin ? user?.name : undefined) || 'Worker Ledger'}
           description="Continuous single-sheet financial ledger"
           icon={
-            worker?.profileImageUrl ? (
+            (worker?.profileImageUrl || (!isAdmin ? user?.profileImageUrl : undefined)) ? (
               <img
-                src={worker.profileImageUrl}
-                alt={worker.name}
+                src={worker?.profileImageUrl || (!isAdmin ? user?.profileImageUrl : undefined)}
+                alt={worker?.name || user?.name || 'Worker'}
                 className="w-full h-full object-cover rounded-lg"
                 onError={(e) => {
                   (e.currentTarget as HTMLElement).style.display = 'none';
@@ -398,13 +398,13 @@ export const WorkerLedgerPage: React.FC = () => {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center font-bold text-xs">
-                {worker?.name?.charAt(0)?.toUpperCase()}
+                {(worker?.name || user?.name || 'W')?.charAt(0)?.toUpperCase()}
               </div>
             )
           }
           badge={
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold font-mono">
-              ₹{worker?.dailyWage || 0}/day
+              ₹{(worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0}/day
             </span>
           }
           actions={

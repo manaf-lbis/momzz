@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   RefreshCw,
   AlertCircle,
+  Wallet,
 } from 'lucide-react';
 import { useAppDispatch } from '../../../shared/hooks/useAppDispatch';
 import { logout, updateUser } from '../../auth/store/authSlice';
@@ -230,11 +231,31 @@ export const ProfilePage: React.FC = () => {
                     <Calendar className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                     <span>Member since {memberSince}</span>
                   </p>
+
+                  {currentUser?.role === 'WORKER' && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-center gap-2">
+                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">Daily Wage:</span>
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+                        ₹{currentUser?.dailyWage || 0}/day
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Quick Actions */}
               <div className="pt-3 border-t border-slate-200/80 dark:border-white/[0.06] grid grid-cols-2 gap-2">
+                {currentUser?.role === 'WORKER' && (
+                  <div className="col-span-2">
+                    <button
+                      onClick={() => navigate('/payroll')}
+                      className="w-full py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-xs"
+                    >
+                      <Wallet className="w-3.5 h-3.5" />
+                      <span>My Wage Ledger & Earnings</span>
+                    </button>
+                  </div>
+                )}
                 <button
                   onClick={() => setIsPasswordModalOpen(true)}
                   className="py-2 px-3 rounded-xl glass-ghost-btn text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-2xs"

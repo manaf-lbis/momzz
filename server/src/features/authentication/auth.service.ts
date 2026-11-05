@@ -180,6 +180,8 @@ export class AuthService {
       acceptedTermsVersion: acceptedVersion,
       acceptedTermsAt: profile.acceptedTermsAt || null,
       needsTermsAcceptance: acceptedVersion !== CURRENT_TERMS_VERSION,
+      dailyWage: profile.dailyWage !== undefined ? profile.dailyWage : 0,
+      dailyWageEffectiveDate: profile.dailyWageEffectiveDate || null,
     };
   }
 
@@ -265,6 +267,8 @@ export class AuthService {
       lastSeen: user.lastSeen,
       profileImageUrl: getCloudinaryUrl(user.profileImageUrl),
       loginAudit: user.loginAudit || [],
+      dailyWage: user.dailyWage || 0,
+      dailyWageEffectiveDate: user.dailyWageEffectiveDate,
       createdAt: user.createdAt,
     }));
   }
@@ -287,6 +291,8 @@ export class AuthService {
       lastSeen: user.lastSeen,
       profileImageUrl: getCloudinaryUrl(user.profileImageUrl),
       loginAudit: user.loginAudit || [],
+      dailyWage: user.dailyWage || 0,
+      dailyWageEffectiveDate: user.dailyWageEffectiveDate,
       updatedAt: user.updatedAt,
       createdAt: user.createdAt,
     }));

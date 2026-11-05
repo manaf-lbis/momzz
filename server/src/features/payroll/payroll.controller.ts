@@ -26,7 +26,7 @@ export class PayrollController {
    */
   static async claimOvertime(req: Request, res: Response, next: NextFunction) {
     try {
-      const workerId = (req as any).user?._id?.toString();
+      const workerId = (req as any).user?._id?.toString() || (req as any).user?.id?.toString() || req.body.workerId;
       if (!workerId) throw new AppError('Unauthorized', 401);
 
       const result = await PayrollService.claimOvertime({
@@ -79,7 +79,8 @@ export class PayrollController {
 
       // Ensure worker can only view their own sheet unless admin
       const currentUser = (req as any).user;
-      if (currentUser?.role !== 'ADMIN' && currentUser?._id?.toString() !== workerId) {
+      const currentUserId = (currentUser?._id || currentUser?.id)?.toString();
+      if (currentUser?.role !== 'ADMIN' && currentUserId !== workerId) {
         throw new AppError('Access denied', 403);
       }
 
@@ -105,7 +106,7 @@ export class PayrollController {
    */
   static async getMySingleSheet(req: Request, res: Response, next: NextFunction) {
     try {
-      const workerId = (req as any).user?._id?.toString();
+      const workerId = (req as any).user?._id?.toString() || (req as any).user?.id?.toString() || req.body.workerId;
       if (!workerId) throw new AppError('Unauthorized', 401);
 
       const { startDate, endDate, includeSettledHistory } = req.query;
@@ -266,7 +267,7 @@ export class PayrollController {
    */
   static async cancelOtClaim(req: Request, res: Response, next: NextFunction) {
     try {
-      const workerId = (req as any).user?._id?.toString();
+      const workerId = (req as any).user?._id?.toString() || (req as any).user?.id?.toString();
       const userRole = (req as any).user?.role;
       const claim = await PayrollRepository.findWageAdjustmentById(req.params.id);
       if (!claim) throw new AppError('Overtime claim not found', 404);
@@ -357,7 +358,7 @@ export class PayrollController {
   static async updateOtClaim(req: Request, res: Response, next: NextFunction) {
     try {
       const userRole = (req as any).user?.role;
-      const userId = (req as any).user?._id?.toString();
+      const userId = (req as any).user?._id?.toString() || (req as any).user?.id?.toString();
 
       const result = await PayrollService.updateOtClaim({
         claimId: req.params.id,

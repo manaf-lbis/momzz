@@ -49,7 +49,14 @@ export class PayrollRepository {
       worker.dailyWageEffectiveDate = worker.createdAt || effDate;
     }
 
-    return worker.save();
+    const saved = await worker.save();
+    try {
+      const { cacheService } = await import('../cache/cache.service');
+      await cacheService.del([`user:session:${workerId}`, `user:profile:${workerId}`]);
+    } catch {
+      // cache invalidation non-fatal
+    }
+    return saved;
   }
 
   static async updateWorkerLastSettledDate(workerId: string, lastSettledDate: Date): Promise<IUser | null> {

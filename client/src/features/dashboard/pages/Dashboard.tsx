@@ -23,6 +23,7 @@ import {
   Pin,
   Globe,
   User,
+  Wallet,
 } from "lucide-react";
 
 import { useAuth } from "../../../shared/hooks/useAuth";
@@ -30,6 +31,7 @@ import { Navbar } from "../../../shared/components/navbar/Navbar";
 import { useGetJobCardsQuery, useGetJobStatsQuery, JobCardData } from "../../jobs/api/jobApi";
 import { useGetPendingWorkersQuery, useGetAllUsersQuery } from "../../auth/api/authApi";
 import { useGetCatalogQuery } from "../../catalog/api/catalogApi";
+import { useGetMySingleSheetQuery } from "../../payroll/api/payrollApi";
 import { DashboardBentoSkeleton } from "../../../shared/components/common/PageShimmer";
 import { NumberTicker } from "../../../shared/components/magicui/NumberTicker";
 import { GlobalSearchModal } from "../../../shared/components/common/GlobalSearchModal";
@@ -86,6 +88,10 @@ export const Dashboard: React.FC = () => {
   const { data: pendingRes }         = useGetPendingWorkersQuery(undefined, { skip: !isAdmin });
   const { data: usersRes }           = useGetAllUsersQuery(undefined,       { skip: !isAdmin });
   const { data: catalogRes }         = useGetCatalogQuery();
+  const { data: mySheetData }        = useGetMySingleSheetQuery(undefined,  { skip: isAdmin });
+
+  const myWorker = mySheetData?.data?.worker;
+  const myKpis = mySheetData?.data?.kpis;
 
   const allJobs: JobCardData[] = Array.isArray(jobsRes?.data)
     ? (jobsRes!.data as unknown as JobCardData[])
@@ -906,6 +912,61 @@ export const Dashboard: React.FC = () => {
                   <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-300 dark:text-slate-600 ml-auto shrink-0" />
                 </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── 7. WORKER DAILY WAGE & EARNINGS TILE ── */}
+        {!isAdmin && (
+          <section>
+            <h2 className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono font-bold uppercase tracking-widest mb-2.5 sm:mb-3 text-slate-400 dark:text-slate-500">
+              <Wallet className="w-3 h-3 text-amber-500" />
+              My Wage & Earnings
+            </h2>
+            <div
+              onClick={() => navigate('/payroll')}
+              className={`${modernCard} p-4 sm:p-5 hover:border-amber-400/50 dark:hover:border-amber-400/30 cursor-pointer space-y-3 transition group`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
+                    <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-400">
+                        Assigned Daily Wage
+                      </p>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                        Active Rate
+                      </span>
+                    </div>
+                    <p className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
+                      ₹{myWorker?.dailyWage || user?.dailyWage || 0}<span className="text-xs sm:text-sm text-slate-400 font-sans font-normal"> / day</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] sm:text-xs font-mono text-slate-400 uppercase block font-semibold">
+                    Unsettled Dues
+                  </span>
+                  <span className="text-lg sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                    ₹{myKpis ? myKpis.netPayable.toLocaleString('en-IN') : 0}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 dark:border-white/5 text-xs font-mono text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-3">
+                  <span>Working Days: <strong className="text-slate-800 dark:text-slate-200">{myKpis?.totalWorkingDays || 0}d</strong></span>
+                  <span>Approved OT: <strong className="text-emerald-600">+{myKpis?.totalApprovedOtHours || 0}h</strong></span>
+                </div>
+                <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold group-hover:translate-x-0.5 transition-transform">
+                  <span>View Full Ledger</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </div>
+              </div>
             </div>
           </section>
         )}
