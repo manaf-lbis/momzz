@@ -335,11 +335,16 @@ export class PayrollController {
    */
   static async updateLeaveAdjustment(req: Request, res: Response, next: NextFunction) {
     try {
+      const userId = (req as any).user?._id?.toString() || (req as any).user?.id?.toString();
+      const userName = (req as any).user?.name || 'Admin';
+
       const result = await PayrollService.updateLeaveAdjustment({
         adjustmentId: req.params.id,
         type: req.body.type,
         date: req.body.date,
         note: req.body.note,
+        updatedBy: userId,
+        updatedByName: userName,
       });
 
       res.status(200).json({
@@ -359,6 +364,7 @@ export class PayrollController {
     try {
       const userRole = (req as any).user?.role;
       const userId = (req as any).user?._id?.toString() || (req as any).user?.id?.toString();
+      const userName = (req as any).user?.name || (userRole === 'ADMIN' ? 'Admin' : 'Worker');
 
       const result = await PayrollService.updateOtClaim({
         claimId: req.params.id,
@@ -367,6 +373,8 @@ export class PayrollController {
         note: req.body.note,
         status: req.body.status,
         reviewedBy: userRole === 'ADMIN' ? userId : undefined,
+        updatedBy: userId,
+        updatedByName: userName,
       });
 
       res.status(200).json({

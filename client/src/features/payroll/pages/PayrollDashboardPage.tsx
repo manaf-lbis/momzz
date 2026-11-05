@@ -20,6 +20,10 @@ import {
   Info,
   Gift,
   Sparkles,
+  AlertCircle,
+  Share2,
+  Printer,
+  Copy,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
@@ -460,6 +464,19 @@ export const PayrollDashboardPage: React.FC = () => {
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                       {claim.date} &bull; <span className="font-semibold">{claim.otHours}h OT</span>
                     </div>
+                    {claim.flaggedReason === 'CLAIMED_ON_FULL_LEAVE' && (
+                      <div className="mt-1">
+                        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/30">
+                          <AlertCircle className="w-3 h-3 text-rose-500" />
+                          <span>Claimed on Full Leave Day</span>
+                        </span>
+                      </div>
+                    )}
+                    {claim.lastEditedAt && (
+                      <span className="text-[10px] text-amber-500 block mt-0.5">
+                        Edited by {claim.updatedByName || 'Admin'}
+                      </span>
+                    )}
                     {claim.note && (
                       <p className="text-[10px] text-slate-500 italic mt-1 line-clamp-1">
                         "{claim.note}"
@@ -646,6 +663,11 @@ export const PayrollDashboardPage: React.FC = () => {
                         <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
                           {formatCurrency(w.netPayable)}
                         </span>
+                        {w.advanceOverhang && w.advanceOverhang > 0 ? (
+                          <span className="block text-[10px] text-rose-500 font-semibold mt-0.5">
+                            Overhang: -{formatCurrency(w.advanceOverhang)}
+                          </span>
+                        ) : null}
                       </td>
 
                       <td className="py-3 px-4 text-right">
@@ -761,6 +783,11 @@ export const PayrollDashboardPage: React.FC = () => {
                       <span className="text-sm font-black font-mono text-amber-600 dark:text-amber-400">
                         {formatCurrency(w.netPayable)}
                       </span>
+                      {w.advanceOverhang && w.advanceOverhang > 0 ? (
+                        <span className="text-[10px] text-rose-500 font-semibold block font-mono">
+                          Overhang: -{formatCurrency(w.advanceOverhang)}
+                        </span>
+                      ) : null}
                     </div>
 
                     <div className="flex items-center gap-1.5">
@@ -1332,6 +1359,27 @@ export const PayrollDashboardPage: React.FC = () => {
                   Takes effect from today onwards without modifying past settled records.
                 </span>
               </div>
+
+              {newWage !== '' && Number(newWage) !== selectedWorker.dailyWage && (
+                (() => {
+                  const unsettledDays = selectedWorker.unsettledWorkingDays || 0;
+                  const diffPerDay = Number(newWage) - (selectedWorker.dailyWage || 0);
+                  const totalDiff = diffPerDay * unsettledDays;
+                  const projectedPayable = Math.max(0, selectedWorker.netPayable + totalDiff);
+
+                  return (
+                    <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/25 text-xs text-blue-900 dark:text-blue-200 space-y-1 animate-fadeIn">
+                      <div className="flex items-center gap-1.5 font-bold text-blue-700 dark:text-blue-300">
+                        <Info className="w-3.5 h-3.5 shrink-0" />
+                        <span>Wage Change Impact Preview</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed">
+                        This worker has <strong>{unsettledDays}</strong> unsettled day(s). Updating from ₹{selectedWorker.dailyWage} to ₹{newWage} will {totalDiff >= 0 ? 'increase' : 'decrease'} their current payable dues by <strong>₹{Math.abs(totalDiff).toLocaleString('en-IN')}</strong> (from ₹{selectedWorker.netPayable.toLocaleString('en-IN')} to ₹{projectedPayable.toLocaleString('en-IN')}).
+                      </p>
+                    </div>
+                  );
+                })()
+              )}
 
               <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
                 <button

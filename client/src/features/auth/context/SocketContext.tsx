@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Award, CheckCircle2, AlertCircle, X, Sparkles, Wallet } from 'lucide-react';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { useAppDispatch } from '../../../shared/hooks/useAppDispatch';
 import { apiSlice } from '../api/apiSlice';
@@ -8,6 +10,13 @@ import { logout, updateUser } from '../store/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { store } from '../../../store/store';
 import { getBaseServerUrl } from '../../../shared/utils/serverUrl';
+
+export interface InAppAlert {
+  id: string;
+  type: 'INCENTIVE' | 'OT_APPROVED' | 'OT_REJECTED' | 'SETTLEMENT' | 'WAGE';
+  title: string;
+  message: string;
+}
 
 interface SocketContextType {
   socket: Socket | null;
@@ -65,6 +74,19 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const socketRef = useRef<Socket | null>(null);
+  const [alerts, setAlerts] = useState<InAppAlert[]>([]);
+
+  const addAlert = (alert: Omit<InAppAlert, 'id'>) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setAlerts((prev) => [...prev, { ...alert, id }]);
+    setTimeout(() => {
+      setAlerts((prev) => prev.filter((a) => a.id !== id));
+    }, 6000);
+  };
+
+  const removeAlert = (id: string) => {
+    setAlerts((prev) => prev.filter((a) => a.id !== id));
+  };
 
   useEffect(() => {
     const backendUrl = getBackendUrl();
@@ -234,6 +256,50 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
+    // ───── Payroll Socket Events ─────────────────────────────────────────
+    socket.on('payroll:incentive_awarded', (data: any) => {
+      dispatch(apiSlice.util.invalidateTags(['Payroll', 'AllUsers', 'User']));
+      addAlert({
+        type: 'INCENTIVE',
+        title: '🎉 Incentive Awarded!',
+        message: `You were awarded a ₹${Number(data.amount || 0).toLocaleString('en-IN')} incentive (${data.notes || 'Performance'})`,
+      });
+    });
+
+    socket.on('payroll:ot_reviewed', (data: any) => {
+      dispatch(apiSlice.util.invalidateTags(['Payroll', 'AllUsers', 'User']));
+      const isApproved = data.status === 'APPROVED';
+      addAlert({
+        type: isApproved ? 'OT_APPROVED' : 'OT_REJECTED',
+        title: isApproved ? '✅ Overtime Approved!' : '⚠️ Overtime Review',
+        message: isApproved
+          ? `Your claim for ${data.otHours}h OT (+₹${data.potentialAmount || data.otHours * 150}) on ${data.date} was approved.`
+          : `Your OT claim for ${data.date} was marked as rejected: ${data.note || 'Admin clearance required'}`,
+      });
+    });
+
+    socket.on('payroll:settled', (data: any) => {
+      dispatch(apiSlice.util.invalidateTags(['Payroll', 'AllUsers', 'User']));
+      addAlert({
+        type: 'SETTLEMENT',
+        title: '💳 Payout Disbursed',
+        message: `Settlement payout of ₹${Number(data.amount || 0).toLocaleString('en-IN')} disbursed via ${data.paymentMethod || 'Cash'}.`,
+      });
+    });
+
+    socket.on('payroll:wage_updated', (data: any) => {
+      dispatch(apiSlice.util.invalidateTags(['Payroll', 'AllUsers', 'User']));
+      addAlert({
+        type: 'WAGE',
+        title: '💼 Wage Rate Updated',
+        message: `Your daily wage rate has been updated to ₹${data.dailyWage}.`,
+      });
+    });
+
+    socket.on('payroll:updated', () => {
+      dispatch(apiSlice.util.invalidateTags(['Payroll', 'AllUsers', 'User']));
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -242,6 +308,40 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   return (
     <SocketContext.Provider value={{ socket: socketRef.current }}>
       {children}
+      {/* Floating In-App Notifications Container */}
+      <aside aria-label="Notifications" className="fixed top-4 right-4 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-2 sm:px-0">
+        <AnimatePresence>
+          {alerts.map((alert) => (
+            <motion.div
+              key={alert.id}
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
+              className="pointer-events-auto flex items-start gap-3 p-3.5 rounded-2xl bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-700/60 shadow-xl text-white"
+            >
+              <div className="p-2 rounded-xl shrink-0 mt-0.5 bg-white/10">
+                {alert.type === 'INCENTIVE' && <Sparkles className="w-5 h-5 text-amber-400" />}
+                {alert.type === 'OT_APPROVED' && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
+                {alert.type === 'OT_REJECTED' && <AlertCircle className="w-5 h-5 text-rose-400" />}
+                {alert.type === 'SETTLEMENT' && <Wallet className="w-5 h-5 text-blue-400" />}
+                {alert.type === 'WAGE' && <Award className="w-5 h-5 text-violet-400" />}
+              </div>
+              <div className="flex-1 min-w-0 pr-1">
+                <h4 className="text-sm font-semibold text-white leading-tight">{alert.title}</h4>
+                <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">{alert.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeAlert(alert.id)}
+                aria-label="Dismiss notification"
+                className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </aside>
     </SocketContext.Provider>
   );
 };

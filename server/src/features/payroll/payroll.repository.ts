@@ -4,6 +4,7 @@ import WageAdjustment, { IWageAdjustment, WageAdjustmentType, WageAdjustmentStat
 import GarageHoliday, { IGarageHoliday } from '../../models/GarageHoliday.model';
 import WageTransaction, { IWageTransaction, WageTransactionType } from '../../models/WageTransaction.model';
 import { ROLES } from '../../shared/constants/status';
+import { emitPayrollWageUpdated } from '../../config/socket';
 
 export class PayrollRepository {
   static async findWorkerById(workerId: string): Promise<IUser | null> {
@@ -55,6 +56,11 @@ export class PayrollRepository {
       await cacheService.del([`user:session:${workerId}`, `user:profile:${workerId}`]);
     } catch {
       // cache invalidation non-fatal
+    }
+    try {
+      emitPayrollWageUpdated(workerId, { dailyWage, effectiveDate: effDate });
+    } catch {
+      // socket non-fatal
     }
     return saved;
   }
@@ -143,6 +149,7 @@ export class PayrollRepository {
     date: string;
     otHours: number;
     note?: string;
+    flaggedReason?: string;
   }): Promise<IWageAdjustment> {
     return WageAdjustment.create({
       workerId: new mongoose.Types.ObjectId(data.workerId),
@@ -152,6 +159,7 @@ export class PayrollRepository {
       status: 'PENDING',
       deductionAmount: 0,
       note: data.note || '',
+      flaggedReason: data.flaggedReason || null,
     });
   }
 
@@ -184,9 +192,18 @@ export class PayrollRepository {
       date: string;
       reviewedBy?: mongoose.Types.ObjectId;
       reviewedAt?: Date;
-    }>
+      flaggedReason?: string;
+      updatedBy?: mongoose.Types.ObjectId;
+      updatedByName?: string;
+      lastEditedAt?: Date;
+    }>,
+    editLog?: any
   ): Promise<IWageAdjustment | null> {
-    return WageAdjustment.findByIdAndUpdate(id, { $set: updates }, { new: true });
+    const updateOps: any = { $set: updates };
+    if (editLog) {
+      updateOps.$push = { editHistory: editLog };
+    }
+    return WageAdjustment.findByIdAndUpdate(id, updateOps, { new: true });
   }
 
   static async deleteWageAdjustment(id: string): Promise<boolean> {

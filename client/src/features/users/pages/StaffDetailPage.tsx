@@ -40,6 +40,7 @@ import {
   useAdminResetPasswordMutation,
 } from '../../auth/api/authApi';
 import { useGetJobCardsQuery, JobCardData } from '../../jobs/api/jobApi';
+import { useGetWorkerSingleSheetQuery } from '../../payroll/api/payrollApi';
 import { User } from '../../auth/store/authSlice';
 
 type DetailTab = 'OVERVIEW' | 'WORK_LOGS' | 'VEHICLES' | 'SECURITY';
@@ -117,6 +118,14 @@ export const StaffDetailPage: React.FC = () => {
   const staffMember = allUsers.find(
     (u) => (u.id || (u as any)._id) === id
   );
+
+  const isWorker = staffMember?.role === 'WORKER';
+  const { data: payrollSheetData } = useGetWorkerSingleSheetQuery(
+    { workerId: id || '', includeSettledHistory: false },
+    { skip: !id || !isWorker }
+  );
+  const payrollKpis = payrollSheetData?.data?.kpis;
+  const payrollWorker = payrollSheetData?.data?.worker;
 
   const allJobs: JobCardData[] = useMemo(() => {
     if (!jobsData?.data) return [];
@@ -668,6 +677,78 @@ export const StaffDetailPage: React.FC = () => {
           {/* TAB 1: OVERVIEW & ANALYTICS */}
           {activeTab === 'OVERVIEW' && (
             <div className="space-y-3">
+              {/* Worker Current Payroll Cycle Snapshot */}
+              {isWorker && payrollKpis && (
+                <div className="p-4 sm:p-5 rounded-2xl glass-modern-card border border-amber-500/30 space-y-3 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-white/10 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                        <Wallet className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <span>Current Cycle Payroll Snapshot</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold">
+                            Live
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Wage rate: <strong className="text-slate-800 dark:text-slate-200">₹{payrollWorker?.dailyWage || staffMember?.dailyWage || 0}/day</strong>
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/payroll/${id}`)}
+                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs transition active:scale-95"
+                    >
+                      <span>Open Full Ledger & Timesheet</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="p-2.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                      <span className="text-[10px] text-slate-400 uppercase font-mono block">Unsettled Dues</span>
+                      <span className="text-base sm:text-lg font-black font-mono text-amber-600 dark:text-amber-400">
+                        ₹{Number(payrollKpis.netPayable || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                      <span className="text-[10px] text-slate-400 uppercase font-mono block">Attendance Days</span>
+                      <span className="text-base sm:text-lg font-black font-mono text-slate-900 dark:text-white">
+                        {payrollKpis.unsettledWorkingDays ?? payrollKpis.totalWorkingDays ?? 0}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                      <span className="text-[10px] text-slate-400 uppercase font-mono block">Advances Taken</span>
+                      <span className="text-base sm:text-lg font-black font-mono text-rose-600 dark:text-rose-400">
+                        -₹{Number(payrollKpis.totalUnsettledAdvances || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                      <span className="text-[10px] text-slate-400 uppercase font-mono block">Approved OT</span>
+                      <span className="text-base sm:text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+                        +{payrollKpis.totalApprovedOtHours || 0}h (₹{Number(payrollKpis.totalApprovedOtAmount || 0).toLocaleString('en-IN')})
+                      </span>
+                    </div>
+                  </div>
+
+                  {payrollKpis.advanceOverhang && payrollKpis.advanceOverhang > 0 ? (
+                    <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center gap-2 text-xs text-rose-700 dark:text-rose-300">
+                      <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                      <span>
+                        Advance Overhang: <strong>-₹{Number(payrollKpis.advanceOverhang).toLocaleString('en-IN')}</strong> will carry forward to next cycle.
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
               {/* Timeframe Filter Bar */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-2xl glass-modern-card shadow-2xs">
                 <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">

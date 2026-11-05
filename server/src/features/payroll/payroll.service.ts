@@ -129,6 +129,8 @@ export interface SingleSheetDayEntry {
   holidayTitle?: string;
   adjustmentId?: string;
   adjustmentNote?: string;
+  leaveUpdatedByName?: string;
+  leaveLastEditedAt?: Date;
   baseWage: number;
   leaveDeduction: number;
   netDayWage: number;
@@ -137,6 +139,11 @@ export interface SingleSheetDayEntry {
   otHours: number;
   otAmount: number;
   otStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  otClaimId?: string;
+  otClaimNote?: string;
+  otFlaggedReason?: string;
+  otUpdatedByName?: string;
+  otLastEditedAt?: Date;
   netDailyPay: number;
   isSettled: boolean;
   inlineTransactions: Array<{
@@ -256,18 +263,31 @@ export class PayrollService {
     const worker = await PayrollRepository.findWorkerById(params.workerId);
     if (!worker) throw new AppError('Worker not found', 404);
 
+    // Check if worker was marked on Full Leave for this date
+    const existingAdjustments = await PayrollRepository.findWageAdjustments({
+      workerId: params.workerId,
+      startDate: params.date,
+      endDate: params.date,
+    });
+    const hasFullLeave = existingAdjustments.some((a) => a.type === 'FULL_LEAVE');
+    const flaggedReason = hasFullLeave ? 'CLAIMED_ON_FULL_LEAVE' : undefined;
+
     const claim = await PayrollRepository.createOtClaim({
       workerId: params.workerId,
       date: params.date,
       otHours: roundedHours,
       note: params.note,
+      flaggedReason,
     });
 
     return {
-      message: 'Overtime claim submitted successfully for admin review',
+      message: hasFullLeave
+        ? 'Overtime claim submitted. Flagged for admin review due to Full Leave marked on this date.'
+        : 'Overtime claim submitted successfully for admin review',
       claim,
       ratePerHour: OT_HOURLY_RATE,
       potentialAmount: roundedHours * OT_HOURLY_RATE,
+      flaggedReason,
     };
   }
 
@@ -290,6 +310,21 @@ export class PayrollService {
       params.reviewedBy,
       params.note
     );
+
+    try {
+      const { emitPayrollOtReviewed } = await import('../../config/socket');
+      const workerIdStr = (claim.workerId as any)?._id?.toString() || claim.workerId?.toString();
+      emitPayrollOtReviewed(workerIdStr, {
+        claimId: params.claimId,
+        date: claim.date,
+        status: params.status,
+        otHours: claim.otHours,
+        potentialAmount: (claim.otHours || 0) * OT_HOURLY_RATE,
+        note: params.note,
+      });
+    } catch {
+      // Socket emission non-fatal
+    }
 
     return {
       message: `Overtime claim marked as ${params.status}`,
@@ -588,6 +623,8 @@ export class PayrollService {
         holidayTitle: holiday?.title,
         adjustmentId: leave?._id?.toString(),
         adjustmentNote: leave?.note,
+        leaveUpdatedByName: leave?.updatedByName,
+        leaveLastEditedAt: leave?.lastEditedAt,
         baseWage,
         leaveDeduction,
         netDayWage,
@@ -596,6 +633,11 @@ export class PayrollService {
         otHours: dayOtHours,
         otAmount: dayOtAmount,
         otStatus,
+        otClaimId: otClaims[0]?._id?.toString(),
+        otClaimNote: otClaims[0]?.note,
+        otFlaggedReason: otClaims.find((o) => o.flaggedReason)?.flaggedReason,
+        otUpdatedByName: otClaims[0]?.updatedByName,
+        otLastEditedAt: otClaims[0]?.lastEditedAt,
         netDailyPay,
         isSettled: isDaySettled,
         inlineTransactions: formattedInline,
@@ -606,6 +648,7 @@ export class PayrollService {
     // Dynamic Net Payable Calculation: strictly unsettled earnings (wages + OT + incentives) minus unsettled advances
     const unsettledEarnings = unsettledNetBaseWages + unsettledApprovedOtAmount + totalUnsettledIncentives + previousBalanceCarriedForward;
     const netPayable = Math.max(0, unsettledEarnings - totalUnsettledAdvances);
+    const advanceOverhang = totalUnsettledAdvances > unsettledEarnings ? totalUnsettledAdvances - unsettledEarnings : 0;
 
     // Monthly breakdown aggregation
     const monthGroups = new Map<string, MonthlyBreakdownItem>();
@@ -697,6 +740,7 @@ export class PayrollService {
         totalUnsettledAdvances,
         totalUnsettledIncentives,
         netPayable,
+        advanceOverhang,
         unsettledWorkingDays,
         unsettledGrossWages,
         unsettledLeaveDeductions,
@@ -796,6 +840,22 @@ export class PayrollService {
     const settledUtcDate = new Date(Date.UTC(sy, sm - 1, sd, 12, 0, 0));
     await PayrollRepository.updateWorkerLastSettledDate(params.workerId, settledUtcDate);
 
+    try {
+      const { emitPayrollSettled } = await import('../../config/socket');
+      emitPayrollSettled(params.workerId, {
+        settlementId: settlementTx._id,
+        workerName: worker.name,
+        amount: amountToDisburse,
+        paymentMethod: params.paymentMethod || 'CASH',
+        period: { startDate: sheet.period.startDate, endDate: endDateStr },
+        carriedForwardBalance,
+        totalWorkingDays: sheet.kpis.totalWorkingDays,
+        totalApprovedOtHours: sheet.kpis.totalApprovedOtHours,
+      });
+    } catch {
+      // Socket emission non-fatal
+    }
+
     return {
       message: `Payroll successfully settled for ${worker.name}`,
       settlement: settlementTx,
@@ -860,6 +920,19 @@ export class PayrollService {
       isSettled: false,
     });
 
+    try {
+      const { emitPayrollIncentiveAwarded } = await import('../../config/socket');
+      emitPayrollIncentiveAwarded(params.workerId, {
+        id: incentiveTx._id,
+        amount: params.amount,
+        notes: params.notes || 'Performance Incentive',
+        workerName: worker.name,
+        date: params.date || new Date().toISOString().split('T')[0],
+      });
+    } catch {
+      // Socket emission non-fatal
+    }
+
     return {
       message: `Incentive of ₹${params.amount} awarded to ${worker.name}`,
       incentive: incentiveTx,
@@ -874,6 +947,8 @@ export class PayrollService {
     type?: 'FULL_LEAVE' | 'HALF_LEAVE';
     date?: string;
     note?: string;
+    updatedBy?: string;
+    updatedByName?: string;
   }) {
     const adj = await PayrollRepository.findWageAdjustmentById(params.adjustmentId);
     if (!adj) throw new AppError('Leave record not found', 404);
@@ -894,12 +969,34 @@ export class PayrollService {
       deductionAmount = calculateHalfDayDeduction(dailyWage);
     }
 
-    const updated = await PayrollRepository.updateWageAdjustment(params.adjustmentId, {
-      type: leaveType,
-      date: targetDate,
-      deductionAmount,
-      note: params.note !== undefined ? params.note : adj.note,
-    });
+    const editLog = params.updatedBy
+      ? {
+          editedBy: new mongoose.Types.ObjectId(params.updatedBy),
+          editedByName: params.updatedByName || 'Admin',
+          editedAt: new Date(),
+          previousValues: {
+            type: adj.type,
+            date: adj.date,
+            deductionAmount: adj.deductionAmount,
+            note: adj.note,
+          },
+          note: `Modified leave from ${adj.type} to ${leaveType}`,
+        }
+      : undefined;
+
+    const updated = await PayrollRepository.updateWageAdjustment(
+      params.adjustmentId,
+      {
+        type: leaveType,
+        date: targetDate,
+        deductionAmount,
+        note: params.note !== undefined ? params.note : adj.note,
+        updatedBy: params.updatedBy ? new mongoose.Types.ObjectId(params.updatedBy) : undefined,
+        updatedByName: params.updatedByName || 'Admin',
+        lastEditedAt: new Date(),
+      },
+      editLog
+    );
 
     return {
       message: 'Leave updated successfully',
@@ -917,6 +1014,8 @@ export class PayrollService {
     note?: string;
     status?: 'PENDING' | 'APPROVED' | 'REJECTED';
     reviewedBy?: string;
+    updatedBy?: string;
+    updatedByName?: string;
   }) {
     const claim = await PayrollRepository.findWageAdjustmentById(params.claimId);
     if (!claim) throw new AppError('Overtime claim not found', 404);
@@ -936,7 +1035,28 @@ export class PayrollService {
       updates.reviewedAt = new Date();
     }
 
-    const updated = await PayrollRepository.updateWageAdjustment(params.claimId, updates);
+    const editLog = params.updatedBy
+      ? {
+          editedBy: new mongoose.Types.ObjectId(params.updatedBy),
+          editedByName: params.updatedByName || 'Admin',
+          editedAt: new Date(),
+          previousValues: {
+            otHours: claim.otHours,
+            date: claim.date,
+            note: claim.note,
+            status: claim.status,
+          },
+          note: `Modified OT claim`,
+        }
+      : undefined;
+
+    if (params.updatedBy) {
+      updates.updatedBy = new mongoose.Types.ObjectId(params.updatedBy);
+      updates.updatedByName = params.updatedByName || 'Admin';
+      updates.lastEditedAt = new Date();
+    }
+
+    const updated = await PayrollRepository.updateWageAdjustment(params.claimId, updates, editLog);
     return {
       message: 'Overtime claim updated successfully',
       claim: updated,
@@ -992,6 +1112,8 @@ export class PayrollService {
             unsettledAdvances: sheet.kpis.totalUnsettledAdvances,
             unsettledIncentives: (sheet.kpis as any).totalUnsettledIncentives || 0,
             netPayable: sheet.kpis.netPayable,
+            advanceOverhang: sheet.kpis.advanceOverhang || 0,
+            unsettledWorkingDays: sheet.kpis.unsettledWorkingDays || 0,
             pendingOtCount: pendingOtWorkerMap.get(worker._id.toString()) || 0,
           };
         } catch {
@@ -1009,6 +1131,8 @@ export class PayrollService {
             unsettledAdvances: 0,
             unsettledIncentives: 0,
             netPayable: 0,
+            advanceOverhang: 0,
+            unsettledWorkingDays: 0,
             pendingOtCount: pendingOtWorkerMap.get(worker._id.toString()) || 0,
           };
         }
@@ -1035,6 +1159,9 @@ export class PayrollService {
         otHours: c.otHours,
         potentialAmount: (c.otHours || 0) * OT_HOURLY_RATE,
         note: c.note,
+        flaggedReason: c.flaggedReason,
+        updatedByName: c.updatedByName,
+        lastEditedAt: c.lastEditedAt,
         createdAt: c.createdAt,
       })),
     };

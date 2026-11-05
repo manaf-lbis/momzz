@@ -178,3 +178,34 @@ export const emitUserBlocked = (userId: string) => {
     io.emit('user:blocked_global', { userId });
   }
 };
+
+// ── Payroll Events ──────────────────────────────────────────────────────────
+
+export const emitPayrollIncentiveAwarded = (workerId: string, incentive: any) => {
+  if (io) {
+    io.to(`user:${workerId}`).emit('payroll:incentive_awarded', incentive);
+    io.emit('payroll:updated', { workerId, type: 'INCENTIVE' });
+  }
+};
+
+export const emitPayrollOtReviewed = (workerId: string, otClaim: any) => {
+  if (io) {
+    io.to(`user:${workerId}`).emit('payroll:ot_reviewed', otClaim);
+    io.emit('payroll:updated', { workerId, type: 'OT_REVIEWED' });
+  }
+};
+
+export const emitPayrollSettled = (workerId: string, settlement: any) => {
+  if (io) {
+    io.to(`user:${workerId}`).emit('payroll:settled', settlement);
+    io.emit('payroll:updated', { workerId, type: 'SETTLED' });
+  }
+};
+
+export const emitPayrollWageUpdated = (workerId: string, wageData: any) => {
+  if (io) {
+    io.to(`user:${workerId}`).emit('payroll:wage_updated', wageData);
+    io.emit('payroll:updated', { workerId, type: 'WAGE_UPDATED' });
+  }
+};
+

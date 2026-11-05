@@ -17,6 +17,8 @@ export interface SingleSheetDayEntry {
   holidayTitle?: string;
   adjustmentId?: string;
   adjustmentNote?: string;
+  leaveUpdatedByName?: string;
+  leaveLastEditedAt?: string;
   baseWage: number;
   leaveDeduction: number;
   netDayWage: number;
@@ -25,6 +27,11 @@ export interface SingleSheetDayEntry {
   otHours: number;
   otAmount: number;
   otStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  otClaimId?: string;
+  otClaimNote?: string;
+  otFlaggedReason?: string;
+  otUpdatedByName?: string;
+  otLastEditedAt?: string;
   netDailyPay: number;
   isSettled: boolean;
   inlineTransactions: InlineTransactionItem[];
@@ -81,6 +88,8 @@ export interface WorkerSingleSheetData {
     totalUnsettledAdvances: number;
     totalUnsettledIncentives?: number;
     netPayable: number;
+    advanceOverhang?: number;
+    unsettledWorkingDays?: number;
   };
   monthlyBreakdown?: MonthlyBreakdownItem[];
   days: SingleSheetDayEntry[];
@@ -100,6 +109,8 @@ export interface WorkerSummaryItem {
   unsettledAdvances: number;
   unsettledIncentives?: number;
   netPayable: number;
+  advanceOverhang?: number;
+  unsettledWorkingDays?: number;
   pendingOtCount: number;
 }
 
@@ -113,6 +124,9 @@ export interface PendingOtClaimItem {
   otHours: number;
   potentialAmount: number;
   note?: string;
+  flaggedReason?: string;
+  updatedByName?: string;
+  lastEditedAt?: string;
   createdAt: string;
 }
 

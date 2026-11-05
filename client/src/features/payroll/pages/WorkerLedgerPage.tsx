@@ -20,6 +20,10 @@ import {
   Trash2,
   Gift,
   Sparkles,
+  Share2,
+  Printer,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
@@ -121,6 +125,72 @@ export const WorkerLedgerPage: React.FC = () => {
   const [settleEndDate, setSettleEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'UPI' | 'BANK_TRANSFER'>('CASH');
   const [settleReference, setSettleReference] = useState('');
+
+  // Share Settlement Slip State
+  const [shareSettlement, setShareSettlement] = useState<{ tx: any; day: SingleSheetDayEntry } | null>(null);
+  const [copiedSlip, setCopiedSlip] = useState(false);
+
+  // Live IST 5:00 PM Timing Engine
+  const [istCountdown, setIstCountdown] = useState<{
+    isBeforeCutoff: boolean;
+    label: string;
+  }>({ isBeforeCutoff: false, label: '' });
+
+  const lastRefetchedDate = useRef<string>('');
+
+  useEffect(() => {
+    const checkCutoff = () => {
+      const now = new Date();
+      const istStr = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+      const istDate = new Date(istStr);
+      const istHour = istDate.getHours();
+      const istMinute = istDate.getMinutes();
+      const todayDateStr = istDate.toISOString().split('T')[0];
+
+      if (istHour < 17) {
+        const totalMinsLeft = (16 - istHour) * 60 + (59 - istMinute);
+        const hrs = Math.floor(totalMinsLeft / 60);
+        const mins = totalMinsLeft % 60;
+        const label = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+        setIstCountdown({ isBeforeCutoff: true, label });
+      } else {
+        setIstCountdown({ isBeforeCutoff: false, label: 'Cutoff reached' });
+        if (lastRefetchedDate.current !== todayDateStr) {
+          lastRefetchedDate.current = todayDateStr;
+          refetch();
+        }
+      }
+    };
+
+    checkCutoff();
+    const interval = setInterval(checkCutoff, 20000);
+    return () => clearInterval(interval);
+  }, [refetch]);
+
+  const generateSlipText = (tx: any, dayEntry?: SingleSheetDayEntry) => {
+    const workerName = data?.data?.worker?.name || 'Worker';
+    const period = tx.periodCovered
+      ? `${new Date(tx.periodCovered.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} – ${new Date(tx.periodCovered.endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`
+      : dayEntry?.date || new Date().toISOString().split('T')[0];
+    const itemized = tx.itemizedSummary || {};
+
+    return [
+      `*Momzz Garage • Salary Slip*`,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `👤 *Worker:* ${workerName}`,
+      `📅 *Period:* ${period}`,
+      itemized.totalWorkingDays !== undefined ? `⚙️ *Days Worked:* ${itemized.totalWorkingDays}` : null,
+      itemized.totalOtHours ? `⏱️ *Overtime:* ${itemized.totalOtHours}h (₹${itemized.totalOtAmount || 0})` : null,
+      itemized.totalAdvancesDeducted ? `🔻 *Advances Deducted:* ₹${Number(itemized.totalAdvancesDeducted).toLocaleString('en-IN')}` : null,
+      itemized.totalIncentives ? `⭐ *Incentives:* +₹${Number(itemized.totalIncentives).toLocaleString('en-IN')}` : null,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `💰 *Paid Amount:* ₹${Number(tx.amount || 0).toLocaleString('en-IN')} via ${tx.paymentMethod || 'Cash'}`,
+      tx.referenceNote ? `📝 *Ref:* ${tx.referenceNote}` : null,
+      tx.carriedForwardBalance ? `⚠️ *Overhang Carried Forward:* ₹${Number(tx.carriedForwardBalance).toLocaleString('en-IN')}` : null,
+      `━━━━━━━━━━━━━━━━━━━━━━`,
+      `_Momzz Garage Management System_`,
+    ].filter(Boolean).join('\n');
+  };
 
   const worker = data?.data?.worker;
   const kpis = data?.data?.kpis || {
@@ -457,7 +527,7 @@ export const WorkerLedgerPage: React.FC = () => {
         <div className="p-4 sm:p-5 rounded-2xl glass-modern-card border-amber-500/30 space-y-3 shadow-2xs">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[10px] sm:text-xs font-mono uppercase text-slate-500 dark:text-slate-400 block font-semibold">
                   Unsettled Payable Dues
                 </span>
@@ -469,6 +539,12 @@ export const WorkerLedgerPage: React.FC = () => {
                 ) : (
                   <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
                     <span>Active Dues</span>
+                  </span>
+                )}
+                {istCountdown.isBeforeCutoff && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/25">
+                    <Clock className="w-2.5 h-2.5 animate-pulse text-sky-500" />
+                    <span>Shift active (accrues in {istCountdown.label})</span>
                   </span>
                 )}
               </div>
@@ -535,6 +611,19 @@ export const WorkerLedgerPage: React.FC = () => {
             ) : null}
           </div>
         </div>
+
+        {/* Advance Overhang Alert */}
+        {kpis.advanceOverhang && kpis.advanceOverhang > 0 ? (
+          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 flex items-start gap-2.5 text-xs text-rose-800 dark:text-rose-200 animate-fadeIn">
+            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold block text-xs">Advance Overhang Carried Forward</span>
+              <p className="text-[11px] opacity-90 leading-relaxed mt-0.5">
+                Cash advance taken exceeds accrued earnings by <strong className="font-mono text-rose-600 dark:text-rose-400">-{formatCurrency(kpis.advanceOverhang)}</strong>. This balance carries forward into the next work cycle before new wages accumulate.
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         {/* ── KPI METRICS 4-GRID ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
@@ -738,25 +827,32 @@ export const WorkerLedgerPage: React.FC = () => {
                                   {day.holidayTitle || 'Holiday'} (100% Paid)
                                 </span>
                               ) : isLeave ? (
-                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                                  <span>{day.dayType === 'FULL_LEAVE' ? 'Full Leave' : 'Half Day'} (-₹{day.leaveDeduction})</span>
-                                  {isAdmin && !day.isSettled && day.adjustmentId && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setEditingAdjustmentId(day.adjustmentId!);
-                                        setEditingLeaveDate(day.date);
-                                        setEditingLeaveType(day.dayType as 'FULL_LEAVE' | 'HALF_LEAVE');
-                                        setEditingLeaveNote(day.adjustmentNote || '');
-                                        setShowEditLeaveModal(true);
-                                      }}
-                                      title="Edit or Remove Leave"
-                                      className="p-0.5 rounded hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 transition"
-                                    >
-                                      <Edit2 className="w-2.5 h-2.5" />
-                                    </button>
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                                    <span>{day.dayType === 'FULL_LEAVE' ? 'Full Leave' : 'Half Day'} (-₹{day.leaveDeduction})</span>
+                                    {isAdmin && !day.isSettled && day.adjustmentId && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingAdjustmentId(day.adjustmentId!);
+                                          setEditingLeaveDate(day.date);
+                                          setEditingLeaveType(day.dayType as 'FULL_LEAVE' | 'HALF_LEAVE');
+                                          setEditingLeaveNote(day.adjustmentNote || '');
+                                          setShowEditLeaveModal(true);
+                                        }}
+                                        title="Edit or Remove Leave"
+                                        className="p-0.5 rounded hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 transition"
+                                      >
+                                        <Edit2 className="w-2.5 h-2.5" />
+                                      </button>
+                                    )}
+                                  </span>
+                                  {day.leaveLastEditedAt && (
+                                    <span className="text-[9px] text-amber-600/90 dark:text-amber-400/90 font-medium pl-0.5">
+                                      Edited by {day.leaveUpdatedByName || 'Admin'}
+                                    </span>
                                   )}
-                                </span>
+                                </div>
                               ) : isInProgress ? (
                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 flex items-center gap-1">
                                   <Clock className="w-2.5 h-2.5 animate-pulse text-sky-500" />
@@ -770,38 +866,50 @@ export const WorkerLedgerPage: React.FC = () => {
 
                               {/* Overtime chip if present */}
                               {day.otHours > 0 && (
-                                <span
-                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 ${
-                                    day.otStatus === 'APPROVED'
-                                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                                      : day.otStatus === 'REJECTED'
-                                      ? 'bg-rose-500/10 text-rose-600'
-                                      : 'bg-amber-500/10 text-amber-600'
-                                  }`}
-                                >
-                                  <Clock className="w-2.5 h-2.5" />
-                                  <span>{day.otHours}h OT</span>
-                                  {day.otStatus === 'APPROVED' && (
-                                    <span className="font-mono">+{formatCurrency(day.otAmount)}</span>
+                                <div className="flex flex-col gap-0.5">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 ${
+                                      day.otStatus === 'APPROVED'
+                                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                        : day.otStatus === 'REJECTED'
+                                        ? 'bg-rose-500/10 text-rose-600'
+                                        : 'bg-amber-500/10 text-amber-600'
+                                    }`}
+                                  >
+                                    <Clock className="w-2.5 h-2.5" />
+                                    <span>{day.otHours}h OT</span>
+                                    {day.otStatus === 'APPROVED' && (
+                                      <span className="font-mono">+{formatCurrency(day.otAmount)}</span>
+                                    )}
+                                    {!day.isSettled && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingOtClaimId(day.otClaimId || day.adjustmentId || '');
+                                          setEditingOtDate(day.date);
+                                          setEditingOtHours(day.otHours);
+                                          setEditingOtNote(day.otClaimNote || day.adjustmentNote || '');
+                                          setEditingOtStatus(day.otStatus || 'PENDING');
+                                          setShowEditOtModal(true);
+                                        }}
+                                        title="Edit Overtime Claim"
+                                        className="p-0.5 ml-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition"
+                                      >
+                                        <Edit2 className="w-2.5 h-2.5" />
+                                      </button>
+                                    )}
+                                  </span>
+                                  {day.otFlaggedReason === 'CLAIMED_ON_FULL_LEAVE' && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25">
+                                      ⚠️ Claimed on Full Leave Day
+                                    </span>
                                   )}
-                                  {!day.isSettled && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setEditingOtClaimId(day.adjustmentId || '');
-                                        setEditingOtDate(day.date);
-                                        setEditingOtHours(day.otHours);
-                                        setEditingOtNote(day.adjustmentNote || '');
-                                        setEditingOtStatus(day.otStatus || 'PENDING');
-                                        setShowEditOtModal(true);
-                                      }}
-                                      title="Edit Overtime Claim"
-                                      className="p-0.5 ml-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition"
-                                    >
-                                      <Edit2 className="w-2.5 h-2.5" />
-                                    </button>
+                                  {day.otLastEditedAt && (
+                                    <span className="text-[9px] text-amber-600/90 dark:text-amber-400/90 font-medium pl-0.5">
+                                      Edited by {day.otUpdatedByName || 'Admin'}
+                                    </span>
                                   )}
-                                </span>
+                                </div>
                               )}
 
                               {/* Settled Badge */}
@@ -878,6 +986,17 @@ export const WorkerLedgerPage: React.FC = () => {
                                   <span className={`font-mono font-bold text-xs ${tx.type === 'INCENTIVE' ? 'text-amber-600 dark:text-amber-400' : ''}`}>
                                     {tx.type === 'INCENTIVE' ? `+${formatCurrency(tx.amount)}` : `-${formatCurrency(tx.amount)}`}
                                   </span>
+                                  {tx.type === 'PAYOUT_SETTLEMENT' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setShareSettlement({ tx, day })}
+                                      title="Share Salary Slip via WhatsApp"
+                                      className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1 transition shadow-2xs"
+                                    >
+                                      <Share2 className="w-3 h-3" />
+                                      <span>Share Slip</span>
+                                    </button>
+                                  )}
                                   {isAdmin && !day.isSettled && tx.type !== 'PAYOUT_SETTLEMENT' && (
                                     <button
                                       type="button"
@@ -1044,6 +1163,23 @@ export const WorkerLedgerPage: React.FC = () => {
                   onChange={(e) => setOtDate(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
+                {(() => {
+                  const dayForDate = days.find((d) => d.date === otDate);
+                  if (dayForDate?.dayType === 'FULL_LEAVE') {
+                    return (
+                      <div className="mt-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-800 dark:text-rose-200 text-xs space-y-1 animate-fadeIn">
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                          <span>Full Leave Day Warning</span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed opacity-90">
+                          You are marked on <strong>Full Leave</strong> on this date. Claiming OT on a full leave day requires admin clearance and will be flagged as "Claimed on Full Leave Day" in the admin review queue.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* Whole Hours Selector */}
@@ -1594,6 +1730,88 @@ export const WorkerLedgerPage: React.FC = () => {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 7: SHARE SETTLEMENT PAY SLIP ── */}
+      {shareSettlement && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Share2 className="w-4 h-4 text-emerald-500" />
+                  Share Pay Slip Voucher
+                </h3>
+                <p className="text-[11px] text-slate-400">1-Click WhatsApp & Clipboard Export</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShareSettlement(null);
+                  setCopiedSlip(false);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Slip Preview Box */}
+            <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-mono text-xs whitespace-pre-line text-slate-800 dark:text-slate-200 leading-relaxed max-h-64 overflow-y-auto">
+              {generateSlipText(shareSettlement.tx, shareSettlement.day)}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const text = generateSlipText(shareSettlement.tx, shareSettlement.day);
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                }}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs flex items-center justify-center gap-2 transition active:scale-95"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Share via WhatsApp</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = generateSlipText(shareSettlement.tx, shareSettlement.day);
+                    navigator.clipboard.writeText(text);
+                    setCopiedSlip(true);
+                    setTimeout(() => setCopiedSlip(false), 3000);
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/15 flex items-center justify-center gap-1.5 transition"
+                >
+                  {copiedSlip ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Text</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="py-2 px-3 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/15 flex items-center justify-center gap-1.5 transition"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
