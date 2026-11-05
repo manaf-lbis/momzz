@@ -67,6 +67,7 @@ export interface WorkerSingleSheetData {
     dailyWage: number;
     dailyWageEffectiveDate?: string;
     lastSettledDate?: string;
+    firstPayrollDate?: string | null;
   };
   period: {
     startDate: string;
@@ -93,6 +94,8 @@ export interface WorkerSingleSheetData {
   };
   monthlyBreakdown?: MonthlyBreakdownItem[];
   days: SingleSheetDayEntry[];
+  hasWageAssigned?: boolean;
+  firstPayrollDate?: string | null;
 }
 
 export interface WorkerSummaryItem {
@@ -102,7 +105,10 @@ export interface WorkerSummaryItem {
   profileImageUrl?: string;
   role: string;
   dailyWage: number;
+  dailyWageEffectiveDate?: string;
   lastSettledDate?: string;
+  firstPayrollDate?: string | null;
+  hasWageAssigned?: boolean;
   unsettledGross: number;
   unsettledDeductions: number;
   unsettledOtAmount: number;
@@ -254,7 +260,7 @@ export const payrollApi = apiSlice.injectEndpoints({
 
     updateWorkerWage: builder.mutation<
       { success: boolean; data: any },
-      { workerId: string; dailyWage: number }
+      { workerId: string; dailyWage: number; effectiveDate?: string }
     >({
       query: (body) => ({
         url: '/payroll/admin/wage-rate',

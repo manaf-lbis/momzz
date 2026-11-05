@@ -3,6 +3,7 @@ import {
   calculateFullLeaveDeduction,
   calculateHalfDayDeduction,
   getWageForDate,
+  getWorkerFirstPayrollDate,
   OT_HOURLY_RATE,
   formatDateStr,
   getDatesBetween,
@@ -22,11 +23,8 @@ console.log('PASS: Floor-100 Leave Penalty correctly floors to 100.');
 
 // Test 2: Half-Day Leave
 console.log('\n[TEST 2] Half-day leave round to next 10 rule...');
-// For wage 875: half = 437.5 -> rounded to next 10 = 440 earned. Deduction = 875 - 440 = 435
 assert.strictEqual(calculateHalfDayDeduction(875), 435, '₹875 half day deduction should be ₹435 (₹440 earned)');
-// For wage 800: half = 400 -> rounded to next 10 = 400 earned. Deduction = 800 - 400 = 400
 assert.strictEqual(calculateHalfDayDeduction(800), 400, '₹800 half day deduction should be ₹400');
-// For wage 722: half = 361 -> rounded to next 10 = 370 earned. Deduction = 722 - 370 = 352
 assert.strictEqual(calculateHalfDayDeduction(722), 352, '₹722 half day deduction should be ₹352');
 console.log('PASS: Half-day leave earns half salary rounded up to next 10.');
 
@@ -38,22 +36,56 @@ assert.strictEqual(Math.floor(2.5) * OT_HOURLY_RATE, 300, '2:30 OT must calculat
 assert.strictEqual(Math.floor(3.0) * OT_HOURLY_RATE, 450, '3:00 OT must calculate as 3 hours (₹450)');
 console.log('PASS: Overtime engine strictly calculates whole hours at ₹150/hr.');
 
-// Test 4: Historical Wage Versioning
-console.log('\n[TEST 4] Historical Wage Versioning rule...');
+// Test 4: Historical Wage Versioning & Start Date Rule
+console.log('\n[TEST 4] Historical Wage Versioning & First Day rule...');
 const mockWorker: any = {
   dailyWage: 900,
+  dailyWageEffectiveDate: new Date('2026-10-01T00:00:00Z'),
   wageHistory: [
     { wage: 700, effectiveDate: new Date('2026-10-01T00:00:00Z') },
     { wage: 900, effectiveDate: new Date('2026-10-15T00:00:00Z') },
   ],
 };
-assert.strictEqual(getWageForDate(mockWorker, '2026-10-10'), 700, 'Date before wage increase must use old wage ₹700');
-assert.strictEqual(getWageForDate(mockWorker, '2026-10-15'), 900, 'Effective date must use new wage ₹900');
+assert.strictEqual(getWorkerFirstPayrollDate(mockWorker), '2026-10-01', 'First day must be the earliest wage effective date');
+assert.strictEqual(getWageForDate(mockWorker, '2026-09-30'), 0, 'Date prior to first wage decision must return ₹0');
+assert.strictEqual(getWageForDate(mockWorker, '2026-10-10'), 700, 'Date between 1st and 15th must use wage ₹700');
+assert.strictEqual(getWageForDate(mockWorker, '2026-10-15'), 900, 'Effective date of update must use new wage ₹900');
 assert.strictEqual(getWageForDate(mockWorker, '2026-10-25'), 900, 'Date after wage increase must use new wage ₹900');
-console.log('PASS: Historical wage versioning applies correct wage rates by date.');
+console.log('PASS: Historical wage versioning and first day cutoff applied correctly.');
 
-// Test 5: Date range generation
-console.log('\n[TEST 5] Date range generation...');
+// Test 5: The 3-Worker User Example
+console.log('\n[TEST 5] Multi-worker staggered joining test...');
+const worker1: any = {
+  dailyWage: 800,
+  wageHistory: [{ wage: 800, effectiveDate: new Date('2026-01-01T12:00:00Z') }],
+};
+const worker2: any = {
+  dailyWage: 850,
+  wageHistory: [{ wage: 850, effectiveDate: new Date('2026-02-01T12:00:00Z') }],
+};
+const worker3: any = {
+  dailyWage: 900,
+  wageHistory: [{ wage: 900, effectiveDate: new Date('2026-03-01T12:00:00Z') }],
+};
+const workerNoWage: any = {
+  dailyWage: 0,
+  wageHistory: [],
+};
+
+assert.strictEqual(getWorkerFirstPayrollDate(worker1), '2026-01-01');
+assert.strictEqual(getWorkerFirstPayrollDate(worker2), '2026-02-01');
+assert.strictEqual(getWorkerFirstPayrollDate(worker3), '2026-03-01');
+assert.strictEqual(getWorkerFirstPayrollDate(workerNoWage), null, 'Worker with no wage decision has no payroll start date');
+
+// Worker 3 must get 0 in January and February
+assert.strictEqual(getWageForDate(worker3, '2026-01-15'), 0, 'Worker 3 gets ₹0 in Jan');
+assert.strictEqual(getWageForDate(worker3, '2026-02-20'), 0, 'Worker 3 gets ₹0 in Feb');
+assert.strictEqual(getWageForDate(worker3, '2026-03-01'), 900, 'Worker 3 gets ₹900 on March 1');
+assert.strictEqual(getWageForDate(workerNoWage, '2026-03-01'), 0, 'Worker without wage update gets ₹0');
+console.log('PASS: Staggered workers strictly accrue only from their respective wage start dates.');
+
+// Test 6: Date range generation
+console.log('\n[TEST 6] Date range generation...');
 const dates = getDatesBetween('2026-11-01', '2026-11-05');
 assert.deepStrictEqual(dates, [
   '2026-11-01',

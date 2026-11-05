@@ -18,36 +18,73 @@ export class PayrollRepository {
       isApproved: true,
       status: 'ACTIVE',
     })
-      .select('name mobile role dailyWage dailyWageEffectiveDate wageHistory lastSettledDate profileImageUrl createdAt')
+      .select('name mobile role dailyWage dailyWageEffectiveDate wageHistory lastSettledDate payrollSnapshot profileImageUrl createdAt')
       .sort({ name: 1 });
   }
 
-  static async updateWorkerWage(workerId: string, dailyWage: number, effectiveDate?: Date): Promise<IUser | null> {
+  static async updateWorkerWage(workerId: string, dailyWage: number, effectiveDate?: Date | string): Promise<IUser | null> {
     const worker = await User.findById(workerId);
     if (!worker) return null;
 
-    const effDate = effectiveDate || new Date();
+    let effDateObj: Date;
+    if (effectiveDate) {
+      if (typeof effectiveDate === 'string') {
+        const [y, m, d] = effectiveDate.split('-').map(Number);
+        effDateObj = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+      } else {
+        const d = new Date(effectiveDate);
+        effDateObj = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0));
+      }
+    } else {
+      const now = new Date();
+      const istStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const [y, m, d] = istStr.split('-').map(Number);
+      effDateObj = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+    }
 
-    if (!worker.wageHistory || worker.wageHistory.length === 0) {
+    const effDateStr = effDateObj.toISOString().split('T')[0];
+
+    if (!worker.wageHistory) {
       worker.wageHistory = [];
-      if (worker.dailyWage && worker.dailyWage > 0) {
+    }
+
+    // Check if an entry already exists for this exact effective date
+    const existingIndex = worker.wageHistory.findIndex((h) => {
+      const hDateStr = new Date(h.effectiveDate).toISOString().split('T')[0];
+      return hDateStr === effDateStr;
+    });
+
+    if (existingIndex >= 0) {
+      worker.wageHistory[existingIndex].wage = dailyWage;
+      worker.wageHistory[existingIndex].effectiveDate = effDateObj;
+      worker.wageHistory[existingIndex].createdAt = new Date();
+    } else {
+      // If worker already had dailyWage > 0 without history, seed the first record
+      if (worker.wageHistory.length === 0 && worker.dailyWage && worker.dailyWage > 0) {
+        const initialDate = worker.dailyWageEffectiveDate || effDateObj;
         worker.wageHistory.push({
           wage: worker.dailyWage,
-          effectiveDate: worker.dailyWageEffectiveDate || worker.createdAt || new Date(0),
+          effectiveDate: initialDate,
           createdAt: worker.createdAt || new Date(),
         });
       }
+
+      worker.wageHistory.push({
+        wage: dailyWage,
+        effectiveDate: effDateObj,
+        createdAt: new Date(),
+      });
     }
 
-    worker.wageHistory.push({
-      wage: dailyWage,
-      effectiveDate: effDate,
-      createdAt: new Date(),
-    });
+    // Sort wage history ascending by effectiveDate
+    worker.wageHistory.sort(
+      (a, b) => new Date(a.effectiveDate).getTime() - new Date(b.effectiveDate).getTime()
+    );
 
     worker.dailyWage = dailyWage;
+    // The very first effective date marks the worker's start of payroll existence
     if (!worker.dailyWageEffectiveDate) {
-      worker.dailyWageEffectiveDate = worker.createdAt || effDate;
+      worker.dailyWageEffectiveDate = worker.wageHistory[0]?.effectiveDate || effDateObj;
     }
 
     const saved = await worker.save();
@@ -58,11 +95,21 @@ export class PayrollRepository {
       // cache invalidation non-fatal
     }
     try {
-      emitPayrollWageUpdated(workerId, { dailyWage, effectiveDate: effDate });
+      emitPayrollWageUpdated(workerId, { dailyWage, effectiveDate: effDateObj });
     } catch {
       // socket non-fatal
     }
     return saved;
+  }
+
+  static async updateWorkerPayrollSnapshot(workerId: string, snapshot: any): Promise<void> {
+    try {
+      await User.findByIdAndUpdate(workerId, {
+        $set: { payrollSnapshot: snapshot },
+      });
+    } catch (err) {
+      console.error('[PAYROLL DB] Failed to persist payrollSnapshot:', err);
+    }
   }
 
   static async updateWorkerLastSettledDate(workerId: string, lastSettledDate: Date): Promise<IUser | null> {

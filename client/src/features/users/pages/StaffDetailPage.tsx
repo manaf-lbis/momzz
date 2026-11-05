@@ -433,9 +433,11 @@ export const StaffDetailPage: React.FC = () => {
                   <span>{isOnline ? 'Online' : 'Active'}</span>
                 </span>
               )}
-              {isWorkerRole && staffMember.dailyWage !== undefined && (
+              {isWorkerRole && (
                 <span className="hidden xs:inline-flex text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300">
-                  ₹{staffMember.dailyWage}/day
+                  {(staffMember.dailyWage || payrollWorker?.dailyWage || 0) > 0
+                    ? `₹${staffMember.dailyWage || payrollWorker?.dailyWage}/day`
+                    : 'Wage Not Decided'}
                 </span>
               )}
             </div>
@@ -693,7 +695,15 @@ export const StaffDetailPage: React.FC = () => {
                           </span>
                         </h4>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          Wage rate: <strong className="text-slate-800 dark:text-slate-200">₹{payrollWorker?.dailyWage || staffMember?.dailyWage || 0}/day</strong>
+                          Wage rate:{' '}
+                          {(payrollWorker?.dailyWage || staffMember?.dailyWage || 0) > 0 ? (
+                            <strong className="text-slate-800 dark:text-slate-200">
+                              ₹{payrollWorker?.dailyWage || staffMember?.dailyWage}/day
+                              {payrollWorker?.firstPayrollDate ? ` (From ${payrollWorker.firstPayrollDate})` : ''}
+                            </strong>
+                          ) : (
+                            <strong className="text-amber-600 dark:text-amber-400">Not Decided Yet</strong>
+                          )}
                         </p>
                       </div>
                     </div>

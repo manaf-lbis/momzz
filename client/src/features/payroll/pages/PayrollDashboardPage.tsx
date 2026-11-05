@@ -107,6 +107,7 @@ export const PayrollDashboardPage: React.FC = () => {
 
   // Wage Form State
   const [newWage, setNewWage] = useState<number | ''>('');
+  const [wageEffectiveDate, setWageEffectiveDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   // Holiday Form State
   const [holidayDate, setHolidayDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -260,6 +261,7 @@ export const PayrollDashboardPage: React.FC = () => {
       await updateWorkerWage({
         workerId: selectedWorker.workerId,
         dailyWage: Number(newWage),
+        effectiveDate: wageEffectiveDate,
       }).unwrap();
 
       setShowWageModal(false);
@@ -626,17 +628,31 @@ export const PayrollDashboardPage: React.FC = () => {
 
                       <td className="py-3 px-4 font-mono">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
-                            {formatCurrency(w.dailyWage)}
-                          </span>
+                          {w.dailyWage > 0 ? (
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                {formatCurrency(w.dailyWage)}
+                              </span>
+                              {w.firstPayrollDate && (
+                                <span className="text-[10px] text-slate-400">
+                                  From {w.firstPayrollDate}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-rose-500 font-semibold italic">
+                              Not Decided
+                            </span>
+                          )}
                           <button
                             onClick={() => {
                               setSelectedWorker(w);
-                              setNewWage(w.dailyWage);
+                              setNewWage(w.dailyWage || '');
+                              setWageEffectiveDate(new Date().toISOString().split('T')[0]);
                               setShowWageModal(true);
                             }}
                             className="p-1 text-slate-400 hover:text-amber-500 transition"
-                            title="Edit Daily Wage"
+                            title="Set / Edit Daily Wage"
                           >
                             <Edit2 className="w-3 h-3" />
                           </button>
@@ -736,12 +752,13 @@ export const PayrollDashboardPage: React.FC = () => {
 
                     <div className="flex items-center gap-1 shrink-0">
                       <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300">
-                        ₹{w.dailyWage}/d
+                        {w.dailyWage > 0 ? `₹${w.dailyWage}/d` : 'No Wage'}
                       </span>
                       <button
                         onClick={() => {
                           setSelectedWorker(w);
-                          setNewWage(w.dailyWage);
+                          setNewWage(w.dailyWage || '');
+                          setWageEffectiveDate(new Date().toISOString().split('T')[0]);
                           setShowWageModal(true);
                         }}
                         className="p-1 text-slate-400 hover:text-amber-500 transition"
@@ -1355,8 +1372,23 @@ export const PayrollDashboardPage: React.FC = () => {
                   onChange={(e) => setNewWage(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Effective From Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={wageEffectiveDate}
+                  onChange={(e) => setWageEffectiveDate(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                />
                 <span className="text-[10px] text-slate-400 block">
-                  Takes effect from today onwards without modifying past settled records.
+                  {selectedWorker.dailyWage === 0
+                    ? "Marks the worker's very first day. All salary, attendance, and OT calculations start from this date."
+                    : 'Applies from this date onwards. Previous days retain historical wage rates.'}
                 </span>
               </div>
 

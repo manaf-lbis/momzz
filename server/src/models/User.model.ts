@@ -7,6 +7,20 @@ export interface IWageHistoryItem {
   createdAt: Date;
 }
 
+export interface IPayrollSnapshot {
+  netPayable: number;
+  unsettledGross: number;
+  unsettledDeductions: number;
+  unsettledOtAmount: number;
+  unsettledAdvances: number;
+  unsettledIncentives: number;
+  advanceOverhang: number;
+  unsettledWorkingDays: number;
+  firstPayrollDate?: string;
+  lastSettledDate?: Date;
+  lastCalculatedAt: Date;
+}
+
 export interface IUser extends Document {
   name: string;
   mobile: string;
@@ -28,6 +42,7 @@ export interface IUser extends Document {
   dailyWageEffectiveDate?: Date;
   lastSettledDate?: Date;
   wageHistory?: IWageHistoryItem[];
+  payrollSnapshot?: IPayrollSnapshot;
   mcpToken?: string;
   mcpTokenHash?: string;
   mcpTokenCreatedAt?: Date;
@@ -128,6 +143,22 @@ const UserSchema: Schema = new Schema(
         createdAt: { type: Date, default: Date.now },
       },
     ],
+    payrollSnapshot: {
+      type: {
+        netPayable: { type: Number, default: 0 },
+        unsettledGross: { type: Number, default: 0 },
+        unsettledDeductions: { type: Number, default: 0 },
+        unsettledOtAmount: { type: Number, default: 0 },
+        unsettledAdvances: { type: Number, default: 0 },
+        unsettledIncentives: { type: Number, default: 0 },
+        advanceOverhang: { type: Number, default: 0 },
+        unsettledWorkingDays: { type: Number, default: 0 },
+        firstPayrollDate: { type: String, default: null },
+        lastSettledDate: { type: Date, default: null },
+        lastCalculatedAt: { type: Date, default: null },
+      },
+      default: null,
+    },
     mcpToken: {
       type: String,
       default: null,

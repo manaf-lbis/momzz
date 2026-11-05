@@ -31,33 +31,68 @@ export function calculateHalfDayDeduction(dailyWage: number): number {
 }
 
 /**
- * Finds the applicable daily wage for a worker on a specific date string (YYYY-MM-DD).
- * If the date is earlier than worker's registration / employment creation, returns 0.
+ * Determines the very first day of existence for a worker's payroll.
+ * Rule: Whenever we decide the salary/wages of that person, that is the first day of that person.
+ * If no wage update / decision was ever made, returns null (person will not get anything).
  */
-export function getWageForDate(worker: IUser, dateStr: string): number {
-  if (worker.createdAt) {
-    const createdStr = formatDateStr(new Date(worker.createdAt));
-    if (dateStr < createdStr) return 0;
-  }
-
-  if (!worker.wageHistory || worker.wageHistory.length === 0) {
-    return worker.dailyWage || 0;
-  }
-
-  const targetDate = new Date(`${dateStr}T23:59:59.999Z`);
-  const sorted = [...worker.wageHistory].sort(
-    (a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime()
-  );
-
-  for (const record of sorted) {
-    if (new Date(record.effectiveDate) <= targetDate) {
-      return record.wage;
+export function getWorkerFirstPayrollDate(worker: IUser): string | null {
+  if (worker.wageHistory && worker.wageHistory.length > 0) {
+    const dates = worker.wageHistory
+      .map((entry) => formatDateStr(new Date(entry.effectiveDate)))
+      .filter(Boolean)
+      .sort();
+    if (dates.length > 0) {
+      return dates[0];
     }
   }
 
-  // Target date is before earliest wage in history: fallback to earliest recorded wage or current dailyWage
-  const earliestWage = sorted[sorted.length - 1]?.wage;
-  return earliestWage !== undefined ? earliestWage : (worker.dailyWage || 0);
+  if (worker.dailyWage && worker.dailyWage > 0 && worker.dailyWageEffectiveDate) {
+    return formatDateStr(new Date(worker.dailyWageEffectiveDate));
+  }
+
+  if (worker.dailyWage && worker.dailyWage > 0) {
+    return worker.createdAt ? formatDateStr(new Date(worker.createdAt)) : formatDateStr(new Date());
+  }
+
+  return null;
+}
+
+/**
+ * Finds the applicable daily wage for a worker on a specific date string (YYYY-MM-DD).
+ * Rule:
+ * 1. If date is earlier than worker's first wage decision date, returns 0.
+ * 2. If no wage was ever decided, returns 0.
+ * 3. Tracks when we updated wages: from that point onwards those wages will be effective
+ *    and previous wages are effective from previous wage updates.
+ */
+export function getWageForDate(worker: IUser, dateStr: string): number {
+  const firstPayrollDate = getWorkerFirstPayrollDate(worker);
+  if (!firstPayrollDate || dateStr < firstPayrollDate) {
+    return 0;
+  }
+
+  if (worker.wageHistory && worker.wageHistory.length > 0) {
+    const sorted = [...worker.wageHistory]
+      .map((entry) => ({
+        wage: entry.wage,
+        effectiveDateStr: formatDateStr(new Date(entry.effectiveDate)),
+      }))
+      .filter((e) => Boolean(e.effectiveDateStr))
+      .sort((a, b) => a.effectiveDateStr.localeCompare(b.effectiveDateStr));
+
+    let applicableWage = 0;
+    for (const record of sorted) {
+      if (record.effectiveDateStr <= dateStr) {
+        applicableWage = record.wage;
+      } else {
+        break;
+      }
+    }
+
+    return applicableWage;
+  }
+
+  return worker.dailyWage || 0;
 }
 
 /**
@@ -210,7 +245,12 @@ export class PayrollService {
       const worker = await PayrollRepository.findWorkerById(workerId);
       if (!worker) continue;
 
+      const workerFirstPayrollDate = getWorkerFirstPayrollDate(worker);
+      if (!workerFirstPayrollDate) continue; // cannot mark leave if worker has no wage decided
+
       for (const date of targetDates) {
+        if (date < workerFirstPayrollDate) continue; // cannot mark leave prior to worker's first wage date
+
         const dailyWage = getWageForDate(worker, date);
         const deductionAmount =
           leaveType === 'FULL_LEAVE'
@@ -262,6 +302,14 @@ export class PayrollService {
 
     const worker = await PayrollRepository.findWorkerById(params.workerId);
     if (!worker) throw new AppError('Worker not found', 404);
+
+    const firstPayrollDate = getWorkerFirstPayrollDate(worker);
+    if (!firstPayrollDate) {
+      throw new AppError('Worker daily wage has not been decided yet. Overtime cannot be claimed without an active wage.', 400);
+    }
+    if (params.date < firstPayrollDate) {
+      throw new AppError(`Cannot claim overtime for ${params.date} prior to wage effective date (${firstPayrollDate}).`, 400);
+    }
 
     // Check if worker was marked on Full Leave for this date
     const existingAdjustments = await PayrollRepository.findWageAdjustments({
@@ -352,35 +400,85 @@ export class PayrollService {
     const previousBalanceCarriedForward = lastSettlement?.carriedForwardBalance || 0;
     const lastSettledDateStr = worker.lastSettledDate ? formatDateStr(new Date(worker.lastSettledDate)) : null;
 
+    const firstPayrollDateStr = getWorkerFirstPayrollDate(worker);
+
+    if (!firstPayrollDateStr) {
+      // Worker has no wage decided yet - returns 0 and empty period
+      const emptyKpis = {
+        totalWorkingDays: 0,
+        totalSundays: 0,
+        totalHolidayDays: 0,
+        totalFullLeaveDays: 0,
+        totalHalfDays: 0,
+        grossWages: 0,
+        totalLeaveDeductions: 0,
+        netBaseWages: 0,
+        previousBalanceCarriedForward: 0,
+        totalApprovedOtHours: 0,
+        totalApprovedOtAmount: 0,
+        totalEarnings: 0,
+        totalUnsettledAdvances: 0,
+        totalUnsettledIncentives: 0,
+        netPayable: 0,
+        advanceOverhang: 0,
+        unsettledWorkingDays: 0,
+        unsettledGrossWages: 0,
+        unsettledLeaveDeductions: 0,
+        unsettledNetBaseWages: 0,
+        unsettledApprovedOtHours: 0,
+        unsettledApprovedOtAmount: 0,
+      };
+
+      // Persist snapshot to database
+      await PayrollRepository.updateWorkerPayrollSnapshot(params.workerId, {
+        ...emptyKpis,
+        firstPayrollDate: null,
+        lastSettledDate: worker.lastSettledDate || null,
+        lastCalculatedAt: new Date(),
+      });
+
+      return {
+        worker: {
+          id: worker._id,
+          name: worker.name,
+          mobile: worker.mobile,
+          profileImageUrl: worker.profileImageUrl || '',
+          dailyWage: 0,
+          dailyWageEffectiveDate: undefined,
+          lastSettledDate: worker.lastSettledDate,
+          firstPayrollDate: null,
+        },
+        period: {
+          startDate: todayStr,
+          endDate: todayStr,
+          totalDays: 0,
+        },
+        kpis: emptyKpis,
+        monthlyBreakdown: [],
+        days: [],
+        hasWageAssigned: false,
+      };
+    }
+
     // Determine calculation window:
+    // First day of worker is strictly the day their wage was decided!
     let startStr = params.startDate;
     if (!startStr) {
       if (params.includeSettledHistory) {
-        // Look back up to 60 days, but never earlier than worker's registration
-        const lookback = new Date();
-        lookback.setDate(lookback.getDate() - 60);
-        let lookbackStr = formatDateStr(lookback);
-        if (worker.createdAt) {
-          const createdStr = formatDateStr(new Date(worker.createdAt));
-          if (lookbackStr < createdStr) {
-            lookbackStr = createdStr;
-          }
-        }
-        startStr = lookbackStr;
+        // Starts on worker's first day of wage decision!
+        startStr = firstPayrollDateStr;
       } else if (lastSettledDateStr) {
-        startStr = getNextDayStr(lastSettledDateStr);
+        // Unsettled only: start from day after last settlement, clamped to first wage date
+        const dayAfter = getNextDayStr(lastSettledDateStr);
+        startStr = dayAfter < firstPayrollDateStr ? firstPayrollDateStr : dayAfter;
       } else {
-        // Unsettled: start from up to 30 days ago or worker's registration
-        const lookback = new Date();
-        lookback.setDate(lookback.getDate() - 30);
-        let lookbackStr = formatDateStr(lookback);
-        if (worker.createdAt) {
-          const createdStr = formatDateStr(new Date(worker.createdAt));
-          if (lookbackStr < createdStr) {
-            lookbackStr = createdStr;
-          }
-        }
-        startStr = lookbackStr;
+        // Unsettled with no previous settlement: strictly starts on first wage decision date
+        startStr = firstPayrollDateStr;
+      }
+    } else {
+      // Clamped so it never looks back earlier than the worker's first wage decision date
+      if (startStr < firstPayrollDateStr) {
+        startStr = firstPayrollDateStr;
       }
     }
 
@@ -709,6 +807,46 @@ export class PayrollService {
 
     const monthlyBreakdown = Array.from(monthGroups.values()).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
 
+    const kpiSummary = {
+      totalWorkingDays,
+      totalSundays,
+      totalHolidayDays,
+      totalFullLeaveDays,
+      totalHalfDays,
+      grossWages,
+      totalLeaveDeductions,
+      netBaseWages,
+      previousBalanceCarriedForward,
+      totalApprovedOtHours,
+      totalApprovedOtAmount,
+      totalEarnings: unsettledEarnings,
+      totalUnsettledAdvances,
+      totalUnsettledIncentives,
+      netPayable,
+      advanceOverhang,
+      unsettledWorkingDays,
+      unsettledGrossWages,
+      unsettledLeaveDeductions,
+      unsettledNetBaseWages,
+      unsettledApprovedOtHours,
+      unsettledApprovedOtAmount,
+    };
+
+    // Persist real-time snapshot to the database for instant queries & data resilience
+    await PayrollRepository.updateWorkerPayrollSnapshot(params.workerId, {
+      netPayable,
+      unsettledGross: unsettledGrossWages ?? grossWages,
+      unsettledDeductions: unsettledLeaveDeductions ?? totalLeaveDeductions,
+      unsettledOtAmount: unsettledApprovedOtAmount ?? totalApprovedOtAmount,
+      unsettledAdvances: totalUnsettledAdvances,
+      unsettledIncentives: totalUnsettledIncentives || 0,
+      advanceOverhang,
+      unsettledWorkingDays,
+      firstPayrollDate: firstPayrollDateStr,
+      lastSettledDate: worker.lastSettledDate || null,
+      lastCalculatedAt: new Date(),
+    });
+
     return {
       worker: {
         id: worker._id,
@@ -718,38 +856,17 @@ export class PayrollService {
         dailyWage: worker.dailyWage || 0,
         dailyWageEffectiveDate: worker.dailyWageEffectiveDate,
         lastSettledDate: worker.lastSettledDate,
+        firstPayrollDate: firstPayrollDateStr,
       },
       period: {
         startDate: startStr,
         endDate: endStr,
         totalDays: dateList.length,
       },
-      kpis: {
-        totalWorkingDays,
-        totalSundays,
-        totalHolidayDays,
-        totalFullLeaveDays,
-        totalHalfDays,
-        grossWages,
-        totalLeaveDeductions,
-        netBaseWages,
-        previousBalanceCarriedForward,
-        totalApprovedOtHours,
-        totalApprovedOtAmount,
-        totalEarnings: unsettledEarnings,
-        totalUnsettledAdvances,
-        totalUnsettledIncentives,
-        netPayable,
-        advanceOverhang,
-        unsettledWorkingDays,
-        unsettledGrossWages,
-        unsettledLeaveDeductions,
-        unsettledNetBaseWages,
-        unsettledApprovedOtHours,
-        unsettledApprovedOtAmount,
-      },
+      kpis: kpiSummary,
       monthlyBreakdown,
       days: dayEntries.reverse(), // Newest date first for instant viewing
+      hasWageAssigned: true,
     };
   }
 
@@ -839,6 +956,21 @@ export class PayrollService {
     const [sy, sm, sd] = endDateStr.split('-').map(Number);
     const settledUtcDate = new Date(Date.UTC(sy, sm - 1, sd, 12, 0, 0));
     await PayrollRepository.updateWorkerLastSettledDate(params.workerId, settledUtcDate);
+
+    // Persist settled snapshot to DB
+    await PayrollRepository.updateWorkerPayrollSnapshot(params.workerId, {
+      netPayable: carriedForwardBalance,
+      unsettledGross: 0,
+      unsettledDeductions: 0,
+      unsettledOtAmount: 0,
+      unsettledAdvances: 0,
+      unsettledIncentives: 0,
+      advanceOverhang: 0,
+      unsettledWorkingDays: 0,
+      firstPayrollDate: getWorkerFirstPayrollDate(worker),
+      lastSettledDate: settledUtcDate,
+      lastCalculatedAt: new Date(),
+    });
 
     try {
       const { emitPayrollSettled } = await import('../../config/socket');
@@ -1105,7 +1237,10 @@ export class PayrollService {
             profileImageUrl: worker.profileImageUrl || '',
             role: worker.role,
             dailyWage: worker.dailyWage || 0,
+            dailyWageEffectiveDate: worker.dailyWageEffectiveDate,
             lastSettledDate: worker.lastSettledDate,
+            firstPayrollDate: (sheet.worker as any).firstPayrollDate || getWorkerFirstPayrollDate(worker) || null,
+            hasWageAssigned: (sheet as any).hasWageAssigned !== false && Boolean(worker.dailyWage && worker.dailyWage > 0),
             unsettledGross: sheet.kpis.unsettledGrossWages ?? sheet.kpis.grossWages,
             unsettledDeductions: sheet.kpis.unsettledLeaveDeductions ?? sheet.kpis.totalLeaveDeductions,
             unsettledOtAmount: sheet.kpis.unsettledApprovedOtAmount ?? sheet.kpis.totalApprovedOtAmount,
@@ -1124,7 +1259,10 @@ export class PayrollService {
             profileImageUrl: worker.profileImageUrl || '',
             role: worker.role,
             dailyWage: worker.dailyWage || 0,
+            dailyWageEffectiveDate: worker.dailyWageEffectiveDate,
             lastSettledDate: worker.lastSettledDate,
+            firstPayrollDate: getWorkerFirstPayrollDate(worker) || null,
+            hasWageAssigned: Boolean(worker.dailyWage && worker.dailyWage > 0),
             unsettledGross: 0,
             unsettledDeductions: 0,
             unsettledOtAmount: 0,

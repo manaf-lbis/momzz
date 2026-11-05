@@ -249,7 +249,11 @@ export class PayrollController {
    */
   static async updateWorkerWage(req: Request, res: Response, next: NextFunction) {
     try {
-      const updated = await PayrollRepository.updateWorkerWage(req.body.workerId, req.body.dailyWage);
+      const updated = await PayrollRepository.updateWorkerWage(
+        req.body.workerId,
+        req.body.dailyWage,
+        req.body.effectiveDate
+      );
       if (!updated) throw new AppError('Worker not found', 404);
 
       res.status(200).json({

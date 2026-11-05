@@ -473,9 +473,18 @@ export const WorkerLedgerPage: React.FC = () => {
             )
           }
           badge={
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold font-mono">
-              ₹{(worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0}/day
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold font-mono">
+                {((worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0) > 0
+                  ? `₹${(worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage)}/day`
+                  : 'Wage Not Decided'}
+              </span>
+              {(worker?.firstPayrollDate || data?.data?.firstPayrollDate) && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold font-mono">
+                  From {worker?.firstPayrollDate || data?.data?.firstPayrollDate}
+                </span>
+              )}
+            </div>
           }
           actions={
             <div className="hidden sm:flex items-center gap-2">
@@ -522,6 +531,21 @@ export const WorkerLedgerPage: React.FC = () => {
             </div>
           }
         />
+
+        {/* Wage Not Decided Warning */}
+        {(!data?.data?.hasWageAssigned && ((worker?.dailyWage || user?.dailyWage || 0) === 0)) && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3 text-amber-800 dark:text-amber-200 animate-fadeIn">
+            <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-bold text-sm">Wage Not Yet Decided</h4>
+              <p className="text-xs opacity-90 mt-1 leading-relaxed">
+                {isAdmin
+                  ? 'This worker does not have an active daily wage configured yet. Daily attendance, shift accruals, and overtime tracking will strictly begin from the date you decide their wage in the Payroll Dashboard.'
+                  : 'Your daily wage has not been decided yet. Your salary, shift accruals, and overtime tracking will start accumulating from your wage decision date once assigned by management.'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ── HERO DUES CARD ── */}
         <div className="p-4 sm:p-5 rounded-2xl glass-modern-card border-amber-500/30 space-y-3 shadow-2xs">
@@ -765,8 +789,17 @@ export const WorkerLedgerPage: React.FC = () => {
           </div>
 
           {filteredDays.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-400 glass-modern-card rounded-2xl">
-              No daily entries recorded for this view.
+            <div className="p-8 text-center text-xs text-slate-400 glass-modern-card rounded-2xl space-y-1">
+              <p className="font-semibold text-slate-600 dark:text-slate-300">
+                {!data?.data?.hasWageAssigned && ((worker?.dailyWage || user?.dailyWage || 0) === 0)
+                  ? 'No payroll entries recorded'
+                  : 'No daily entries recorded for this view.'}
+              </p>
+              {!data?.data?.hasWageAssigned && ((worker?.dailyWage || user?.dailyWage || 0) === 0) && (
+                <p className="text-[11px] text-slate-400">
+                  Payroll calculation and ledger history will begin on the date this worker's daily wage is decided.
+                </p>
+              )}
             </div>
           ) : (
             Object.entries(groupedDays).map(([monthYear, monthDays]) => (
