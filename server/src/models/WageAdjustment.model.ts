@@ -18,6 +18,7 @@ export interface IWageAdjustment extends Document {
   otHours: number;
   status: WageAdjustmentStatus;
   deductionAmount: number;
+  isAllowedLeave?: boolean;
   note: string;
   reviewedBy?: mongoose.Types.ObjectId;
   reviewedAt?: Date;
@@ -76,6 +77,10 @@ const WageAdjustmentSchema: Schema = new Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+    isAllowedLeave: {
+      type: Boolean,
+      default: false,
     },
     note: {
       type: String,

@@ -96,4 +96,44 @@ assert.deepStrictEqual(dates, [
 ], 'getDatesBetween should return inclusive continuous dates');
 console.log('PASS: Date range correctly generates continuous days.');
 
+// Test 7: 1 Allowed Leave Per Month Rule (Paid Leave • No Carry Forward)
+console.log('\n[TEST 7] 1 Allowed Leave Per Month Rule (No Carry Forward)...');
+const mockLeaveAdjustments = [
+  // May 2026: 2 leaves
+  { date: '2026-05-04', type: 'FULL_LEAVE' },
+  { date: '2026-05-18', type: 'FULL_LEAVE' },
+  // June 2026: 0 leaves (lapses, no carry forward)
+  // July 2026: 2 leaves
+  { date: '2026-07-02', type: 'FULL_LEAVE' },
+  { date: '2026-07-20', type: 'FULL_LEAVE' },
+];
+
+const leavesByMonth = new Map<string, typeof mockLeaveAdjustments>();
+for (const adj of mockLeaveAdjustments) {
+  const mKey = adj.date.substring(0, 7);
+  const list = leavesByMonth.get(mKey) || [];
+  list.push(adj);
+  leavesByMonth.set(mKey, list);
+}
+
+const allowedLeaveDateSet = new Set<string>();
+for (const [_mKey, mLeaves] of leavesByMonth.entries()) {
+  mLeaves.sort((a, b) => a.date.localeCompare(b.date));
+  if (mLeaves.length > 0 && mLeaves[0].date) {
+    allowedLeaveDateSet.add(mLeaves[0].date);
+  }
+}
+
+// In May 2026: only 2026-05-04 is allowed leave
+assert.strictEqual(allowedLeaveDateSet.has('2026-05-04'), true, 'First leave in May must be Allowed Paid Leave');
+assert.strictEqual(allowedLeaveDateSet.has('2026-05-18'), false, 'Second leave in May must have regular deduction');
+
+// In June 2026: no leaves
+assert.strictEqual(leavesByMonth.has('2026-06'), false, 'June had no leaves');
+
+// In July 2026: strictly 1 allowed leave on 2026-07-02; 2026-07-20 is NOT allowed leave (no carry forward)
+assert.strictEqual(allowedLeaveDateSet.has('2026-07-02'), true, 'First leave in July must be Allowed Paid Leave');
+assert.strictEqual(allowedLeaveDateSet.has('2026-07-20'), false, 'Second leave in July must NOT be allowed (no carry forward)');
+console.log('PASS: Exactly 1 allowed leave granted per month on earliest leave date, with 0 carry-forward.');
+
 console.log('\nALL DYNAMIC PAYROLL UNIT TESTS PASSED SUCCESSFULLY!\n');

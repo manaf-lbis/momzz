@@ -633,6 +633,14 @@ export const WorkerLedgerPage: React.FC = () => {
                 <span>Includes {formatCurrency(kpis.totalUnsettledIncentives)} in Special Incentives</span>
               </div>
             ) : null}
+            {kpis.totalAllowedLeaves && kpis.totalAllowedLeaves > 0 ? (
+              <div className="col-span-2 sm:col-span-4 pt-1 border-t border-slate-200/50 dark:border-white/5 flex items-center justify-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                <span>
+                  Includes {kpis.totalAllowedLeaves} Monthly Allowed Leave{kpis.totalAllowedLeaves > 1 ? 's' : ''} (100% Paid • ₹0 penalty)
+                </span>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -829,7 +837,9 @@ export const WorkerLedgerPage: React.FC = () => {
                           isSun
                             ? 'opacity-65'
                             : isLeave
-                            ? 'border-l-4 border-amber-500'
+                            ? day.isAllowedLeave
+                              ? 'border-l-4 border-emerald-500 bg-emerald-500/[0.03]'
+                              : 'border-l-4 border-amber-500'
                             : isHol
                             ? 'border-l-4 border-purple-500'
                             : isInProgress
@@ -861,25 +871,48 @@ export const WorkerLedgerPage: React.FC = () => {
                                 </span>
                               ) : isLeave ? (
                                 <div className="flex flex-col gap-0.5">
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                                    <span>{day.dayType === 'FULL_LEAVE' ? 'Full Leave' : 'Half Day'} (-₹{day.leaveDeduction})</span>
-                                    {isAdmin && !day.isSettled && day.adjustmentId && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setEditingAdjustmentId(day.adjustmentId!);
-                                          setEditingLeaveDate(day.date);
-                                          setEditingLeaveType(day.dayType as 'FULL_LEAVE' | 'HALF_LEAVE');
-                                          setEditingLeaveNote(day.adjustmentNote || '');
-                                          setShowEditLeaveModal(true);
-                                        }}
-                                        title="Edit or Remove Leave"
-                                        className="p-0.5 rounded hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 transition"
-                                      >
-                                        <Edit2 className="w-2.5 h-2.5" />
-                                      </button>
-                                    )}
-                                  </span>
+                                  {day.isAllowedLeave ? (
+                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                                      <Sparkles className="w-2.5 h-2.5 text-emerald-500" />
+                                      <span>Allowed Leave (Paid • ₹0 penalty)</span>
+                                      {isAdmin && !day.isSettled && day.adjustmentId && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingAdjustmentId(day.adjustmentId!);
+                                            setEditingLeaveDate(day.date);
+                                            setEditingLeaveType(day.dayType as 'FULL_LEAVE' | 'HALF_LEAVE');
+                                            setEditingLeaveNote(day.adjustmentNote || '');
+                                            setShowEditLeaveModal(true);
+                                          }}
+                                          title="Edit or Remove Leave"
+                                          className="p-0.5 rounded hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 transition"
+                                        >
+                                          <Edit2 className="w-2.5 h-2.5" />
+                                        </button>
+                                      )}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                                      <span>{day.dayType === 'FULL_LEAVE' ? 'Full Leave' : 'Half Day'} (-₹{day.leaveDeduction})</span>
+                                      {isAdmin && !day.isSettled && day.adjustmentId && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingAdjustmentId(day.adjustmentId!);
+                                            setEditingLeaveDate(day.date);
+                                            setEditingLeaveType(day.dayType as 'FULL_LEAVE' | 'HALF_LEAVE');
+                                            setEditingLeaveNote(day.adjustmentNote || '');
+                                            setShowEditLeaveModal(true);
+                                          }}
+                                          title="Edit or Remove Leave"
+                                          className="p-0.5 rounded hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 transition"
+                                        >
+                                          <Edit2 className="w-2.5 h-2.5" />
+                                        </button>
+                                      )}
+                                    </span>
+                                  )}
                                   {day.leaveLastEditedAt && (
                                     <span className="text-[9px] text-amber-600/90 dark:text-amber-400/90 font-medium pl-0.5">
                                       Edited by {day.leaveUpdatedByName || 'Admin'}
@@ -1572,6 +1605,13 @@ export const WorkerLedgerPage: React.FC = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {days.find((d) => d.date === editingLeaveDate)?.isAllowedLeave && (
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300 animate-fadeIn">
+                <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>This leave is the <strong>1 Allowed Paid Leave</strong> of this month (₹0 deduction).</span>
+              </div>
+            )}
 
             <form onSubmit={handleEditLeaveSubmit} className="space-y-3.5">
               <div className="space-y-1">

@@ -19,6 +19,7 @@ export interface SingleSheetDayEntry {
   adjustmentNote?: string;
   leaveUpdatedByName?: string;
   leaveLastEditedAt?: string;
+  isAllowedLeave?: boolean;
   baseWage: number;
   leaveDeduction: number;
   netDayWage: number;
@@ -46,6 +47,7 @@ export interface MonthlyBreakdownItem {
   sundays: number;
   holidays: number;
   leaveDays: number;
+  allowedLeaveDays?: number;
   grossWages: number;
   leaveDeductions: number;
   netBaseWages: number;
@@ -80,6 +82,8 @@ export interface WorkerSingleSheetData {
     totalHolidayDays: number;
     totalFullLeaveDays: number;
     totalHalfDays: number;
+    totalAllowedLeaves?: number;
+    unsettledAllowedLeaves?: number;
     grossWages: number;
     totalLeaveDeductions: number;
     netBaseWages: number;

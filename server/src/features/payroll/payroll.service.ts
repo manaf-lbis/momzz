@@ -161,6 +161,7 @@ export interface SingleSheetDayEntry {
   date: string; // YYYY-MM-DD
   dayName: string;
   dayType: 'WORKING' | 'SUNDAY' | 'HOLIDAY' | 'FULL_LEAVE' | 'HALF_LEAVE';
+  isAllowedLeave?: boolean;
   holidayTitle?: string;
   adjustmentId?: string;
   adjustmentNote?: string;
@@ -201,6 +202,7 @@ export interface MonthlyBreakdownItem {
   sundays: number;
   holidays: number;
   leaveDays: number;
+  allowedLeaveDays: number;
   grossWages: number;
   leaveDeductions: number;
   netBaseWages: number;
@@ -248,21 +250,51 @@ export class PayrollService {
       const workerFirstPayrollDate = getWorkerFirstPayrollDate(worker);
       if (!workerFirstPayrollDate) continue; // cannot mark leave if worker has no wage decided
 
-      for (const date of targetDates) {
+      // Sort target dates chronologically
+      const sortedDates = [...targetDates].sort();
+
+      for (const date of sortedDates) {
         if (date < workerFirstPayrollDate) continue; // cannot mark leave prior to worker's first wage date
 
         const dailyWage = getWageForDate(worker, date);
-        const deductionAmount =
-          leaveType === 'FULL_LEAVE'
-            ? calculateFullLeaveDeduction(dailyWage)
-            : calculateHalfDayDeduction(dailyWage);
+        const mKey = date.substring(0, 7);
+        const monthStart = `${mKey}-01`;
+        const monthEnd = `${mKey}-31`;
+
+        // Check if worker already has another leave in this calendar month
+        const monthLeaves = await PayrollRepository.findWageAdjustments({
+          workerId: worker._id.toString(),
+          startDate: monthStart,
+          endDate: monthEnd,
+          types: ['FULL_LEAVE', 'HALF_LEAVE'],
+        });
+
+        const otherLeavesInMonth = monthLeaves.filter((l) => l.date !== date);
+        otherLeavesInMonth.sort((a, b) => a.date.localeCompare(b.date));
+
+        // First leave in this month is the 1 Allowed Paid Leave with ₹0 deduction
+        const isFirstInMonth = otherLeavesInMonth.length === 0 || date < otherLeavesInMonth[0].date;
+
+        let deductionAmount = 0;
+        let isAllowedLeave = false;
+
+        if (isFirstInMonth) {
+          deductionAmount = 0;
+          isAllowedLeave = true;
+        } else {
+          deductionAmount =
+            leaveType === 'FULL_LEAVE'
+              ? calculateFullLeaveDeduction(dailyWage)
+              : calculateHalfDayDeduction(dailyWage);
+        }
 
         const adj = await PayrollRepository.upsertLeaveAdjustment({
           workerId: worker._id.toString(),
           date,
           type: leaveType,
           deductionAmount,
-          note: params.note || '',
+          isAllowedLeave,
+          note: params.note || (isAllowedLeave ? 'Monthly Allowed Leave (Paid)' : ''),
         });
 
         results.push({
@@ -272,6 +304,7 @@ export class PayrollService {
           type: leaveType,
           dailyWage,
           deductionAmount,
+          isAllowedLeave,
           netDayWage: Math.max(0, dailyWage - deductionAmount),
           adjustmentId: adj._id,
         });
@@ -410,6 +443,8 @@ export class PayrollService {
         totalHolidayDays: 0,
         totalFullLeaveDays: 0,
         totalHalfDays: 0,
+        totalAllowedLeaves: 0,
+        unsettledAllowedLeaves: 0,
         grossWages: 0,
         totalLeaveDeductions: 0,
         netBaseWages: 0,
@@ -491,22 +526,38 @@ export class PayrollService {
     const holidayMap = new Map<string, IGarageHoliday>();
     holidays.forEach((h) => holidayMap.set(h.date, h));
 
+    // Fetch adjustments starting from 1st of earliest month in range to accurately track the 1 allowed leave per month
+    const startMonthFirstDay = `${startStr.substring(0, 7)}-01`;
     const adjustments = await PayrollRepository.findWageAdjustments({
       workerId: params.workerId,
-      startDate: startStr,
+      startDate: startMonthFirstDay,
       endDate: endStr,
     });
 
     const leaveMap = new Map<string, IWageAdjustment>();
     const otMap = new Map<string, IWageAdjustment[]>();
+    const leavesByMonth = new Map<string, IWageAdjustment[]>();
 
     for (const adj of adjustments) {
       if (adj.type === 'FULL_LEAVE' || adj.type === 'HALF_LEAVE') {
         leaveMap.set(adj.date, adj);
+        const mKey = adj.date.substring(0, 7);
+        const list = leavesByMonth.get(mKey) || [];
+        list.push(adj);
+        leavesByMonth.set(mKey, list);
       } else if (adj.type === 'OVERTIME') {
         const list = otMap.get(adj.date) || [];
         list.push(adj);
         otMap.set(adj.date, list);
+      }
+    }
+
+    // Determine the allowed leave for each month (the chronologically first leave taken in each calendar month)
+    const allowedLeaveDateSet = new Set<string>();
+    for (const [_mKey, mLeaves] of leavesByMonth.entries()) {
+      mLeaves.sort((a, b) => a.date.localeCompare(b.date));
+      if (mLeaves.length > 0 && mLeaves[0].date) {
+        allowedLeaveDateSet.add(mLeaves[0].date);
       }
     }
 
@@ -552,6 +603,7 @@ export class PayrollService {
     let totalHolidayDays = 0;
     let totalFullLeaveDays = 0;
     let totalHalfDays = 0;
+    let totalAllowedLeaves = 0;
     let grossWages = 0;
     let totalLeaveDeductions = 0;
     let netBaseWages = 0;
@@ -560,6 +612,7 @@ export class PayrollService {
 
     // Unsettled metrics (strictly for days/adjustments that are NOT settled yet)
     let unsettledWorkingDays = 0;
+    let unsettledAllowedLeaves = 0;
     let unsettledGrossWages = 0;
     let unsettledLeaveDeductions = 0;
     let unsettledNetBaseWages = 0;
@@ -591,28 +644,46 @@ export class PayrollService {
       let netDayWage = currentDailyWage;
       let shiftStatus: SingleSheetDayEntry['shiftStatus'] = undefined;
       let shiftNote: string | undefined = undefined;
+      let isAllowedLeave = false;
 
       if (leave) {
+        const isMonthAllowedLeave = allowedLeaveDateSet.has(dStr);
+        isAllowedLeave = isMonthAllowedLeave;
+
         if (leave.type === 'FULL_LEAVE') {
           dayType = 'FULL_LEAVE';
-          leaveDeduction = leave.deductionAmount || calculateFullLeaveDeduction(currentDailyWage);
-          netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
+          if (isMonthAllowedLeave) {
+            leaveDeduction = 0;
+            netDayWage = currentDailyWage; // Paid leave! Full daily wage paid
+            shiftStatus = 'LEAVE';
+            shiftNote = 'Monthly Allowed Leave (Paid • ₹0 deduction)';
+          } else {
+            leaveDeduction = leave.deductionAmount || calculateFullLeaveDeduction(currentDailyWage);
+            netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
+            shiftStatus = 'LEAVE';
+          }
           totalFullLeaveDays++;
           totalLeaveDeductions += leaveDeduction;
-          shiftStatus = 'LEAVE';
         } else if (leave.type === 'HALF_LEAVE') {
           dayType = 'HALF_LEAVE';
-          leaveDeduction = leave.deductionAmount || calculateHalfDayDeduction(currentDailyWage);
-          if (isShiftInProgress) {
-            // Worker marked half-day on running day: balance wage ONLY accrues after 5:00 PM IST
-            baseWage = currentDailyWage;
-            netDayWage = 0;
-            shiftStatus = 'IN_PROGRESS';
-            shiftNote = 'Half-day shift in progress (accrues after 5:00 PM)';
+          if (isMonthAllowedLeave) {
+            leaveDeduction = 0;
+            netDayWage = currentDailyWage; // Paid leave! Full daily wage paid
+            shiftStatus = 'LEAVE';
+            shiftNote = 'Monthly Allowed Leave (Half-Day Paid • ₹0 deduction)';
           } else {
-            baseWage = currentDailyWage;
-            netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
-            shiftStatus = 'COMPLETED';
+            leaveDeduction = leave.deductionAmount || calculateHalfDayDeduction(currentDailyWage);
+            if (isShiftInProgress) {
+              // Worker marked half-day on running day: balance wage ONLY accrues after 5:00 PM IST
+              baseWage = currentDailyWage;
+              netDayWage = 0;
+              shiftStatus = 'IN_PROGRESS';
+              shiftNote = 'Half-day shift in progress (accrues after 5:00 PM)';
+            } else {
+              baseWage = currentDailyWage;
+              netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
+              shiftStatus = 'COMPLETED';
+            }
           }
           totalHalfDays++;
           totalLeaveDeductions += leaveDeduction;
@@ -698,6 +769,13 @@ export class PayrollService {
 
       const isDaySettled = Boolean(lastSettledDateStr && dStr <= lastSettledDateStr) || (leave?.isSettled || false);
 
+      if (isAllowedLeave) {
+        totalAllowedLeaves++;
+        if (!isDaySettled) {
+          unsettledAllowedLeaves++;
+        }
+      }
+
       // Unsettled tallies strictly for days not settled
       if (!isDaySettled) {
         if (dayType === 'WORKING' && !isShiftInProgress) {
@@ -718,6 +796,7 @@ export class PayrollService {
         date: dStr,
         dayName,
         dayType,
+        isAllowedLeave,
         holidayTitle: holiday?.title,
         adjustmentId: leave?._id?.toString(),
         adjustmentNote: leave?.note,
@@ -767,6 +846,7 @@ export class PayrollService {
           sundays: 0,
           holidays: 0,
           leaveDays: 0,
+          allowedLeaveDays: 0,
           grossWages: 0,
           leaveDeductions: 0,
           netBaseWages: 0,
@@ -786,6 +866,7 @@ export class PayrollService {
       if (entry.dayType === 'SUNDAY') group.sundays++;
       if (entry.dayType === 'HOLIDAY') group.holidays++;
       if (entry.dayType === 'FULL_LEAVE' || entry.dayType === 'HALF_LEAVE') group.leaveDays++;
+      if (entry.isAllowedLeave) group.allowedLeaveDays++;
 
       group.grossWages += entry.baseWage;
       group.leaveDeductions += entry.leaveDeduction;
@@ -813,6 +894,8 @@ export class PayrollService {
       totalHolidayDays,
       totalFullLeaveDays,
       totalHalfDays,
+      totalAllowedLeaves,
+      unsettledAllowedLeaves,
       grossWages,
       totalLeaveDeductions,
       netBaseWages,
@@ -1094,8 +1177,26 @@ export class PayrollService {
     const leaveType = params.type || (adj.type as 'FULL_LEAVE' | 'HALF_LEAVE');
     const dailyWage = getWageForDate(worker, targetDate);
 
-    let deductionAmount = adj.deductionAmount;
-    if (leaveType === 'FULL_LEAVE') {
+    const mKey = targetDate.substring(0, 7);
+    const monthLeaves = await PayrollRepository.findWageAdjustments({
+      workerId: workerIdStr,
+      startDate: `${mKey}-01`,
+      endDate: `${mKey}-31`,
+      types: ['FULL_LEAVE', 'HALF_LEAVE'],
+    });
+
+    const otherLeavesInMonth = monthLeaves.filter((l) => l._id.toString() !== params.adjustmentId);
+    otherLeavesInMonth.sort((a, b) => a.date.localeCompare(b.date));
+
+    // First leave in month is the Allowed Paid Leave with ₹0 deduction
+    const isFirstInMonth = otherLeavesInMonth.length === 0 || targetDate <= otherLeavesInMonth[0].date;
+
+    let deductionAmount = 0;
+    let isAllowedLeave = false;
+    if (isFirstInMonth) {
+      deductionAmount = 0;
+      isAllowedLeave = true;
+    } else if (leaveType === 'FULL_LEAVE') {
       deductionAmount = calculateFullLeaveDeduction(dailyWage);
     } else if (leaveType === 'HALF_LEAVE') {
       deductionAmount = calculateHalfDayDeduction(dailyWage);
@@ -1112,7 +1213,7 @@ export class PayrollService {
             deductionAmount: adj.deductionAmount,
             note: adj.note,
           },
-          note: `Modified leave from ${adj.type} to ${leaveType}`,
+          note: `Modified leave from ${adj.type} to ${leaveType}${isAllowedLeave ? ' (Monthly Allowed Leave)' : ''}`,
         }
       : undefined;
 
@@ -1122,6 +1223,7 @@ export class PayrollService {
         type: leaveType,
         date: targetDate,
         deductionAmount,
+        isAllowedLeave,
         note: params.note !== undefined ? params.note : adj.note,
         updatedBy: params.updatedBy ? new mongoose.Types.ObjectId(params.updatedBy) : undefined,
         updatedByName: params.updatedByName || 'Admin',

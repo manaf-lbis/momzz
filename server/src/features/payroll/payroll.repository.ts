@@ -170,6 +170,7 @@ export class PayrollRepository {
     date: string;
     type: 'FULL_LEAVE' | 'HALF_LEAVE';
     deductionAmount: number;
+    isAllowedLeave?: boolean;
     note?: string;
   }): Promise<IWageAdjustment> {
     return WageAdjustment.findOneAndUpdate(
@@ -184,6 +185,7 @@ export class PayrollRepository {
         type: data.type,
         status: 'APPROVED',
         deductionAmount: data.deductionAmount,
+        isAllowedLeave: data.isAllowedLeave || false,
         note: data.note || '',
         otHours: 0,
       },
@@ -235,6 +237,7 @@ export class PayrollRepository {
       otHours: number;
       status: WageAdjustmentStatus;
       deductionAmount: number;
+      isAllowedLeave?: boolean;
       note: string;
       date: string;
       reviewedBy?: mongoose.Types.ObjectId;
