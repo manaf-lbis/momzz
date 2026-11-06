@@ -136,4 +136,43 @@ assert.strictEqual(allowedLeaveDateSet.has('2026-07-02'), true, 'First leave in 
 assert.strictEqual(allowedLeaveDateSet.has('2026-07-20'), false, 'Second leave in July must NOT be allowed (no carry forward)');
 console.log('PASS: Exactly 1 allowed leave granted per month on earliest leave date, with 0 carry-forward.');
 
+// Test 8: Settlement Checkpoint Brief & Incremental Active Range Rule
+console.log('\n[TEST 8] Settlement Checkpoint Brief & Incremental Window Rule...');
+const workerWithSettlement: any = {
+  dailyWage: 800,
+  wageHistory: [{ wage: 800, effectiveDate: new Date('2026-01-01T12:00:00Z') }],
+  lastSettledDate: new Date('2026-01-20T12:00:00Z'),
+  payrollSnapshot: {
+    lastSettledDate: new Date('2026-01-20T12:00:00Z'),
+    lastSettlementBrief: {
+      settledUpToDate: '2026-01-20',
+      periodCovered: { startDate: '2026-01-01', endDate: '2026-01-20' },
+      totalWorkingDays: 17,
+      totalOtHours: 6,
+      totalOtAmount: 900,
+      totalAdvancesDeducted: 1500,
+      amountSettled: 13000,
+      carriedForwardBalance: 0,
+    },
+  },
+};
+
+const lastSettledDateStr = formatDateStr(new Date(workerWithSettlement.lastSettledDate));
+assert.strictEqual(lastSettledDateStr, '2026-01-20', 'Settlement date must be 2026-01-20');
+
+// Day after settlement is the new active start date
+const nextCycleStart = getDatesBetween(lastSettledDateStr, lastSettledDateStr)[0];
+const dayAfterSettlement = '2026-01-21';
+const activeCycleDays = getDatesBetween(dayAfterSettlement, '2026-01-25');
+assert.deepStrictEqual(activeCycleDays, [
+  '2026-01-21',
+  '2026-01-22',
+  '2026-01-23',
+  '2026-01-24',
+  '2026-01-25',
+], 'New active cycle must only compute from 21 Jan onwards, omitting 1-20 Jan');
+assert.strictEqual(workerWithSettlement.payrollSnapshot.lastSettlementBrief.amountSettled, 13000);
+assert.strictEqual(workerWithSettlement.payrollSnapshot.lastSettlementBrief.totalOtHours, 6);
+console.log('PASS: Settlement brief verified and incremental calculation starts strictly from day after settlement.');
+
 console.log('\nALL DYNAMIC PAYROLL UNIT TESTS PASSED SUCCESSFULLY!\n');

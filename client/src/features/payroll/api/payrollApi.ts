@@ -60,6 +60,37 @@ export interface MonthlyBreakdownItem {
   isSettled: boolean;
 }
 
+export interface ISettlementBrief {
+  settlementId?: string;
+  settledAt: string;
+  settledUpToDate: string;
+  periodCovered: {
+    startDate: string;
+    endDate: string;
+  };
+  dailyWageAtSettlement: number;
+  totalWorkingDays: number;
+  totalSundays: number;
+  totalHolidays: number;
+  totalFullLeaves: number;
+  totalHalfDays: number;
+  allowedLeaveDays: number;
+  grossWages: number;
+  totalLeaveDeduction: number;
+  netBaseWage: number;
+  totalOtHours: number;
+  totalOtAmount: number;
+  totalAdvancesDeducted: number;
+  totalIncentives: number;
+  netPayableBeforePayout: number;
+  amountSettled: number;
+  carriedForwardBalance: number;
+  advanceOverhang: number;
+  paymentMethod: string;
+  referenceNote?: string;
+  settledByName: string;
+}
+
 export interface WorkerSingleSheetData {
   worker: {
     id: string;
@@ -100,6 +131,19 @@ export interface WorkerSingleSheetData {
   days: SingleSheetDayEntry[];
   hasWageAssigned?: boolean;
   firstPayrollDate?: string | null;
+  settlements?: Array<{
+    id: string;
+    date: string;
+    amount: number;
+    periodCovered?: { startDate: string; endDate: string };
+    notes?: string;
+    paymentMethod?: string;
+    referenceNote?: string;
+    settledByName?: string;
+    carriedForwardBalance?: number;
+    itemizedSummary?: ISettlementBrief;
+  }>;
+  lastSettlementBrief?: ISettlementBrief | null;
 }
 
 export interface WorkerSummaryItem {

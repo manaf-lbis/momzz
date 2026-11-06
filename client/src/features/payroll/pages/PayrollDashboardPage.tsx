@@ -24,6 +24,7 @@ import {
   Share2,
   Printer,
   Copy,
+  BarChart3,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
@@ -551,6 +552,82 @@ export const PayrollDashboardPage: React.FC = () => {
             <p className="text-[10px] text-slate-400 mt-0.5">Calculated dynamically</p>
           </div>
         </div>
+
+        {/* ── WORKFORCE PAYROLL DISTRIBUTION CARD ── */}
+        {workers.length > 0 && (
+          <div className="p-3.5 sm:p-4 rounded-2xl glass-modern-card border border-slate-200/80 dark:border-white/10 space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <div className="flex items-center gap-1.5">
+                <BarChart3 className="w-3.5 h-3.5 text-amber-500" />
+                <h3 className="text-xs font-bold uppercase tracking-wider font-mono text-slate-700 dark:text-slate-300">
+                  Current Cycle Workforce Liability Split
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400">
+                {workers.length} active worker accounts
+              </span>
+            </div>
+
+            {/* Proportion Bar */}
+            {(() => {
+              const totalGross = workers.reduce((s, w) => s + (w.unsettledGross || 0), 0);
+              const totalOt = workers.reduce((s, w) => s + (w.unsettledOtAmount || 0), 0);
+              const totalAdv = workers.reduce((s, w) => s + (w.unsettledAdvances || 0), 0);
+              const totalDeduct = workers.reduce((s, w) => s + (w.unsettledDeductions || 0), 0);
+              const totalPool = Math.max(1, totalGross + totalOt);
+
+              const grossPct = Math.round((totalGross / totalPool) * 100);
+              const otPct = Math.round((totalOt / totalPool) * 100);
+
+              return (
+                <div className="space-y-2">
+                  <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden flex">
+                    <div
+                      style={{ width: `${grossPct}%` }}
+                      className="h-full bg-emerald-500 transition-all duration-500"
+                      title={`Base Wages: ${formatCurrency(totalGross)}`}
+                    />
+                    <div
+                      style={{ width: `${otPct}%` }}
+                      className="h-full bg-sky-500 transition-all duration-500"
+                      title={`Overtime: ${formatCurrency(totalOt)}`}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] sm:text-xs font-mono pt-1 text-center">
+                    <div className="p-1.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                      <span className="text-slate-400 block text-[9px] uppercase font-sans">Gross Base</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        {formatCurrency(totalGross)}
+                      </span>
+                    </div>
+
+                    <div className="p-1.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                      <span className="text-slate-400 block text-[9px] uppercase font-sans">Approved OT</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        +{formatCurrency(totalOt)}
+                      </span>
+                    </div>
+
+                    <div className="p-1.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                      <span className="text-slate-400 block text-[9px] uppercase font-sans">Leave Floor Deductions</span>
+                      <span className="font-bold text-amber-600 dark:text-amber-400">
+                        -{formatCurrency(totalDeduct)}
+                      </span>
+                    </div>
+
+                    <div className="p-1.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                      <span className="text-slate-400 block text-[9px] uppercase font-sans">Advances Drawn</span>
+                      <span className="font-bold text-rose-600 dark:text-rose-400">
+                        -{formatCurrency(totalAdv)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* ── WORKER ROSTER SECTION ── */}
         <section className="space-y-2.5">

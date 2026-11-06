@@ -7,6 +7,37 @@ export interface IWageHistoryItem {
   createdAt: Date;
 }
 
+export interface ISettlementBrief {
+  settlementId?: string;
+  settledAt: Date;
+  settledUpToDate: string; // YYYY-MM-DD
+  periodCovered: {
+    startDate: string;
+    endDate: string;
+  };
+  dailyWageAtSettlement: number;
+  totalWorkingDays: number;
+  totalSundays: number;
+  totalHolidays: number;
+  totalFullLeaves: number;
+  totalHalfDays: number;
+  allowedLeaveDays: number;
+  grossWages: number;
+  totalLeaveDeduction: number;
+  netBaseWage: number;
+  totalOtHours: number;
+  totalOtAmount: number;
+  totalAdvancesDeducted: number;
+  totalIncentives: number;
+  netPayableBeforePayout: number;
+  amountSettled: number;
+  carriedForwardBalance: number;
+  advanceOverhang: number;
+  paymentMethod: string;
+  referenceNote?: string;
+  settledByName: string;
+}
+
 export interface IPayrollSnapshot {
   netPayable: number;
   unsettledGross: number;
@@ -16,9 +47,10 @@ export interface IPayrollSnapshot {
   unsettledIncentives: number;
   advanceOverhang: number;
   unsettledWorkingDays: number;
-  firstPayrollDate?: string;
-  lastSettledDate?: Date;
+  firstPayrollDate?: string | null;
+  lastSettledDate?: Date | null;
   lastCalculatedAt: Date;
+  lastSettlementBrief?: ISettlementBrief | null;
 }
 
 export interface IUser extends Document {
@@ -156,6 +188,7 @@ const UserSchema: Schema = new Schema(
         firstPayrollDate: { type: String, default: null },
         lastSettledDate: { type: Date, default: null },
         lastCalculatedAt: { type: Date, default: null },
+        lastSettlementBrief: { type: Schema.Types.Mixed, default: null },
       },
       default: null,
     },

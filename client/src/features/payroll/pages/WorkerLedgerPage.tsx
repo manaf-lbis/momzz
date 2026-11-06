@@ -24,12 +24,16 @@ import {
   Printer,
   Copy,
   Check,
+  BarChart3,
+  FileText,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
 import { useAuth } from '../../../shared/hooks/useAuth';
+import { PayrollAnalyticsGraph } from '../components/PayrollAnalyticsGraph';
+import { SettlementHistoryBriefs } from '../components/SettlementHistoryBriefs';
 import {
   useGetWorkerSingleSheetQuery,
   useGetMySingleSheetQuery,
@@ -91,6 +95,10 @@ export const WorkerLedgerPage: React.FC = () => {
   const [showEditLeaveModal, setShowEditLeaveModal] = useState(false);
   const [showEditOtModal, setShowEditOtModal] = useState(false);
   const [showMobileActionSheet, setShowMobileActionSheet] = useState(false);
+
+  // Active view tab in ledger
+  const [ledgerTab, setLedgerTab] = useState<'STREAM' | 'BRIEFS' | 'ANALYTICS'>('STREAM');
+  const [showGraph, setShowGraph] = useState<boolean>(true);
 
   // OT Form State
   const [otDate, setOtDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -210,6 +218,8 @@ export const WorkerLedgerPage: React.FC = () => {
   };
   const days = data?.data?.days || [];
   const monthlyBreakdown = data?.data?.monthlyBreakdown || [];
+  const settlements = data?.data?.settlements || [];
+  const lastSettlementBrief = data?.data?.lastSettlementBrief;
 
   // Month filter state ('ALL' or 'YYYY-MM')
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
@@ -758,15 +768,135 @@ export const WorkerLedgerPage: React.FC = () => {
           </section>
         )}
 
-        {/* ── CONTINUOUS SINGLE-SHEET STREAM & FILTERS ── */}
-        <section className="space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <CalendarDays className="w-3.5 h-3.5 text-amber-500" />
-              <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400">
-                Daily Transaction Stream
-              </h2>
+        {/* ── WORKER LEDGER SECTION NAVIGATION TABS ── */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-x-auto scrollbar-none shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setLedgerTab('STREAM')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              ledgerTab === 'STREAM'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span>Continuous Ledger</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                ledgerTab === 'STREAM' ? 'bg-black/20 text-white' : 'bg-slate-200 dark:bg-white/10'
+              }`}
+            >
+              {days.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLedgerTab('BRIEFS')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              ledgerTab === 'BRIEFS'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Settlement Briefs</span>
+            {settlements.length > 0 && (
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                  ledgerTab === 'BRIEFS'
+                    ? 'bg-black/20 text-white'
+                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                }`}
+              >
+                {settlements.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLedgerTab('ANALYTICS')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              ledgerTab === 'ANALYTICS'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Salary Graph</span>
+          </button>
+        </div>
+
+        {/* ── TAB 2: SETTLEMENT BRIEFS ARCHIVE ── */}
+        {ledgerTab === 'BRIEFS' && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400">
+                  Payment History & Settlement Briefs
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400">
+                {settlements.length} settlement(s) archived
+              </span>
             </div>
+
+            <SettlementHistoryBriefs
+              settlements={settlements}
+              workerName={worker?.name || (!isAdmin ? user?.name : undefined) || 'Worker'}
+            />
+          </section>
+        )}
+
+        {/* ── TAB 3: SALARY ANALYTICS GRAPH ── */}
+        {ledgerTab === 'ANALYTICS' && (
+          <section className="space-y-3">
+            <PayrollAnalyticsGraph
+              monthlyData={monthlyBreakdown}
+              workerDailyWage={(worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0}
+            />
+          </section>
+        )}
+
+        {/* ── TAB 1: CONTINUOUS SINGLE-SHEET STREAM & FILTERS ── */}
+        {ledgerTab === 'STREAM' && (
+          <section className="space-y-3">
+            {/* Quick Interactive Salary Graph inside Stream */}
+            {monthlyBreakdown.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[11px] font-mono uppercase text-slate-400 font-bold flex items-center gap-1.5">
+                    <BarChart3 className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Visual Trend Preview</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowGraph(!showGraph)}
+                    className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline transition"
+                  >
+                    {showGraph ? 'Hide Graph' : 'Show Graph'}
+                  </button>
+                </div>
+                {showGraph && (
+                  <PayrollAnalyticsGraph
+                    monthlyData={monthlyBreakdown}
+                    workerDailyWage={
+                      (worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0
+                    }
+                  />
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <CalendarDays className="w-3.5 h-3.5 text-amber-500" />
+                <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400">
+                  Daily Transaction Stream
+                </h2>
+              </div>
 
             {/* Month Filter Selector Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
@@ -1109,6 +1239,7 @@ export const WorkerLedgerPage: React.FC = () => {
             </div>
           )}
         </section>
+      )}
       </main>
 
       {/* ── MODAL: MOBILE QUICK ACTIONS SHEET ── */}

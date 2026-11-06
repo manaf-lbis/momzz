@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { PayrollRepository } from './payroll.repository';
-import { IUser } from '../../models/User.model';
+import { IUser, ISettlementBrief } from '../../models/User.model';
 import { IWageAdjustment } from '../../models/WageAdjustment.model';
 import { IGarageHoliday } from '../../models/GarageHoliday.model';
 import { IWageTransaction, WageTransactionType } from '../../models/WageTransaction.model';
@@ -470,6 +470,7 @@ export class PayrollService {
         firstPayrollDate: null,
         lastSettledDate: worker.lastSettledDate || null,
         lastCalculatedAt: new Date(),
+        lastSettlementBrief: null,
       });
 
       return {
@@ -492,6 +493,8 @@ export class PayrollService {
         monthlyBreakdown: [],
         days: [],
         hasWageAssigned: false,
+        settlements: [],
+        lastSettlementBrief: null,
       };
     }
 
@@ -915,6 +918,62 @@ export class PayrollService {
       unsettledApprovedOtAmount,
     };
 
+    // Fetch historical settlements for archive briefs
+    const settlements = await PayrollRepository.findWageTransactions({
+      workerId: params.workerId,
+      type: 'PAYOUT_SETTLEMENT',
+    });
+
+    const formattedSettlements = settlements.map((s) => ({
+      id: s._id.toString(),
+      date: formatDateStr(new Date(s.date)),
+      amount: s.amount,
+      periodCovered: s.periodCovered
+        ? {
+            startDate: s.periodCovered.startDate ? formatDateStr(new Date(s.periodCovered.startDate)) : '',
+            endDate: s.periodCovered.endDate ? formatDateStr(new Date(s.periodCovered.endDate)) : '',
+          }
+        : undefined,
+      notes: s.notes,
+      paymentMethod: s.paymentMethod,
+      referenceNote: s.referenceNote,
+      settledByName: s.settledByName,
+      carriedForwardBalance: s.carriedForwardBalance || 0,
+      itemizedSummary: s.itemizedSummary,
+    }));
+
+    const lastSettlementBrief: ISettlementBrief | null =
+      (worker.payrollSnapshot as any)?.lastSettlementBrief ||
+      (formattedSettlements.length > 0 && formattedSettlements[0].itemizedSummary
+        ? {
+            settlementId: formattedSettlements[0].id,
+            settledAt: new Date(settlements[0].date),
+            settledUpToDate: formattedSettlements[0].periodCovered?.endDate || '',
+            periodCovered: formattedSettlements[0].periodCovered || { startDate: '', endDate: '' },
+            dailyWageAtSettlement: formattedSettlements[0].itemizedSummary.dailyWageAtSettlement || worker.dailyWage || 0,
+            totalWorkingDays: formattedSettlements[0].itemizedSummary.totalWorkingDays || 0,
+            totalSundays: formattedSettlements[0].itemizedSummary.totalSundays || 0,
+            totalHolidays: formattedSettlements[0].itemizedSummary.totalHolidays || 0,
+            totalFullLeaves: formattedSettlements[0].itemizedSummary.totalFullLeaves || 0,
+            totalHalfDays: formattedSettlements[0].itemizedSummary.totalHalfDays || 0,
+            allowedLeaveDays: formattedSettlements[0].itemizedSummary.allowedLeaveDays || 0,
+            grossWages: formattedSettlements[0].itemizedSummary.grossWages || 0,
+            totalLeaveDeduction: formattedSettlements[0].itemizedSummary.totalLeaveDeduction || 0,
+            netBaseWage: formattedSettlements[0].itemizedSummary.netBaseWage || 0,
+            totalOtHours: formattedSettlements[0].itemizedSummary.totalOtHours || 0,
+            totalOtAmount: formattedSettlements[0].itemizedSummary.totalOtAmount || 0,
+            totalAdvancesDeducted: formattedSettlements[0].itemizedSummary.totalAdvancesDeducted || 0,
+            totalIncentives: formattedSettlements[0].itemizedSummary.totalIncentives || 0,
+            netPayableBeforePayout: formattedSettlements[0].itemizedSummary.netPayableBeforePayout || formattedSettlements[0].amount,
+            amountSettled: formattedSettlements[0].amount,
+            carriedForwardBalance: formattedSettlements[0].carriedForwardBalance || 0,
+            advanceOverhang: formattedSettlements[0].itemizedSummary.advanceOverhang || 0,
+            paymentMethod: formattedSettlements[0].paymentMethod || 'CASH',
+            referenceNote: formattedSettlements[0].referenceNote,
+            settledByName: formattedSettlements[0].settledByName || 'Admin',
+          }
+        : null);
+
     // Persist real-time snapshot to the database for instant queries & data resilience
     await PayrollRepository.updateWorkerPayrollSnapshot(params.workerId, {
       netPayable,
@@ -928,6 +987,7 @@ export class PayrollService {
       firstPayrollDate: firstPayrollDateStr,
       lastSettledDate: worker.lastSettledDate || null,
       lastCalculatedAt: new Date(),
+      lastSettlementBrief,
     });
 
     return {
@@ -950,6 +1010,8 @@ export class PayrollService {
       monthlyBreakdown,
       days: dayEntries.reverse(), // Newest date first for instant viewing
       hasWageAssigned: true,
+      lastSettlementBrief,
+      settlements: formattedSettlements,
     };
   }
 
@@ -984,6 +1046,37 @@ export class PayrollService {
     const amountToDisburse = params.amountPaid !== undefined ? params.amountPaid : netPayable;
     const carriedForwardBalance = Math.max(0, netPayable - amountToDisburse);
 
+    const settlementBrief: ISettlementBrief = {
+      settlementId: '',
+      settledAt: new Date(),
+      settledUpToDate: endDateStr,
+      periodCovered: {
+        startDate: sheet.period.startDate,
+        endDate: endDateStr,
+      },
+      dailyWageAtSettlement: worker.dailyWage || 0,
+      totalWorkingDays: sheet.kpis.totalWorkingDays,
+      totalSundays: sheet.kpis.totalSundays,
+      totalHolidays: sheet.kpis.totalHolidayDays,
+      totalFullLeaves: sheet.kpis.totalFullLeaveDays,
+      totalHalfDays: sheet.kpis.totalHalfDays,
+      allowedLeaveDays: sheet.kpis.totalAllowedLeaves || 0,
+      grossWages: sheet.kpis.grossWages,
+      totalLeaveDeduction: sheet.kpis.totalLeaveDeductions,
+      netBaseWage: sheet.kpis.netBaseWages,
+      totalOtHours: sheet.kpis.totalApprovedOtHours,
+      totalOtAmount: sheet.kpis.totalApprovedOtAmount,
+      totalAdvancesDeducted: sheet.kpis.totalUnsettledAdvances,
+      totalIncentives: (sheet.kpis as any).totalUnsettledIncentives || 0,
+      netPayableBeforePayout: netPayable,
+      amountSettled: amountToDisburse,
+      carriedForwardBalance,
+      advanceOverhang: sheet.kpis.advanceOverhang || 0,
+      paymentMethod: params.paymentMethod || 'CASH',
+      referenceNote: params.referenceNote || '',
+      settledByName: params.settledByName || 'Admin',
+    };
+
     // Create Settlement WageTransaction
     const settlementTx = await PayrollRepository.createWageTransaction({
       workerId: params.workerId,
@@ -999,22 +1092,10 @@ export class PayrollService {
       referenceNote: params.referenceNote || '',
       settledByName: params.settledByName || 'Admin',
       carriedForwardBalance,
-      itemizedSummary: {
-        totalWorkingDays: sheet.kpis.totalWorkingDays,
-        totalSundays: sheet.kpis.totalSundays,
-        totalHolidays: sheet.kpis.totalHolidayDays,
-        totalFullLeaves: sheet.kpis.totalFullLeaveDays,
-        totalHalfDays: sheet.kpis.totalHalfDays,
-        grossWages: sheet.kpis.grossWages,
-        totalLeaveDeduction: sheet.kpis.totalLeaveDeductions,
-        netBaseWage: sheet.kpis.netBaseWages,
-        totalOtHours: sheet.kpis.totalApprovedOtHours,
-        totalOtAmount: sheet.kpis.totalApprovedOtAmount,
-        totalAdvancesDeducted: sheet.kpis.totalUnsettledAdvances,
-        totalIncentives: (sheet.kpis as any).totalUnsettledIncentives || 0,
-        carriedForwardBalance,
-      },
+      itemizedSummary: settlementBrief as any,
     });
+
+    settlementBrief.settlementId = settlementTx._id.toString();
 
     // Mark adjustments, advances, and incentives settled
     await PayrollRepository.markAdjustmentsSettled(
@@ -1040,7 +1121,7 @@ export class PayrollService {
     const settledUtcDate = new Date(Date.UTC(sy, sm - 1, sd, 12, 0, 0));
     await PayrollRepository.updateWorkerLastSettledDate(params.workerId, settledUtcDate);
 
-    // Persist settled snapshot to DB
+    // Persist settled snapshot to DB with the brief
     await PayrollRepository.updateWorkerPayrollSnapshot(params.workerId, {
       netPayable: carriedForwardBalance,
       unsettledGross: 0,
@@ -1053,6 +1134,7 @@ export class PayrollService {
       firstPayrollDate: getWorkerFirstPayrollDate(worker),
       lastSettledDate: settledUtcDate,
       lastCalculatedAt: new Date(),
+      lastSettlementBrief: settlementBrief,
     });
 
     try {
@@ -1102,6 +1184,12 @@ export class PayrollService {
       settledByName: params.recordedByName || 'Admin',
     });
 
+    try {
+      await this.getWorkerSingleSheet({ workerId: params.workerId, includeSettledHistory: false });
+    } catch {
+      // Snapshot sync non-fatal
+    }
+
     return {
       message: `Cash advance of ₹${params.amount} recorded for ${worker.name}`,
       advance: advanceTx,
@@ -1146,6 +1234,12 @@ export class PayrollService {
       });
     } catch {
       // Socket emission non-fatal
+    }
+
+    try {
+      await this.getWorkerSingleSheet({ workerId: params.workerId, includeSettledHistory: false });
+    } catch {
+      // Snapshot sync non-fatal
     }
 
     return {
@@ -1306,7 +1400,13 @@ export class PayrollService {
     if (tx.isSettled || tx.type === 'PAYOUT_SETTLEMENT') {
       throw new AppError('Cannot delete settled transaction or settlement payout', 400);
     }
+    const workerIdStr = (tx.workerId as any)?._id?.toString() || tx.workerId?.toString();
     await PayrollRepository.deleteWageTransaction(id);
+    try {
+      await this.getWorkerSingleSheet({ workerId: workerIdStr, includeSettledHistory: false });
+    } catch {
+      // Snapshot sync non-fatal
+    }
     return { message: 'Transaction removed successfully' };
   }
 

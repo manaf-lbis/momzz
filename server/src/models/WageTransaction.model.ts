@@ -24,6 +24,8 @@ export interface IWageTransaction extends Document {
     totalHolidays?: number;
     totalFullLeaves?: number;
     totalHalfDays?: number;
+    allowedLeaveDays?: number;
+    dailyWageAtSettlement?: number;
     grossWages?: number;
     totalLeaveDeduction?: number;
     netBaseWage?: number;
@@ -31,7 +33,10 @@ export interface IWageTransaction extends Document {
     totalOtAmount?: number;
     totalAdvancesDeducted?: number;
     totalIncentives?: number;
+    netPayableBeforePayout?: number;
+    amountSettled?: number;
     carriedForwardBalance?: number;
+    advanceOverhang?: number;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -104,13 +109,19 @@ const WageTransactionSchema: Schema = new Schema(
       totalHolidays: Number,
       totalFullLeaves: Number,
       totalHalfDays: Number,
+      allowedLeaveDays: Number,
+      dailyWageAtSettlement: Number,
       grossWages: Number,
       totalLeaveDeduction: Number,
       netBaseWage: Number,
       totalOtHours: Number,
       totalOtAmount: Number,
       totalAdvancesDeducted: Number,
+      totalIncentives: Number,
+      netPayableBeforePayout: Number,
+      amountSettled: Number,
       carriedForwardBalance: Number,
+      advanceOverhang: Number,
     },
   },
   {
