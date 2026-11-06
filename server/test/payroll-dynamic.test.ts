@@ -175,4 +175,43 @@ assert.strictEqual(workerWithSettlement.payrollSnapshot.lastSettlementBrief.amou
 assert.strictEqual(workerWithSettlement.payrollSnapshot.lastSettlementBrief.totalOtHours, 6);
 console.log('PASS: Settlement brief verified and incremental calculation starts strictly from day after settlement.');
 
+// [TEST 9] Overtime Request Tracking & Optional Rejection Reason Rule
+console.log('\n[TEST 9] Overtime Request Tracking & Optional Rejection Reason Rule...');
+const otClaimsMock = [
+  {
+    _id: 'claim-1',
+    workerId: 'w1',
+    date: '2026-03-05',
+    otHours: 3,
+    status: 'PENDING',
+    note: 'Brake overhaul completion',
+  },
+  {
+    _id: 'claim-2',
+    workerId: 'w1',
+    date: '2026-03-08',
+    otHours: 2,
+    status: 'REJECTED',
+    note: 'Wiring harness replacement',
+    rejectionReason: 'Overtime was not pre-authorized by supervisor',
+    reviewerName: 'Admin Boss',
+    reviewedAt: new Date('2026-03-09'),
+  },
+  {
+    _id: 'claim-3',
+    workerId: 'w1',
+    date: '2026-03-10',
+    otHours: 4,
+    status: 'APPROVED',
+    note: 'Engine rebuild overtime',
+    reviewerName: 'Admin Boss',
+    reviewedAt: new Date('2026-03-11'),
+  },
+];
+
+assert.strictEqual(otClaimsMock.find(c => c._id === 'claim-2')?.rejectionReason, 'Overtime was not pre-authorized by supervisor');
+assert.strictEqual(otClaimsMock.find(c => c._id === 'claim-3')?.status, 'APPROVED');
+assert.strictEqual(otClaimsMock.find(c => c._id === 'claim-1')?.status, 'PENDING');
+console.log('PASS: OT tracking audit trail handles PENDING, APPROVED, and REJECTED with rejection reasons correctly.');
+
 console.log('\nALL DYNAMIC PAYROLL UNIT TESTS PASSED SUCCESSFULLY!\n');

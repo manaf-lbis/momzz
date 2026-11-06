@@ -23,6 +23,7 @@ export const otClaimSchema = z.object({
 export const otStatusSchema = z.object({
   status: z.enum(['APPROVED', 'REJECTED']),
   note: z.string().optional(),
+  rejectionReason: z.string().optional(),
 });
 
 export const settlePayrollSchema = z.object({

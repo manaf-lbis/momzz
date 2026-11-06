@@ -31,6 +31,9 @@ export interface SingleSheetDayEntry {
   otClaimId?: string;
   otClaimNote?: string;
   otFlaggedReason?: string;
+  otRejectionReason?: string;
+  otReviewedByName?: string;
+  otReviewedAt?: string;
   otUpdatedByName?: string;
   otLastEditedAt?: string;
   netDailyPay: number;
@@ -144,6 +147,31 @@ export interface WorkerSingleSheetData {
     itemizedSummary?: ISettlementBrief;
   }>;
   lastSettlementBrief?: ISettlementBrief | null;
+  otClaims?: IOtClaimItem[];
+}
+
+export interface IOtClaimItem {
+  id: string;
+  workerId: string;
+  workerName: string;
+  workerMobile: string;
+  workerProfileImageUrl?: string;
+  dailyWage?: number;
+  date: string;
+  otHours: number;
+  amount: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  note?: string;
+  rejectionReason?: string;
+  reviewedBy?: string;
+  reviewerName?: string;
+  reviewedAt?: string;
+  flaggedReason?: string;
+  updatedByName?: string;
+  lastEditedAt?: string;
+  isSettled?: boolean;
+  settledAt?: string;
+  createdAt?: string;
 }
 
 export interface WorkerSummaryItem {
@@ -261,7 +289,7 @@ export const payrollApi = apiSlice.injectEndpoints({
 
     updateOtStatus: builder.mutation<
       { success: boolean; data: any },
-      { id: string; status: 'APPROVED' | 'REJECTED'; note?: string }
+      { id: string; status: 'APPROVED' | 'REJECTED'; note?: string; rejectionReason?: string }
     >({
       query: ({ id, ...body }) => ({
         url: `/payroll/ot/${id}/status`,
@@ -269,6 +297,17 @@ export const payrollApi = apiSlice.injectEndpoints({
         body,
       }),
       invalidatesTags: ['Payroll'],
+    }),
+
+    getOtClaims: builder.query<
+      { success: boolean; data: IOtClaimItem[] },
+      { workerId?: string; status?: string; startDate?: string; endDate?: string; limit?: number } | void
+    >({
+      query: (params) => ({
+        url: '/payroll/ot/claims',
+        params: params || {},
+      }),
+      providesTags: ['Payroll'],
     }),
 
     settlePayroll: builder.mutation<
@@ -432,6 +471,7 @@ export const {
   useMarkBatchLeaveMutation,
   useClaimOvertimeMutation,
   useUpdateOtStatusMutation,
+  useGetOtClaimsQuery,
   useSettlePayrollMutation,
   useRecordAdvanceMutation,
   useRecordIncentiveMutation,

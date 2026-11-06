@@ -47,21 +47,56 @@ export class PayrollController {
 
   /**
    * PATCH /api/payroll/ot/:id/status
-   * Admin approves or rejects OT claim
+   * Admin approves or rejects OT claim with audit information and rejection reason
    */
   static async updateOtStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const adminId = (req as any).user?._id?.toString() || 'Admin';
+      const adminName = (req as any).user?.name || 'Admin';
       const result = await PayrollService.reviewOtClaim({
         claimId: req.params.id,
         status: req.body.status,
         reviewedBy: adminId,
+        reviewerName: adminName,
         note: req.body.note,
+        rejectionReason: req.body.rejectionReason,
       });
 
       res.status(200).json({
         success: true,
         data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/payroll/ot/claims
+   * Track OT claims for both Admin & Worker with status filtering & audit metadata
+   */
+  static async getOtClaims(req: Request, res: Response, next: NextFunction) {
+    try {
+      const user = (req as any).user;
+      const isAdmin = user?.role === 'ADMIN';
+      const requestedWorkerId = req.query.workerId as string;
+      const workerId = isAdmin ? requestedWorkerId : user?._id?.toString();
+      const status = req.query.status as any;
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+
+      const claims = await PayrollService.getOtClaimsList({
+        workerId,
+        status,
+        startDate,
+        endDate,
+        limit,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: claims,
       });
     } catch (error) {
       next(error);

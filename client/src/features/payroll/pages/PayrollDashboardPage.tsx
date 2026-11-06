@@ -41,8 +41,10 @@ import {
   useGetHolidaysQuery,
   useDeclareHolidayMutation,
   useDeleteHolidayMutation,
+  useGetOtClaimsQuery,
   WorkerSummaryItem,
 } from '../api/payrollApi';
+import { OvertimeTrackerConsole } from '../components/OvertimeTrackerConsole';
 
 const formatCurrency = (val: number) =>
   new Intl.NumberFormat('en-IN', {
@@ -57,6 +59,14 @@ export const PayrollDashboardPage: React.FC = () => {
   // Queries
   const { data: overviewData, isLoading, refetch } = useGetAdminOverviewQuery();
   const { data: holidaysData } = useGetHolidaysQuery();
+  const { data: otClaimsData, refetch: refetchOtClaims } = useGetOtClaimsQuery();
+
+  // Navigation section: 'ROSTER' | 'OT_CONSOLE'
+  const [activeSection, setActiveSection] = useState<'ROSTER' | 'OT_CONSOLE'>('ROSTER');
+
+  // OT Rejection modal state
+  const [rejectingClaim, setRejectingClaim] = useState<any | null>(null);
+  const [rejectionReasonInput, setRejectionReasonInput] = useState('');
 
   // Mutations
   const [markBatchLeave, { isLoading: isMarkingLeave }] = useMarkBatchLeaveMutation();
@@ -122,6 +132,7 @@ export const PayrollDashboardPage: React.FC = () => {
   const allRawWorkers = overviewData?.data?.workers || [];
   const workers = useMemo(() => allRawWorkers.filter((w) => w.role !== 'ADMIN'), [allRawWorkers]);
   const pendingOtClaims = overviewData?.data?.pendingOtClaims || [];
+  const allOtClaims = otClaimsData?.data || [];
   const kpis = overviewData?.data?.kpis || { totalWorkers: 0, totalUnsettledNet: 0, totalPendingOtCount: 0 };
   const holidays = holidaysData?.data || [];
 
@@ -176,13 +187,26 @@ export const PayrollDashboardPage: React.FC = () => {
   };
 
   // Handle OT Review
-  const handleReviewOt = async (id: string, status: 'APPROVED' | 'REJECTED') => {
+  const handleReviewOt = async (id: string, status: 'APPROVED' | 'REJECTED', rejectionReason?: string) => {
     try {
-      await updateOtStatus({ id, status }).unwrap();
+      await updateOtStatus({
+        id,
+        status,
+        rejectionReason: rejectionReason || undefined,
+        note: rejectionReason || undefined,
+      }).unwrap();
       refetch();
+      refetchOtClaims();
     } catch (err: any) {
       alert(err?.data?.message || 'Failed to update overtime status');
     }
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectingClaim) return;
+    await handleReviewOt(rejectingClaim.id, 'REJECTED', rejectionReasonInput.trim());
+    setRejectingClaim(null);
+    setRejectionReasonInput('');
   };
 
   // Handle Cash Advance Submit
@@ -498,7 +522,10 @@ export const PayrollDashboardPage: React.FC = () => {
                     </button>
                     <button
                       disabled={isUpdatingOt}
-                      onClick={() => handleReviewOt(claim.id, 'REJECTED')}
+                      onClick={() => {
+                        setRejectingClaim(claim);
+                        setRejectionReasonInput('');
+                      }}
                       className="py-1.5 px-3 text-[11px] font-bold rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-1 transition active:scale-95"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -629,8 +656,50 @@ export const PayrollDashboardPage: React.FC = () => {
           </div>
         )}
 
-        {/* ── WORKER ROSTER SECTION ── */}
-        <section className="space-y-2.5">
+        {/* ── SECTION NAVIGATION TABS: ROSTER vs. OVERTIME TRACKER ── */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-2xs overflow-x-auto scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setActiveSection('ROSTER')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              activeSection === 'ROSTER'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Staff Roster & Dues</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                activeSection === 'ROSTER' ? 'bg-black/20 text-white' : 'bg-slate-200 dark:bg-white/10'
+              }`}
+            >
+              {workers.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSection('OT_CONSOLE')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              activeSection === 'OT_CONSOLE'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>Overtime Tracker & Audit Console</span>
+            {pendingOtClaims.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-amber-500 text-white font-bold animate-pulse">
+                {pendingOtClaims.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* ── VIEW 1: WORKER ROSTER SECTION ── */}
+        {activeSection === 'ROSTER' && (
+          <section className="space-y-2.5">
           {/* Section Header & Search */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
@@ -908,6 +977,17 @@ export const PayrollDashboardPage: React.FC = () => {
             )}
           </div>
         </section>
+        )}
+
+        {/* ── VIEW 2: OVERTIME TRACKER & AUDIT CONSOLE ── */}
+        {activeSection === 'OT_CONSOLE' && (
+          <section className="space-y-3">
+            <OvertimeTrackerConsole
+              claims={allOtClaims}
+              isAdmin={true}
+            />
+          </section>
+        )}
       </main>
 
       {/* ── MODAL 1: MARK BULK LEAVE (Responsive Bottom-Sheet) ── */}
@@ -1610,6 +1690,70 @@ export const PayrollDashboardPage: React.FC = () => {
                   ))
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: ADMIN REJECT OVERTIME MODAL ── */}
+      {rejectingClaim && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl glass-modern-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-4 sm:p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                  <X className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+                    Reject Overtime Request
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {rejectingClaim.workerName} &bull; {rejectingClaim.date} &bull; {rejectingClaim.otHours}h OT
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectingClaim(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Reason for Rejection (Optional)
+              </label>
+              <textarea
+                value={rejectionReasonInput}
+                onChange={(e) => setRejectionReasonInput(e.target.value)}
+                rows={3}
+                placeholder="e.g. Work completed in regular hours / supervisor did not pre-authorize..."
+                className="w-full p-2.5 text-xs rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none"
+              />
+              <p className="text-[10px] text-slate-400">
+                The mechanic will see this reason in their overtime audit tracker.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
+              <button
+                type="button"
+                onClick={() => setRejectingClaim(null)}
+                className="py-1.5 px-3 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isUpdatingOt}
+                onClick={handleConfirmReject}
+                className="py-1.5 px-4 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-500 text-white shadow-2xs transition active:scale-95 disabled:opacity-50"
+              >
+                {isUpdatingOt ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
             </div>
           </div>
         </div>

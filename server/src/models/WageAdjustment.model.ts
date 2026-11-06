@@ -21,7 +21,9 @@ export interface IWageAdjustment extends Document {
   isAllowedLeave?: boolean;
   note: string;
   reviewedBy?: mongoose.Types.ObjectId;
+  reviewerName?: string;
   reviewedAt?: Date;
+  rejectionReason?: string;
   flaggedReason?: string;
   updatedBy?: mongoose.Types.ObjectId;
   updatedByName?: string;
@@ -92,9 +94,19 @@ const WageAdjustmentSchema: Schema = new Schema(
       ref: 'User',
       default: null,
     },
+    reviewerName: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     reviewedAt: {
       type: Date,
       default: null,
+    },
+    rejectionReason: {
+      type: String,
+      default: null,
+      trim: true,
     },
     flaggedReason: {
       type: String,

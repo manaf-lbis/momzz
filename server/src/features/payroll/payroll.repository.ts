@@ -216,18 +216,43 @@ export class PayrollRepository {
     id: string,
     status: 'APPROVED' | 'REJECTED',
     reviewedBy: string,
-    note?: string
+    rejectionReason?: string,
+    reviewerName?: string
   ): Promise<IWageAdjustment | null> {
-    return WageAdjustment.findByIdAndUpdate(
-      id,
-      {
-        status,
-        reviewedBy: new mongoose.Types.ObjectId(reviewedBy),
-        reviewedAt: new Date(),
-        ...(note ? { note } : {}),
-      },
-      { new: true }
-    );
+    const updateOps: any = {
+      status,
+      reviewedBy: new mongoose.Types.ObjectId(reviewedBy),
+      reviewedAt: new Date(),
+    };
+    if (reviewerName) updateOps.reviewerName = reviewerName;
+    if (rejectionReason !== undefined) updateOps.rejectionReason = rejectionReason;
+
+    return WageAdjustment.findByIdAndUpdate(id, updateOps, { new: true });
+  }
+
+  static async findAllOtClaims(filter: {
+    workerId?: string;
+    status?: WageAdjustmentStatus | 'ALL';
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): Promise<IWageAdjustment[]> {
+    const query: any = { type: 'OVERTIME' };
+    if (filter.workerId) query.workerId = new mongoose.Types.ObjectId(filter.workerId);
+    if (filter.status && filter.status !== 'ALL') query.status = filter.status;
+    if (filter.startDate || filter.endDate) {
+      query.date = {};
+      if (filter.startDate) query.date.$gte = filter.startDate;
+      if (filter.endDate) query.date.$lte = filter.endDate;
+    }
+    const q = WageAdjustment.find(query)
+      .populate('workerId', 'name mobile dailyWage profileImageUrl')
+      .populate('reviewedBy', 'name')
+      .sort({ date: -1, createdAt: -1 });
+    if (filter.limit && filter.limit > 0) {
+      q.limit(filter.limit);
+    }
+    return q;
   }
 
   static async updateWageAdjustment(

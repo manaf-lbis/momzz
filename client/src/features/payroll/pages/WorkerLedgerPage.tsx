@@ -34,6 +34,7 @@ import { AnimatedThemeToggle } from '../../../shared/components/magicui/Animated
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { PayrollAnalyticsGraph } from '../components/PayrollAnalyticsGraph';
 import { SettlementHistoryBriefs } from '../components/SettlementHistoryBriefs';
+import { OvertimeTrackerConsole } from '../components/OvertimeTrackerConsole';
 import {
   useGetWorkerSingleSheetQuery,
   useGetMySingleSheetQuery,
@@ -48,6 +49,7 @@ import {
   useDeleteTransactionMutation,
   SingleSheetDayEntry,
   MonthlyBreakdownItem,
+  IOtClaimItem,
 } from '../api/payrollApi';
 
 const formatCurrency = (val: number) =>
@@ -97,7 +99,7 @@ export const WorkerLedgerPage: React.FC = () => {
   const [showMobileActionSheet, setShowMobileActionSheet] = useState(false);
 
   // Active view tab in ledger
-  const [ledgerTab, setLedgerTab] = useState<'STREAM' | 'BRIEFS' | 'ANALYTICS'>('STREAM');
+  const [ledgerTab, setLedgerTab] = useState<'STREAM' | 'BRIEFS' | 'ANALYTICS' | 'OT_TRACKER'>('STREAM');
   const [showGraph, setShowGraph] = useState<boolean>(true);
 
   // OT Form State
@@ -220,6 +222,43 @@ export const WorkerLedgerPage: React.FC = () => {
   const monthlyBreakdown = data?.data?.monthlyBreakdown || [];
   const settlements = data?.data?.settlements || [];
   const lastSettlementBrief = data?.data?.lastSettlementBrief;
+
+  // Overtime claims list with itemized audit info
+  const derivedOtClaims: IOtClaimItem[] = useMemo(() => {
+    if (data?.data?.otClaims && data.data.otClaims.length > 0) {
+      return data.data.otClaims;
+    }
+    const list: IOtClaimItem[] = [];
+    for (const d of days) {
+      if (d.otHours > 0 || d.otClaimId) {
+        list.push({
+          id: d.otClaimId || d.adjustmentId || `${d.date}-ot`,
+          workerId: worker?.id || (!isAdmin ? (user as any)?._id || (user as any)?.id : '') || '',
+          workerName: worker?.name || (!isAdmin ? (user as any)?.name : 'Worker') || 'Worker',
+          workerMobile: worker?.mobile || (!isAdmin ? (user as any)?.mobile : '') || '',
+          workerProfileImageUrl: worker?.profileImageUrl || (!isAdmin ? (user as any)?.profileImageUrl : undefined),
+          dailyWage: worker?.dailyWage || (!isAdmin ? (user as any)?.dailyWage : 0) || 0,
+          date: d.date,
+          otHours: d.otHours,
+          amount: d.otAmount || d.otHours * 150,
+          status: d.otStatus || 'PENDING',
+          note: d.otClaimNote || d.adjustmentNote || '',
+          rejectionReason: d.otRejectionReason || '',
+          reviewerName: d.otReviewedByName || '',
+          reviewedAt: d.otReviewedAt,
+          flaggedReason: d.otFlaggedReason,
+          updatedByName: d.otUpdatedByName,
+          lastEditedAt: d.otLastEditedAt,
+          isSettled: d.isSettled,
+        });
+      }
+    }
+    return list;
+  }, [data?.data?.otClaims, days, worker, user, isAdmin]);
+
+  const pendingOtCount = useMemo(() => {
+    return derivedOtClaims.filter((c) => c.status === 'PENDING').length;
+  }, [derivedOtClaims]);
 
   // Month filter state ('ALL' or 'YYYY-MM')
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
@@ -826,7 +865,70 @@ export const WorkerLedgerPage: React.FC = () => {
             <TrendingUp className="w-3.5 h-3.5" />
             <span>Salary Graph</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setLedgerTab('OT_TRACKER')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              ledgerTab === 'OT_TRACKER'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>Overtime Tracker</span>
+            {pendingOtCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-amber-500 text-white font-bold animate-pulse">
+                {pendingOtCount}
+              </span>
+            )}
+          </button>
         </div>
+
+        {/* ── TAB 4: OVERTIME TRACKER CONSOLE ── */}
+        {ledgerTab === 'OT_TRACKER' && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400">
+                  Overtime Claims & Audit History
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOtModal(true)}
+                className="py-1 px-2.5 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white flex items-center gap-1 shadow-2xs transition active:scale-95"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Claim OT</span>
+              </button>
+            </div>
+
+            <OvertimeTrackerConsole
+              claims={derivedOtClaims}
+              isAdmin={isAdmin}
+              workerDailyWage={(worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0}
+              onEditClaim={(claim) => {
+                setEditingOtClaimId(claim.id);
+                setEditingOtDate(claim.date);
+                setEditingOtHours(claim.otHours);
+                setEditingOtNote(claim.note || '');
+                setEditingOtStatus(claim.status);
+                setShowEditOtModal(true);
+              }}
+              onCancelClaim={async (claimId) => {
+                if (!confirm('Are you sure you want to withdraw this overtime claim?')) return;
+                try {
+                  await deleteOtClaim(claimId).unwrap();
+                  refetch();
+                } catch (err: any) {
+                  alert(err?.data?.message || 'Failed to cancel overtime claim');
+                }
+              }}
+            />
+          </section>
+        )}
 
         {/* ── TAB 2: SETTLEMENT BRIEFS ARCHIVE ── */}
         {ledgerTab === 'BRIEFS' && (
@@ -855,6 +957,7 @@ export const WorkerLedgerPage: React.FC = () => {
           <section className="space-y-3">
             <PayrollAnalyticsGraph
               monthlyData={monthlyBreakdown}
+              days={days}
               workerDailyWage={(worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0}
             />
           </section>
@@ -882,6 +985,7 @@ export const WorkerLedgerPage: React.FC = () => {
                 {showGraph && (
                   <PayrollAnalyticsGraph
                     monthlyData={monthlyBreakdown}
+                    days={days}
                     workerDailyWage={
                       (worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0
                     }
@@ -1103,6 +1207,11 @@ export const WorkerLedgerPage: React.FC = () => {
                                   {day.otLastEditedAt && (
                                     <span className="text-[9px] text-amber-600/90 dark:text-amber-400/90 font-medium pl-0.5">
                                       Edited by {day.otUpdatedByName || 'Admin'}
+                                    </span>
+                                  )}
+                                  {day.otStatus === 'REJECTED' && (
+                                    <span className="text-[9px] text-rose-600 dark:text-rose-400 font-medium pl-0.5">
+                                      {day.otRejectionReason ? `Reason: ${day.otRejectionReason}` : 'Claim Rejected'}
                                     </span>
                                   )}
                                 </div>

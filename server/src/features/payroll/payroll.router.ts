@@ -87,6 +87,8 @@ router.patch(
   validateRequest({ body: otStatusSchema }),
   PayrollController.updateOtStatus
 );
+router.get('/ot/claims', PayrollController.getOtClaims);
+router.get('/admin/ot-claims', adminMiddleware, PayrollController.getOtClaims);
 router.delete('/ot/claim/:id', PayrollController.cancelOtClaim);
 router.delete('/ot-claim/:id', PayrollController.cancelOtClaim);
 

@@ -178,6 +178,9 @@ export interface SingleSheetDayEntry {
   otClaimId?: string;
   otClaimNote?: string;
   otFlaggedReason?: string;
+  otRejectionReason?: string;
+  otReviewedByName?: string;
+  otReviewedAt?: Date;
   otUpdatedByName?: string;
   otLastEditedAt?: Date;
   netDailyPay: number;
@@ -373,23 +376,29 @@ export class PayrollService {
   }
 
   /**
-   * Admin approves or rejects OT claim
+   * Admin approves or rejects OT claim with optional rejection reason & audit info
    */
   static async reviewOtClaim(params: {
     claimId: string;
     status: 'APPROVED' | 'REJECTED';
     reviewedBy: string;
+    reviewerName?: string;
     note?: string;
+    rejectionReason?: string;
   }) {
     const claim = await PayrollRepository.findWageAdjustmentById(params.claimId);
     if (!claim) throw new AppError('Overtime claim not found', 404);
     if (claim.type !== 'OVERTIME') throw new AppError('Adjustment is not an overtime claim', 400);
 
+    const effectiveRejectionReason =
+      params.rejectionReason || (params.status === 'REJECTED' ? params.note : undefined);
+
     const updated = await PayrollRepository.updateOtStatus(
       params.claimId,
       params.status,
       params.reviewedBy,
-      params.note
+      effectiveRejectionReason,
+      params.reviewerName
     );
 
     try {
@@ -402,6 +411,8 @@ export class PayrollService {
         otHours: claim.otHours,
         potentialAmount: (claim.otHours || 0) * OT_HOURLY_RATE,
         note: params.note,
+        rejectionReason: effectiveRejectionReason,
+        reviewerName: params.reviewerName,
       });
     } catch {
       // Socket emission non-fatal
@@ -411,6 +422,50 @@ export class PayrollService {
       message: `Overtime claim marked as ${params.status}`,
       claim: updated,
     };
+  }
+
+  /**
+   * Fetches OT claims with status filter and itemized audit tracking
+   */
+  static async getOtClaimsList(params: {
+    workerId?: string;
+    status?: any;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }) {
+    const claims = await PayrollRepository.findAllOtClaims({
+      workerId: params.workerId,
+      status: params.status,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      limit: params.limit,
+    });
+
+    return claims.map((c: any) => ({
+      id: c._id.toString(),
+      workerId: c.workerId?._id?.toString() || c.workerId?.toString(),
+      workerName: c.workerId?.name || 'Worker',
+      workerMobile: c.workerId?.mobile || '',
+      workerProfileImageUrl: c.workerId?.profileImageUrl || '',
+      dailyWage: c.workerId?.dailyWage || 0,
+      date: c.date,
+      otHours: c.otHours,
+      amount: (c.otHours || 0) * OT_HOURLY_RATE,
+      status: c.status,
+      note: c.note || '',
+      rejectionReason: c.rejectionReason || '',
+      reviewedBy: (c.reviewedBy as any)?._id?.toString() || c.reviewedBy?.toString() || null,
+      reviewerName: (c.reviewedBy as any)?.name || c.reviewerName || null,
+      reviewedAt: c.reviewedAt,
+      flaggedReason: c.flaggedReason || null,
+      updatedByName: c.updatedByName || null,
+      lastEditedAt: c.lastEditedAt || null,
+      isSettled: Boolean(c.isSettled),
+      settledAt: c.settledAt || null,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
   }
 
   /**
@@ -816,6 +871,9 @@ export class PayrollService {
         otClaimId: otClaims[0]?._id?.toString(),
         otClaimNote: otClaims[0]?.note,
         otFlaggedReason: otClaims.find((o) => o.flaggedReason)?.flaggedReason,
+        otRejectionReason: otClaims.find((o) => o.rejectionReason)?.rejectionReason,
+        otReviewedByName: otClaims[0]?.reviewerName,
+        otReviewedAt: otClaims[0]?.reviewedAt,
         otUpdatedByName: otClaims[0]?.updatedByName,
         otLastEditedAt: otClaims[0]?.lastEditedAt,
         netDailyPay,
@@ -990,6 +1048,25 @@ export class PayrollService {
       lastSettlementBrief,
     });
 
+    const allOtClaims = Array.from(otMap.values())
+      .flat()
+      .map((c) => ({
+        id: c._id.toString(),
+        date: c.date,
+        otHours: c.otHours,
+        amount: (c.otHours || 0) * OT_HOURLY_RATE,
+        status: c.status,
+        note: c.note || '',
+        rejectionReason: c.rejectionReason || '',
+        reviewerName: c.reviewerName || '',
+        reviewedAt: c.reviewedAt,
+        flaggedReason: c.flaggedReason || '',
+        isSettled: Boolean(c.isSettled),
+        settledAt: c.settledAt,
+        createdAt: c.createdAt,
+      }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+
     return {
       worker: {
         id: worker._id,
@@ -1012,6 +1089,7 @@ export class PayrollService {
       hasWageAssigned: true,
       lastSettlementBrief,
       settlements: formattedSettlements,
+      otClaims: allOtClaims,
     };
   }
 
