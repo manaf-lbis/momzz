@@ -32,6 +32,7 @@ import { useGetJobCardsQuery, useGetJobStatsQuery, JobCardData } from "../../job
 import { useGetPendingWorkersQuery, useGetAllUsersQuery } from "../../auth/api/authApi";
 import { useGetCatalogQuery } from "../../catalog/api/catalogApi";
 import { useGetMySingleSheetQuery } from "../../payroll/api/payrollApi";
+import { WorkerSalaryQuickSummary } from "../../payroll/components/WorkerSalaryQuickSummary";
 import { DashboardBentoSkeleton } from "../../../shared/components/common/PageShimmer";
 import { NumberTicker } from "../../../shared/components/magicui/NumberTicker";
 import { GlobalSearchModal } from "../../../shared/components/common/GlobalSearchModal";
@@ -222,6 +223,13 @@ export const Dashboard: React.FC = () => {
             ⌘K
           </kbd>
         </button>
+
+        {/* ── WORKER INSTANT SALARY SNAPSHOT (Persistent 0ms Cache) ── */}
+        {!isAdmin && (
+          <section className="animate-fadeIn">
+            <WorkerSalaryQuickSummary />
+          </section>
+        )}
 
         {/* ── 3. PINNED PRIORITY VEHICLE (Top Spotlight with Swipe Gestures) ── */}
         <section

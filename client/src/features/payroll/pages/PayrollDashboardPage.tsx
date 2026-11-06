@@ -746,10 +746,14 @@ export const PayrollDashboardPage: React.FC = () => {
                   </tr>
                 ) : (
                   filteredWorkers.map((w) => (
-                    <tr key={w.workerId} className="hover:bg-amber-500/[0.02] transition">
+                    <tr
+                      key={w.workerId}
+                      onClick={() => navigate(`/payroll/${w.workerId}`)}
+                      className="hover:bg-amber-500/[0.04] dark:hover:bg-amber-500/[0.06] transition cursor-pointer group"
+                    >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-xs flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-xs flex items-center justify-center group-hover:scale-105 transition-transform">
                             {w.profileImageUrl ? (
                               <img
                                 src={w.profileImageUrl}
@@ -764,7 +768,7 @@ export const PayrollDashboardPage: React.FC = () => {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-bold text-slate-900 dark:text-white truncate">
+                            <div className="font-bold text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                               {w.name}
                             </div>
                             <div className="text-[10px] text-slate-400 truncate">{w.mobile}</div>
@@ -791,7 +795,8 @@ export const PayrollDashboardPage: React.FC = () => {
                             </span>
                           )}
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedWorker(w);
                               setNewWage(w.dailyWage || '');
                               setWageEffectiveDate(new Date().toISOString().split('T')[0]);
@@ -835,7 +840,8 @@ export const PayrollDashboardPage: React.FC = () => {
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedWorker(w);
                               setSettleAmount(w.netPayable);
                               setShowSettleModal(true);
@@ -845,7 +851,10 @@ export const PayrollDashboardPage: React.FC = () => {
                             Settle
                           </button>
                           <button
-                            onClick={() => navigate(`/payroll/${w.workerId}`)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/payroll/${w.workerId}`);
+                            }}
                             className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 transition"
                           >
                             Ledger &rarr;
@@ -869,12 +878,13 @@ export const PayrollDashboardPage: React.FC = () => {
               filteredWorkers.map((w) => (
                 <div
                   key={w.workerId}
-                  className="p-3.5 rounded-2xl glass-modern-card space-y-2.5"
+                  onClick={() => navigate(`/payroll/${w.workerId}`)}
+                  className="p-3.5 rounded-2xl glass-modern-card space-y-2.5 cursor-pointer hover:border-amber-400/50 dark:hover:border-amber-400/30 active:scale-[0.99] transition-all duration-150 group shadow-xs hover:shadow-md"
                 >
                   {/* Top Row: Worker Info & Wage */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
+                      <div className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
                         {w.profileImageUrl ? (
                           <img
                             src={w.profileImageUrl}
@@ -889,7 +899,7 @@ export const PayrollDashboardPage: React.FC = () => {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                        <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                           {w.name}
                         </p>
                         <p className="text-[10px] text-slate-400 truncate">{w.mobile}</p>
@@ -901,7 +911,8 @@ export const PayrollDashboardPage: React.FC = () => {
                         {w.dailyWage > 0 ? `₹${w.dailyWage}/d` : 'No Wage'}
                       </span>
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedWorker(w);
                           setNewWage(w.dailyWage || '');
                           setWageEffectiveDate(new Date().toISOString().split('T')[0]);
@@ -955,7 +966,8 @@ export const PayrollDashboardPage: React.FC = () => {
 
                     <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedWorker(w);
                           setSettleAmount(w.netPayable);
                           setShowSettleModal(true);
@@ -965,7 +977,10 @@ export const PayrollDashboardPage: React.FC = () => {
                         Settle Dues
                       </button>
                       <button
-                        onClick={() => navigate(`/payroll/${w.workerId}`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/payroll/${w.workerId}`);
+                        }}
                         className="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-200 transition"
                       >
                         <ChevronRight className="w-4 h-4" />

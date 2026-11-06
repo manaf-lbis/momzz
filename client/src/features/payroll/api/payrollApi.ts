@@ -245,6 +245,7 @@ export const payrollApi = apiSlice.injectEndpoints({
         params,
       }),
       providesTags: (_result, _error, arg) => [{ type: 'Payroll', id: arg.workerId }],
+      keepUnusedDataFor: 600,
     }),
 
     getMySingleSheet: builder.query<
@@ -256,6 +257,7 @@ export const payrollApi = apiSlice.injectEndpoints({
         params: params || {},
       }),
       providesTags: ['Payroll'],
+      keepUnusedDataFor: 600,
     }),
 
     markBatchLeave: builder.mutation<

@@ -681,7 +681,10 @@ export const StaffDetailPage: React.FC = () => {
             <div className="space-y-3">
               {/* Worker Current Payroll Cycle Snapshot */}
               {isWorker && payrollKpis && (
-                <div className="p-4 sm:p-5 rounded-2xl glass-modern-card border border-amber-500/30 space-y-3 shadow-xs">
+                <div
+                  onClick={() => navigate(`/payroll/${id}`)}
+                  className="p-4 sm:p-5 rounded-2xl glass-modern-card border border-amber-500/30 hover:border-amber-500/50 space-y-3 shadow-xs cursor-pointer transition-all duration-150 active:scale-[0.99] group"
+                >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-white/10 pb-2.5">
                     <div className="flex items-center gap-2">
                       <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
@@ -710,7 +713,10 @@ export const StaffDetailPage: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => navigate(`/payroll/${id}`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/payroll/${id}`);
+                      }}
                       className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs transition active:scale-95"
                     >
                       <span>Open Full Ledger & Timesheet</span>
