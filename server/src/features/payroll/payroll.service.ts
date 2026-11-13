@@ -490,9 +490,19 @@ export class PayrollService {
     // Resolve lastSettledDate accurately from User document OR lastSettlement
     let lastSettledDateObj: Date | null = worker.lastSettledDate ? new Date(worker.lastSettledDate) : null;
     if (lastSettlement) {
-      const settlementEnd = (lastSettlement as any).settledUpToDate
-        ? new Date((lastSettlement as any).settledUpToDate)
-        : (lastSettlement.periodCovered?.endDate ? new Date(lastSettlement.periodCovered.endDate) : null);
+      const settlementEnd =
+        (lastSettlement as any).settledUpToDate
+          ? new Date((lastSettlement as any).settledUpToDate)
+          : lastSettlement.periodCovered?.endDate
+          ? new Date(lastSettlement.periodCovered.endDate)
+          : (lastSettlement.itemizedSummary as any)?.periodCovered?.endDate
+          ? new Date((lastSettlement.itemizedSummary as any).periodCovered.endDate)
+          : (lastSettlement.itemizedSummary as any)?.settledUpToDate
+          ? new Date((lastSettlement.itemizedSummary as any).settledUpToDate)
+          : (lastSettlement as any).endDate
+          ? new Date((lastSettlement as any).endDate)
+          : (lastSettlement.date ? new Date(lastSettlement.date) : null);
+
       if (settlementEnd && (!lastSettledDateObj || settlementEnd > lastSettledDateObj)) {
         lastSettledDateObj = settlementEnd;
         PayrollRepository.updateWorkerLastSettledDate(params.workerId, settlementEnd).catch(() => {});
@@ -689,7 +699,7 @@ export class PayrollService {
     let unsettledApprovedOtHours = 0;
     let unsettledApprovedOtAmount = 0;
 
-    let runningBalance = 0;
+    let runningBalance = params.includeSettledHistory ? 0 : previousBalanceCarriedForward;
     const dayEntries: SingleSheetDayEntry[] = [];
 
     for (const dStr of dateList) {
@@ -895,10 +905,34 @@ export class PayrollService {
       });
     }
 
-    // Dynamic Net Payable Calculation: strictly unsettled earnings (wages + OT + incentives) minus unsettled advances
-    const unsettledEarnings = unsettledNetBaseWages + unsettledApprovedOtAmount + totalUnsettledIncentives + previousBalanceCarriedForward;
-    const netPayable = Math.max(0, unsettledEarnings - totalUnsettledAdvances);
-    const advanceOverhang = totalUnsettledAdvances > unsettledEarnings ? totalUnsettledAdvances - unsettledEarnings : 0;
+    // In a single-sheet ledger, the worker's true net unsettled dues at the end of the calculation stream is the cumulative ledger balance
+    const finalLedgerBalance = dayEntries.length > 0
+      ? dayEntries[dayEntries.length - 1].runningCumulativeBalance
+      : (previousBalanceCarriedForward + totalUnsettledIncentives - totalUnsettledAdvances);
+
+    const netPayable = Math.max(0, finalLedgerBalance);
+    const advanceOverhang = finalLedgerBalance < 0 ? Math.abs(finalLedgerBalance) : 0;
+
+    // Total settlements paid out in this period
+    const totalSettlementsInPeriod = transactions
+      .filter((t) => t.type === 'PAYOUT_SETTLEMENT')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    // If settlements were disbursed, adjust unsettled gross & net base wages accordingly
+    const effectiveUnsettledNetBaseWages = Math.max(0, unsettledNetBaseWages - totalSettlementsInPeriod);
+    const effectiveUnsettledGrossWages = Math.max(0, unsettledGrossWages - totalSettlementsInPeriod);
+
+    // Adjust remaining unsettled working days proportionally
+    let effectiveUnsettledWorkingDays = unsettledWorkingDays;
+    const currentWorkerDailyWage = worker.dailyWage || 0;
+    if (totalSettlementsInPeriod > 0 && currentWorkerDailyWage > 0) {
+      effectiveUnsettledWorkingDays = Math.min(
+        unsettledWorkingDays,
+        Math.round((effectiveUnsettledNetBaseWages / currentWorkerDailyWage) * 10) / 10
+      );
+    }
+
+    const unsettledEarnings = effectiveUnsettledNetBaseWages + unsettledApprovedOtAmount + totalUnsettledIncentives + (params.includeSettledHistory ? 0 : previousBalanceCarriedForward);
 
     // Monthly breakdown aggregation
     const monthGroups = new Map<string, MonthlyBreakdownItem>();
@@ -946,17 +980,17 @@ export class PayrollService {
       group.netBaseWages += entry.netDayWage;
       group.otHours += entry.otHours;
       group.otAmount += entry.otAmount;
-      group.netEarnings += entry.netDailyPay;
-
-      if (!entry.isSettled) {
-        group.isSettled = false;
-      }
 
       for (const tx of entry.inlineTransactions) {
         if (tx.type === 'ADVANCE_TAKEN') group.advances += tx.amount;
         if (tx.type === 'INCENTIVE') group.incentives += tx.amount;
         if (tx.type === 'PAYOUT_SETTLEMENT') group.payouts += tx.amount;
       }
+    }
+
+    for (const group of monthGroups.values()) {
+      group.netEarnings = (group.netBaseWages + group.otAmount + group.incentives) - (group.advances + group.payouts);
+      group.isSettled = group.netEarnings <= 0;
     }
 
     const monthlyBreakdown = Array.from(monthGroups.values()).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
@@ -980,10 +1014,10 @@ export class PayrollService {
       totalUnsettledIncentives,
       netPayable,
       advanceOverhang,
-      unsettledWorkingDays,
-      unsettledGrossWages,
+      unsettledWorkingDays: effectiveUnsettledWorkingDays,
+      unsettledGrossWages: effectiveUnsettledGrossWages,
       unsettledLeaveDeductions,
-      unsettledNetBaseWages,
+      unsettledNetBaseWages: effectiveUnsettledNetBaseWages,
       unsettledApprovedOtHours,
       unsettledApprovedOtAmount,
     };
@@ -1047,13 +1081,13 @@ export class PayrollService {
     // Persist real-time snapshot to the database for instant queries & data resilience
     await PayrollRepository.updateWorkerPayrollSnapshot(params.workerId, {
       netPayable,
-      unsettledGross: unsettledGrossWages ?? grossWages,
+      unsettledGross: effectiveUnsettledGrossWages ?? grossWages,
       unsettledDeductions: unsettledLeaveDeductions ?? totalLeaveDeductions,
       unsettledOtAmount: unsettledApprovedOtAmount ?? totalApprovedOtAmount,
       unsettledAdvances: totalUnsettledAdvances,
       unsettledIncentives: totalUnsettledIncentives || 0,
       advanceOverhang,
-      unsettledWorkingDays,
+      unsettledWorkingDays: effectiveUnsettledWorkingDays,
       firstPayrollDate: firstPayrollDateStr,
       lastSettledDate: worker.lastSettledDate || null,
       lastCalculatedAt: new Date(),
