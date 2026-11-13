@@ -9,6 +9,11 @@ import { AppError } from '../../shared/utils/appError';
 export const OT_HOURLY_RATE = 150;
 
 /**
+ * Rounds a number to exact 2 decimal places (paise / cents) with epsilon correction.
+ */
+export const round2 = (num: number): number => Math.round((num + Number.EPSILON) * 100) / 100;
+
+/**
  * Floor-100 leave penalty rule:
  * Deduction = floor(dailyWage / 100) * 100
  * e.g., ₹870 -> ₹800 deduction, net day wage = ₹70
@@ -501,11 +506,14 @@ export class PayrollService {
           ? new Date((lastSettlement.itemizedSummary as any).settledUpToDate)
           : (lastSettlement as any).endDate
           ? new Date((lastSettlement as any).endDate)
-          : (lastSettlement.date ? new Date(lastSettlement.date) : null);
+          : null;
 
-      if (settlementEnd && (!lastSettledDateObj || settlementEnd > lastSettledDateObj)) {
-        lastSettledDateObj = settlementEnd;
-        PayrollRepository.updateWorkerLastSettledDate(params.workerId, settlementEnd).catch(() => {});
+      // Only update worker.lastSettledDate if it was an explicit settlement period end AND carriedForwardBalance === 0
+      if (settlementEnd && (lastSettlement.carriedForwardBalance === 0 || lastSettlement.carriedForwardBalance === undefined)) {
+        if (!lastSettledDateObj || settlementEnd > lastSettledDateObj) {
+          lastSettledDateObj = settlementEnd;
+          PayrollRepository.updateWorkerLastSettledDate(params.workerId, settlementEnd).catch(() => {});
+        }
       }
     }
     const lastSettledDateStr = lastSettledDateObj ? formatDateStr(lastSettledDateObj) : null;
@@ -579,7 +587,7 @@ export class PayrollService {
     // First day of worker is strictly the day their wage was decided!
     let startStr = params.startDate;
     if (!startStr) {
-      if (params.includeSettledHistory) {
+      if (params.includeSettledHistory !== false) {
         // Starts on worker's first day of wage decision!
         startStr = firstPayrollDateStr;
       } else if (lastSettledDateStr) {
@@ -598,7 +606,7 @@ export class PayrollService {
     }
 
     const endStr = params.endDate || todayStr;
-    const isFullySettled = !params.includeSettledHistory && startStr > endStr;
+    const isFullySettled = params.includeSettledHistory === false && startStr > endStr;
     const dateList = isFullySettled ? [] : getDatesBetween(startStr, endStr);
 
     // Fetch garage holidays, adjustments, and transactions
@@ -699,8 +707,16 @@ export class PayrollService {
     let unsettledApprovedOtHours = 0;
     let unsettledApprovedOtAmount = 0;
 
-    let runningBalance = params.includeSettledHistory ? 0 : previousBalanceCarriedForward;
+    let runningBalance = params.includeSettledHistory !== false ? 0 : previousBalanceCarriedForward;
     const dayEntries: SingleSheetDayEntry[] = [];
+
+    // Pre-calculate total settlement payouts in this history/period to drive FIFO settlement allocation
+    const totalSettlementsInPeriod = round2(
+      transactions
+        .filter((t) => t.type === 'PAYOUT_SETTLEMENT')
+        .reduce((sum, t) => sum + (t.amount || 0), 0)
+    );
+    let remainingSettlementCredit = totalSettlementsInPeriod;
 
     for (const dStr of dateList) {
       const dObj = new Date(`${dStr}T00:00:00`);
@@ -823,18 +839,18 @@ export class PayrollService {
       totalApprovedOtHours += otStatus === 'APPROVED' ? dayOtHours : 0;
       totalApprovedOtAmount += dayOtAmount;
 
-      const netDailyPay = netDayWage + dayOtAmount;
-      runningBalance += netDailyPay;
+      const netDailyPay = round2(netDayWage + dayOtAmount);
+      runningBalance = round2(runningBalance + netDailyPay);
 
       // Inline transactions for this date
       const inlineTxs = txMap.get(dStr) || [];
       const formattedInline = inlineTxs.map((t) => {
         if (t.type === 'ADVANCE_TAKEN') {
-          runningBalance -= t.amount;
+          runningBalance = round2(runningBalance - t.amount);
         } else if (t.type === 'PAYOUT_SETTLEMENT') {
-          runningBalance -= t.amount;
+          runningBalance = round2(runningBalance - t.amount);
         } else if (t.type === 'INCENTIVE') {
-          runningBalance += t.amount;
+          runningBalance = round2(runningBalance + t.amount);
         }
         return {
           id: t._id.toString(),
@@ -847,7 +863,45 @@ export class PayrollService {
         };
       });
 
-      const isDaySettled = Boolean(lastSettledDateStr && dStr <= lastSettledDateStr) || (leave?.isSettled || false);
+      // Earned net on this day (wages + approved OT) eligible for FIFO settlement absorption
+      const dayNetEarned = isShiftInProgress ? 0 : round2(netDayWage + (otStatus === 'APPROVED' ? dayOtAmount : 0));
+
+      let isDaySettled = false;
+      let dayUnsettledGross = 0;
+      let dayUnsettledDeduction = 0;
+      let dayUnsettledNetWage = 0;
+      let dayUnsettledOtAmount = 0;
+      let dayUnsettledWorkFraction = 0;
+
+      if (remainingSettlementCredit >= dayNetEarned && dayNetEarned > 0) {
+        // Shift fully covered by settlement payout
+        remainingSettlementCredit = round2(remainingSettlementCredit - dayNetEarned);
+        isDaySettled = true;
+      } else if (remainingSettlementCredit > 0 && dayNetEarned > 0) {
+        // Shift partially covered by settlement payout
+        const uncoveredNet = round2(dayNetEarned - remainingSettlementCredit);
+        remainingSettlementCredit = 0;
+        isDaySettled = false;
+        const coverageRatio = uncoveredNet / dayNetEarned;
+
+        dayUnsettledGross = round2(baseWage * coverageRatio);
+        dayUnsettledDeduction = round2(leaveDeduction * coverageRatio);
+        dayUnsettledNetWage = uncoveredNet;
+        dayUnsettledOtAmount = otStatus === 'APPROVED' ? round2(dayOtAmount * coverageRatio) : 0;
+        dayUnsettledWorkFraction = dayType === 'WORKING' && !isShiftInProgress
+          ? round2(1 * coverageRatio)
+          : (dayType === 'HALF_LEAVE' && !isShiftInProgress ? round2(0.5 * coverageRatio) : 0);
+      } else {
+        // Shift is completely unsettled
+        isDaySettled = false;
+        dayUnsettledGross = baseWage;
+        dayUnsettledDeduction = leaveDeduction;
+        dayUnsettledNetWage = isShiftInProgress ? 0 : netDayWage;
+        dayUnsettledOtAmount = otStatus === 'APPROVED' ? dayOtAmount : 0;
+        dayUnsettledWorkFraction = dayType === 'WORKING' && !isShiftInProgress
+          ? 1
+          : (dayType === 'HALF_LEAVE' && !isShiftInProgress ? 0.5 : 0);
+      }
 
       if (isAllowedLeave) {
         totalAllowedLeaves++;
@@ -856,19 +910,15 @@ export class PayrollService {
         }
       }
 
-      // Unsettled tallies strictly for days not settled
+      // Unsettled tallies strictly accumulated for uncovered portions
       if (!isDaySettled) {
-        if (dayType === 'WORKING' && !isShiftInProgress) {
-          unsettledWorkingDays++;
-        } else if (dayType === 'HALF_LEAVE' && !isShiftInProgress) {
-          unsettledWorkingDays += 0.5;
-        }
-        unsettledGrossWages += baseWage;
-        unsettledLeaveDeductions += leaveDeduction;
-        unsettledNetBaseWages += netDayWage;
+        unsettledWorkingDays = round2(unsettledWorkingDays + dayUnsettledWorkFraction);
+        unsettledGrossWages = round2(unsettledGrossWages + dayUnsettledGross);
+        unsettledLeaveDeductions = round2(unsettledLeaveDeductions + dayUnsettledDeduction);
+        unsettledNetBaseWages = round2(unsettledNetBaseWages + dayUnsettledNetWage);
         if (otStatus === 'APPROVED') {
           unsettledApprovedOtHours += dayOtHours;
-          unsettledApprovedOtAmount += dayOtAmount;
+          unsettledApprovedOtAmount = round2(unsettledApprovedOtAmount + dayUnsettledOtAmount);
         }
       }
 
@@ -908,31 +958,12 @@ export class PayrollService {
     // In a single-sheet ledger, the worker's true net unsettled dues at the end of the calculation stream is the cumulative ledger balance
     const finalLedgerBalance = dayEntries.length > 0
       ? dayEntries[dayEntries.length - 1].runningCumulativeBalance
-      : (previousBalanceCarriedForward + totalUnsettledIncentives - totalUnsettledAdvances);
+      : round2(previousBalanceCarriedForward + totalUnsettledIncentives - totalUnsettledAdvances);
 
-    const netPayable = Math.max(0, finalLedgerBalance);
-    const advanceOverhang = finalLedgerBalance < 0 ? Math.abs(finalLedgerBalance) : 0;
+    const netPayable = Math.max(0, round2(finalLedgerBalance));
+    const advanceOverhang = finalLedgerBalance < 0 ? Math.abs(round2(finalLedgerBalance)) : 0;
 
-    // Total settlements paid out in this period
-    const totalSettlementsInPeriod = transactions
-      .filter((t) => t.type === 'PAYOUT_SETTLEMENT')
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-    // If settlements were disbursed, adjust unsettled gross & net base wages accordingly
-    const effectiveUnsettledNetBaseWages = Math.max(0, unsettledNetBaseWages - totalSettlementsInPeriod);
-    const effectiveUnsettledGrossWages = Math.max(0, unsettledGrossWages - totalSettlementsInPeriod);
-
-    // Adjust remaining unsettled working days proportionally
-    let effectiveUnsettledWorkingDays = unsettledWorkingDays;
-    const currentWorkerDailyWage = worker.dailyWage || 0;
-    if (totalSettlementsInPeriod > 0 && currentWorkerDailyWage > 0) {
-      effectiveUnsettledWorkingDays = Math.min(
-        unsettledWorkingDays,
-        Math.round((effectiveUnsettledNetBaseWages / currentWorkerDailyWage) * 10) / 10
-      );
-    }
-
-    const unsettledEarnings = effectiveUnsettledNetBaseWages + unsettledApprovedOtAmount + totalUnsettledIncentives + (params.includeSettledHistory ? 0 : previousBalanceCarriedForward);
+    const unsettledEarnings = round2(unsettledNetBaseWages + unsettledApprovedOtAmount + totalUnsettledIncentives);
 
     // Monthly breakdown aggregation
     const monthGroups = new Map<string, MonthlyBreakdownItem>();
@@ -975,21 +1006,21 @@ export class PayrollService {
       if (entry.dayType === 'FULL_LEAVE' || entry.dayType === 'HALF_LEAVE') group.leaveDays++;
       if (entry.isAllowedLeave) group.allowedLeaveDays++;
 
-      group.grossWages += entry.baseWage;
-      group.leaveDeductions += entry.leaveDeduction;
-      group.netBaseWages += entry.netDayWage;
+      group.grossWages = round2(group.grossWages + entry.baseWage);
+      group.leaveDeductions = round2(group.leaveDeductions + entry.leaveDeduction);
+      group.netBaseWages = round2(group.netBaseWages + entry.netDayWage);
       group.otHours += entry.otHours;
-      group.otAmount += entry.otAmount;
+      group.otAmount = round2(group.otAmount + entry.otAmount);
 
       for (const tx of entry.inlineTransactions) {
-        if (tx.type === 'ADVANCE_TAKEN') group.advances += tx.amount;
-        if (tx.type === 'INCENTIVE') group.incentives += tx.amount;
-        if (tx.type === 'PAYOUT_SETTLEMENT') group.payouts += tx.amount;
+        if (tx.type === 'ADVANCE_TAKEN') group.advances = round2(group.advances + tx.amount);
+        if (tx.type === 'INCENTIVE') group.incentives = round2(group.incentives + tx.amount);
+        if (tx.type === 'PAYOUT_SETTLEMENT') group.payouts = round2(group.payouts + tx.amount);
       }
     }
 
     for (const group of monthGroups.values()) {
-      group.netEarnings = (group.netBaseWages + group.otAmount + group.incentives) - (group.advances + group.payouts);
+      group.netEarnings = round2((group.netBaseWages + group.otAmount + group.incentives) - (group.advances + group.payouts));
       group.isSettled = group.netEarnings <= 0;
     }
 
@@ -1003,23 +1034,23 @@ export class PayrollService {
       totalHalfDays,
       totalAllowedLeaves,
       unsettledAllowedLeaves,
-      grossWages,
-      totalLeaveDeductions,
-      netBaseWages,
-      previousBalanceCarriedForward,
+      grossWages: round2(grossWages),
+      totalLeaveDeductions: round2(totalLeaveDeductions),
+      netBaseWages: round2(netBaseWages),
+      previousBalanceCarriedForward: round2(previousBalanceCarriedForward),
       totalApprovedOtHours,
-      totalApprovedOtAmount,
+      totalApprovedOtAmount: round2(totalApprovedOtAmount),
       totalEarnings: unsettledEarnings,
-      totalUnsettledAdvances,
-      totalUnsettledIncentives,
+      totalUnsettledAdvances: round2(totalUnsettledAdvances),
+      totalUnsettledIncentives: round2(totalUnsettledIncentives),
       netPayable,
       advanceOverhang,
-      unsettledWorkingDays: effectiveUnsettledWorkingDays,
-      unsettledGrossWages: effectiveUnsettledGrossWages,
-      unsettledLeaveDeductions,
-      unsettledNetBaseWages: effectiveUnsettledNetBaseWages,
+      unsettledWorkingDays: round2(unsettledWorkingDays),
+      unsettledGrossWages: round2(unsettledGrossWages),
+      unsettledLeaveDeductions: round2(unsettledLeaveDeductions),
+      unsettledNetBaseWages: round2(unsettledNetBaseWages),
       unsettledApprovedOtHours,
-      unsettledApprovedOtAmount,
+      unsettledApprovedOtAmount: round2(unsettledApprovedOtAmount),
     };
 
     // Fetch historical settlements for archive briefs
@@ -1081,13 +1112,13 @@ export class PayrollService {
     // Persist real-time snapshot to the database for instant queries & data resilience
     await PayrollRepository.updateWorkerPayrollSnapshot(params.workerId, {
       netPayable,
-      unsettledGross: effectiveUnsettledGrossWages ?? grossWages,
-      unsettledDeductions: unsettledLeaveDeductions ?? totalLeaveDeductions,
-      unsettledOtAmount: unsettledApprovedOtAmount ?? totalApprovedOtAmount,
-      unsettledAdvances: totalUnsettledAdvances,
-      unsettledIncentives: totalUnsettledIncentives || 0,
+      unsettledGross: round2(unsettledGrossWages),
+      unsettledDeductions: round2(unsettledLeaveDeductions),
+      unsettledOtAmount: round2(unsettledApprovedOtAmount),
+      unsettledAdvances: round2(totalUnsettledAdvances),
+      unsettledIncentives: round2(totalUnsettledIncentives),
       advanceOverhang,
-      unsettledWorkingDays: effectiveUnsettledWorkingDays,
+      unsettledWorkingDays: round2(unsettledWorkingDays),
       firstPayrollDate: firstPayrollDateStr,
       lastSettledDate: worker.lastSettledDate || null,
       lastCalculatedAt: new Date(),
@@ -1163,7 +1194,7 @@ export class PayrollService {
     const sheet = await this.getWorkerSingleSheet({
       workerId: params.workerId,
       endDate: endDateStr,
-      includeSettledHistory: false,
+      includeSettledHistory: true,
     });
 
     const netPayable = sheet.kpis.netPayable;
@@ -1333,7 +1364,7 @@ export class PayrollService {
     });
 
     try {
-      await this.getWorkerSingleSheet({ workerId: params.workerId, includeSettledHistory: false });
+      await this.getWorkerSingleSheet({ workerId: params.workerId, includeSettledHistory: true });
     } catch {
       // Snapshot sync non-fatal
     }
@@ -1385,7 +1416,7 @@ export class PayrollService {
     }
 
     try {
-      await this.getWorkerSingleSheet({ workerId: params.workerId, includeSettledHistory: false });
+      await this.getWorkerSingleSheet({ workerId: params.workerId, includeSettledHistory: true });
     } catch {
       // Snapshot sync non-fatal
     }
@@ -1551,7 +1582,7 @@ export class PayrollService {
     const workerIdStr = (tx.workerId as any)?._id?.toString() || tx.workerId?.toString();
     await PayrollRepository.deleteWageTransaction(id);
     try {
-      await this.getWorkerSingleSheet({ workerId: workerIdStr, includeSettledHistory: false });
+      await this.getWorkerSingleSheet({ workerId: workerIdStr, includeSettledHistory: true });
     } catch {
       // Snapshot sync non-fatal
     }
@@ -1577,7 +1608,7 @@ export class PayrollService {
         try {
           const sheet = await this.getWorkerSingleSheet({
             workerId: worker._id.toString(),
-            includeSettledHistory: false,
+            includeSettledHistory: true,
           });
 
           return {
@@ -1627,7 +1658,7 @@ export class PayrollService {
       })
     );
 
-    const totalUnsettledNet = workerSummaries.reduce((sum, w) => sum + w.netPayable, 0);
+    const totalUnsettledNet = round2(workerSummaries.reduce((sum, w) => sum + w.netPayable, 0));
     const totalPendingOtCount = pendingOtClaims.length;
 
     return {

@@ -58,7 +58,8 @@ const formatCurrency = (val: number) =>
   new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: val % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
   }).format(val);
 
 export const WorkerLedgerPage: React.FC = () => {
