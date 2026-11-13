@@ -3,6 +3,7 @@ import User, { IUser } from '../../models/User.model';
 import WageAdjustment, { IWageAdjustment, WageAdjustmentType, WageAdjustmentStatus } from '../../models/WageAdjustment.model';
 import GarageHoliday, { IGarageHoliday } from '../../models/GarageHoliday.model';
 import WageTransaction, { IWageTransaction, WageTransactionType } from '../../models/WageTransaction.model';
+import PayrollSettlement from '../../models/PayrollSettlement.model';
 import { ROLES } from '../../shared/constants/status';
 import { emitPayrollWageUpdated } from '../../config/socket';
 
@@ -368,10 +369,96 @@ export class PayrollRepository {
 
   static async findLastSettlement(workerId: string): Promise<IWageTransaction | null> {
     if (!mongoose.Types.ObjectId.isValid(workerId)) return null;
-    return WageTransaction.findOne({
+    const tx = await WageTransaction.findOne({
       workerId: new mongoose.Types.ObjectId(workerId),
       type: 'PAYOUT_SETTLEMENT',
     }).sort({ date: -1 });
+    if (tx) return tx;
+
+    // Fallback to legacy PayrollSettlement collection
+    const legacy = await PayrollSettlement.findOne({
+      workerId: new mongoose.Types.ObjectId(workerId),
+    }).sort({ endDate: -1 });
+
+    if (legacy) {
+      const endD = legacy.endDate instanceof Date ? legacy.endDate : new Date(legacy.endDate);
+      const endStr = `${endD.getFullYear()}-${String(endD.getMonth() + 1).padStart(2, '0')}-${String(endD.getDate()).padStart(2, '0')}`;
+      return {
+        _id: legacy._id,
+        workerId: legacy.workerId,
+        type: 'PAYOUT_SETTLEMENT',
+        amount: legacy.amountPaid || 0,
+        date: legacy.settledAt || legacy.endDate,
+        periodCovered: {
+          startDate: legacy.startDate,
+          endDate: legacy.endDate,
+        },
+        carriedForwardBalance: 0,
+        settledUpToDate: endStr,
+      } as any;
+    }
+
+    return null;
+  }
+
+  static async syncLegacySettlementRecord(data: {
+    workerId: mongoose.Types.ObjectId | string;
+    workerName?: string;
+    workerMobile?: string;
+    dailyWage: number;
+    startDate: Date;
+    endDate: Date;
+    totalWorkingDays: number;
+    totalSundays?: number;
+    totalHolidays?: number;
+    totalFullLeaves?: number;
+    totalHalfDays?: number;
+    grossWages: number;
+    totalLeaveDeduction: number;
+    totalOtHours: number;
+    totalOtAmount: number;
+    totalAdvancesDeducted: number;
+    netPayable: number;
+    amountPaid: number;
+    paymentMethod: string;
+    settledBy?: mongoose.Types.ObjectId | string;
+  }): Promise<void> {
+    try {
+      let settledById: mongoose.Types.ObjectId;
+      if (data.settledBy && mongoose.Types.ObjectId.isValid(data.settledBy)) {
+        settledById = new mongoose.Types.ObjectId(data.settledBy.toString());
+      } else {
+        const adminUser = await User.findOne({ role: ROLES.ADMIN }).select('_id');
+        settledById = (adminUser?._id as mongoose.Types.ObjectId) || new mongoose.Types.ObjectId(data.workerId.toString());
+      }
+
+      await PayrollSettlement.create({
+        workerId: new mongoose.Types.ObjectId(data.workerId.toString()),
+        workerName: data.workerName,
+        workerMobile: data.workerMobile,
+        baseDailyWageRate: data.dailyWage,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        totalWorkingDays: data.totalWorkingDays,
+        totalSundayDays: data.totalSundays || 0,
+        totalHolidayDays: data.totalHolidays || 0,
+        totalFullLeaveDays: data.totalFullLeaves || 0,
+        totalHalfDays: data.totalHalfDays || 0,
+        grossWages: data.grossWages,
+        totalLeaveDeduction: data.totalLeaveDeduction,
+        totalOtHours: data.totalOtHours,
+        totalOtAmount: data.totalOtAmount,
+        totalCashAdvances: data.totalAdvancesDeducted,
+        netPayable: data.netPayable,
+        amountPaid: data.amountPaid,
+        paymentMethod: data.paymentMethod,
+        settledBy: settledById,
+        settledAt: new Date(),
+      });
+    } catch (err) {
+      // Non-fatal legacy sync
+      console.error('[PAYROLL DB] Legacy settlement sync error:', err);
+    }
   }
 
   static async markAdjustmentsSettled(workerId: string, endDate: string, settlementId: mongoose.Types.ObjectId): Promise<number> {

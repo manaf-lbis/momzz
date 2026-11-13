@@ -1325,7 +1325,7 @@ export const PayrollDashboardPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Festival bonus, exceptional job on paint repair..."
+                  placeholder="e.g. Festival incentive, exceptional job on paint repair..."
                   value={incentiveNotes}
                   onChange={(e) => setIncentiveNotes(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"

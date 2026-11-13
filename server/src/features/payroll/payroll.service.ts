@@ -486,7 +486,19 @@ export class PayrollService {
     // Check if worker has previous settlement with carried forward balance
     const lastSettlement = await PayrollRepository.findLastSettlement(params.workerId);
     const previousBalanceCarriedForward = lastSettlement?.carriedForwardBalance || 0;
-    const lastSettledDateStr = worker.lastSettledDate ? formatDateStr(new Date(worker.lastSettledDate)) : null;
+    
+    // Resolve lastSettledDate accurately from User document OR lastSettlement
+    let lastSettledDateObj: Date | null = worker.lastSettledDate ? new Date(worker.lastSettledDate) : null;
+    if (lastSettlement) {
+      const settlementEnd = (lastSettlement as any).settledUpToDate
+        ? new Date((lastSettlement as any).settledUpToDate)
+        : (lastSettlement.periodCovered?.endDate ? new Date(lastSettlement.periodCovered.endDate) : null);
+      if (settlementEnd && (!lastSettledDateObj || settlementEnd > lastSettledDateObj)) {
+        lastSettledDateObj = settlementEnd;
+        PayrollRepository.updateWorkerLastSettledDate(params.workerId, settlementEnd).catch(() => {});
+      }
+    }
+    const lastSettledDateStr = lastSettledDateObj ? formatDateStr(lastSettledDateObj) : null;
 
     const firstPayrollDateStr = getWorkerFirstPayrollDate(worker);
 
@@ -1193,6 +1205,30 @@ export class PayrollService {
       new Date(`${endDateStr}T23:59:59.999Z`),
       settlementTx._id as mongoose.Types.ObjectId
     );
+
+    // Sync to legacy PayrollSettlement collection for 100% data consistency
+    await PayrollRepository.syncLegacySettlementRecord({
+      workerId: params.workerId,
+      workerName: worker.name,
+      workerMobile: worker.mobile,
+      dailyWage: worker.dailyWage || 0,
+      startDate: new Date(`${sheet.period.startDate}T00:00:00.000Z`),
+      endDate: new Date(`${endDateStr}T23:59:59.999Z`),
+      totalWorkingDays: sheet.kpis.totalWorkingDays,
+      totalSundays: sheet.kpis.totalSundays,
+      totalHolidays: sheet.kpis.totalHolidayDays,
+      totalFullLeaves: sheet.kpis.totalFullLeaveDays,
+      totalHalfDays: sheet.kpis.totalHalfDays,
+      grossWages: sheet.kpis.grossWages,
+      totalLeaveDeduction: sheet.kpis.totalLeaveDeductions,
+      totalOtHours: sheet.kpis.totalApprovedOtHours,
+      totalOtAmount: sheet.kpis.totalApprovedOtAmount,
+      totalAdvancesDeducted: sheet.kpis.totalUnsettledAdvances,
+      netPayable,
+      amountPaid: amountToDisburse,
+      paymentMethod: params.paymentMethod || 'CASH',
+      settledBy: params.settledByName,
+    });
 
     // Update worker's lastSettledDate at clean midday UTC to prevent timezone rollover
     const [sy, sm, sd] = endDateStr.split('-').map(Number);

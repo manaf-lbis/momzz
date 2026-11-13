@@ -211,7 +211,7 @@ Net Payout: ${formatCurrency(s.amount)} via ${s.paymentMethod || 'CASH'}`;
                 <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
                   {item.totalIncentives && item.totalIncentives > 0 ? (
                     <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold">
-                      Bonus +{formatCurrency(item.totalIncentives)}
+                      Incentive +{formatCurrency(item.totalIncentives)}
                     </span>
                   ) : null}
 

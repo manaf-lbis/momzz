@@ -244,8 +244,12 @@ export const payrollApi = apiSlice.injectEndpoints({
         url: `/payroll/worker/${workerId}/single-sheet`,
         params,
       }),
-      providesTags: (_result, _error, arg) => [{ type: 'Payroll', id: arg.workerId }],
-      keepUnusedDataFor: 600,
+      providesTags: (_result, _error, arg) => [
+        { type: 'Payroll', id: arg.workerId },
+        { type: 'Payroll', id: 'LIST' },
+        'Payroll',
+      ],
+      keepUnusedDataFor: 30,
     }),
 
     getMySingleSheet: builder.query<
@@ -256,8 +260,8 @@ export const payrollApi = apiSlice.injectEndpoints({
         url: '/payroll/worker/me/single-sheet',
         params: params || {},
       }),
-      providesTags: ['Payroll'],
-      keepUnusedDataFor: 600,
+      providesTags: ['Payroll', { type: 'Payroll', id: 'ME' }, { type: 'Payroll', id: 'LIST' }],
+      keepUnusedDataFor: 30,
     }),
 
     markBatchLeave: builder.mutation<
@@ -274,7 +278,13 @@ export const payrollApi = apiSlice.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: (_result, _error, arg) => [
+        'Payroll',
+        ...(arg.workerIds || []).map((id) => ({ type: 'Payroll' as const, id })),
+        { type: 'Payroll', id: 'ME' },
+        { type: 'Payroll', id: 'LIST' },
+        'AllUsers',
+      ],
     }),
 
     claimOvertime: builder.mutation<
@@ -286,7 +296,13 @@ export const payrollApi = apiSlice.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: (_result, _error, arg) => [
+        'Payroll',
+        ...(arg.workerId ? [{ type: 'Payroll' as const, id: arg.workerId }] : []),
+        { type: 'Payroll', id: 'ME' },
+        { type: 'Payroll', id: 'LIST' },
+        'AllUsers',
+      ],
     }),
 
     updateOtStatus: builder.mutation<
@@ -298,7 +314,7 @@ export const payrollApi = apiSlice.injectEndpoints({
         method: 'PATCH',
         body,
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: ['Payroll', { type: 'Payroll', id: 'LIST' }, { type: 'Payroll', id: 'ME' }, 'AllUsers'],
     }),
 
     getOtClaims: builder.query<
@@ -327,7 +343,13 @@ export const payrollApi = apiSlice.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: (_result, _error, arg) => [
+        'Payroll',
+        { type: 'Payroll', id: arg.workerId },
+        { type: 'Payroll', id: 'ME' },
+        { type: 'Payroll', id: 'LIST' },
+        'AllUsers',
+      ],
     }),
 
     recordAdvance: builder.mutation<
@@ -344,7 +366,13 @@ export const payrollApi = apiSlice.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: (_result, _error, arg) => [
+        'Payroll',
+        { type: 'Payroll', id: arg.workerId },
+        { type: 'Payroll', id: 'ME' },
+        { type: 'Payroll', id: 'LIST' },
+        'AllUsers',
+      ],
     }),
 
     updateWorkerWage: builder.mutation<
@@ -359,6 +387,8 @@ export const payrollApi = apiSlice.injectEndpoints({
       invalidatesTags: (_result, _error, arg) => [
         'Payroll',
         { type: 'Payroll', id: arg.workerId },
+        { type: 'Payroll', id: 'ME' },
+        { type: 'Payroll', id: 'LIST' },
         'AllUsers',
       ],
     }),
@@ -377,7 +407,7 @@ export const payrollApi = apiSlice.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: ['Payroll', { type: 'Payroll', id: 'LIST' }],
     }),
 
     recordIncentive: builder.mutation<
@@ -394,7 +424,13 @@ export const payrollApi = apiSlice.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: (_result, _error, arg) => [
+        'Payroll',
+        { type: 'Payroll', id: arg.workerId },
+        { type: 'Payroll', id: 'ME' },
+        { type: 'Payroll', id: 'LIST' },
+        'AllUsers',
+      ],
     }),
 
     updateLeave: builder.mutation<
@@ -411,7 +447,7 @@ export const payrollApi = apiSlice.injectEndpoints({
         method: 'PUT',
         body,
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: ['Payroll', { type: 'Payroll', id: 'LIST' }, { type: 'Payroll', id: 'ME' }, 'AllUsers'],
     }),
 
     deleteLeave: builder.mutation<{ success: boolean; message: string }, string>({
@@ -419,7 +455,7 @@ export const payrollApi = apiSlice.injectEndpoints({
         url: `/payroll/leave/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: ['Payroll', { type: 'Payroll', id: 'LIST' }, { type: 'Payroll', id: 'ME' }, 'AllUsers'],
     }),
 
     updateOtClaim: builder.mutation<
@@ -437,7 +473,7 @@ export const payrollApi = apiSlice.injectEndpoints({
         method: 'PUT',
         body,
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: ['Payroll', { type: 'Payroll', id: 'LIST' }, { type: 'Payroll', id: 'ME' }, 'AllUsers'],
     }),
 
     deleteOtClaim: builder.mutation<{ success: boolean; message: string }, string>({
@@ -445,7 +481,7 @@ export const payrollApi = apiSlice.injectEndpoints({
         url: `/payroll/ot/claim/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: ['Payroll', { type: 'Payroll', id: 'LIST' }, { type: 'Payroll', id: 'ME' }, 'AllUsers'],
     }),
 
     deleteTransaction: builder.mutation<{ success: boolean; message: string }, string>({
@@ -453,7 +489,7 @@ export const payrollApi = apiSlice.injectEndpoints({
         url: `/payroll/transaction/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: ['Payroll', { type: 'Payroll', id: 'LIST' }, { type: 'Payroll', id: 'ME' }, 'AllUsers'],
     }),
 
     deleteHoliday: builder.mutation<{ success: boolean }, string>({
@@ -461,7 +497,7 @@ export const payrollApi = apiSlice.injectEndpoints({
         url: `/payroll/holiday/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Payroll'],
+      invalidatesTags: ['Payroll', { type: 'Payroll', id: 'LIST' }],
     }),
   }),
 });
