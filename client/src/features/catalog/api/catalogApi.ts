@@ -256,7 +256,7 @@ export const catalogApi = apiSlice.injectEndpoints({
     }),
     adjustItemStock: builder.mutation<
       { success: boolean; data: { item: CatalogItem; finalStock: number; reason: string } },
-      { id: string; delta?: number; newQuantity?: number; reason?: string }
+      { id: string; delta?: number; newQuantity?: number; reason?: string; categoryId?: string; category?: string }
     >({
       query: ({ id, ...body }) => ({
         url: `/catalog/items/${id}/stock-adjust`,

@@ -29,6 +29,8 @@ import {
   ArrowDownRight,
   SlidersHorizontal,
   FileSpreadsheet,
+  FolderPlus,
+  Tag,
 } from 'lucide-react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
@@ -38,6 +40,8 @@ import {
   useUpdateCatalogItemMutation,
   useGetItemHistoryQuery,
   useAdjustItemStockMutation,
+  useGetCategoriesQuery,
+  useCreateCategoryMutation,
 } from '../../catalog/api/catalogApi';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { useTheme } from '../../auth/context/ThemeContext';
@@ -101,6 +105,17 @@ export const InventoryDetailPage: React.FC = () => {
   const [deleteItem, { isLoading: isDeleting }] = useDeleteCatalogItemMutation();
   const [adjustStock, { isLoading: isAdjusting }] = useAdjustItemStockMutation();
 
+  const { data: categoryData, refetch: refetchCategories } = useGetCategoriesQuery();
+  const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
+  const categories = categoryData?.data || [];
+
+  const [adjustCategory, setAdjustCategory] = useState<string>('');
+  const [showQuickCategoryModal, setShowQuickCategoryModal] = useState(false);
+  const [quickCategoryId, setQuickCategoryId] = useState('');
+  const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryType, setNewCategoryType] = useState<'PRODUCT' | 'SERVICE' | 'BOTH'>('BOTH');
+
   // State
   const [activeMovementFilter, setActiveMovementFilter] = useState<MovementFilterType>('ALL');
   const [movementSearch, setMovementSearch] = useState('');
@@ -126,6 +141,7 @@ export const InventoryDetailPage: React.FC = () => {
 
   const [draft, setDraft] = useState({
     title: '',
+    categoryId: '',
     price: 0,
     description: '',
     stockQuantity: 0,
@@ -138,8 +154,10 @@ export const InventoryDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (item) {
+      const currentCatId = item.category?.id || (item.category as any)?._id || '';
       setDraft({
         title: item.title,
+        categoryId: currentCatId,
         price: item.price,
         description: item.description || '',
         stockQuantity: item.stockQuantity || 0,
@@ -151,6 +169,8 @@ export const InventoryDetailPage: React.FC = () => {
       setEditImages(allImgs);
       const thumbIdx = allImgs.indexOf(item.thumbnailUrl || '');
       setEditThumbnailIndex(thumbIdx >= 0 ? thumbIdx : 0);
+      setAdjustCategory(currentCatId);
+      setQuickCategoryId(currentCatId);
     }
   }, [item]);
 
@@ -249,10 +269,14 @@ export const InventoryDetailPage: React.FC = () => {
     }
 
     try {
-      let payload: { id: string; delta?: number; newQuantity?: number; reason: string } = {
+      let payload: { id: string; delta?: number; newQuantity?: number; reason: string; categoryId?: string } = {
         id: item.id,
         reason: adjustNotes.trim() ? `${adjustReason}: ${adjustNotes.trim()}` : adjustReason,
       };
+
+      if (adjustCategory) {
+        payload.categoryId = adjustCategory;
+      }
 
       if (adjustMode === 'ADD') {
         payload.delta = qty;
@@ -278,6 +302,8 @@ export const InventoryDetailPage: React.FC = () => {
         id: item.id,
         body: {
           title: draft.title.trim(),
+          category: draft.categoryId || undefined,
+          categoryId: draft.categoryId || undefined,
           price: draft.price,
           description: draft.description,
           sku: draft.sku.trim() || undefined,
@@ -294,6 +320,49 @@ export const InventoryDetailPage: React.FC = () => {
       setIsEditing(false);
     } catch (err: any) {
       alert(err?.data?.message || 'Failed to save changes.');
+    }
+  };
+
+  const handleCreateNewCategory = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    try {
+      const res = await createCategory({
+        name: newCategoryName.trim(),
+        type: newCategoryType,
+      }).unwrap();
+      await refetchCategories();
+      const newCatId = res.data.id || (res.data as any)._id;
+      setDraft((prev) => ({ ...prev, categoryId: newCatId }));
+      setAdjustCategory(newCatId);
+      setQuickCategoryId(newCatId);
+      setNewCategoryName('');
+      setShowNewCategoryModal(false);
+      setAdjustFeedback('New category created and selected.');
+      setTimeout(() => setAdjustFeedback(null), 3000);
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to create category.');
+    }
+  };
+
+  const handleSaveQuickCategory = async () => {
+    if (!item || !quickCategoryId) {
+      setShowQuickCategoryModal(false);
+      return;
+    }
+    try {
+      await updateItem({
+        id: item.id,
+        body: {
+          category: quickCategoryId,
+          categoryId: quickCategoryId,
+        },
+      }).unwrap();
+      setShowQuickCategoryModal(false);
+      setAdjustFeedback('Category updated successfully.');
+      setTimeout(() => setAdjustFeedback(null), 3500);
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to update category.');
     }
   };
 
@@ -436,7 +505,21 @@ export const InventoryDetailPage: React.FC = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
-                  <span>{item.category?.name || 'General'}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isAdmin) {
+                        setQuickCategoryId(item.category?.id || (item.category as any)?._id || '');
+                        setShowQuickCategoryModal(true);
+                      }
+                    }}
+                    className={`inline-flex items-center gap-1 font-semibold ${isAdmin ? 'text-amber-600 dark:text-amber-400 hover:underline cursor-pointer' : ''}`}
+                    title={isAdmin ? 'Click to change category' : undefined}
+                  >
+                    <Tag className="w-3 h-3 text-amber-500" />
+                    <span>{item.category?.name || 'General'}</span>
+                    {isAdmin && <Edit3 className="w-2.5 h-2.5 opacity-60 hover:opacity-100" />}
+                  </button>
                   <span>·</span>
                   <span className="flex items-center gap-1">
                     <span>SKU: {item.sku || 'N/A'}</span>
@@ -608,6 +691,31 @@ export const InventoryDetailPage: React.FC = () => {
                   onChange={(e) => setDraft({ ...draft, price: Number(e.target.value) || 0 })}
                   className="w-full rounded-xl glass-modern-input px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
                 />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] font-mono uppercase text-slate-400">Category</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCategoryModal(true)}
+                    className="text-[10px] font-mono font-bold text-amber-500 hover:text-amber-400 flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <FolderPlus className="w-3 h-3" />
+                    <span>+ New</span>
+                  </button>
+                </div>
+                <select
+                  value={draft.categoryId}
+                  onChange={(e) => setDraft({ ...draft, categoryId: e.target.value })}
+                  className="w-full rounded-xl glass-modern-input px-3 py-2 text-xs text-slate-900 dark:text-white outline-none cursor-pointer"
+                >
+                  <option value="" className="text-slate-900 dark:bg-slate-900">General</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id || (cat as any)._id} value={cat.id || (cat as any)._id} className="text-slate-900 dark:bg-slate-900">
+                      {cat.name} ({cat.type})
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1">SKU</label>
@@ -1135,9 +1243,24 @@ export const InventoryDetailPage: React.FC = () => {
                 {/* Category */}
                 <div className="p-3 flex items-center justify-between">
                   <span className="text-slate-400">Category</span>
-                  <span className="font-bold text-amber-600 dark:text-amber-400">
-                    {item.category?.name || 'General'}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-amber-600 dark:text-amber-400">
+                      {item.category?.name || 'General'}
+                    </span>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuickCategoryId(item.category?.id || (item.category as any)?._id || '');
+                          setShowQuickCategoryModal(true);
+                        }}
+                        className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-amber-500 transition cursor-pointer"
+                        title="Change Category"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Classification */}
@@ -1295,6 +1418,35 @@ export const InventoryDetailPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Category Selector (Allow edit category on stock adjustment) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                    Category
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCategoryModal(true)}
+                    className="text-[10px] font-mono font-bold text-amber-500 hover:text-amber-400 flex items-center gap-1 cursor-pointer"
+                  >
+                    <FolderPlus className="w-3 h-3" />
+                    <span>+ New Category</span>
+                  </button>
+                </div>
+                <select
+                  value={adjustCategory}
+                  onChange={(e) => setAdjustCategory(e.target.value)}
+                  className="w-full rounded-xl bg-slate-100 dark:bg-[#141624] border border-slate-200 dark:border-white/10 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono outline-none focus:border-amber-400 cursor-pointer"
+                >
+                  <option value="" className="text-slate-900 dark:bg-slate-900">General</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id || (cat as any)._id} value={cat.id || (cat as any)._id} className="text-slate-900 dark:bg-slate-900">
+                      {cat.name} ({cat.type})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Reason Selector */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
@@ -1395,7 +1547,145 @@ export const InventoryDetailPage: React.FC = () => {
         />
       )}
 
-      {/* Delete Item Confirmation Modal */}
+      {/* Quick Category Switcher Modal */}
+      {showQuickCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#0e101a] border border-slate-200 dark:border-white/15 p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10">
+              <div className="flex items-center gap-2">
+                <Tag className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Change Category</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowQuickCategoryModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-mono uppercase text-slate-400 font-bold">Select Category</label>
+                <button
+                  type="button"
+                  onClick={() => setShowNewCategoryModal(true)}
+                  className="text-xs font-mono font-bold text-amber-500 hover:text-amber-400 flex items-center gap-1 cursor-pointer"
+                >
+                  <FolderPlus className="w-3.5 h-3.5" />
+                  <span>+ New Category</span>
+                </button>
+              </div>
+
+              <select
+                value={quickCategoryId}
+                onChange={(e) => setQuickCategoryId(e.target.value)}
+                className="w-full rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-mono outline-none focus:border-amber-400 cursor-pointer"
+              >
+                <option value="" className="text-slate-900 dark:bg-slate-900">General</option>
+                {categories.map((cat) => (
+                  <option key={cat.id || (cat as any)._id} value={cat.id || (cat as any)._id} className="text-slate-900 dark:bg-slate-900">
+                    {cat.name} ({cat.type})
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickCategoryModal(false)}
+                  className="flex-1 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={handleSaveQuickCategory}
+                  className="flex-1 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs transition"
+                >
+                  {isSaving ? 'Updating...' : 'Save Category'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create New Category Modal */}
+      {showNewCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#0e101a] border border-slate-200 dark:border-white/15 p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10">
+              <div className="flex items-center gap-2">
+                <FolderPlus className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Create New Category</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewCategoryModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewCategory} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-mono uppercase text-slate-400 font-bold block">Category Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Brake Pads, Suspension, Engine Oil"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="w-full rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-mono uppercase text-slate-400 font-bold block">Type</label>
+                <div className="grid grid-cols-3 gap-1.5 text-xs font-mono">
+                  {(['PRODUCT', 'SERVICE', 'BOTH'] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setNewCategoryType(t)}
+                      className={`py-1.5 rounded-lg border text-[11px] font-bold transition ${
+                        newCategoryType === t
+                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40 shadow-xs'
+                          : 'border-slate-200 dark:border-white/10 text-slate-500'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowNewCategoryModal(false)}
+                  className="flex-1 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingCategory || !newCategoryName.trim()}
+                  className="flex-1 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs disabled:opacity-50"
+                >
+                  {isCreatingCategory ? 'Creating...' : 'Create & Select'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
       <ConfirmationModal
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}

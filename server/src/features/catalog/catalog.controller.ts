@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import Sale from '../../models/Sale.model';
 import Task from '../../models/Task.model';
+import Category from '../../models/Category.model';
 import { catalogRepository } from './catalog.repository';
 import { sendError, sendSuccess } from '../../shared/utils/response.handler';
 import { getCloudinaryUrl, extractPublicId, uploadToCloudinary, deleteFromCloudinary, deleteMultipleFromCloudinary } from '../../shared/utils/cloudinary.helper';
@@ -194,6 +195,17 @@ export const updateCatalogItem = async (req: Request, res: Response) => {
   try {
     if (req.body.itemType === 'PRODUCT' && Number(req.body.stockQuantity) < 0) return sendError(res, 'Stock cannot be negative.', 400);
     const updates: any = { ...req.body, ...(req.body.price !== undefined ? { price: Number(req.body.price) } : {}), ...(req.body.stockQuantity !== undefined ? { stockQuantity: Number(req.body.stockQuantity), trackStock: true } : {}) };
+
+    const rawCategory = req.body.category || req.body.categoryId;
+    if (rawCategory) {
+      if (mongoose.Types.ObjectId.isValid(rawCategory)) {
+        updates.category = new mongoose.Types.ObjectId(rawCategory);
+      } else {
+        const cat = await Category.findOne({ name: { $regex: new RegExp('^' + String(rawCategory).trim() + '$', 'i') } });
+        if (cat) updates.category = cat._id;
+      }
+      delete updates.categoryId;
+    }
 
     const base64Map = new Map<string, string>();
     const uploadCached = async (base64Str: string): Promise<string> => {
@@ -690,7 +702,7 @@ export const getItemHistory = async (req: Request, res: Response) => {
 
 export const adjustItemStock = async (req: Request, res: Response) => {
   try {
-    const { delta, newQuantity, reason } = req.body;
+    const { delta, newQuantity, reason, category, categoryId } = req.body;
     const item = await catalogRepository.findItem(req.params.id);
     if (!item) return sendError(res, 'Item not found.', 404);
 
@@ -701,9 +713,17 @@ export const adjustItemStock = async (req: Request, res: Response) => {
       finalStock = Math.max(0, finalStock + Number(delta));
     }
 
-    const updated = await catalogRepository.updateItem(req.params.id, {
-      stockQuantity: finalStock,
-    });
+    const updates: any = { stockQuantity: finalStock };
+    const rawCategory = category || categoryId;
+    if (rawCategory) {
+      if (mongoose.Types.ObjectId.isValid(rawCategory)) {
+        updates.category = new mongoose.Types.ObjectId(rawCategory);
+      } else {
+        const cat = await Category.findOne({ name: { $regex: new RegExp('^' + String(rawCategory).trim() + '$', 'i') } });
+        if (cat) updates.category = cat._id;
+      }
+    }
+    const updated = await catalogRepository.updateItem(req.params.id, updates);
 
     return sendSuccess(res, `Stock adjusted to ${finalStock}.`, {
       item: format(updated),
