@@ -22,6 +22,8 @@ export interface MonthlyPaySlipModalProps {
     name: string;
     mobile?: string;
     role?: string;
+    wageType?: 'DAILY' | 'MONTHLY';
+    monthlySalary?: number;
     dailyWage: number;
     profileImageUrl?: string;
   };
@@ -47,8 +49,12 @@ export const MonthlyPaySlipModal: React.FC<MonthlyPaySlipModalProps> = ({
     year: 'numeric',
   });
 
+  const isMonthly = (monthItem.wageType || worker.wageType) === 'MONTHLY';
+  const monthlySalary = monthItem.monthlySalary || worker.monthlySalary || 0;
   const dailyWage = worker.dailyWage || 0;
-  const grossBase = monthItem.workingDays * dailyWage;
+  const grossBase = isMonthly
+    ? (monthItem.grossWages || monthlySalary)
+    : monthItem.workingDays * dailyWage;
   const grossEarnings = grossBase + (monthItem.otAmount || 0) + (monthItem.incentives || 0);
   const totalDeductions = (monthItem.leaveDeductions || 0) + (monthItem.advances || 0);
   const netSalary = Math.max(0, grossEarnings - totalDeductions);
@@ -62,16 +68,16 @@ export const MonthlyPaySlipModal: React.FC<MonthlyPaySlipModalProps> = ({
 👤 *Worker:* ${worker.name} (${worker.role || 'Staff'})
 📱 *Mobile:* ${worker.mobile || 'N/A'}
 📅 *Period:* ${monthItem.monthLabel}
-💰 *Daily Wage Rate:* ₹${dailyWage.toLocaleString('en-IN')} / day
+${isMonthly ? `💰 *Salary Scheme:* Fixed Monthly (₹${monthlySalary.toLocaleString('en-IN')}/mo)` : `💰 *Daily Wage Rate:* ₹${dailyWage.toLocaleString('en-IN')} / day`}
 
 📊 *ATTENDANCE SUMMARY:*
 • Working Days Present: ${monthItem.workingDays} days
-• Sundays / Weekly Offs: ${monthItem.sundays} days
+• Sundays / Weekly Offs: ${monthItem.sundays} days ${isMonthly ? '(Paid)' : '(Off)'}
 • Paid Holidays: ${monthItem.holidays} days
 • Leaves Taken: ${monthItem.leaveDays} days (Allowed: ${monthItem.allowedLeaveDays}d)
 
 💵 *EARNINGS:*
-• Base Wages (${monthItem.workingDays}d × ₹${dailyWage}): ₹${grossBase.toLocaleString('en-IN')}
+• Base ${isMonthly ? 'Monthly Salary' : `Wages (${monthItem.workingDays}d × ₹${dailyWage})`}: ₹${grossBase.toLocaleString('en-IN')}
 • Overtime (${monthItem.otHours} hrs): +₹${(monthItem.otAmount || 0).toLocaleString('en-IN')}
 • Incentives: +₹${(monthItem.incentives || 0).toLocaleString('en-IN')}
 • *Gross Earnings:* ₹${grossEarnings.toLocaleString('en-IN')}
@@ -195,9 +201,9 @@ Issued on ${todayStr} • Momzz Garage Management System`;
                 </span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 uppercase block">Daily Wage Rate</span>
+                <span className="text-[10px] text-slate-400 uppercase block">{isMonthly ? 'Salary Scheme' : 'Daily Wage Rate'}</span>
                 <span className="font-black text-amber-600 dark:text-amber-400">
-                  ₹{dailyWage.toLocaleString('en-IN')} / day
+                  {isMonthly ? `₹${monthlySalary.toLocaleString('en-IN')} / mo` : `₹${dailyWage.toLocaleString('en-IN')} / day`}
                 </span>
               </div>
               <div>
@@ -251,7 +257,9 @@ Issued on ${todayStr} • Momzz Garage Management System`;
                 {/* Earnings rows */}
                 <div className="flex justify-between py-1 px-2 rounded-lg bg-slate-50 dark:bg-white/[0.02]">
                   <span className="text-slate-600 dark:text-slate-400">
-                    Base Daily Wages ({monthItem.workingDays} days × ₹{dailyWage})
+                    {isMonthly
+                      ? `Base Monthly Salary (₹${monthlySalary.toLocaleString('en-IN')}/mo)`
+                      : `Base Daily Wages (${monthItem.workingDays} days × ₹${dailyWage})`}
                   </span>
                   <span className="font-bold text-slate-800 dark:text-slate-200">
                     ₹{grossBase.toLocaleString('en-IN')}

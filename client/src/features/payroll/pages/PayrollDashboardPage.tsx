@@ -118,6 +118,7 @@ export const PayrollDashboardPage: React.FC = () => {
   const [settleReference, setSettleReference] = useState('');
 
   // Wage Form State
+  const [selectedWageType, setSelectedWageType] = useState<'DAILY' | 'MONTHLY'>('DAILY');
   const [newWage, setNewWage] = useState<number | ''>('');
   const [wageEffectiveDate, setWageEffectiveDate] = useState(() => new Date().toISOString().split('T')[0]);
 
@@ -306,9 +307,12 @@ export const PayrollDashboardPage: React.FC = () => {
     if (!selectedWorker || newWage === '' || Number(newWage) < 0) return;
 
     try {
+      const isMonthly = selectedWageType === 'MONTHLY';
       await updateWorkerWage({
         workerId: selectedWorker.workerId,
-        dailyWage: Number(newWage),
+        wageType: selectedWageType,
+        monthlySalary: isMonthly ? Number(newWage) : 0,
+        dailyWage: !isMonthly ? Number(newWage) : 0,
         effectiveDate: wageEffectiveDate,
       }).unwrap();
 
@@ -725,11 +729,17 @@ export const PayrollDashboardPage: React.FC = () => {
 
                       <td className="py-3 px-4 font-mono">
                         <div className="flex items-center gap-1.5">
-                          {w.dailyWage > 0 ? (
+                          {w.hasWageAssigned ? (
                             <div className="flex flex-col">
-                              <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                {formatCurrency(w.dailyWage)}
-                              </span>
+                              {w.wageType === 'MONTHLY' ? (
+                                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                  ₹{(w.monthlySalary || 0).toLocaleString('en-IN')}/mo
+                                </span>
+                              ) : (
+                                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                  {formatCurrency(w.dailyWage)}/d
+                                </span>
+                              )}
                               {w.firstPayrollDate && (
                                 <span className="text-[10px] text-slate-400">
                                   From {w.firstPayrollDate}
@@ -745,12 +755,14 @@ export const PayrollDashboardPage: React.FC = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedWorker(w);
-                              setNewWage(w.dailyWage || '');
+                              const isMonthly = w.wageType === 'MONTHLY';
+                              setSelectedWageType(isMonthly ? 'MONTHLY' : 'DAILY');
+                              setNewWage(isMonthly ? (w.monthlySalary || '') : (w.dailyWage || ''));
                               setWageEffectiveDate(new Date().toISOString().split('T')[0]);
                               setShowWageModal(true);
                             }}
                             className="p-1 text-slate-400 hover:text-amber-500 transition"
-                            title="Set / Edit Daily Wage"
+                            title="Set / Edit Wage or Salary"
                           >
                             <Edit2 className="w-3 h-3" />
                           </button>
@@ -855,18 +867,22 @@ export const PayrollDashboardPage: React.FC = () => {
 
                     <div className="flex items-center gap-1 shrink-0">
                       <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300">
-                        {w.dailyWage > 0 ? `₹${w.dailyWage}/d` : 'No Wage'}
+                        {w.hasWageAssigned
+                          ? (w.wageType === 'MONTHLY' ? `₹${(w.monthlySalary || 0).toLocaleString('en-IN')}/mo` : `₹${w.dailyWage}/d`)
+                          : 'No Wage'}
                       </span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedWorker(w);
-                          setNewWage(w.dailyWage || '');
+                          const isMonthly = w.wageType === 'MONTHLY';
+                          setSelectedWageType(isMonthly ? 'MONTHLY' : 'DAILY');
+                          setNewWage(isMonthly ? (w.monthlySalary || '') : (w.dailyWage || ''));
                           setWageEffectiveDate(new Date().toISOString().split('T')[0]);
                           setShowWageModal(true);
                         }}
                         className="p-1 text-slate-400 hover:text-amber-500 transition"
-                        title="Edit Daily Wage"
+                        title="Edit Wage or Salary"
                       >
                         <Edit2 className="w-3 h-3" />
                       </button>
@@ -1465,16 +1481,21 @@ export const PayrollDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* ── MODAL 4: EDIT DAILY WAGE ── */}
+      {/* ── MODAL 4: EDIT WAGE OR MONTHLY SALARY ── */}
       {showWageModal && selectedWorker && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
           <div className="w-full sm:max-w-sm bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                Update Daily Wage
-              </h3>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Update Wage & Salary
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Staff: <span className="font-bold text-slate-900 dark:text-white">{selectedWorker.name}</span>
+                </p>
+              </div>
               <button
                 onClick={() => setShowWageModal(false)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
@@ -1484,21 +1505,76 @@ export const PayrollDashboardPage: React.FC = () => {
             </div>
 
             <form onSubmit={handleWageSubmit} className="space-y-3.5">
-              <p className="text-xs text-slate-500">
-                Staff: <span className="font-bold text-slate-900 dark:text-white">{selectedWorker.name}</span>
-              </p>
+              {/* Wage Scheme Selector */}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  New Daily Wage (₹)
+                  Salary Stream / Scheme
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedWageType('DAILY');
+                      if (selectedWorker.dailyWage) setNewWage(selectedWorker.dailyWage);
+                    }}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                      selectedWageType === 'DAILY'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span>Daily Wage</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedWageType('MONTHLY');
+                      if (selectedWorker.monthlySalary) setNewWage(selectedWorker.monthlySalary);
+                    }}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                      selectedWageType === 'MONTHLY'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span>Monthly Salary</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Amount input */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {selectedWageType === 'MONTHLY' ? 'Monthly Fixed Salary (₹)' : 'Daily Wage Rate (₹)'}
                 </label>
                 <input
                   type="number"
                   min="0"
                   required
+                  placeholder={selectedWageType === 'MONTHLY' ? 'e.g. 10000' : 'e.g. 1250'}
                   value={newWage}
                   onChange={(e) => setNewWage(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
+              </div>
+
+              {/* Rules banner */}
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 text-[11px] space-y-1 text-slate-600 dark:text-slate-400">
+                {selectedWageType === 'MONTHLY' ? (
+                  <>
+                    <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      • Sundays are Paid Days
+                    </p>
+                    <p>• 1 Allotted Leave / month = Paid Leave (₹0 deduction)</p>
+                    <p>• Other leaves reduce 1 day's pay (Monthly ÷ Days in month)</p>
+                  </>
+                ) : (
+                  <>
+                    <p>• Sundays are weekly unpaid offs</p>
+                    <p>• 1 Allotted Leave / month = Paid Leave (₹0 deduction)</p>
+                    <p>• Wage accrues per completed working day</p>
+                  </>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -1513,32 +1589,11 @@ export const PayrollDashboardPage: React.FC = () => {
                   className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
                 <span className="text-[10px] text-slate-400 block">
-                  {selectedWorker.dailyWage === 0
+                  {!selectedWorker.hasWageAssigned
                     ? 'Start date for salary and attendance.'
                     : 'Applies from this date onward.'}
                 </span>
               </div>
-
-              {newWage !== '' && Number(newWage) !== selectedWorker.dailyWage && (
-                (() => {
-                  const unsettledDays = selectedWorker.unsettledWorkingDays || 0;
-                  const diffPerDay = Number(newWage) - (selectedWorker.dailyWage || 0);
-                  const totalDiff = diffPerDay * unsettledDays;
-                  const projectedPayable = Math.max(0, selectedWorker.netPayable + totalDiff);
-
-                  return (
-                    <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/25 text-xs text-blue-900 dark:text-blue-200 space-y-1 animate-fadeIn">
-                      <div className="flex items-center gap-1.5 font-bold text-blue-700 dark:text-blue-300">
-                        <Info className="w-3.5 h-3.5 shrink-0" />
-                        <span>Wage Impact</span>
-                      </div>
-                      <p className="text-[11px] leading-relaxed">
-                        {unsettledDays} unsettled day(s): {formatCurrency(selectedWorker.netPayable)} → {formatCurrency(projectedPayable)}
-                      </p>
-                    </div>
-                  );
-                })()
-              )}
 
               <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
                 <button

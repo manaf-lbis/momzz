@@ -51,7 +51,10 @@ export const holidaySchema = z.object({
 
 export const updateWageSchema = z.object({
   workerId: z.string().min(1, 'Worker ID is required'),
-  dailyWage: z.number().min(0, 'Daily wage cannot be negative'),
+  dailyWage: z.number().min(0, 'Daily wage cannot be negative').optional(),
+  wageType: z.enum(['DAILY', 'MONTHLY']).optional().default('DAILY'),
+  monthlySalary: z.number().min(0, 'Monthly salary cannot be negative').optional(),
+  rate: z.number().min(0, 'Rate cannot be negative').optional(),
   effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Effective date must be YYYY-MM-DD').optional(),
 });
 

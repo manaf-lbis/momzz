@@ -14,6 +14,8 @@ export interface SingleSheetDayEntry {
   date: string; // YYYY-MM-DD
   dayName: string;
   dayType: 'WORKING' | 'SUNDAY' | 'HOLIDAY' | 'FULL_LEAVE' | 'HALF_LEAVE';
+  wageType?: 'DAILY' | 'MONTHLY';
+  monthlySalary?: number;
   holidayTitle?: string;
   adjustmentId?: string;
   adjustmentNote?: string;
@@ -45,6 +47,10 @@ export interface SingleSheetDayEntry {
 export interface MonthlyBreakdownItem {
   monthKey: string;
   monthLabel: string;
+  wageType?: 'DAILY' | 'MONTHLY';
+  monthlySalary?: number;
+  perDayWage?: number;
+  daysInMonth?: number;
   totalDays: number;
   workingDays: number;
   sundays: number;
@@ -72,6 +78,8 @@ export interface ISettlementBrief {
     endDate: string;
   };
   dailyWageAtSettlement: number;
+  wageType?: 'DAILY' | 'MONTHLY';
+  monthlySalaryAtSettlement?: number;
   totalWorkingDays: number;
   totalSundays: number;
   totalHolidays: number;
@@ -100,6 +108,8 @@ export interface WorkerSingleSheetData {
     name: string;
     mobile: string;
     profileImageUrl?: string;
+    wageType?: 'DAILY' | 'MONTHLY';
+    monthlySalary?: number;
     dailyWage: number;
     dailyWageEffectiveDate?: string;
     lastSettledDate?: string;
@@ -180,6 +190,8 @@ export interface WorkerSummaryItem {
   mobile: string;
   profileImageUrl?: string;
   role: string;
+  wageType?: 'DAILY' | 'MONTHLY';
+  monthlySalary?: number;
   dailyWage: number;
   dailyWageEffectiveDate?: string;
   lastSettledDate?: string;
@@ -377,7 +389,14 @@ export const payrollApi = apiSlice.injectEndpoints({
 
     updateWorkerWage: builder.mutation<
       { success: boolean; data: any },
-      { workerId: string; dailyWage: number; effectiveDate?: string }
+      {
+        workerId: string;
+        wageType?: 'DAILY' | 'MONTHLY';
+        monthlySalary?: number;
+        dailyWage?: number;
+        rate?: number;
+        effectiveDate?: string;
+      }
     >({
       query: (body) => ({
         url: '/payroll/admin/wage-rate',

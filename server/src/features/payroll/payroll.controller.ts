@@ -319,10 +319,17 @@ export class PayrollController {
    */
   static async updateWorkerWage(req: Request, res: Response, next: NextFunction) {
     try {
+      const { workerId, dailyWage, wageType, monthlySalary, rate, effectiveDate } = req.body;
+      const finalWageType: 'DAILY' | 'MONTHLY' = wageType === 'MONTHLY' ? 'MONTHLY' : 'DAILY';
+      const finalMonthlySalary = finalWageType === 'MONTHLY' ? Number(monthlySalary ?? rate ?? dailyWage ?? 0) : 0;
+      const finalDailyWage = finalWageType === 'DAILY' ? Number(dailyWage ?? rate ?? 0) : 0;
+
       const updated = await PayrollRepository.updateWorkerWage(
-        req.body.workerId,
-        req.body.dailyWage,
-        req.body.effectiveDate
+        workerId,
+        finalDailyWage,
+        effectiveDate,
+        finalWageType,
+        finalMonthlySalary
       );
       if (!updated) throw new AppError('Worker not found', 404);
 

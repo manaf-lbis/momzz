@@ -3,6 +3,7 @@ import { ROLES, UserRole } from '../shared/constants/status';
 
 export interface IWageHistoryItem {
   wage: number;
+  wageType?: 'DAILY' | 'MONTHLY';
   effectiveDate: Date;
   createdAt: Date;
 }
@@ -16,6 +17,8 @@ export interface ISettlementBrief {
     endDate: string;
   };
   dailyWageAtSettlement: number;
+  wageType?: 'DAILY' | 'MONTHLY';
+  monthlySalaryAtSettlement?: number;
   totalWorkingDays: number;
   totalSundays: number;
   totalHolidays: number;
@@ -70,6 +73,8 @@ export interface IUser extends Document {
   loginAudit: Array<{ timestamp: Date; status: 'SUCCESS' | 'FAILED'; ipAddress: string }>;
   acceptedTermsVersion?: string;
   acceptedTermsAt?: Date;
+  wageType?: 'DAILY' | 'MONTHLY';
+  monthlySalary?: number;
   dailyWage?: number;
   dailyWageEffectiveDate?: Date;
   lastSettledDate?: Date;
@@ -155,6 +160,16 @@ const UserSchema: Schema = new Schema(
       type: Date,
       default: null,
     },
+    wageType: {
+      type: String,
+      enum: ['DAILY', 'MONTHLY'],
+      default: 'DAILY',
+    },
+    monthlySalary: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     dailyWage: {
       type: Number,
       default: 0,
@@ -171,6 +186,7 @@ const UserSchema: Schema = new Schema(
     wageHistory: [
       {
         wage: { type: Number, required: true },
+        wageType: { type: String, enum: ['DAILY', 'MONTHLY'], default: 'DAILY' },
         effectiveDate: { type: Date, required: true },
         createdAt: { type: Date, default: Date.now },
       },

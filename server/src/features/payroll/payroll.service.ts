@@ -36,6 +36,25 @@ export function calculateHalfDayDeduction(dailyWage: number): number {
 }
 
 /**
+ * Returns total days in calendar month for a dateStr 'YYYY-MM-DD'
+ */
+export function getDaysInCalendarMonth(dateStr: string): number {
+  const [y, m] = dateStr.split('-').map(Number);
+  // In JS Date constructor, (y, m, 0) gives the last day of month m (1-indexed m becomes month m-1's last day)
+  return new Date(y, m, 0).getDate();
+}
+
+/**
+ * Interface describing wage decision for a worker on a given date.
+ */
+export interface WageDecision {
+  wageType: 'DAILY' | 'MONTHLY';
+  baseWageAmount: number; // monthlySalary if MONTHLY, dailyWage if DAILY
+  perDayWage: number; // daily wage accrued for that day (monthlySalary / daysInMonth for MONTHLY)
+  daysInMonth: number;
+}
+
+/**
  * Determines the very first day of existence for a worker's payroll.
  * Rule: Whenever we decide the salary/wages of that person, that is the first day of that person.
  * If no wage update / decision was ever made, returns null (person will not get anything).
@@ -51,11 +70,13 @@ export function getWorkerFirstPayrollDate(worker: IUser): string | null {
     }
   }
 
-  if (worker.dailyWage && worker.dailyWage > 0 && worker.dailyWageEffectiveDate) {
+  const hasWage = (worker.dailyWage && worker.dailyWage > 0) || (worker.monthlySalary && worker.monthlySalary > 0);
+
+  if (hasWage && worker.dailyWageEffectiveDate) {
     return formatDateStr(new Date(worker.dailyWageEffectiveDate));
   }
 
-  if (worker.dailyWage && worker.dailyWage > 0) {
+  if (hasWage) {
     return worker.createdAt ? formatDateStr(new Date(worker.createdAt)) : formatDateStr(new Date());
   }
 
@@ -63,41 +84,88 @@ export function getWorkerFirstPayrollDate(worker: IUser): string | null {
 }
 
 /**
- * Finds the applicable daily wage for a worker on a specific date string (YYYY-MM-DD).
+ * Resolves wage decision (type, assigned amount, and calculated perDayWage) on a specific date (YYYY-MM-DD).
  * Rule:
  * 1. If date is earlier than worker's first wage decision date, returns 0.
  * 2. If no wage was ever decided, returns 0.
- * 3. Tracks when we updated wages: from that point onwards those wages will be effective
- *    and previous wages are effective from previous wage updates.
+ * 3. Tracks when wages were updated: from that point onwards those wages will be effective.
+ * 4. For MONTHLY: perDayWage = round2(monthlySalary / daysInMonth).
+ * 5. For DAILY: perDayWage = dailyWage.
  */
-export function getWageForDate(worker: IUser, dateStr: string): number {
+export function getWageDecisionForDate(worker: IUser, dateStr: string): WageDecision {
+  const daysInMonth = getDaysInCalendarMonth(dateStr);
+  const fallbackType: 'DAILY' | 'MONTHLY' = worker.wageType === 'MONTHLY' ? 'MONTHLY' : 'DAILY';
+
   const firstPayrollDate = getWorkerFirstPayrollDate(worker);
   if (!firstPayrollDate || dateStr < firstPayrollDate) {
-    return 0;
+    return {
+      wageType: fallbackType,
+      baseWageAmount: 0,
+      perDayWage: 0,
+      daysInMonth,
+    };
   }
 
   if (worker.wageHistory && worker.wageHistory.length > 0) {
     const sorted = [...worker.wageHistory]
       .map((entry) => ({
         wage: entry.wage,
+        wageType: entry.wageType || fallbackType,
         effectiveDateStr: formatDateStr(new Date(entry.effectiveDate)),
       }))
       .filter((e) => Boolean(e.effectiveDateStr))
       .sort((a, b) => a.effectiveDateStr.localeCompare(b.effectiveDateStr));
 
-    let applicableWage = 0;
+    let applicableRecord: { wage: number; wageType: 'DAILY' | 'MONTHLY'; effectiveDateStr: string } | null = null;
     for (const record of sorted) {
       if (record.effectiveDateStr <= dateStr) {
-        applicableWage = record.wage;
+        applicableRecord = record;
       } else {
         break;
       }
     }
 
-    return applicableWage;
+    if (applicableRecord) {
+      const isMonthly = applicableRecord.wageType === 'MONTHLY';
+      const perDayWage = isMonthly
+        ? round2(applicableRecord.wage / daysInMonth)
+        : applicableRecord.wage;
+
+      return {
+        wageType: applicableRecord.wageType,
+        baseWageAmount: applicableRecord.wage,
+        perDayWage,
+        daysInMonth,
+      };
+    }
   }
 
-  return worker.dailyWage || 0;
+  // Fallback to worker root fields
+  if (fallbackType === 'MONTHLY') {
+    const monthlySalary = worker.monthlySalary || 0;
+    const perDayWage = monthlySalary > 0 ? round2(monthlySalary / daysInMonth) : 0;
+    return {
+      wageType: 'MONTHLY',
+      baseWageAmount: monthlySalary,
+      perDayWage,
+      daysInMonth,
+    };
+  }
+
+  const dailyWage = worker.dailyWage || 0;
+  return {
+    wageType: 'DAILY',
+    baseWageAmount: dailyWage,
+    perDayWage: dailyWage,
+    daysInMonth,
+  };
+}
+
+/**
+ * Finds the applicable daily wage for a worker on a specific date string (YYYY-MM-DD).
+ */
+export function getWageForDate(worker: IUser, dateStr: string): number {
+  return getWageDecisionForDate(worker, dateStr).perDayWage;
 }
 
 /**
@@ -166,6 +234,8 @@ export interface SingleSheetDayEntry {
   date: string; // YYYY-MM-DD
   dayName: string;
   dayType: 'WORKING' | 'SUNDAY' | 'HOLIDAY' | 'FULL_LEAVE' | 'HALF_LEAVE';
+  wageType?: 'DAILY' | 'MONTHLY';
+  monthlySalary?: number;
   isAllowedLeave?: boolean;
   holidayTitle?: string;
   adjustmentId?: string;
@@ -205,6 +275,10 @@ export interface SingleSheetDayEntry {
 export interface MonthlyBreakdownItem {
   monthKey: string; // 'YYYY-MM'
   monthLabel: string; // 'November 2026'
+  wageType?: 'DAILY' | 'MONTHLY';
+  monthlySalary?: number;
+  perDayWage?: number;
+  daysInMonth?: number;
   totalDays: number;
   workingDays: number;
   sundays: number;
@@ -264,7 +338,8 @@ export class PayrollService {
       for (const date of sortedDates) {
         if (date < workerFirstPayrollDate) continue; // cannot mark leave prior to worker's first wage date
 
-        const dailyWage = getWageForDate(worker, date);
+        const wageDecision = getWageDecisionForDate(worker, date);
+        const dailyWage = wageDecision.perDayWage;
         const mKey = date.substring(0, 7);
         const monthStart = `${mKey}-01`;
         const monthEnd = `${mKey}-31`;
@@ -289,7 +364,14 @@ export class PayrollService {
         if (isFirstInMonth) {
           deductionAmount = 0;
           isAllowedLeave = true;
+        } else if (wageDecision.wageType === 'MONTHLY') {
+          // Monthly salary worker: unpaid leave reduces 1 day's salary (or half day for HALF_LEAVE)
+          deductionAmount =
+            leaveType === 'FULL_LEAVE'
+              ? dailyWage
+              : round2(dailyWage / 2);
         } else {
+          // Daily wage worker: floor 100 deduction
           deductionAmount =
             leaveType === 'FULL_LEAVE'
               ? calculateFullLeaveDeduction(dailyWage)
@@ -564,6 +646,8 @@ export class PayrollService {
           name: worker.name,
           mobile: worker.mobile,
           profileImageUrl: worker.profileImageUrl || '',
+          wageType: worker.wageType || 'DAILY',
+          monthlySalary: worker.monthlySalary || 0,
           dailyWage: 0,
           dailyWageEffectiveDate: undefined,
           lastSettledDate: worker.lastSettledDate,
@@ -728,7 +812,8 @@ export class PayrollService {
       const leave = leaveMap.get(dStr);
       const otClaims = otMap.get(dStr) || [];
 
-      const currentDailyWage = getWageForDate(worker, dStr);
+      const wageDecision = getWageDecisionForDate(worker, dStr);
+      const currentDailyWage = wageDecision.perDayWage;
 
       const isToday = dStr === todayIstStr;
       // Shift is in progress if it is today and current time is before 5:00 PM IST (17:00)
@@ -754,8 +839,13 @@ export class PayrollService {
             shiftStatus = 'LEAVE';
             shiftNote = 'Paid Leave';
           } else {
-            leaveDeduction = leave.deductionAmount || calculateFullLeaveDeduction(currentDailyWage);
-            netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
+            leaveDeduction =
+              leave.deductionAmount !== undefined
+                ? leave.deductionAmount
+                : wageDecision.wageType === 'MONTHLY'
+                ? currentDailyWage
+                : calculateFullLeaveDeduction(currentDailyWage);
+            netDayWage = Math.max(0, round2(currentDailyWage - leaveDeduction));
             shiftStatus = 'LEAVE';
           }
           totalFullLeaveDays++;
@@ -768,7 +858,12 @@ export class PayrollService {
             shiftStatus = 'LEAVE';
             shiftNote = 'Half Day (Paid)';
           } else {
-            leaveDeduction = leave.deductionAmount || calculateHalfDayDeduction(currentDailyWage);
+            leaveDeduction =
+              leave.deductionAmount !== undefined
+                ? leave.deductionAmount
+                : wageDecision.wageType === 'MONTHLY'
+                ? round2(currentDailyWage / 2)
+                : calculateHalfDayDeduction(currentDailyWage);
             if (isShiftInProgress) {
               // Worker marked half-day on running day: balance wage ONLY accrues after 5:00 PM IST
               baseWage = currentDailyWage;
@@ -777,7 +872,7 @@ export class PayrollService {
               shiftNote = 'Half-day in progress';
             } else {
               baseWage = currentDailyWage;
-              netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
+              netDayWage = Math.max(0, round2(currentDailyWage - leaveDeduction));
               shiftStatus = 'COMPLETED';
             }
           }
@@ -793,11 +888,20 @@ export class PayrollService {
         shiftStatus = 'HOLIDAY';
       } else if (isSunday) {
         dayType = 'SUNDAY';
-        baseWage = 0;
-        leaveDeduction = 0;
-        netDayWage = 0;
+        if (wageDecision.wageType === 'MONTHLY') {
+          // Sundays are paid days off for monthly salary workers
+          baseWage = currentDailyWage;
+          leaveDeduction = 0;
+          netDayWage = currentDailyWage;
+          shiftStatus = 'SUNDAY';
+          shiftNote = 'Paid Sunday';
+        } else {
+          baseWage = 0;
+          leaveDeduction = 0;
+          netDayWage = 0;
+          shiftStatus = 'SUNDAY';
+        }
         totalSundays++;
-        shiftStatus = 'SUNDAY';
       } else {
         dayType = 'WORKING';
         totalWorkingDays++;
@@ -873,6 +977,15 @@ export class PayrollService {
       let dayUnsettledOtAmount = 0;
       let dayUnsettledWorkFraction = 0;
 
+      const baseWorkFraction =
+        (dayType === 'WORKING' && !isShiftInProgress) ||
+        isAllowedLeave ||
+        (wageDecision.wageType === 'MONTHLY' && (dayType === 'SUNDAY' || dayType === 'HOLIDAY'))
+          ? 1
+          : dayType === 'HALF_LEAVE' && !isShiftInProgress
+          ? 0.5
+          : 0;
+
       if (remainingSettlementCredit >= dayNetEarned && dayNetEarned > 0) {
         // Shift fully covered by settlement payout
         remainingSettlementCredit = round2(remainingSettlementCredit - dayNetEarned);
@@ -888,9 +1001,7 @@ export class PayrollService {
         dayUnsettledDeduction = round2(leaveDeduction * coverageRatio);
         dayUnsettledNetWage = uncoveredNet;
         dayUnsettledOtAmount = otStatus === 'APPROVED' ? round2(dayOtAmount * coverageRatio) : 0;
-        dayUnsettledWorkFraction = dayType === 'WORKING' && !isShiftInProgress
-          ? round2(1 * coverageRatio)
-          : (dayType === 'HALF_LEAVE' && !isShiftInProgress ? round2(0.5 * coverageRatio) : 0);
+        dayUnsettledWorkFraction = round2(baseWorkFraction * coverageRatio);
       } else {
         // Shift is completely unsettled
         isDaySettled = false;
@@ -898,9 +1009,7 @@ export class PayrollService {
         dayUnsettledDeduction = leaveDeduction;
         dayUnsettledNetWage = isShiftInProgress ? 0 : netDayWage;
         dayUnsettledOtAmount = otStatus === 'APPROVED' ? dayOtAmount : 0;
-        dayUnsettledWorkFraction = dayType === 'WORKING' && !isShiftInProgress
-          ? 1
-          : (dayType === 'HALF_LEAVE' && !isShiftInProgress ? 0.5 : 0);
+        dayUnsettledWorkFraction = baseWorkFraction;
       }
 
       if (isAllowedLeave) {
@@ -926,6 +1035,8 @@ export class PayrollService {
         date: dStr,
         dayName,
         dayType,
+        wageType: wageDecision.wageType,
+        monthlySalary: wageDecision.wageType === 'MONTHLY' ? wageDecision.baseWageAmount : undefined,
         isAllowedLeave,
         holidayTitle: holiday?.title,
         adjustmentId: leave?._id?.toString(),
@@ -979,6 +1090,10 @@ export class PayrollService {
         group = {
           monthKey,
           monthLabel,
+          wageType: entry.wageType || worker.wageType || 'DAILY',
+          monthlySalary: entry.monthlySalary || worker.monthlySalary || 0,
+          perDayWage: entry.baseWage,
+          daysInMonth: getDaysInCalendarMonth(entry.date),
           totalDays: 0,
           workingDays: 0,
           sundays: 0,
@@ -1150,6 +1265,8 @@ export class PayrollService {
         name: worker.name,
         mobile: worker.mobile,
         profileImageUrl: worker.profileImageUrl || '',
+        wageType: worker.wageType || 'DAILY',
+        monthlySalary: worker.monthlySalary || 0,
         dailyWage: worker.dailyWage || 0,
         dailyWageEffectiveDate: worker.dailyWageEffectiveDate,
         lastSettledDate: worker.lastSettledDate,
@@ -1209,6 +1326,8 @@ export class PayrollService {
         startDate: sheet.period.startDate,
         endDate: endDateStr,
       },
+      wageType: worker.wageType || 'DAILY',
+      monthlySalaryAtSettlement: worker.monthlySalary || 0,
       dailyWageAtSettlement: worker.dailyWage || 0,
       totalWorkingDays: sheet.kpis.totalWorkingDays,
       totalSundays: sheet.kpis.totalSundays,
@@ -1448,7 +1567,8 @@ export class PayrollService {
 
     const targetDate = params.date || adj.date;
     const leaveType = params.type || (adj.type as 'FULL_LEAVE' | 'HALF_LEAVE');
-    const dailyWage = getWageForDate(worker, targetDate);
+    const wageDecision = getWageDecisionForDate(worker, targetDate);
+    const dailyWage = wageDecision.perDayWage;
 
     const mKey = targetDate.substring(0, 7);
     const monthLeaves = await PayrollRepository.findWageAdjustments({
@@ -1469,6 +1589,8 @@ export class PayrollService {
     if (isFirstInMonth) {
       deductionAmount = 0;
       isAllowedLeave = true;
+    } else if (wageDecision.wageType === 'MONTHLY') {
+      deductionAmount = leaveType === 'FULL_LEAVE' ? dailyWage : round2(dailyWage / 2);
     } else if (leaveType === 'FULL_LEAVE') {
       deductionAmount = calculateFullLeaveDeduction(dailyWage);
     } else if (leaveType === 'HALF_LEAVE') {
@@ -1611,17 +1733,25 @@ export class PayrollService {
             includeSettledHistory: true,
           });
 
+          const hasWageAssigned =
+            (sheet as any).hasWageAssigned !== false &&
+            (worker.wageType === 'MONTHLY'
+              ? Boolean(worker.monthlySalary && worker.monthlySalary > 0)
+              : Boolean(worker.dailyWage && worker.dailyWage > 0));
+
           return {
             workerId: worker._id,
             name: worker.name,
             mobile: worker.mobile,
             profileImageUrl: worker.profileImageUrl || '',
             role: worker.role,
+            wageType: worker.wageType || 'DAILY',
+            monthlySalary: worker.monthlySalary || 0,
             dailyWage: worker.dailyWage || 0,
             dailyWageEffectiveDate: worker.dailyWageEffectiveDate,
             lastSettledDate: worker.lastSettledDate,
             firstPayrollDate: (sheet.worker as any).firstPayrollDate || getWorkerFirstPayrollDate(worker) || null,
-            hasWageAssigned: (sheet as any).hasWageAssigned !== false && Boolean(worker.dailyWage && worker.dailyWage > 0),
+            hasWageAssigned,
             unsettledGross: sheet.kpis.unsettledGrossWages ?? sheet.kpis.grossWages,
             unsettledDeductions: sheet.kpis.unsettledLeaveDeductions ?? sheet.kpis.totalLeaveDeductions,
             unsettledOtAmount: sheet.kpis.unsettledApprovedOtAmount ?? sheet.kpis.totalApprovedOtAmount,
@@ -1639,11 +1769,16 @@ export class PayrollService {
             mobile: worker.mobile,
             profileImageUrl: worker.profileImageUrl || '',
             role: worker.role,
+            wageType: worker.wageType || 'DAILY',
+            monthlySalary: worker.monthlySalary || 0,
             dailyWage: worker.dailyWage || 0,
             dailyWageEffectiveDate: worker.dailyWageEffectiveDate,
             lastSettledDate: worker.lastSettledDate,
             firstPayrollDate: getWorkerFirstPayrollDate(worker) || null,
-            hasWageAssigned: Boolean(worker.dailyWage && worker.dailyWage > 0),
+            hasWageAssigned:
+              worker.wageType === 'MONTHLY'
+                ? Boolean(worker.monthlySalary && worker.monthlySalary > 0)
+                : Boolean(worker.dailyWage && worker.dailyWage > 0),
             unsettledGross: 0,
             unsettledDeductions: 0,
             unsettledOtAmount: 0,

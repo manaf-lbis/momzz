@@ -23,6 +23,8 @@ export interface User {
   acceptedTermsAt?: string | null;
   needsTermsAcceptance?: boolean;
   dailyWage?: number;
+  monthlySalary?: number;
+  wageType?: 'DAILY' | 'MONTHLY';
   dailyWageEffectiveDate?: string;
 }
 

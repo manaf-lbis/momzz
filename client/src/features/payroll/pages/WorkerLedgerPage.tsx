@@ -671,7 +671,11 @@ export const WorkerLedgerPage: React.FC = () => {
           badge={
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold font-mono">
-                {((worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0) > 0
+                {worker?.wageType === 'MONTHLY'
+                  ? ((worker?.monthlySalary || 0) > 0
+                    ? `₹${(worker?.monthlySalary || 0).toLocaleString('en-IN')}/mo`
+                    : 'Wage Not Decided')
+                  : ((worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0) > 0
                   ? `₹${(worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage)}/day`
                   : 'Wage Not Decided'}
               </span>
@@ -847,7 +851,9 @@ export const WorkerLedgerPage: React.FC = () => {
               <span>Monthly Breakdown</span>
             </div>
             <span className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 rounded-md bg-amber-500/10">
-              Daily Wage: ₹{worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage || 0}/day
+              {worker?.wageType === 'MONTHLY'
+                ? `Monthly Salary: ₹${(worker?.monthlySalary || 0).toLocaleString('en-IN')}/mo`
+                : `Daily Wage: ₹${worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage || 0}/day`}
             </span>
           </div>
 
@@ -903,7 +909,9 @@ export const WorkerLedgerPage: React.FC = () => {
                     {activeMonthItem.monthLabel}
                   </span>
                   <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md bg-amber-500/10">
-                    ₹{worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage || 0}/day
+                    {activeMonthItem.wageType === 'MONTHLY'
+                      ? `₹${(activeMonthItem.monthlySalary || worker?.monthlySalary || 0).toLocaleString('en-IN')}/mo`
+                      : `₹${worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage || 0}/day`}
                   </span>
                   {activeMonthItem.isSettled ? (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
@@ -1159,7 +1167,9 @@ export const WorkerLedgerPage: React.FC = () => {
                         }}
                         className={`p-3 rounded-xl glass-modern-card space-y-2 transition cursor-pointer hover:border-amber-500/40 active:scale-[0.995] ${
                           isSun
-                            ? 'opacity-70'
+                            ? day.netDayWage > 0
+                              ? 'border-l-4 border-emerald-500/60'
+                              : 'opacity-70'
                             : isLeave
                             ? day.isAllowedLeave
                               ? 'border-l-4 border-emerald-500 bg-emerald-500/[0.03]'
@@ -1186,8 +1196,12 @@ export const WorkerLedgerPage: React.FC = () => {
 
                             <div className="min-w-0 flex flex-wrap items-center gap-1.5">
                               {isSun ? (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400">
-                                  Sunday
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                  day.netDayWage > 0
+                                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                    : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400'
+                                }`}>
+                                  {day.netDayWage > 0 ? 'Paid Sunday' : 'Sunday'}
                                 </span>
                               ) : isHol ? (
                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300">
@@ -2498,6 +2512,8 @@ export const WorkerLedgerPage: React.FC = () => {
             name: worker?.name || user?.name || 'Staff Member',
             mobile: worker?.mobile || user?.mobile || '',
             role: (!isAdmin ? user?.role : (worker as any)?.role) || 'Staff / Mechanic',
+            wageType: worker?.wageType || (user as any)?.wageType || 'DAILY',
+            monthlySalary: worker?.monthlySalary || (user as any)?.monthlySalary || 0,
             dailyWage: ((worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0),
             profileImageUrl: worker?.profileImageUrl || (user as any)?.profileImageUrl,
           }}

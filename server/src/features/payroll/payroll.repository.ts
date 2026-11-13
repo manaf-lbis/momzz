@@ -19,11 +19,17 @@ export class PayrollRepository {
       isApproved: true,
       status: 'ACTIVE',
     })
-      .select('name mobile role dailyWage dailyWageEffectiveDate wageHistory lastSettledDate payrollSnapshot profileImageUrl createdAt')
+      .select('name mobile role dailyWage wageType monthlySalary dailyWageEffectiveDate wageHistory lastSettledDate payrollSnapshot profileImageUrl createdAt')
       .sort({ name: 1 });
   }
 
-  static async updateWorkerWage(workerId: string, dailyWage: number, effectiveDate?: Date | string): Promise<IUser | null> {
+  static async updateWorkerWage(
+    workerId: string,
+    dailyWage: number,
+    effectiveDate?: Date | string,
+    wageType: 'DAILY' | 'MONTHLY' = 'DAILY',
+    monthlySalary: number = 0
+  ): Promise<IUser | null> {
     const worker = await User.findById(workerId);
     if (!worker) return null;
 
@@ -49,6 +55,8 @@ export class PayrollRepository {
       worker.wageHistory = [];
     }
 
+    const assignedRate = wageType === 'MONTHLY' ? (monthlySalary || dailyWage) : dailyWage;
+
     // Check if an entry already exists for this exact effective date
     const existingIndex = worker.wageHistory.findIndex((h) => {
       const hDateStr = new Date(h.effectiveDate).toISOString().split('T')[0];
@@ -56,22 +64,25 @@ export class PayrollRepository {
     });
 
     if (existingIndex >= 0) {
-      worker.wageHistory[existingIndex].wage = dailyWage;
+      worker.wageHistory[existingIndex].wage = assignedRate;
+      worker.wageHistory[existingIndex].wageType = wageType;
       worker.wageHistory[existingIndex].effectiveDate = effDateObj;
       worker.wageHistory[existingIndex].createdAt = new Date();
     } else {
-      // If worker already had dailyWage > 0 without history, seed the first record
-      if (worker.wageHistory.length === 0 && worker.dailyWage && worker.dailyWage > 0) {
+      // If worker already had wage > 0 without history, seed the first record
+      if (worker.wageHistory.length === 0 && (worker.dailyWage || worker.monthlySalary)) {
         const initialDate = worker.dailyWageEffectiveDate || effDateObj;
         worker.wageHistory.push({
-          wage: worker.dailyWage,
+          wage: worker.wageType === 'MONTHLY' ? (worker.monthlySalary || worker.dailyWage || 0) : (worker.dailyWage || 0),
+          wageType: worker.wageType || 'DAILY',
           effectiveDate: initialDate,
           createdAt: worker.createdAt || new Date(),
         });
       }
 
       worker.wageHistory.push({
-        wage: dailyWage,
+        wage: assignedRate,
+        wageType,
         effectiveDate: effDateObj,
         createdAt: new Date(),
       });
@@ -82,7 +93,15 @@ export class PayrollRepository {
       (a, b) => new Date(a.effectiveDate).getTime() - new Date(b.effectiveDate).getTime()
     );
 
-    worker.dailyWage = dailyWage;
+    worker.wageType = wageType;
+    if (wageType === 'MONTHLY') {
+      worker.monthlySalary = assignedRate;
+      worker.dailyWage = Math.round(assignedRate / 30);
+    } else {
+      worker.dailyWage = assignedRate;
+      worker.monthlySalary = 0;
+    }
+
     // The very first effective date marks the worker's start of payroll existence
     if (!worker.dailyWageEffectiveDate) {
       worker.dailyWageEffectiveDate = worker.wageHistory[0]?.effectiveDate || effDateObj;
@@ -96,7 +115,12 @@ export class PayrollRepository {
       // cache invalidation non-fatal
     }
     try {
-      emitPayrollWageUpdated(workerId, { dailyWage, effectiveDate: effDateObj });
+      emitPayrollWageUpdated(workerId, {
+        dailyWage: worker.dailyWage,
+        monthlySalary: worker.monthlySalary,
+        wageType,
+        effectiveDate: effDateObj,
+      });
     } catch {
       // socket non-fatal
     }
