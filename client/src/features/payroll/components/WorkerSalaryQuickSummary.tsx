@@ -235,7 +235,7 @@ export const WorkerSalaryQuickSummary: React.FC = () => {
       <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-white/5 text-[10px] text-slate-400 font-mono">
         <div className="flex items-center gap-1.5">
           <Clock className="w-3 h-3 text-amber-500" />
-          <span>Daily wage accrues automatically at 5:00 PM IST</span>
+          <span>Wage accrues at 5 PM</span>
         </div>
         <span className="text-amber-600 dark:text-amber-400 font-bold hover:underline">
           Tap to view &rarr;

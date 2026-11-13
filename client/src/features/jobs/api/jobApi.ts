@@ -132,7 +132,7 @@ export const jobApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getJobCards: builder.query<
       { success: boolean; data: any },
-      { page?: number; limit?: number; timeframe?: string; tab?: string; search?: string; sortBy?: string; sortOrder?: 'asc' | 'desc' } | void
+      { page?: number; limit?: number; timeframe?: string; tab?: string; search?: string; sortBy?: string; sortOrder?: 'asc' | 'desc'; workerId?: string; paginated?: boolean } | void
     >({
       query: (params) => {
         if (!params) return '/jobs';
@@ -144,10 +144,26 @@ export const jobApi = apiSlice.injectEndpoints({
         if (params.search) queryParams.append('search', params.search);
         if (params.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        if (params.workerId) queryParams.append('workerId', params.workerId);
+        if (params.paginated) queryParams.append('paginated', 'true');
         const qs = queryParams.toString();
         return qs ? `/jobs?${qs}` : '/jobs';
       },
       providesTags: ['JobCard'],
+    }),
+
+    getWorkLogs: builder.query<
+      {
+        success: boolean;
+        data: {
+          logs: Array<Omit<TaskItem, 'jobCardId'> & { jobCardId: any }>;
+          pagination: { total: number; page: number; limit: number; totalPages: number; hasMore: boolean };
+        };
+      },
+      { page?: number; limit?: number; workerId?: string; q?: string; itemType?: string; timeframe?: string } | void
+    >({
+      query: (params) => ({ url: '/jobs/work-logs', params: params || {} }),
+      providesTags: ['JobCard', 'Task'],
     }),
 
     getJobCardById: builder.query<{ success: boolean; data: JobCardData }, string>({
@@ -348,6 +364,7 @@ export const jobApi = apiSlice.injectEndpoints({
 
 export const {
   useGetJobCardsQuery,
+  useGetWorkLogsQuery,
   useGetJobCardByIdQuery,
   useGetJobStatsQuery,
   useCreateJobMutation,

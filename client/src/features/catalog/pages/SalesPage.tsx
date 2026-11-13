@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   X,
@@ -35,13 +35,14 @@ import { BackButton } from '../../../shared/components/common/BackButton';
 import {
   CatalogItem,
   Sale,
-  useGetCatalogQuery,
-  useGetSalesQuery,
+  SalesMetrics,
+  useGetPaginatedCatalogQuery,
+  useGetPaginatedSalesQuery,
   useCreateSaleMutation,
   useUpdateSaleMutation,
   useCancelSaleMutation,
 } from '../api/catalogApi';
-import { advancedSearch } from '../../../shared/utils/searchAlgorithm';
+import { ModernInfiniteLoader } from '../../../shared/components/common/ModernInfiniteLoader';
 
 type CartLine = {
   item: CatalogItem;
@@ -80,7 +81,14 @@ export const SalesPage: React.FC = () => {
 
   // Register / POS State
   const [catalogSearch, setCatalogSearch] = useState('');
+  const [debouncedCatalogSearch, setDebouncedCatalogSearch] = useState('');
   const [itemFilter, setItemFilter] = useState<ItemFilter>('ALL');
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [catalogHasMore, setCatalogHasMore] = useState(false);
+  const catalogScrollRef = useRef<HTMLDivElement | null>(null);
+  const catalogSentinelRef = useRef<HTMLDivElement | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
@@ -96,7 +104,21 @@ export const SalesPage: React.FC = () => {
 
   // Past Bills Ledger State
   const [ledgerSearch, setLedgerSearch] = useState('');
+  const [debouncedLedgerSearch, setDebouncedLedgerSearch] = useState('');
   const [ledgerStatusFilter, setLedgerStatusFilter] = useState<'ALL' | 'COMPLETED' | 'CANCELLED'>('ALL');
+  const [salesPage, setSalesPage] = useState(1);
+  const [salesList, setSalesList] = useState<Sale[]>([]);
+  const [salesHasMore, setSalesHasMore] = useState(false);
+  const [metrics, setMetrics] = useState<SalesMetrics>({
+    totalSalesCount: 0,
+    totalRevenue: 0,
+    todaySalesCount: 0,
+    todayRevenue: 0,
+    totalDiscounts: 0,
+    avgBillValue: 0,
+  });
+  const ledgerScrollRef = useRef<HTMLDivElement | null>(null);
+  const ledgerSentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Receipt / Print Modal State
   const [selectedReceipt, setSelectedReceipt] = useState<Sale | null>(null);
@@ -108,19 +130,132 @@ export const SalesPage: React.FC = () => {
   // Copied invoice feedback
   const [copiedInvoiceId, setCopiedInvoiceId] = useState<string | null>(null);
 
-  // RTK Queries & Mutations
-  const { data: catalogData, isFetching: isFetchingCatalog } = useGetCatalogQuery();
+  // Debounce searches
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedCatalogSearch(catalogSearch.trim()), 250);
+    return () => clearTimeout(t);
+  }, [catalogSearch]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedLedgerSearch(ledgerSearch.trim()), 250);
+    return () => clearTimeout(t);
+  }, [ledgerSearch]);
+
+  const catalogFilterKey = `${itemFilter}::${debouncedCatalogSearch}`;
+  const lastCatalogFilterRef = useRef(catalogFilterKey);
+  useEffect(() => {
+    if (lastCatalogFilterRef.current !== catalogFilterKey) {
+      lastCatalogFilterRef.current = catalogFilterKey;
+      setCatalogPage(1);
+      setCatalogItems([]);
+      setCatalogHasMore(false);
+    }
+  }, [catalogFilterKey]);
+
+  const salesFilterKey = `${ledgerStatusFilter}::${debouncedLedgerSearch}`;
+  const lastSalesFilterRef = useRef(salesFilterKey);
+  useEffect(() => {
+    if (lastSalesFilterRef.current !== salesFilterKey) {
+      lastSalesFilterRef.current = salesFilterKey;
+      setSalesPage(1);
+      setSalesList([]);
+      setSalesHasMore(false);
+    }
+  }, [salesFilterKey]);
+
+  const stockFilterParam =
+    itemFilter === 'FAST' ? 'LOW_STOCK' : itemFilter === 'ALL' ? undefined : itemFilter;
+
+  // RTK Queries & Mutations (True server pagination)
   const {
-    data: salesData,
+    currentData: catalogData,
+    isLoading: isLoadingCatalog,
+    isFetching: isFetchingCatalog,
+  } = useGetPaginatedCatalogQuery({
+    q: debouncedCatalogSearch || undefined,
+    stockFilter: stockFilterParam,
+    page: catalogPage,
+    limit: 20,
+  });
+
+  const {
+    currentData: salesData,
+    isLoading: isLoadingSales,
     isFetching: isFetchingSales,
     refetch: refetchSales,
-  } = useGetSalesQuery(
+  } = useGetPaginatedSalesQuery(
     {
-      q: ledgerSearch || undefined,
+      q: debouncedLedgerSearch || undefined,
       status: ledgerStatusFilter !== 'ALL' ? ledgerStatusFilter : undefined,
+      page: salesPage,
+      limit: 20,
     },
     { pollingInterval: 30000 }
   );
+
+  // Accumulate paginated catalog pages safely
+  useEffect(() => {
+    const resp = catalogData?.data;
+    if (!resp?.pagination || resp.pagination.page !== catalogPage) return;
+    const incoming = resp.items || [];
+    setCatalogTotal(resp.pagination.total || 0);
+    setCatalogHasMore(Boolean(resp.pagination.hasMore));
+    setCatalogItems((prev) => {
+      if (catalogPage === 1) return incoming;
+      const seen = new Set(prev.map((i) => i.id || i._id));
+      return [...prev, ...incoming.filter((i) => !seen.has(i.id || i._id))];
+    });
+  }, [catalogData, catalogPage]);
+
+  // Accumulate paginated sales pages safely
+  useEffect(() => {
+    const resp = salesData?.data;
+    if (resp?.metrics) {
+      setMetrics(resp.metrics);
+    }
+    if (!resp?.pagination || resp.pagination.page !== salesPage) return;
+    const incoming = resp.sales || [];
+    setSalesHasMore(Boolean(resp.pagination.hasMore));
+    setSalesList((prev) => {
+      if (salesPage === 1) return incoming;
+      const seen = new Set(prev.map((s) => s.id || (s as any)._id));
+      return [...prev, ...incoming.filter((s) => !seen.has(s.id || (s as any)._id))];
+    });
+  }, [salesData, salesPage]);
+
+  // Infinite scroll observer for POS Catalog grid
+  useEffect(() => {
+    if (viewMode !== 'REGISTER') return;
+    const node = catalogSentinelRef.current;
+    if (!node || !catalogHasMore || isFetchingCatalog) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setCatalogPage((p) => p + 1);
+        }
+      },
+      { root: catalogScrollRef.current, rootMargin: '220px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [viewMode, catalogHasMore, isFetchingCatalog, catalogItems.length]);
+
+  // Infinite scroll observer for Past Bills Ledger
+  useEffect(() => {
+    if (viewMode !== 'LEDGER') return;
+    const node = ledgerSentinelRef.current;
+    if (!node || !salesHasMore || isFetchingSales) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setSalesPage((p) => p + 1);
+        }
+      },
+      { root: ledgerScrollRef.current, rootMargin: '220px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [viewMode, salesHasMore, isFetchingSales, salesList.length]);
 
   const [createSale, { isLoading: isCreatingSale }] = useCreateSaleMutation();
   const [updateSale, { isLoading: isUpdatingSale }] = useUpdateSaleMutation();
@@ -154,37 +289,10 @@ export const SalesPage: React.FC = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [viewMode]);
 
-  // Catalog filtering & Fuzzy search
-  const availableItems = useMemo(() => {
-    const raw = (catalogData?.data || []).filter((item) => {
-      const isOk =
-        item.isAvailable &&
-        (item.itemType === 'SERVICE' || item.trackStock === false || item.stockQuantity > 0);
-      return (
-        isOk &&
-        (itemFilter === 'ALL' ||
-          (itemFilter === 'SERVICE' && item.itemType === 'SERVICE') ||
-          (itemFilter === 'PRODUCT' && item.itemType === 'PRODUCT') ||
-          (itemFilter === 'FAST' &&
-            item.itemType === 'PRODUCT' &&
-            item.stockQuantity > 0 &&
-            item.stockQuantity <= Math.max(5, item.minimumStockQuantity || 0)))
-      );
-    });
-
-    if (!catalogSearch.trim()) return raw;
-    return advancedSearch<CatalogItem>(
-      raw,
-      catalogSearch,
-      {
-        getTitle: (item) => item.title,
-        getSku: (item) => item.sku,
-        getCategory: (item) => item.category?.name,
-        getDescription: (item) => item.description,
-      },
-      140
-    );
-  }, [catalogData, itemFilter, catalogSearch]);
+  const availableItems = useMemo(
+    () => catalogItems.filter((item) => item.isAvailable !== false),
+    [catalogItems]
+  );
 
   // Financial Calculations for Active Cart
   const subtotal = useMemo(
@@ -305,7 +413,7 @@ export const SalesPage: React.FC = () => {
     const reconstructed: CartLine[] = (sale.items || []).map((line) => {
       const rawItem = line.item as any;
       const itemId = rawItem?._id || rawItem?.id || rawItem;
-      const matchedCatalog = (catalogData?.data || []).find((c) => c.id === itemId);
+      const matchedCatalog = catalogItems.find((c) => c.id === itemId);
 
       const catalogFallback: CatalogItem = matchedCatalog || {
         id: itemId,
@@ -364,6 +472,8 @@ export const SalesPage: React.FC = () => {
         }).unwrap();
 
         setSelectedReceipt(res.data);
+        setSalesPage(1);
+        setCatalogPage(1);
         clearRegister();
       } else {
         // Create new invoice
@@ -378,6 +488,8 @@ export const SalesPage: React.FC = () => {
         }).unwrap();
 
         setSelectedReceipt(res.data);
+        setSalesPage(1);
+        setCatalogPage(1);
         clearRegister();
       }
     } catch (err: any) {
@@ -395,6 +507,8 @@ export const SalesPage: React.FC = () => {
       }).unwrap();
       setVoidModalSale(null);
       setVoidReason('');
+      setSalesPage(1);
+      setCatalogPage(1);
       refetchSales();
     } catch (err: any) {
       alert(err?.data?.message || 'Could not cancel the bill.');
@@ -407,23 +521,11 @@ export const SalesPage: React.FC = () => {
     setTimeout(() => setCopiedInvoiceId(null), 2000);
   };
 
-  const metrics = salesData?.data?.metrics || {
-    totalSalesCount: 0,
-    totalRevenue: 0,
-    todaySalesCount: 0,
-    todayRevenue: 0,
-    totalDiscounts: 0,
-    avgBillValue: 0,
-  };
-
-  const salesList = salesData?.data?.sales || [];
-
-  // Filter chips for catalog
   const catalogChips: Array<{ id: ItemFilter; label: string }> = [
-    { id: 'ALL', label: 'All Items' },
-    { id: 'PRODUCT', label: 'Spare Parts' },
-    { id: 'SERVICE', label: 'Labor & Services' },
-    { id: 'FAST', label: 'Low Stock Alert' },
+    { id: 'ALL', label: 'All' },
+    { id: 'PRODUCT', label: 'Parts' },
+    { id: 'SERVICE', label: 'Services' },
+    { id: 'FAST', label: 'Low Stock' },
   ];
 
   return (
@@ -449,7 +551,7 @@ export const SalesPage: React.FC = () => {
                 )}
               </div>
               <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                POS Invoicing • Real-Time Stock Reconciliation • Past Bills Ledger
+                POS Register • Invoices
               </p>
             </div>
           </div>
@@ -615,14 +717,14 @@ export const SalesPage: React.FC = () => {
             </div>
 
             {/* Catalog Grid */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4 pb-28 lg:pb-6 space-y-2">
+            <div ref={catalogScrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 pb-28 lg:pb-6 space-y-2">
               <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 dark:text-slate-500 px-1">
                 <span>
-                  {isFetchingCatalog
-                    ? 'Loading catalog...'
-                    : `${availableItems.length} items available in register`}
+                  {isLoadingCatalog && catalogPage === 1
+                    ? 'Loading...'
+                    : `${availableItems.length}${catalogTotal > availableItems.length ? ` / ${catalogTotal}` : ''} items`}
                 </span>
-                <span>Click item to add or increment in cart</span>
+                <span className="hidden sm:inline">Tap to add</span>
               </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
@@ -838,11 +940,19 @@ export const SalesPage: React.FC = () => {
                 })}
               </div>
 
-              {!availableItems.length && (
-                <div className="py-20 text-center text-xs font-mono text-slate-400">
-                  No catalog items match your search.
+              {!availableItems.length && !isFetchingCatalog && (
+                <div className="py-16 text-center text-xs font-mono text-slate-400">
+                  No matching items.
                 </div>
               )}
+
+              <ModernInfiniteLoader
+                sentinelRef={catalogSentinelRef}
+                hasMore={catalogHasMore}
+                isLoading={isFetchingCatalog && catalogPage > 1}
+                totalCount={availableItems.length}
+                entityName="items"
+              />
             </div>
           </section>
 
@@ -931,7 +1041,10 @@ export const SalesPage: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => refetchSales()}
+                onClick={() => {
+                  if (salesPage !== 1) setSalesPage(1);
+                  else refetchSales();
+                }}
                 className="p-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
                 title="Refresh Ledger"
               >
@@ -951,10 +1064,132 @@ export const SalesPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Invoices Ledger Data Table */}
+          {/* Invoices Ledger Mobile Cards + Desktop Table */}
           <div className="flex-1 rounded-2xl bg-white/70 dark:bg-[#0c0d18]/70 border border-slate-200/80 dark:border-white/10 backdrop-blur-xl overflow-hidden flex flex-col shadow-xs">
-            <div className="overflow-x-auto flex-1">
-              <table className="w-full text-left text-xs font-mono border-collapse">
+            <div ref={ledgerScrollRef} className="overflow-y-auto flex-1 pb-24 lg:pb-4">
+              {/* Mobile Cards (< md) */}
+              <div className="md:hidden divide-y divide-slate-200/70 dark:divide-white/[0.06]">
+                {salesList.map((sale) => {
+                  const isCancelled = sale.status === 'CANCELLED';
+                  const itemsSummary = (sale.items || [])
+                    .map((i) => {
+                      const itemTitle =
+                        typeof i.item === 'object' && i.item?.title ? i.item.title : 'Item';
+                      return `${i.quantity}x ${itemTitle}`;
+                    })
+                    .join(', ');
+
+                  return (
+                    <div
+                      key={sale.id}
+                      className={`p-3.5 space-y-2 ${isCancelled ? 'opacity-65 bg-rose-500/[0.02]' : ''}`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">
+                              {sale.invoiceNumber}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(sale.invoiceNumber, sale.id)}
+                              className="p-0.5 text-slate-400 hover:text-amber-500 cursor-pointer"
+                            >
+                              {copiedInvoiceId === sale.id ? (
+                                <Check className="w-3 h-3 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                                isCancelled
+                                  ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                                  : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                              }`}
+                            >
+                              {isCancelled ? 'Voided' : 'Paid'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                            {formatDate(sale.createdAt)}
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="text-sm font-black font-mono text-slate-900 dark:text-white">
+                            {money(sale.grandTotal)}
+                          </div>
+                          <span className="text-[9px] font-mono uppercase text-amber-600 dark:text-amber-400">
+                            {sale.paymentMethod || 'CASH'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-700 dark:text-slate-200 truncate">
+                          {sale.customerName || 'Walk-in'}
+                          {sale.customerMobile ? ` • ${sale.customerMobile}` : ''}
+                        </span>
+                        {sale.totalDiscount > 0 && (
+                          <span className="font-mono text-[10px] text-amber-600 dark:text-amber-400 shrink-0 ml-2">
+                            -{money(sale.totalDiscount)} disc
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                        ({sale.items?.length || 0}) {itemsSummary || '—'}
+                      </p>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[10px] text-slate-400">
+                          By {sale.soldBy?.name || 'Staff'}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReceipt(sale)}
+                            className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-[11px] font-mono font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Printer className="w-3 h-3" /> Bill
+                          </button>
+                          {!isCancelled && (
+                            <button
+                              type="button"
+                              onClick={() => startEditingBill(sale)}
+                              className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit3 className="w-3 h-3" /> Edit
+                            </button>
+                          )}
+                          {!isCancelled && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVoidModalSale(sale);
+                                setVoidReason('');
+                              }}
+                              className="p-1.5 rounded-lg border border-rose-500/20 text-rose-500 cursor-pointer"
+                            >
+                              <Ban className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {!salesList.length && !isFetchingSales && (
+                  <div className="py-12 text-center text-xs font-mono text-slate-400">
+                    No invoices found.
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop Table (>= md) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-white/[0.02] text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
                     <th className="py-3 px-3.5">Invoice #</th>
@@ -1116,15 +1351,26 @@ export const SalesPage: React.FC = () => {
                     );
                   })}
 
-                  {!salesList.length && (
+                  {!salesList.length && !isFetchingSales && (
                     <tr>
                       <td colSpan={10} className="py-16 text-center text-slate-400">
-                        No invoices found in ledger.
+                        {isLoadingSales ? 'Loading invoices...' : 'No invoices found.'}
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
+              </div>
+
+              <div className="px-3">
+                <ModernInfiniteLoader
+                  sentinelRef={ledgerSentinelRef}
+                  hasMore={salesHasMore}
+                  isLoading={isFetchingSales && salesPage > 1}
+                  totalCount={salesList.length}
+                  entityName="invoices"
+                />
+              </div>
             </div>
           </div>
         </main>
@@ -1149,11 +1395,11 @@ export const SalesPage: React.FC = () => {
       {/* ── MOBILE CART SHEET MODAL ── */}
       {mobileCartOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-black/70 p-2 backdrop-blur-md lg:hidden"
+          className="fixed inset-0 z-[70] flex items-end bg-black/70 p-2 pb-24 backdrop-blur-md lg:hidden"
           onClick={() => setMobileCartOpen(false)}
         >
           <div
-            className="w-full h-[85dvh] rounded-3xl bg-white dark:bg-[#0c0d18] border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col shadow-2xl"
+            className="w-full h-[calc(88dvh-5rem)] rounded-3xl bg-white dark:bg-[#0c0d18] border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
@@ -1206,11 +1452,11 @@ export const SalesPage: React.FC = () => {
       {/* ── TOTAL BILL DISCOUNT MODAL ── */}
       {billDiscountModalOpen && (
         <div
-          className="fixed inset-0 z-60 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/75 p-4 pb-24 sm:pb-4 backdrop-blur-md"
           onClick={() => setBillDiscountModalOpen(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#0f101d] border border-slate-200 dark:border-white/10 p-5 shadow-2xl space-y-4"
+            className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#0f101d] border border-slate-200 dark:border-white/10 p-5 shadow-2xl space-y-4 max-h-[calc(88vh-5rem)] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div>
@@ -1307,11 +1553,11 @@ export const SalesPage: React.FC = () => {
       {/* ── VOID / CANCEL BILL CONFIRMATION MODAL ── */}
       {voidModalSale && (
         <div
-          className="fixed inset-0 z-70 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/80 p-4 pb-24 sm:pb-4 backdrop-blur-md"
           onClick={() => setVoidModalSale(null)}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-white dark:bg-[#0f101d] border border-rose-500/30 p-6 shadow-2xl space-y-4"
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-[#0f101d] border border-rose-500/30 p-5 shadow-2xl space-y-4 max-h-[calc(88vh-5rem)] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 text-rose-500">
@@ -1380,11 +1626,11 @@ export const SalesPage: React.FC = () => {
       {/* ── ENTERPRISE RECEIPT & PRINT MODAL ── */}
       {selectedReceipt && (
         <div
-          className="fixed inset-0 z-70 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md overflow-y-auto"
+          className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/80 p-3 sm:p-4 pb-24 sm:pb-4 backdrop-blur-md overflow-y-auto"
           onClick={() => setSelectedReceipt(null)}
         >
           <div
-            className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#0c0d18] border border-slate-200 dark:border-white/15 p-6 shadow-2xl space-y-4 my-8"
+            className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#0c0d18] border border-slate-200 dark:border-white/15 p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[calc(90vh-5rem)] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Action Bar (Top) */}

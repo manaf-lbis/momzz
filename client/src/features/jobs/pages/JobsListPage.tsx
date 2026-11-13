@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGetJobCardsQuery, useGetJobStatsQuery, useToggleJobPinMutation, JobCardData } from '../../jobs/api/jobApi';
 
 import { Navbar } from '../../../shared/components/navbar/Navbar';
@@ -62,43 +62,78 @@ const SORT_CONFIG: Array<{ value: SortOption; label: string; shortLabel: string;
 export const JobsListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAdmin } = useAuth();
   const currentUserId = user?.id || (user as any)?._id;
 
+  const parseView = (raw?: string | null): JobsView | null => {
+    if (!raw) return null;
+    const upper = raw.toUpperCase();
+    if (upper === 'ALL' || upper === 'ALL_VEHICLES' || upper === 'HISTORY') return 'ALL_VEHICLES';
+    if (upper === 'VERIFY' || upper === 'PENDING_VERIFICATION') return 'PENDING_VERIFICATION';
+    if (upper === 'MY_JOBS') return 'MY_JOBS';
+    return null;
+  };
+
   const initialView: JobsView =
-    location.state?.view === 'verify'
-      ? 'PENDING_VERIFICATION'
-      : location.state?.view === 'all'
-      ? 'ALL_VEHICLES'
-      : 'MY_JOBS';
+    parseView(searchParams.get('tab') || searchParams.get('view')) ||
+    parseView(location.state?.view) ||
+    'MY_JOBS';
 
   const [jobsView, setJobsView] = useState<JobsView>(initialView);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const viewParam = params.get('view');
-    if (viewParam === 'all' || viewParam === 'ALL_VEHICLES' || location.state?.view === 'all') {
-      setJobsView('ALL_VEHICLES');
-    } else if (viewParam === 'verify' || location.state?.view === 'verify') {
-      setJobsView('PENDING_VERIFICATION');
-    } else if (viewParam === 'my_jobs' || location.state?.view === 'my_jobs') {
-      setJobsView('MY_JOBS');
-    }
-  }, [location.search, location.state]);
-
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('ALL');
-  const [sortBy, setSortBy] = useState<SortOption>('DELIVERY_SOONEST');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>(
+    ((searchParams.get('t')?.toUpperCase() as TimeFilter) || 'ALL')
+  );
+  const [sortBy, setSortBy] = useState<SortOption>(
+    ((searchParams.get('sort')?.toUpperCase() as SortOption) || 'DELIVERY_SOONEST')
+  );
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(() => (searchParams.get('q') || '').trim());
   const [page, setPage] = useState(1);
   const [accumulatedJobs, setAccumulatedJobs] = useState<JobCardData[]>([]);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalServerCount, setTotalServerCount] = useState(0);
   const [selectedPinJob, setSelectedPinJob] = useState<JobCardData | null>(null);
   const [optimisticPins, setOptimisticPins] = useState<Record<string, { isPinnedForAll: boolean; pinnedByMe: boolean }>>({});
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const lastSyncedSearchRef = useRef<string | null>(null);
+
+  // Sync external navigation state (Dashboard tile clicks or browser popstate) without clobbering active typing
+  useEffect(() => {
+    const currentStr = searchParams.toString();
+    if (lastSyncedSearchRef.current === currentStr) return;
+
+    const paramView = parseView(searchParams.get('tab') || searchParams.get('view'));
+    const stateView = parseView(location.state?.view);
+    const nextView = paramView || stateView || 'MY_JOBS';
+    if (nextView !== jobsView) {
+      setJobsView(nextView);
+    }
+
+    const qParam = searchParams.get('q') || '';
+    if (searchParams.has('q') || lastSyncedSearchRef.current !== null) {
+      setSearchQuery(qParam);
+      setDebouncedSearch(qParam.trim());
+    }
+    lastSyncedSearchRef.current = currentStr;
+  }, [location.key]);
+
+  // Persist current tab/search/sort in URL search params for back-navigation continuity
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (jobsView !== 'MY_JOBS') next.set('tab', jobsView);
+    if (debouncedSearch) next.set('q', debouncedSearch);
+    if (sortBy !== 'DELIVERY_SOONEST') next.set('sort', sortBy);
+    if (timeFilter !== 'ALL') next.set('t', timeFilter);
+    const nextStr = next.toString();
+    lastSyncedSearchRef.current = nextStr;
+    if (nextStr !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [jobsView, debouncedSearch, sortBy, timeFilter, setSearchParams]);
 
   const [isPulling, setIsPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -148,7 +183,10 @@ export const JobsListPage: React.FC = () => {
 
   const myJobsCount = stats?.activeCount ?? 0;
   const pendingCount = stats?.pendingVerificationCount ?? 0;
-  const allCount = stats?.totalCount ?? 0;
+  const allCount = Math.max(
+    0,
+    (stats?.totalCount ?? 0) - myJobsCount - pendingCount
+  );
 
   const isMatchingUserId = (p: any, targetId: any): boolean => {
     if (!p || !targetId) return false;
@@ -211,7 +249,7 @@ export const JobsListPage: React.FC = () => {
 
   // Debounce search query
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 350);
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
@@ -226,37 +264,64 @@ export const JobsListPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const serverSort: { sortBy?: string; sortOrder?: 'asc' | 'desc' } = (() => {
+    switch (sortBy) {
+      case 'DELIVERY_SOONEST':
+        return jobsView === 'ALL_VEHICLES'
+          ? { sortBy: 'createdAt', sortOrder: 'desc' }
+          : { sortBy: 'expectedDeliveryDate', sortOrder: 'asc' };
+      case 'DELIVERY_LATEST':
+        return { sortBy: 'expectedDeliveryDate', sortOrder: 'desc' };
+      case 'CREATED_NEWEST':
+        return { sortBy: 'createdAt', sortOrder: 'desc' };
+      case 'CREATED_OLDEST':
+        return { sortBy: 'createdAt', sortOrder: 'asc' };
+      case 'VEHICLE_AZ':
+        return { sortBy: 'vehicleName', sortOrder: 'asc' };
+      case 'VEHICLE_ZA':
+        return { sortBy: 'vehicleName', sortOrder: 'desc' };
+      default:
+        return { sortBy: 'createdAt', sortOrder: 'desc' };
+    }
+  })();
+
+  const filterKey = `${jobsView}||${timeFilter}||${debouncedSearch}||${serverSort.sortBy}||${serverSort.sortOrder}`;
+  const prevFilterKeyRef = useRef(filterKey);
+
+  useEffect(() => {
+    if (prevFilterKeyRef.current !== filterKey) {
+      prevFilterKeyRef.current = filterKey;
+      setPage(1);
+      setAccumulatedJobs([]);
+      setHasMore(false);
+    }
+  }, [filterKey]);
+
   const queryParams = {
     page,
     limit: 15,
     timeframe: timeFilter !== 'ALL' ? timeFilter.toLowerCase() : undefined,
     tab: jobsView,
-    search: debouncedSearch.trim() || undefined,
+    search: debouncedSearch || undefined,
+    sortBy: serverSort.sortBy,
+    sortOrder: serverSort.sortOrder,
+    paginated: true,
   };
 
-  const { data: responseData, isLoading, refetch } = useGetJobCardsQuery(queryParams);
+  const { currentData: responseData, isLoading, isFetching, refetch } = useGetJobCardsQuery(queryParams);
 
   const rawJobs: JobCardData[] = Array.isArray(responseData?.data)
     ? (responseData!.data as unknown as JobCardData[])
     : ((responseData?.data as any)?.jobs || []);
 
   const pagination = !Array.isArray(responseData?.data) ? (responseData?.data as any)?.pagination : undefined;
-  const totalPages = pagination?.totalPages || 1;
-  const hasMore = page < totalPages;
 
-  // Reset on filter or search change
+  // Accumulate jobs strictly when currentData matches requested page
   useEffect(() => {
-    setPage(1);
-    setAccumulatedJobs([]);
-  }, [timeFilter, jobsView, debouncedSearch]);
+    if (!responseData?.data) return;
+    const resolvedPage = pagination?.page ?? 1;
+    if (resolvedPage !== page) return;
 
-  // Accumulate jobs across pages
-  useEffect(() => {
-    if (!rawJobs.length) {
-      if (page === 1) setAccumulatedJobs([]);
-      setIsFetchingMore(false);
-      return;
-    }
     if (page === 1) {
       setAccumulatedJobs(rawJobs);
     } else {
@@ -266,56 +331,44 @@ export const JobsListPage: React.FC = () => {
         return [...prev, ...newUnique];
       });
     }
-    setIsFetchingMore(false);
-  }, [rawJobs, page]);
 
-  // Infinite scroll
-  const loadMore = useCallback(() => {
-    if (hasMore && !isLoading && !isFetchingMore) {
-      setIsFetchingMore(true);
-      setPage((p) => p + 1);
-    }
-  }, [hasMore, isLoading, isFetchingMore]);
+    const more = pagination
+      ? Boolean(pagination.hasMore ?? page < (pagination.totalPages || 1))
+      : false;
+    setHasMore(more);
+    setTotalServerCount(pagination?.total ?? rawJobs.length);
+  }, [responseData, rawJobs, pagination, page]);
 
+  // Infinite scroll IntersectionObserver
   useEffect(() => {
-    if (observerRef.current) observerRef.current.disconnect();
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
 
-    observerRef.current = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) loadMore();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasMore && !isFetching) {
+          setPage((p) => p + 1);
+        }
       },
-      { rootMargin: '200px', threshold: 0 }
+      { rootMargin: '180px', threshold: 0.05 }
     );
 
-    if (sentinelRef.current) observerRef.current.observe(sentinelRef.current);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, isFetching, accumulatedJobs.length]);
 
-    return () => observerRef.current?.disconnect();
-  }, [loadMore]);
-
-  const displayJobs = accumulatedJobs.length > 0 ? accumulatedJobs : rawJobs;
-
-  const filteredJobs = displayJobs
-    .filter((job) => {
-      if (jobsView === 'MY_JOBS' && !job.tasks?.some((t) => t.status === 'OPEN')) return false;
-      if (
-        jobsView === 'PENDING_VERIFICATION' &&
-        (!job.tasks?.length ||
-          job.tasks.some((t) => t.status !== 'COMPLETED') ||
-          job.verifiedAt)
-      )
-        return false;
-      const q = searchQuery.toLowerCase().trim();
-      if (!q) return true;
-      return (
-        job.vehicleName.toLowerCase().includes(q) ||
-        job.vehicleNumber.toLowerCase().includes(q)
-      );
-    })
-    .sort((a, b) => {
-      const aPinned = isJobPinned(a);
-      const bPinned = isJobPinned(b);
-      if (aPinned && !bPinned) return -1;
-      if (!aPinned && bPinned) return 1;
+  const filteredJobs = React.useMemo(() => {
+    const list = [...accumulatedJobs];
+    if (jobsView === 'ALL_VEHICLES' && sortBy !== 'PROGRESS_LOWEST' && sortBy !== 'PROGRESS_HIGHEST') {
+      return list;
+    }
+    return list.sort((a, b) => {
+      if (jobsView !== 'ALL_VEHICLES') {
+        const aPinned = isJobPinned(a);
+        const bPinned = isJobPinned(b);
+        if (aPinned && !bPinned) return -1;
+        if (!aPinned && bPinned) return 1;
+      }
 
       const aTotalTasks = a.tasks?.length || 0;
       const aCompletedTasks = (a.tasks || []).filter((t) => t.status === 'COMPLETED').length;
@@ -325,35 +378,11 @@ export const JobsListPage: React.FC = () => {
       const bCompletedTasks = (b.tasks || []).filter((t) => t.status === 'COMPLETED').length;
       const bProgress = bTotalTasks > 0 ? bCompletedTasks / bTotalTasks : 0;
 
-      switch (sortBy) {
-        case 'DELIVERY_SOONEST': {
-          const aDate = a.expectedDeliveryDate ? new Date(a.expectedDeliveryDate).getTime() : Infinity;
-          const bDate = b.expectedDeliveryDate ? new Date(b.expectedDeliveryDate).getTime() : Infinity;
-          if (aDate !== bDate) return aDate - bDate;
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        }
-        case 'DELIVERY_LATEST': {
-          const aDate = a.expectedDeliveryDate ? new Date(a.expectedDeliveryDate).getTime() : -Infinity;
-          const bDate = b.expectedDeliveryDate ? new Date(b.expectedDeliveryDate).getTime() : -Infinity;
-          if (aDate !== bDate) return bDate - aDate;
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        }
-        case 'CREATED_NEWEST':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case 'CREATED_OLDEST':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case 'VEHICLE_AZ':
-          return a.vehicleName.localeCompare(b.vehicleName);
-        case 'VEHICLE_ZA':
-          return b.vehicleName.localeCompare(a.vehicleName);
-        case 'PROGRESS_LOWEST':
-          return aProgress - bProgress;
-        case 'PROGRESS_HIGHEST':
-          return bProgress - aProgress;
-        default:
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
+      if (sortBy === 'PROGRESS_LOWEST') return aProgress - bProgress;
+      if (sortBy === 'PROGRESS_HIGHEST') return bProgress - aProgress;
+      return 0;
     });
+  }, [accumulatedJobs, jobsView, sortBy, optimisticPins]);
 
   const VIEWS: { key: JobsView; label: string; count: number }[] = [
     { key: 'MY_JOBS', label: 'My Jobs', count: myJobsCount },
@@ -392,8 +421,8 @@ export const JobsListPage: React.FC = () => {
         {/* ── TOP BAR: Header & New Button ── */}
         <PageHeader
           backTo="/dashboard"
-          title="Active Vehicles"
-          count={filteredJobs.length}
+          title={jobsView === 'ALL_VEHICLES' ? 'Vehicle History' : jobsView === 'PENDING_VERIFICATION' ? 'Pending QA' : 'Active Vehicles'}
+          count={totalServerCount || filteredJobs.length}
           actions={
             isAdmin && (
               <button
@@ -490,7 +519,7 @@ export const JobsListPage: React.FC = () => {
         </div>
 
         {/* ── COMPACT VEHICLE CARDS GRID ── */}
-        {isLoading && page === 1 ? (
+        {(page === 1 && accumulatedJobs.length === 0 && (isLoading || isFetching)) ? (
           <JobsListSkeleton />
         ) : filteredJobs.length === 0 ? (
           <div className="py-16 text-center rounded-3xl glass-modern-card space-y-1.5">
@@ -518,7 +547,7 @@ export const JobsListPage: React.FC = () => {
                   key={jobId}
                   whileHover={{ y: -2 }}
                   transition={{ duration: 0.18 }}
-                  onClick={() => navigate(`/jobs/${jobId}`)}
+                  onClick={() => navigate(`/jobs/${jobId}`, { state: { returnTo: `${location.pathname}${location.search}` } })}
                   className="group relative overflow-hidden rounded-2xl glass-modern-card p-3.5 sm:p-5 flex flex-col justify-between cursor-pointer select-none active:scale-[0.985] hover:border-amber-400/50 dark:hover:border-amber-400/40 transition-all duration-200"
                 >
                   <div className="space-y-3">
@@ -638,7 +667,7 @@ export const JobsListPage: React.FC = () => {
                     <div className="flex items-center gap-1.5">
                       <span className={`w-1.5 h-1.5 rounded-full ${isReady ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
                       <span className="text-[10px] sm:text-xs font-mono text-slate-400 dark:text-slate-500">
-                        {isReady ? 'Ready for Delivery' : 'In Service Bay'}
+                        {job.verifiedAt ? 'Verified' : isReady ? 'Ready for Delivery' : 'In Service Bay'}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold group-hover:text-amber-500 transition-colors">
@@ -655,14 +684,16 @@ export const JobsListPage: React.FC = () => {
         )}
 
         {/* Modern Infinite Scroll Loader & End Indicator */}
-        <ModernInfiniteLoader
-          sentinelRef={sentinelRef}
-          hasMore={hasMore}
-          isLoading={isFetchingMore}
-          totalCount={filteredJobs.length}
-          entityName="vehicles"
-          loadingLabel="Loading more garage vehicles"
-        />
+        {filteredJobs.length > 0 && (
+          <ModernInfiniteLoader
+            sentinelRef={sentinelRef}
+            hasMore={hasMore}
+            isLoading={isFetching && page > 1}
+            totalCount={totalServerCount || filteredJobs.length}
+            entityName="vehicles"
+            loadingLabel="Loading more vehicles"
+          />
+        )}
       </main>
 
       {/* Pin Job Modal */}

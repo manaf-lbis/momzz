@@ -29,8 +29,46 @@ export const createCategory = async (req: Request, res: Response) => {
   } catch (error: any) { return sendError(res, error.code === 11000 ? 'Category name already exists.' : error.message || 'Could not create category.', 400); }
 };
 
+export const getCatalogStats = async (_req: Request, res: Response) => {
+  try {
+    const stats = await catalogRepository.getCatalogStats();
+    return sendSuccess(res, 'Catalog stats retrieved.', stats);
+  } catch (error: any) {
+    return sendError(res, error.message || 'Could not load catalog stats.', 500);
+  }
+};
+
 export const getCatalogItems = async (req: Request, res: Response) => {
-  try { return sendSuccess(res, 'Catalog items retrieved.', (await catalogRepository.getItems({ q: req.query.q as string, itemType: req.query.itemType as string, category: req.query.category as string })).map(format)); }
+  try {
+    const isPaginated = req.query.page !== undefined || req.query.paginated === 'true';
+    if (isPaginated) {
+      const result = await catalogRepository.getPaginatedItems({
+        q: req.query.q as string,
+        itemType: req.query.itemType as string,
+        category: req.query.category as string,
+        stockFilter: req.query.stockFilter as string,
+        page: req.query.page ? Number(req.query.page) : 1,
+        limit: req.query.limit ? Number(req.query.limit) : 20,
+      });
+      return sendSuccess(res, 'Catalog items retrieved.', {
+        items: result.items.map(format),
+        pagination: result.pagination,
+      });
+    }
+
+    return sendSuccess(
+      res,
+      'Catalog items retrieved.',
+      (
+        await catalogRepository.getItems({
+          q: req.query.q as string,
+          itemType: req.query.itemType as string,
+          category: req.query.category as string,
+          limit: req.query.limit ? Number(req.query.limit) : undefined,
+        })
+      ).map(format)
+    );
+  }
   catch (error: any) { return sendError(res, error.message || 'Could not load catalog.', 500); }
 };
 
@@ -354,7 +392,21 @@ export const createSale = async (req: Request, res: Response) => {
 
 export const getSales = async (req: Request, res: Response) => {
   try {
-    const { q, status, limit } = req.query;
+    const { q, status, limit, page, paginated } = req.query;
+    const isPaginated = page !== undefined || paginated === 'true';
+    if (isPaginated) {
+      const result = await catalogRepository.getPaginatedSales({
+        q: q as string,
+        status: status as string,
+        page: page ? Number(page) : 1,
+        limit: limit ? Number(limit) : 20,
+      });
+      return sendSuccess(res, 'Sales retrieved.', {
+        sales: result.sales.map(formatSale),
+        metrics: result.metrics,
+        pagination: result.pagination,
+      });
+    }
     const rawSales = await catalogRepository.getSales({
       q: q as string,
       status: status as string,

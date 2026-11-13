@@ -15,9 +15,11 @@ export const batchLeaveSchema = z.object({
 });
 
 export const otClaimSchema = z.object({
+  workerId: z.string().optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
   otHours: z.number().int('Overtime hours must be a whole integer').min(1, 'Minimum 1 hour OT').max(24),
   note: z.string().optional(),
+  autoApprove: z.boolean().optional(),
 });
 
 export const otStatusSchema = z.object({

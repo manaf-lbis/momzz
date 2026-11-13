@@ -29,14 +29,6 @@ export const AddInventoryItemPage: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: categoryData, refetch: refetchCategories } = useGetCategoriesQuery();
-  const { data: catalogData } = useGetCatalogQuery();
-  const [createCatalogItem, { isLoading: isCreating }] = useCreateCatalogItemMutation();
-  const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
-
-  const categories = categoryData?.data || [];
-  const existingItems = catalogData?.data || [];
-
   // Form State
   const [form, setForm] = useState({
     title: '',
@@ -47,6 +39,18 @@ export const AddInventoryItemPage: React.FC = () => {
     minimumStockQuantity: '2',
     description: '',
   });
+
+  const { data: categoryData, refetch: refetchCategories } = useGetCategoriesQuery();
+  const trimmedDupQuery = form.title.trim();
+  const { data: catalogData } = useGetCatalogQuery(
+    { q: trimmedDupQuery, limit: 20 },
+    { skip: trimmedDupQuery.length < 2 }
+  );
+  const [createCatalogItem, { isLoading: isCreating }] = useCreateCatalogItemMutation();
+  const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
+
+  const categories = categoryData?.data || [];
+  const existingItems = catalogData?.data || [];
 
   // Duplicate candidates check
   const duplicateCandidates = useMemo(() => {

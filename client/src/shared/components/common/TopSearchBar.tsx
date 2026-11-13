@@ -23,7 +23,15 @@ export const TopSearchBar: React.FC<TopSearchBarProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data: jobsResponse } = useGetJobCardsQuery({ limit: 150 });
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 250);
+    return () => clearTimeout(t);
+  }, [query]);
+  const { data: jobsResponse } = useGetJobCardsQuery(
+    { limit: 20, search: debouncedQuery || undefined },
+    { skip: !isFocused && !debouncedQuery }
+  );
   const allJobs: JobCardData[] = Array.isArray(jobsResponse?.data)
     ? (jobsResponse!.data as unknown as JobCardData[])
     : ((jobsResponse?.data as any)?.jobs || []);

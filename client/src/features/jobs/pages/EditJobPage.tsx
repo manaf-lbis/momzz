@@ -74,7 +74,7 @@ export const EditJobPage: React.FC = () => {
   const navigate = useNavigate();
 
   const { data: jobResponse, isLoading: isSingleLoading } = useGetJobCardByIdQuery(id!, { skip: !id });
-  const { data: listResponse, isLoading: isListLoading } = useGetJobCardsQuery(undefined, { skip: !!jobResponse?.data });
+  const { data: listResponse, isLoading: isListLoading } = useGetJobCardsQuery({ limit: 20, paginated: true }, { skip: !id || isSingleLoading || !!jobResponse?.data });
 
   const rawList = listResponse?.data;
   const jobsList: JobCardData[] = Array.isArray(rawList) ? rawList : rawList?.jobs || [];
@@ -167,6 +167,7 @@ export const EditJobPage: React.FC = () => {
 
   const { data, isFetching } = useGetCatalogQuery({
     q: query,
+    limit: 50,
     ...(itemFilter === 'ALL' ? {} : { itemType: itemFilter }),
   });
 

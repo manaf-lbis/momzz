@@ -131,9 +131,30 @@ export interface SalesMetrics {
   avgBillValue: number;
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export interface CatalogStats {
+  totalCount: number;
+  productCount: number;
+  serviceCount: number;
+  lowStockCount: number;
+}
+
+export interface PaginatedCatalogResponse {
+  items: CatalogItem[];
+  pagination: PaginationMeta;
+}
+
 export interface SalesListResponse {
   sales: Sale[];
   metrics: SalesMetrics;
+  pagination?: PaginationMeta;
 }
 
 export interface CreateSalePayload {
@@ -183,11 +204,25 @@ export const catalogApi = apiSlice.injectEndpoints({
       query: (body) => ({ url: '/catalog/categories', method: 'POST', body }),
       invalidatesTags: ['Catalog'],
     }),
+    getCatalogStats: builder.query<{ success: boolean; data: CatalogStats }, void>({
+      query: () => '/catalog/stats',
+      providesTags: ['Catalog'],
+    }),
     getCatalog: builder.query<
       { success: boolean; data: CatalogItem[] },
-      { q?: string; itemType?: string; category?: string } | void
+      { q?: string; itemType?: string; category?: string; limit?: number } | void
     >({
       query: (filters) => ({ url: '/catalog/items', params: filters || {} }),
+      providesTags: ['Catalog'],
+    }),
+    getPaginatedCatalog: builder.query<
+      { success: boolean; data: PaginatedCatalogResponse },
+      { q?: string; itemType?: string; category?: string; stockFilter?: string; page: number; limit?: number }
+    >({
+      query: (params) => ({
+        url: '/catalog/items',
+        params: { ...params, paginated: 'true' },
+      }),
       providesTags: ['Catalog'],
     }),
     getCatalogItem: builder.query<{ success: boolean; data: CatalogItem }, string>({
@@ -242,9 +277,19 @@ export const catalogApi = apiSlice.injectEndpoints({
     // Enterprise Sales & Invoicing Endpoints
     getSales: builder.query<
       { success: boolean; data: SalesListResponse },
-      { q?: string; status?: string; limit?: number } | void
+      { q?: string; status?: string; limit?: number; page?: number; paginated?: boolean } | void
     >({
       query: (params) => ({ url: '/catalog/sales', params: params || {} }),
+      providesTags: ['Sale'],
+    }),
+    getPaginatedSales: builder.query<
+      { success: boolean; data: SalesListResponse },
+      { q?: string; status?: string; page: number; limit?: number }
+    >({
+      query: (params) => ({
+        url: '/catalog/sales',
+        params: { ...params, paginated: 'true' },
+      }),
       providesTags: ['Sale'],
     }),
     getSaleById: builder.query<{ success: boolean; data: Sale }, string>({
@@ -279,7 +324,10 @@ export const catalogApi = apiSlice.injectEndpoints({
 export const {
   useGetCategoriesQuery,
   useCreateCategoryMutation,
+  useGetCatalogStatsQuery,
   useGetCatalogQuery,
+  useGetPaginatedCatalogQuery,
+  useLazyGetPaginatedCatalogQuery,
   useGetCatalogItemQuery,
   useGetItemHistoryQuery,
   useCreateCatalogItemMutation,
@@ -289,6 +337,7 @@ export const {
   useDeleteCatalogItemMutation,
   useUploadCatalogImageMutation,
   useGetSalesQuery,
+  useGetPaginatedSalesQuery,
   useGetSaleByIdQuery,
   useCreateSaleMutation,
   useUpdateSaleMutation,

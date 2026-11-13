@@ -29,8 +29,8 @@ import {
 import { useAuth } from "../../../shared/hooks/useAuth";
 import { Navbar } from "../../../shared/components/navbar/Navbar";
 import { useGetJobCardsQuery, useGetJobStatsQuery, JobCardData } from "../../jobs/api/jobApi";
-import { useGetPendingWorkersQuery, useGetAllUsersQuery } from "../../auth/api/authApi";
-import { useGetCatalogQuery } from "../../catalog/api/catalogApi";
+import { useGetPendingWorkersQuery, useGetUserStatsQuery } from "../../auth/api/authApi";
+import { useGetCatalogStatsQuery } from "../../catalog/api/catalogApi";
 import { useGetMySingleSheetQuery } from "../../payroll/api/payrollApi";
 import { WorkerSalaryQuickSummary } from "../../payroll/components/WorkerSalaryQuickSummary";
 import { DashboardBentoSkeleton } from "../../../shared/components/common/PageShimmer";
@@ -84,11 +84,11 @@ export const Dashboard: React.FC = () => {
     return pStr.trim().toLowerCase() === targetStr.trim().toLowerCase();
   };
 
-  const { data: jobsRes, isLoading } = useGetJobCardsQuery(undefined, { refetchOnMountOrArgChange: true });
+  const { data: jobsRes, isLoading } = useGetJobCardsQuery({ limit: 50, paginated: true }, { refetchOnMountOrArgChange: true });
   const { data: statsRes }           = useGetJobStatsQuery(undefined, { refetchOnMountOrArgChange: true });
   const { data: pendingRes }         = useGetPendingWorkersQuery(undefined, { skip: !isAdmin });
-  const { data: usersRes }           = useGetAllUsersQuery(undefined,       { skip: !isAdmin });
-  const { data: catalogRes }         = useGetCatalogQuery();
+  const { data: userStatsRes }       = useGetUserStatsQuery(undefined, { skip: !isAdmin });
+  const { data: catalogStatsRes }    = useGetCatalogStatsQuery();
   const { data: mySheetData }        = useGetMySingleSheetQuery(undefined,  { skip: isAdmin });
 
   const myWorker = mySheetData?.data?.worker;
@@ -143,8 +143,8 @@ export const Dashboard: React.FC = () => {
   const velocity = totalAllTasks > 0 ? Math.round((totalDone / totalAllTasks) * 100) : 0;
 
   const pendingWorkers = pendingRes?.data?.length || 0;
-  const totalUsers     = usersRes?.data?.length   || 0;
-  const catalogCount   = catalogRes?.data?.length || 0;
+  const totalUsers     = userStatsRes?.data?.totalUsers || 0;
+  const catalogCount   = catalogStatsRes?.data?.totalCount || 0;
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -619,12 +619,12 @@ export const Dashboard: React.FC = () => {
                       </span>
                       <div className="pb-0.5 sm:pb-1">
                         <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">QA Ready Vehicles</p>
-                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">all tasks complete, ready for manager verify</p>
+                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">Ready for manager sign-off</p>
                       </div>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
-                      Ensure 100% inspection accuracy before customer delivery. Instant technician time log stamps and quality audits.
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md">
+                      Final inspection before delivery.
                     </p>
                   </div>
 
@@ -668,12 +668,12 @@ export const Dashboard: React.FC = () => {
                       </span>
                       <div className="pb-0.5 sm:pb-1">
                         <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">Catalog Items</p>
-                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">products, parts & labor service items</p>
+                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">Parts & services</p>
                       </div>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md leading-relaxed">
-                      Instant price calculation, stock depletion warning, and seamless custom checklist addition on any job card.
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md">
+                      Stock levels & job card billing sync.
                     </p>
                   </div>
 
@@ -750,7 +750,7 @@ export const Dashboard: React.FC = () => {
 
             {/* Tile 2: QA Sign-Off (2 cols) */}
             <div
-              onClick={() => navigate("/jobs", { state: { view: "verify" } })}
+              onClick={() => navigate("/jobs?tab=VERIFY")}
               className={`col-span-2 lg:col-span-2 ${modernCard} p-3.5 sm:p-5 flex flex-col justify-between
                           hover:border-purple-400/50 dark:hover:border-purple-400/40`}
             >
@@ -860,7 +860,7 @@ export const Dashboard: React.FC = () => {
 
             {/* Tile 4: Vehicle Archives (2 cols) */}
             <div
-              onClick={() => navigate("/jobs", { state: { view: "all" } })}
+              onClick={() => navigate("/jobs?tab=ALL_VEHICLES")}
               className={`col-span-2 lg:col-span-2 ${modernCard} p-3.5 sm:p-5 flex flex-col justify-between
                           hover:border-teal-400/50 dark:hover:border-teal-400/40`}
             >
@@ -902,7 +902,7 @@ export const Dashboard: React.FC = () => {
             </h2>
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
               {[
-                { label: "Staff Roster", sub: `${totalUsers} mechanics registered`, icon: <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />, bg: "bg-amber-500/15", path: "/admin/users", hover: "hover:border-amber-400/50 dark:hover:border-amber-400/30" },
+                { label: "Staff", sub: `${totalUsers} mechanics`, icon: <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />, bg: "bg-amber-500/15", path: "/admin/users", hover: "hover:border-amber-400/50 dark:hover:border-amber-400/30" },
                 { label: "Approvals", sub: pendingWorkers > 0 ? `${pendingWorkers} pending requests` : "All cleared", icon: <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600 dark:text-rose-400" />, bg: "bg-rose-500/15", path: "/admin/approvals", hover: "hover:border-rose-400/50 dark:hover:border-rose-400/30" },
               ].map(a => (
                 <div
@@ -943,10 +943,10 @@ export const Dashboard: React.FC = () => {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-400">
-                        Assigned Daily Wage
+                        Daily Wage
                       </p>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                        Active Rate
+                        Active
                       </span>
                     </div>
                     <p className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
@@ -957,7 +957,7 @@ export const Dashboard: React.FC = () => {
 
                 <div className="text-right shrink-0">
                   <span className="text-[10px] sm:text-xs font-mono text-slate-400 uppercase block font-semibold">
-                    Unsettled Dues
+                    Payable
                   </span>
                   <span className="text-lg sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
                     ₹{myKpis ? myKpis.netPayable.toLocaleString('en-IN') : 0}
@@ -967,11 +967,11 @@ export const Dashboard: React.FC = () => {
 
               <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 dark:border-white/5 text-xs font-mono text-slate-500 dark:text-slate-400">
                 <div className="flex items-center gap-3">
-                  <span>Working Days: <strong className="text-slate-800 dark:text-slate-200">{myKpis?.totalWorkingDays || 0}d</strong></span>
-                  <span>Approved OT: <strong className="text-emerald-600">+{myKpis?.totalApprovedOtHours || 0}h</strong></span>
+                  <span>Days: <strong className="text-slate-800 dark:text-slate-200">{myKpis?.totalWorkingDays || 0}d</strong></span>
+                  <span>OT: <strong className="text-emerald-600">+{myKpis?.totalApprovedOtHours || 0}h</strong></span>
                 </div>
                 <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold group-hover:translate-x-0.5 transition-transform">
-                  <span>View Full Ledger</span>
+                  <span>Ledger</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </div>
               </div>

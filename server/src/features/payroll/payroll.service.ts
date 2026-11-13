@@ -297,7 +297,7 @@ export class PayrollService {
           type: leaveType,
           deductionAmount,
           isAllowedLeave,
-          note: params.note || (isAllowedLeave ? 'Monthly Allowed Leave (Paid)' : ''),
+          note: params.note || (isAllowedLeave ? 'Paid Leave' : ''),
         });
 
         results.push({
@@ -714,7 +714,7 @@ export class PayrollService {
             leaveDeduction = 0;
             netDayWage = currentDailyWage; // Paid leave! Full daily wage paid
             shiftStatus = 'LEAVE';
-            shiftNote = 'Monthly Allowed Leave (Paid • ₹0 deduction)';
+            shiftNote = 'Paid Leave';
           } else {
             leaveDeduction = leave.deductionAmount || calculateFullLeaveDeduction(currentDailyWage);
             netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
@@ -728,7 +728,7 @@ export class PayrollService {
             leaveDeduction = 0;
             netDayWage = currentDailyWage; // Paid leave! Full daily wage paid
             shiftStatus = 'LEAVE';
-            shiftNote = 'Monthly Allowed Leave (Half-Day Paid • ₹0 deduction)';
+            shiftNote = 'Half Day (Paid)';
           } else {
             leaveDeduction = leave.deductionAmount || calculateHalfDayDeduction(currentDailyWage);
             if (isShiftInProgress) {
@@ -736,7 +736,7 @@ export class PayrollService {
               baseWage = currentDailyWage;
               netDayWage = 0;
               shiftStatus = 'IN_PROGRESS';
-              shiftNote = 'Half-day shift in progress (accrues after 5:00 PM)';
+              shiftNote = 'Half-day in progress';
             } else {
               baseWage = currentDailyWage;
               netDayWage = Math.max(0, currentDailyWage - leaveDeduction);
@@ -769,7 +769,7 @@ export class PayrollService {
           leaveDeduction = 0;
           netDayWage = 0;
           shiftStatus = 'IN_PROGRESS';
-          shiftNote = 'Shift in progress (accrues after 5:00 PM)';
+          shiftNote = 'In progress';
         } else {
           baseWage = currentDailyWage;
           leaveDeduction = 0;
@@ -1385,7 +1385,7 @@ export class PayrollService {
             deductionAmount: adj.deductionAmount,
             note: adj.note,
           },
-          note: `Modified leave from ${adj.type} to ${leaveType}${isAllowedLeave ? ' (Monthly Allowed Leave)' : ''}`,
+          note: `Updated to ${leaveType === 'FULL_LEAVE' ? 'Full Leave' : 'Half Day'}${isAllowedLeave ? ' (Paid)' : ''}`,
         }
       : undefined;
 

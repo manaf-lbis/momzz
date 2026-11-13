@@ -5,13 +5,10 @@ import {
   Calendar as CalendarIcon,
   Clock,
   CheckCircle2,
-  AlertCircle,
   CreditCard,
   X,
-  TrendingUp,
   Banknote,
   Zap,
-  Info,
   CalendarDays,
   Filter,
   Layers,
@@ -24,21 +21,25 @@ import {
   Printer,
   Copy,
   Check,
-  BarChart3,
   FileText,
+  UserCheck,
+  UserX,
+  Plus,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
+import { ModernInfiniteLoader } from '../../../shared/components/common/ModernInfiniteLoader';
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
 import { useAuth } from '../../../shared/hooks/useAuth';
-import { PayrollAnalyticsGraph } from '../components/PayrollAnalyticsGraph';
 import { SettlementHistoryBriefs } from '../components/SettlementHistoryBriefs';
 import { OvertimeTrackerConsole } from '../components/OvertimeTrackerConsole';
 import {
   useGetWorkerSingleSheetQuery,
   useGetMySingleSheetQuery,
+  useMarkBatchLeaveMutation,
   useClaimOvertimeMutation,
+  useUpdateOtStatusMutation,
   useSettlePayrollMutation,
   useRecordAdvanceMutation,
   useRecordIncentiveMutation,
@@ -79,7 +80,9 @@ export const WorkerLedgerPage: React.FC = () => {
   const { data, isLoading, refetch } = activeQuery;
 
   // Mutations
+  const [markBatchLeave, { isLoading: isMarkingLeave }] = useMarkBatchLeaveMutation();
   const [claimOvertime, { isLoading: isClaimingOt }] = useClaimOvertimeMutation();
+  const [updateOtStatus, { isLoading: isUpdatingOtStatus }] = useUpdateOtStatusMutation();
   const [settlePayroll, { isLoading: isSettling }] = useSettlePayrollMutation();
   const [recordAdvance, { isLoading: isRecordingAdvance }] = useRecordAdvanceMutation();
   const [recordIncentive, { isLoading: isRecordingIncentive }] = useRecordIncentiveMutation();
@@ -98,9 +101,17 @@ export const WorkerLedgerPage: React.FC = () => {
   const [showEditOtModal, setShowEditOtModal] = useState(false);
   const [showMobileActionSheet, setShowMobileActionSheet] = useState(false);
 
+  // Day Quick Mark state
+  const [quickMarkDate, setQuickMarkDate] = useState<string | null>(null);
+  const [quickLeaveNote, setQuickLeaveNote] = useState('');
+  const [quickOtHours, setQuickOtHours] = useState<number>(1);
+  const [quickOtNote, setQuickOtNote] = useState('');
+  const [quickTxType, setQuickTxType] = useState<'ADVANCE' | 'INCENTIVE'>('ADVANCE');
+  const [quickTxAmount, setQuickTxAmount] = useState<number | ''>('');
+  const [quickTxNote, setQuickTxNote] = useState('');
+
   // Active view tab in ledger
-  const [ledgerTab, setLedgerTab] = useState<'STREAM' | 'BRIEFS' | 'ANALYTICS' | 'OT_TRACKER'>('STREAM');
-  const [showGraph, setShowGraph] = useState<boolean>(true);
+  const [ledgerTab, setLedgerTab] = useState<'STREAM' | 'BRIEFS' | 'OT_TRACKER'>('STREAM');
 
   // OT Form State
   const [otDate, setOtDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -265,7 +276,18 @@ export const WorkerLedgerPage: React.FC = () => {
 
   // Progressive Infinite Scroll state
   const [visibleLimit, setVisibleLimit] = useState<number>(30);
+  const [isLoadingMoreDays, setIsLoadingMoreDays] = useState<boolean>(false);
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  const quickMarkDay = useMemo(
+    () => (quickMarkDate ? days.find((d) => d.date === quickMarkDate) || null : null),
+    [days, quickMarkDate]
+  );
+
+  const quickMarkOtClaim = useMemo(
+    () => (quickMarkDate ? derivedOtClaims.find((c) => c.date === quickMarkDate) || null : null),
+    [derivedOtClaims, quickMarkDate]
+  );
 
   // Filter days by month if selected
   const filteredDays = useMemo(() => {
@@ -294,11 +316,15 @@ export const WorkerLedgerPage: React.FC = () => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && visibleLimit < filteredDays.length) {
-          setVisibleLimit((prev) => Math.min(prev + 20, filteredDays.length));
+        if (entries[0]?.isIntersecting && visibleLimit < filteredDays.length && !isLoadingMoreDays) {
+          setIsLoadingMoreDays(true);
+          setTimeout(() => {
+            setVisibleLimit((prev) => Math.min(prev + 20, filteredDays.length));
+            setIsLoadingMoreDays(false);
+          }, 120);
         }
       },
-      { threshold: 0.1 }
+      { rootMargin: '120px' }
     );
 
     const currentTarget = observerTarget.current;
@@ -311,7 +337,7 @@ export const WorkerLedgerPage: React.FC = () => {
         observer.unobserve(currentTarget);
       }
     };
-  }, [filteredDays.length, visibleLimit]);
+  }, [filteredDays.length, visibleLimit, isLoadingMoreDays]);
 
   const handleSelectMonth = (mKey: string) => {
     setSelectedMonth(mKey);
@@ -325,9 +351,11 @@ export const WorkerLedgerPage: React.FC = () => {
 
     try {
       await claimOvertime({
+        workerId: isAdmin && worker?.id ? worker.id : undefined,
         date: otDate,
         otHours: Math.floor(otHours),
         note: otNote,
+        autoApprove: isAdmin && !!worker?.id,
       }).unwrap();
 
       setShowOtModal(false);
@@ -478,14 +506,118 @@ export const WorkerLedgerPage: React.FC = () => {
 
   // Handle Delete Wage Transaction (Advance or Incentive)
   const handleDeleteTransaction = async (id: string, type: string, amount: number) => {
-    const label = type === 'INCENTIVE' ? 'incentive' : 'cash advance';
-    if (!confirm(`Are you sure you want to remove this ${label} of ${formatCurrency(amount)}?`)) return;
+    const label = type === 'INCENTIVE' ? 'bonus' : 'advance';
+    if (!confirm(`Remove ${label} of ${formatCurrency(amount)}?`)) return;
 
     try {
       await deleteTransaction(id).unwrap();
       refetch();
     } catch (err: any) {
       alert(err?.data?.message || `Failed to delete ${label}`);
+    }
+  };
+
+  const openQuickMark = (day: SingleSheetDayEntry) => {
+    setQuickMarkDate(day.date);
+    setQuickLeaveNote(day.adjustmentNote || '');
+    setQuickOtHours(day.otHours > 0 ? day.otHours : 1);
+    setQuickOtNote(day.otClaimNote || '');
+    setQuickTxType('ADVANCE');
+    setQuickTxAmount('');
+    setQuickTxNote('');
+  };
+
+  const handleQuickAttendance = async (target: 'PRESENT' | 'HALF_LEAVE' | 'FULL_LEAVE') => {
+    if (!quickMarkDay || !worker || !isAdmin || quickMarkDay.isSettled) return;
+    try {
+      if (target === 'PRESENT') {
+        if (quickMarkDay.adjustmentId) {
+          await deleteLeave(quickMarkDay.adjustmentId).unwrap();
+          refetch();
+        }
+        return;
+      }
+      if (quickMarkDay.adjustmentId) {
+        await updateLeave({
+          id: quickMarkDay.adjustmentId,
+          type: target,
+          date: quickMarkDay.date,
+          note: quickLeaveNote.trim() || undefined,
+        }).unwrap();
+      } else {
+        await markBatchLeave({
+          workerIds: [worker.id],
+          dates: [quickMarkDay.date],
+          type: target,
+          note: quickLeaveNote.trim() || undefined,
+        }).unwrap();
+      }
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to update attendance');
+    }
+  };
+
+  const handleQuickOtSave = async () => {
+    if (!quickMarkDay || quickOtHours < 1) return;
+    const claimId = quickMarkDay.otClaimId || quickMarkOtClaim?.id;
+    try {
+      if (claimId) {
+        await updateOtClaim({
+          id: claimId,
+          otHours: Math.floor(quickOtHours),
+          date: quickMarkDay.date,
+          note: quickOtNote.trim() || undefined,
+          status: isAdmin ? 'APPROVED' : undefined,
+        }).unwrap();
+      } else {
+        await claimOvertime({
+          workerId: isAdmin && worker?.id ? worker.id : undefined,
+          date: quickMarkDay.date,
+          otHours: Math.floor(quickOtHours),
+          note: quickOtNote.trim() || undefined,
+          autoApprove: isAdmin && !!worker?.id,
+        }).unwrap();
+      }
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to save overtime');
+    }
+  };
+
+  const handleQuickOtDecision = async (claimId: string, status: 'APPROVED' | 'REJECTED') => {
+    try {
+      await updateOtStatus({ id: claimId, status }).unwrap();
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to update overtime status');
+    }
+  };
+
+  const handleQuickTxSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickMarkDay || !worker || !quickTxAmount || Number(quickTxAmount) <= 0) return;
+    try {
+      if (quickTxType === 'ADVANCE') {
+        await recordAdvance({
+          workerId: worker.id,
+          amount: Number(quickTxAmount),
+          date: quickMarkDay.date,
+          notes: quickTxNote.trim() || undefined,
+        }).unwrap();
+      } else {
+        await recordIncentive({
+          workerId: worker.id,
+          amount: Number(quickTxAmount),
+          date: quickMarkDay.date,
+          notes: quickTxNote.trim() || 'Day bonus',
+        }).unwrap();
+      }
+      setQuickTxAmount('');
+      setQuickTxNote('');
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.message || 'Failed to record entry');
     }
   };
 
@@ -504,7 +636,7 @@ export const WorkerLedgerPage: React.FC = () => {
         <PageHeader
           backTo={isAdmin ? "/payroll" : "/dashboard"}
           title={worker?.name || (!isAdmin ? user?.name : undefined) || 'Worker Ledger'}
-          description="Continuous single-sheet financial ledger"
+          description="Payroll & daily ledger"
           icon={
             (worker?.profileImageUrl || (!isAdmin ? user?.profileImageUrl : undefined)) ? (
               <img
@@ -581,18 +713,11 @@ export const WorkerLedgerPage: React.FC = () => {
           }
         />
 
-        {/* Wage Not Decided Warning */}
+        {/* Wage Not Decided Badge */}
         {(!data?.data?.hasWageAssigned && ((worker?.dailyWage || user?.dailyWage || 0) === 0)) && (
-          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3 text-amber-800 dark:text-amber-200 animate-fadeIn">
-            <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-bold text-sm">Wage Not Yet Decided</h4>
-              <p className="text-xs opacity-90 mt-1 leading-relaxed">
-                {isAdmin
-                  ? 'This worker does not have an active daily wage configured yet. Daily attendance, shift accruals, and overtime tracking will strictly begin from the date you decide their wage in the Payroll Dashboard.'
-                  : 'Your daily wage has not been decided yet. Your salary, shift accruals, and overtime tracking will start accumulating from your wage decision date once assigned by management.'}
-              </p>
-            </div>
+          <div className="px-3.5 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between text-xs text-amber-800 dark:text-amber-200 animate-fadeIn">
+            <span className="font-bold">Wage not set</span>
+            <span className="text-[11px] opacity-80">Set daily wage in Payroll to accrue</span>
           </div>
         )}
 
@@ -602,22 +727,22 @@ export const WorkerLedgerPage: React.FC = () => {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[10px] sm:text-xs font-mono uppercase text-slate-500 dark:text-slate-400 block font-semibold">
-                  Unsettled Payable Dues
+                  Payable Dues
                 </span>
                 {kpis.netPayable === 0 ? (
-                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
                     <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
-                    <span>All Dues Settled</span>
+                    <span>Settled</span>
                   </span>
                 ) : (
-                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
-                    <span>Active Dues</span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+                    <span>Due</span>
                   </span>
                 )}
                 {istCountdown.isBeforeCutoff && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/25">
                     <Clock className="w-2.5 h-2.5 animate-pulse text-sky-500" />
-                    <span>Shift active (accrues in {istCountdown.label})</span>
+                    <span>{istCountdown.label}</span>
                   </span>
                 )}
               </div>
@@ -659,50 +784,37 @@ export const WorkerLedgerPage: React.FC = () => {
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[9px] uppercase">Leave Penalty</span>
+              <span className="text-slate-400 block text-[9px] uppercase">Leaves</span>
               <span className="font-semibold text-amber-600 dark:text-amber-400">
                 -{formatCurrency(kpis.totalLeaveDeductions)}
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[9px] uppercase">Approved OT</span>
+              <span className="text-slate-400 block text-[9px] uppercase">OT</span>
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                 +{formatCurrency(kpis.totalApprovedOtAmount)}
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[9px] uppercase">Advances Taken</span>
+              <span className="text-slate-400 block text-[9px] uppercase">Advances</span>
               <span className="font-semibold text-rose-600 dark:text-rose-400">
                 -{formatCurrency(kpis.totalUnsettledAdvances)}
               </span>
             </div>
             {kpis.totalUnsettledIncentives && kpis.totalUnsettledIncentives > 0 ? (
-              <div className="col-span-2 sm:col-span-4 pt-1 border-t border-slate-200/50 dark:border-white/5 flex items-center justify-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+              <div className="col-span-2 sm:col-span-4 pt-1 border-t border-slate-200/50 dark:border-white/5 flex items-center justify-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
                 <Gift className="w-3.5 h-3.5" />
-                <span>Includes {formatCurrency(kpis.totalUnsettledIncentives)} in Special Incentives</span>
-              </div>
-            ) : null}
-            {kpis.totalAllowedLeaves && kpis.totalAllowedLeaves > 0 ? (
-              <div className="col-span-2 sm:col-span-4 pt-1 border-t border-slate-200/50 dark:border-white/5 flex items-center justify-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-                <span>
-                  Includes {kpis.totalAllowedLeaves} Monthly Allowed Leave{kpis.totalAllowedLeaves > 1 ? 's' : ''} (100% Paid • ₹0 penalty)
-                </span>
+                <span>Bonus: +{formatCurrency(kpis.totalUnsettledIncentives)}</span>
               </div>
             ) : null}
           </div>
         </div>
 
-        {/* Advance Overhang Alert */}
+        {/* Advance Overhang Chip */}
         {kpis.advanceOverhang && kpis.advanceOverhang > 0 ? (
-          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 flex items-start gap-2.5 text-xs text-rose-800 dark:text-rose-200 animate-fadeIn">
-            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-bold block text-xs">Advance Overhang Carried Forward</span>
-              <p className="text-[11px] opacity-90 leading-relaxed mt-0.5">
-                Cash advance taken exceeds accrued earnings by <strong className="font-mono text-rose-600 dark:text-rose-400">-{formatCurrency(kpis.advanceOverhang)}</strong>. This balance carries forward into the next work cycle before new wages accumulate.
-              </p>
-            </div>
+          <div className="px-3.5 py-2 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-between text-xs text-rose-700 dark:text-rose-300">
+            <span className="font-bold">Advance Carried Forward</span>
+            <span className="font-mono font-bold">-{formatCurrency(kpis.advanceOverhang)}</span>
           </div>
         ) : null}
 
@@ -715,22 +827,22 @@ export const WorkerLedgerPage: React.FC = () => {
             <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-0.5">
               {kpis.totalWorkingDays}
             </p>
-            <p className="text-[10px] text-slate-400">Non-Sunday present</p>
+            <p className="text-[10px] text-slate-400">Present</p>
           </div>
 
           <div className="p-3 rounded-2xl glass-modern-card shadow-2xs">
             <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 block">
-              Floor Deductions
+              Leave Deductions
             </span>
             <p className="text-lg sm:text-xl font-black font-mono text-amber-600 dark:text-amber-400 mt-0.5">
               -{formatCurrency(kpis.totalLeaveDeductions)}
             </p>
-            <p className="text-[10px] text-slate-400">Floor-100 rule</p>
+            <p className="text-[10px] text-slate-400">{kpis.totalFullLeaveDays + kpis.totalHalfDays * 0.5}d</p>
           </div>
 
           <div className="p-3 rounded-2xl glass-modern-card shadow-2xs">
             <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 block">
-              Overtime Hours
+              Overtime
             </span>
             <p className="text-lg sm:text-xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
               {kpis.totalApprovedOtHours}h
@@ -745,7 +857,7 @@ export const WorkerLedgerPage: React.FC = () => {
             <p className="text-lg sm:text-xl font-black font-mono text-rose-600 dark:text-rose-400 mt-0.5">
               -{formatCurrency(kpis.totalUnsettledAdvances)}
             </p>
-            <p className="text-[10px] text-slate-400">Mid-cycle cash</p>
+            <p className="text-[10px] text-slate-400">Unsettled</p>
           </div>
         </div>
 
@@ -755,10 +867,10 @@ export const WorkerLedgerPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-blue-500" />
-                <span>Monthly Earnings Split-Up</span>
+                <span>Monthly Summary</span>
               </h3>
               <span className="text-[10px] text-slate-400 font-mono">
-                {monthlyBreakdown.length} months recorded
+                {monthlyBreakdown.length} mo
               </span>
             </div>
 
@@ -855,19 +967,6 @@ export const WorkerLedgerPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setLedgerTab('ANALYTICS')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-              ledgerTab === 'ANALYTICS'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Salary Graph</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setLedgerTab('OT_TRACKER')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
               ledgerTab === 'OT_TRACKER'
@@ -952,54 +1051,22 @@ export const WorkerLedgerPage: React.FC = () => {
           </section>
         )}
 
-        {/* ── TAB 3: SALARY ANALYTICS GRAPH ── */}
-        {ledgerTab === 'ANALYTICS' && (
-          <section className="space-y-3">
-            <PayrollAnalyticsGraph
-              monthlyData={monthlyBreakdown}
-              days={days}
-              workerDailyWage={(worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0}
-            />
-          </section>
-        )}
-
         {/* ── TAB 1: CONTINUOUS SINGLE-SHEET STREAM & FILTERS ── */}
         {ledgerTab === 'STREAM' && (
           <section className="space-y-3">
-            {/* Quick Interactive Salary Graph inside Stream */}
-            {monthlyBreakdown.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-[11px] font-mono uppercase text-slate-400 font-bold flex items-center gap-1.5">
-                    <BarChart3 className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Visual Trend Preview</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowGraph(!showGraph)}
-                    className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline transition"
-                  >
-                    {showGraph ? 'Hide Graph' : 'Show Graph'}
-                  </button>
-                </div>
-                {showGraph && (
-                  <PayrollAnalyticsGraph
-                    monthlyData={monthlyBreakdown}
-                    days={days}
-                    workerDailyWage={
-                      (worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage) || 0
-                    }
-                  />
-                )}
-              </div>
-            )}
-
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <CalendarDays className="w-3.5 h-3.5 text-amber-500" />
-                <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400">
-                  Daily Transaction Stream
-                </h2>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <CalendarDays className="w-3.5 h-3.5 text-amber-500" />
+                  <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400">
+                    Daily Transaction Stream
+                  </h2>
+                </div>
+                {isAdmin && (
+                  <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
+                    Tap day to mark
+                  </span>
+                )}
               </div>
 
             {/* Month Filter Selector Pills */}
@@ -1031,17 +1098,10 @@ export const WorkerLedgerPage: React.FC = () => {
           </div>
 
           {filteredDays.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-400 glass-modern-card rounded-2xl space-y-1">
+            <div className="p-8 text-center text-xs text-slate-400 glass-modern-card rounded-2xl">
               <p className="font-semibold text-slate-600 dark:text-slate-300">
-                {!data?.data?.hasWageAssigned && ((worker?.dailyWage || user?.dailyWage || 0) === 0)
-                  ? 'No payroll entries recorded'
-                  : 'No daily entries recorded for this view.'}
+                No entries recorded
               </p>
-              {!data?.data?.hasWageAssigned && ((worker?.dailyWage || user?.dailyWage || 0) === 0) && (
-                <p className="text-[11px] text-slate-400">
-                  Payroll calculation and ledger history will begin on the date this worker's daily wage is decided.
-                </p>
-              )}
             </div>
           ) : (
             Object.entries(groupedDays).map(([monthYear, monthDays]) => (
@@ -1067,9 +1127,18 @@ export const WorkerLedgerPage: React.FC = () => {
                     return (
                       <div
                         key={day.date}
-                        className={`p-3 rounded-xl glass-modern-card space-y-2 transition ${
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => openQuickMark(day)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            openQuickMark(day);
+                          }
+                        }}
+                        className={`p-3 rounded-xl glass-modern-card space-y-2 transition cursor-pointer hover:border-amber-500/40 active:scale-[0.995] ${
                           isSun
-                            ? 'opacity-65'
+                            ? 'opacity-70'
                             : isLeave
                             ? day.isAllowedLeave
                               ? 'border-l-4 border-emerald-500 bg-emerald-500/[0.03]'
@@ -1097,22 +1166,23 @@ export const WorkerLedgerPage: React.FC = () => {
                             <div className="min-w-0 flex flex-wrap items-center gap-1.5">
                               {isSun ? (
                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400">
-                                  Sunday (₹0)
+                                  Sunday
                                 </span>
                               ) : isHol ? (
                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300">
-                                  {day.holidayTitle || 'Holiday'} (100% Paid)
+                                  {day.holidayTitle || 'Holiday'}
                                 </span>
                               ) : isLeave ? (
                                 <div className="flex flex-col gap-0.5">
                                   {day.isAllowedLeave ? (
                                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                                       <Sparkles className="w-2.5 h-2.5 text-emerald-500" />
-                                      <span>Allowed Leave (Paid • ₹0 penalty)</span>
+                                      <span>Paid Leave</span>
                                       {isAdmin && !day.isSettled && day.adjustmentId && (
                                         <button
                                           type="button"
-                                          onClick={() => {
+                                          onClick={(e) => {
+                                            e.stopPropagation();
                                             setEditingAdjustmentId(day.adjustmentId!);
                                             setEditingLeaveDate(day.date);
                                             setEditingLeaveType(day.dayType as 'FULL_LEAVE' | 'HALF_LEAVE');
@@ -1132,7 +1202,8 @@ export const WorkerLedgerPage: React.FC = () => {
                                       {isAdmin && !day.isSettled && day.adjustmentId && (
                                         <button
                                           type="button"
-                                          onClick={() => {
+                                          onClick={(e) => {
+                                            e.stopPropagation();
                                             setEditingAdjustmentId(day.adjustmentId!);
                                             setEditingLeaveDate(day.date);
                                             setEditingLeaveType(day.dayType as 'FULL_LEAVE' | 'HALF_LEAVE');
@@ -1156,7 +1227,7 @@ export const WorkerLedgerPage: React.FC = () => {
                               ) : isInProgress ? (
                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 flex items-center gap-1">
                                   <Clock className="w-2.5 h-2.5 animate-pulse text-sky-500" />
-                                  <span>Shift In Progress (accrues 5 PM)</span>
+                                  <span>Active shift</span>
                                 </span>
                               ) : (
                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300">
@@ -1184,7 +1255,8 @@ export const WorkerLedgerPage: React.FC = () => {
                                     {!day.isSettled && (
                                       <button
                                         type="button"
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                          e.stopPropagation();
                                           setEditingOtClaimId(day.otClaimId || day.adjustmentId || '');
                                           setEditingOtDate(day.date);
                                           setEditingOtHours(day.otHours);
@@ -1201,7 +1273,7 @@ export const WorkerLedgerPage: React.FC = () => {
                                   </span>
                                   {day.otFlaggedReason === 'CLAIMED_ON_FULL_LEAVE' && (
                                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25">
-                                      ⚠️ Claimed on Full Leave Day
+                                      On Leave Day
                                     </span>
                                   )}
                                   {day.otLastEditedAt && (
@@ -1211,7 +1283,7 @@ export const WorkerLedgerPage: React.FC = () => {
                                   )}
                                   {day.otStatus === 'REJECTED' && (
                                     <span className="text-[9px] text-rose-600 dark:text-rose-400 font-medium pl-0.5">
-                                      {day.otRejectionReason ? `Reason: ${day.otRejectionReason}` : 'Claim Rejected'}
+                                      {day.otRejectionReason ? `${day.otRejectionReason}` : 'Rejected'}
                                     </span>
                                   )}
                                 </div>
@@ -1226,22 +1298,25 @@ export const WorkerLedgerPage: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Right: Day Earnings & Running Balance */}
-                          <div className="text-right shrink-0 font-mono">
-                            <span
-                              className={`text-xs font-bold block ${
-                                isInProgress
-                                  ? 'text-sky-600 dark:text-sky-400 font-semibold'
-                                  : day.netDailyPay > 0
-                                  ? 'text-slate-900 dark:text-white'
-                                  : 'text-slate-400'
-                              }`}
-                            >
-                              {isInProgress ? '₹0 (shift active)' : `+${formatCurrency(day.netDailyPay)}`}
-                            </span>
-                            <span className="text-[9px] text-amber-600 dark:text-amber-400 font-semibold block">
-                              bal {formatCurrency(day.runningCumulativeBalance)}
-                            </span>
+                          {/* Right: Day Earnings & Running Balance + Quick chevron */}
+                          <div className="flex items-center gap-1.5 shrink-0 font-mono">
+                            <div className="text-right">
+                              <span
+                                className={`text-xs font-bold block ${
+                                  isInProgress
+                                    ? 'text-sky-600 dark:text-sky-400 font-semibold'
+                                    : day.netDailyPay > 0
+                                    ? 'text-slate-900 dark:text-white'
+                                    : 'text-slate-400'
+                                }`}
+                              >
+                                {isInProgress ? '₹0' : `+${formatCurrency(day.netDailyPay)}`}
+                              </span>
+                              <span className="text-[9px] text-amber-600 dark:text-amber-400 font-semibold block">
+                                bal {formatCurrency(day.runningCumulativeBalance)}
+                              </span>
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400/70" />
                           </div>
                         </div>
 
@@ -1294,7 +1369,10 @@ export const WorkerLedgerPage: React.FC = () => {
                                   {tx.type === 'PAYOUT_SETTLEMENT' && (
                                     <button
                                       type="button"
-                                      onClick={() => setShareSettlement({ tx, day })}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShareSettlement({ tx, day });
+                                      }}
                                       title="Share Salary Slip via WhatsApp"
                                       className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1 transition shadow-2xs"
                                     >
@@ -1305,8 +1383,11 @@ export const WorkerLedgerPage: React.FC = () => {
                                   {isAdmin && !day.isSettled && tx.type !== 'PAYOUT_SETTLEMENT' && (
                                     <button
                                       type="button"
-                                      onClick={() => handleDeleteTransaction(tx.id, tx.type, tx.amount)}
-                                      title={`Delete ${tx.type === 'INCENTIVE' ? 'Incentive' : 'Advance'}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteTransaction(tx.id, tx.type, tx.amount);
+                                      }}
+                                      title={`Delete ${tx.type === 'INCENTIVE' ? 'Bonus' : 'Advance'}`}
                                       className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-500/10 transition"
                                     >
                                       <Trash2 className="w-3 h-3" />
@@ -1325,31 +1406,306 @@ export const WorkerLedgerPage: React.FC = () => {
             ))
           )}
 
-          {/* ── INFINITE SCROLL SENTINEL & LOAD MORE ── */}
+          {/* ── INFINITE SCROLL LOADER ── */}
           {filteredDays.length > 0 && (
-            <div className="pt-2 pb-4 text-center">
-              {visibleLimit < filteredDays.length ? (
-                <div ref={observerTarget} className="space-y-2">
-                  <button
-                    onClick={() => setVisibleLimit((prev) => Math.min(prev + 25, filteredDays.length))}
-                    className="px-4 py-2 text-xs font-bold font-mono rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 transition active:scale-95"
-                  >
-                    Load More Days ({filteredDays.length - visibleLimit} remaining)
-                  </button>
-                  <p className="text-[10px] text-slate-400 font-mono">
-                    Showing {visibleDays.length} of {filteredDays.length} days • Scroll down to auto-load
-                  </p>
-                </div>
-              ) : (
-                <p className="text-[10px] text-slate-400 font-mono">
-                  ✓ All {filteredDays.length} days loaded in ledger stream
-                </p>
-              )}
-            </div>
+            <ModernInfiniteLoader
+              sentinelRef={observerTarget}
+              hasMore={visibleLimit < filteredDays.length}
+              isLoading={isLoadingMoreDays}
+              totalCount={filteredDays.length}
+              entityName="days"
+            />
           )}
         </section>
       )}
       </main>
+
+      {/* ── MODAL 0: DAY QUICK MARK SHEET ── */}
+      {quickMarkDay && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setQuickMarkDate(null)}
+        >
+          <div
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-5 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-2.5">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-amber-500" />
+                  <span>
+                    {new Date(`${quickMarkDay.date}T00:00:00`).toLocaleDateString('en-IN', {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </h3>
+                <div className="flex items-center gap-2 mt-0.5 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                  <span>Net +{formatCurrency(quickMarkDay.netDailyPay)}</span>
+                  <span>&bull;</span>
+                  <span>Bal {formatCurrency(quickMarkDay.runningCumulativeBalance)}</span>
+                  {quickMarkDay.isSettled && (
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                      Settled
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickMarkDate(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {quickMarkDay.isSettled && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                This day is settled and locked.
+              </p>
+            )}
+
+            {/* Attendance Quick Mark (Admin, Unsettled, Working Day) */}
+            {isAdmin && worker && !quickMarkDay.isSettled && quickMarkDay.dayType !== 'SUNDAY' && quickMarkDay.dayType !== 'HOLIDAY' && (
+              <div className="space-y-2">
+                <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 block">
+                  Attendance
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    disabled={isMarkingLeave || isUpdatingLeave || isDeletingLeave}
+                    onClick={() => handleQuickAttendance('PRESENT')}
+                    className={`py-2.5 px-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1 transition active:scale-95 disabled:opacity-50 ${
+                      quickMarkDay.dayType === 'WORKING'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>Present</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isMarkingLeave || isUpdatingLeave || isDeletingLeave}
+                    onClick={() => handleQuickAttendance('HALF_LEAVE')}
+                    className={`py-2.5 px-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1 transition active:scale-95 disabled:opacity-50 ${
+                      quickMarkDay.dayType === 'HALF_LEAVE'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                        : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Half Day</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isMarkingLeave || isUpdatingLeave || isDeletingLeave}
+                    onClick={() => handleQuickAttendance('FULL_LEAVE')}
+                    className={`py-2.5 px-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1 transition active:scale-95 disabled:opacity-50 ${
+                      quickMarkDay.dayType === 'FULL_LEAVE'
+                        ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                        : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <UserX className="w-3.5 h-3.5" />
+                    <span>Full Leave</span>
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Leave note (optional)"
+                  value={quickLeaveNote}
+                  onChange={(e) => setQuickLeaveNote(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                />
+              </div>
+            )}
+
+            {/* Overtime Quick Mark */}
+            {!quickMarkDay.isSettled && (
+              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-white/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">
+                    Overtime (₹150/hr)
+                  </span>
+                  {quickMarkDay.otHours > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                      {quickMarkDay.otHours}h • {quickMarkDay.otStatus || 'PENDING'}
+                    </span>
+                  )}
+                </div>
+
+                {quickMarkDay.otHours > 0 && isAdmin && quickMarkDay.otStatus === 'PENDING' && (quickMarkDay.otClaimId || quickMarkOtClaim?.id) && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={isUpdatingOtStatus}
+                      onClick={() => handleQuickOtDecision((quickMarkDay.otClaimId || quickMarkOtClaim?.id)!, 'APPROVED')}
+                      className="py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition active:scale-95"
+                    >
+                      Approve OT
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isUpdatingOtStatus}
+                      onClick={() => handleQuickOtDecision((quickMarkDay.otClaimId || quickMarkOtClaim?.id)!, 'REJECTED')}
+                      className="py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition active:scale-95"
+                    >
+                      Reject OT
+                    </button>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[1, 2, 3, 4].map((hr) => (
+                    <button
+                      key={hr}
+                      type="button"
+                      onClick={() => setQuickOtHours(hr)}
+                      className={`py-2 rounded-xl text-xs font-bold border transition ${
+                        quickOtHours === hr
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      {hr}h
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="OT note (optional)"
+                    value={quickOtNote}
+                    onChange={(e) => setQuickOtNote(e.target.value)}
+                    className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    disabled={isClaimingOt || isUpdatingOt}
+                    onClick={handleQuickOtSave}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-xs transition active:scale-95 disabled:opacity-50"
+                  >
+                    {quickMarkDay.otHours > 0 ? 'Update OT' : isAdmin ? 'Add OT' : 'Claim OT'}
+                  </button>
+                  {(quickMarkDay.otClaimId || quickMarkOtClaim?.id) && (
+                    <button
+                      type="button"
+                      disabled={isDeletingOt}
+                      onClick={() => handleDeleteOtClaim(quickMarkDay.otClaimId || quickMarkOtClaim?.id)}
+                      title="Delete OT"
+                      className="p-2 rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 transition"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Quick Advance / Bonus for This Day (Admin only) */}
+            {isAdmin && worker && !quickMarkDay.isSettled && (
+              <form onSubmit={handleQuickTxSubmit} className="space-y-2 pt-2 border-t border-slate-100 dark:border-white/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">
+                    Day Entry
+                  </span>
+                  <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-100 dark:bg-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setQuickTxType('ADVANCE')}
+                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition ${
+                        quickTxType === 'ADVANCE' ? 'bg-rose-600 text-white' : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      Advance
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuickTxType('INCENTIVE')}
+                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition ${
+                        quickTxType === 'INCENTIVE' ? 'bg-amber-600 text-white' : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      Bonus
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Amount ₹"
+                    value={quickTxAmount}
+                    onChange={(e) => setQuickTxAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-28 px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  />
+                  <input
+                    type="text"
+                    placeholder={quickTxType === 'INCENTIVE' ? 'Reason' : 'Note (optional)'}
+                    value={quickTxNote}
+                    onChange={(e) => setQuickTxNote(e.target.value)}
+                    className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isRecordingAdvance || isRecordingIncentive || !quickTxAmount}
+                    className="p-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs flex items-center gap-1 active:scale-95 transition disabled:opacity-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Existing Transactions on This Day */}
+            {quickMarkDay.inlineTransactions && quickMarkDay.inlineTransactions.length > 0 && (
+              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-white/10">
+                <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 block">
+                  Recorded Entries
+                </span>
+                {quickMarkDay.inlineTransactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="px-3 py-2 rounded-xl bg-slate-100/80 dark:bg-white/5 flex items-center justify-between text-xs gap-2"
+                  >
+                    <span className="truncate font-semibold text-slate-700 dark:text-slate-200">
+                      {tx.type === 'PAYOUT_SETTLEMENT'
+                        ? 'Settlement'
+                        : tx.type === 'INCENTIVE'
+                        ? tx.notes || 'Bonus'
+                        : tx.notes || 'Advance'}
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-mono font-bold">
+                        {tx.type === 'INCENTIVE' ? `+${formatCurrency(tx.amount)}` : `-${formatCurrency(tx.amount)}`}
+                      </span>
+                      {isAdmin && !quickMarkDay.isSettled && tx.type !== 'PAYOUT_SETTLEMENT' && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTransaction(tx.id, tx.type, tx.amount)}
+                          className="p-1 text-rose-500 hover:bg-rose-500/10 rounded"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── MODAL: MOBILE QUICK ACTIONS SHEET ── */}
       {showMobileActionSheet && (
@@ -1446,21 +1802,10 @@ export const WorkerLedgerPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Warning Banner */}
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-200 space-y-1">
-              <div className="flex items-center gap-1.5 font-bold">
-                <Info className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span>Overtime Claim Rules</span>
-              </div>
-              <p className="text-[11px] leading-relaxed">
-                Overtime rate is strictly ₹150/hr. Partial hours (minutes) are truncated. Subject to admin verification.
-              </p>
-            </div>
-
             <form onSubmit={handleOtSubmit} className="space-y-3.5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Date of Overtime
+                  Date
                 </label>
                 <input
                   type="date"
@@ -1473,15 +1818,9 @@ export const WorkerLedgerPage: React.FC = () => {
                   const dayForDate = days.find((d) => d.date === otDate);
                   if (dayForDate?.dayType === 'FULL_LEAVE') {
                     return (
-                      <div className="mt-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-800 dark:text-rose-200 text-xs space-y-1 animate-fadeIn">
-                        <div className="flex items-center gap-1.5 font-bold">
-                          <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                          <span>Full Leave Day Warning</span>
-                        </div>
-                        <p className="text-[11px] leading-relaxed opacity-90">
-                          You are marked on <strong>Full Leave</strong> on this date. Claiming OT on a full leave day requires admin clearance and will be flagged as "Claimed on Full Leave Day" in the admin review queue.
-                        </p>
-                      </div>
+                      <p className="mt-1.5 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                        Marked Full Leave on this date
+                      </p>
                     );
                   }
                   return null;
@@ -1756,10 +2095,6 @@ export const WorkerLedgerPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-200">
-              Incentives directly increase the worker&apos;s payable balance and reflect on the continuous ledger with admin remarks.
-            </div>
-
             <form onSubmit={handleIncentiveSubmit} className="space-y-3.5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -1847,9 +2182,9 @@ export const WorkerLedgerPage: React.FC = () => {
             </div>
 
             {days.find((d) => d.date === editingLeaveDate)?.isAllowedLeave && (
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300 animate-fadeIn">
-                <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>This leave is the <strong>1 Allowed Paid Leave</strong> of this month (₹0 deduction).</span>
+              <div className="px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>Paid leave</span>
               </div>
             )}
 
@@ -1868,7 +2203,7 @@ export const WorkerLedgerPage: React.FC = () => {
                         : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
                     }`}
                   >
-                    Full Leave (100% Floor)
+                    Full Leave
                   </button>
                   <button
                     type="button"
@@ -1879,7 +2214,7 @@ export const WorkerLedgerPage: React.FC = () => {
                         : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
                     }`}
                   >
-                    Half Day (50% Floor)
+                    Half Day
                   </button>
                 </div>
               </div>
@@ -1905,7 +2240,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl text-rose-600 hover:bg-rose-500/10 transition"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>{isDeletingLeave ? 'Removing...' : 'Delete Leave (Mark Present)'}</span>
+                  <span>{isDeletingLeave ? 'Removing...' : 'Remove'}</span>
                 </button>
                 <div className="flex items-center gap-2">
                   <button

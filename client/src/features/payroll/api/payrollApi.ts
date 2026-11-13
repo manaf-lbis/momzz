@@ -279,7 +279,7 @@ export const payrollApi = apiSlice.injectEndpoints({
 
     claimOvertime: builder.mutation<
       { success: boolean; data: any },
-      { date: string; otHours: number; note?: string }
+      { workerId?: string; date: string; otHours: number; note?: string; autoApprove?: boolean }
     >({
       query: (body) => ({
         url: '/payroll/ot/claim',

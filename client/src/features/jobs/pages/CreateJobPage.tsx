@@ -103,6 +103,7 @@ export const CreateJobPage: React.FC = () => {
 
   const { data, isFetching } = useGetCatalogQuery({
     q: query,
+    limit: 50,
     ...(itemFilter === 'ALL' ? {} : { itemType: itemFilter }),
   });
 

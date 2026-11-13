@@ -106,6 +106,31 @@ export const authApi = apiSlice.injectEndpoints({
       query: () => '/auth/users',
       providesTags: ['AllUsers', 'PendingWorkers', 'User'],
     }),
+    getUserStats: builder.query<
+      { success: boolean; data: { totalUsers: number; onlineUsers: number; adminCount: number; workerCount?: number; blockedUsers: number; pendingApproval: number } },
+      void
+    >({
+      query: () => '/auth/users/stats',
+      providesTags: ['AllUsers', 'PendingWorkers', 'User'],
+    }),
+    getPaginatedUsers: builder.query<
+      {
+        success: boolean;
+        data: {
+          users: User[];
+          stats: { totalUsers: number; onlineUsers: number; adminCount: number; workerCount?: number; blockedUsers: number; pendingApproval: number };
+          pagination: { total: number; page: number; limit: number; totalPages: number; hasMore: boolean };
+        };
+      },
+      { page: number; limit?: number; q?: string; role?: string; status?: string }
+    >({
+      query: (params) => ({ url: '/auth/users', params: { ...params, paginated: 'true' } }),
+      providesTags: ['AllUsers', 'PendingWorkers', 'User'],
+    }),
+    getUserById: builder.query<{ success: boolean; data: User }, string>({
+      query: (userId) => `/auth/users/${userId}`,
+      providesTags: ['AllUsers', 'User'],
+    }),
     toggleUserStatus: builder.mutation<{ success: boolean; message: string; data: User }, { userId: string; status: 'ACTIVE' | 'BLOCKED' }>({
       query: ({ userId, status }) => ({
         url: `/auth/users/${userId}/status`,
@@ -212,6 +237,9 @@ export const {
   useApproveWorkerMutation,
   useGetDummyQuery,
   useGetAllUsersQuery,
+  useGetUserStatsQuery,
+  useGetPaginatedUsersQuery,
+  useGetUserByIdQuery,
   useToggleUserStatusMutation,
   useUpdateUserRoleMutation,
   useAdminResetPasswordMutation,

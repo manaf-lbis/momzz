@@ -26,9 +26,18 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { data: jobsResponse } = useGetJobCardsQuery({ limit: 200 }, { skip: !isOpen });
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 250);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const { data: jobsResponse } = useGetJobCardsQuery(
+    { limit: 25, search: debouncedQuery || undefined },
+    { skip: !isOpen }
+  );
   const allJobs: JobCardData[] = Array.isArray(jobsResponse?.data)
     ? (jobsResponse!.data as unknown as JobCardData[])
     : ((jobsResponse?.data as any)?.jobs || []);

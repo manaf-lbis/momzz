@@ -26,7 +26,10 @@ export class PayrollController {
    */
   static async claimOvertime(req: Request, res: Response, next: NextFunction) {
     try {
-      const workerId = (req as any).user?._id?.toString() || (req as any).user?.id?.toString() || req.body.workerId;
+      const user = (req as any).user;
+      const isAdmin = user?.role === 'ADMIN';
+      const selfId = user?._id?.toString() || user?.id?.toString();
+      const workerId = isAdmin && req.body.workerId ? req.body.workerId : selfId;
       if (!workerId) throw new AppError('Unauthorized', 401);
 
       const result = await PayrollService.claimOvertime({
@@ -35,6 +38,17 @@ export class PayrollController {
         otHours: req.body.otHours,
         note: req.body.note,
       });
+
+      if (isAdmin && req.body.autoApprove && result.claim?._id) {
+        await PayrollService.reviewOtClaim({
+          claimId: result.claim._id.toString(),
+          status: 'APPROVED',
+          reviewedBy: selfId || 'Admin',
+          reviewerName: user?.name || 'Admin',
+          note: req.body.note,
+        });
+        (result.claim as any).status = 'APPROVED';
+      }
 
       res.status(201).json({
         success: true,
@@ -85,14 +99,35 @@ export class PayrollController {
       const startDate = req.query.startDate as string;
       const endDate = req.query.endDate as string;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+      const page = req.query.page ? Math.max(1, parseInt(req.query.page as string, 10)) : undefined;
 
       const claims = await PayrollService.getOtClaimsList({
         workerId,
         status,
         startDate,
         endDate,
-        limit,
+        limit: page ? undefined : limit,
       });
+
+      if (page) {
+        const pageSize = Math.min(Math.max(1, limit || 20), 100);
+        const startIdx = (page - 1) * pageSize;
+        const paged = claims.slice(startIdx, startIdx + pageSize);
+        const total = claims.length;
+        return res.status(200).json({
+          success: true,
+          data: {
+            claims: paged,
+            pagination: {
+              total,
+              page,
+              limit: pageSize,
+              totalPages: Math.ceil(total / pageSize) || 1,
+              hasMore: startIdx + paged.length < total,
+            },
+          },
+        });
+      }
 
       res.status(200).json({
         success: true,

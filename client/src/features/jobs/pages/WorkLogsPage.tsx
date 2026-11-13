@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Flame,
@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../shared/hooks/useAuth';
-import { useGetJobCardsQuery, JobCardData } from '../../jobs/api/jobApi';
+import { useGetWorkLogsQuery } from '../../jobs/api/jobApi';
+import { ModernInfiniteLoader } from '../../../shared/components/common/ModernInfiniteLoader';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { BackButton } from '../../../shared/components/common/BackButton';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
@@ -68,108 +69,113 @@ const TIMEFRAMES: { key: Timeframe; label: string }[] = [
 ];
 
 export const WorkLogsPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  useNavigate();
+  useAuth();
   const [timeframe, setTimeframe] = useState<Timeframe>('month');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [rawTasks, setRawTasks] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const { data: jobsResponse, isLoading: isJobsLoading } = useGetJobCardsQuery({ limit: 300 });
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 250);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
-  const jobs: JobCardData[] = useMemo(() => {
-    if (!jobsResponse?.data) return [];
-    if (Array.isArray(jobsResponse.data)) return jobsResponse.data;
-    if ((jobsResponse.data as any).jobs) return (jobsResponse.data as any).jobs;
-    return [];
-  }, [jobsResponse]);
+  const filterKey = `${timeframe}::${debouncedSearch}`;
+  const lastFilterRef = useRef(filterKey);
+  useEffect(() => {
+    if (lastFilterRef.current !== filterKey) {
+      lastFilterRef.current = filterKey;
+      setPage(1);
+      setRawTasks([]);
+      setHasMore(false);
+    }
+  }, [filterKey]);
 
-  // Timeframe boundaries
-  const { startTimestamp, endTimestamp, periodLabel } = useMemo(() => {
-    const now = new Date();
+  const { currentData, isLoading, isFetching } = useGetWorkLogsQuery({
+    page,
+    limit: 25,
+    timeframe,
+    q: debouncedSearch || undefined,
+  });
 
-    if (timeframe === 'day') {
-      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
-      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
-      return { startTimestamp: start, endTimestamp: end, periodLabel: now.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) };
-    }
-    if (timeframe === 'week') {
-      const dow = now.getDay();
-      const diffToMonday = dow === 0 ? -6 : 1 - dow;
-      const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday, 0, 0, 0, 0);
-      const saturday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 5, 23, 59, 59, 999);
-      return {
-        startTimestamp: monday.getTime(),
-        endTimestamp: saturday.getTime(),
-        periodLabel: `${monday.toLocaleDateString([], { day: 'numeric', month: 'short' })} – ${saturday.toLocaleDateString([], { day: 'numeric', month: 'short' })}`,
-      };
-    }
-    if (timeframe === 'month') {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).getTime();
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-      return { startTimestamp: start, endTimestamp: end, periodLabel: now.toLocaleDateString([], { month: 'long', year: 'numeric' }) };
-    }
-    if (timeframe === 'year') {
-      const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0).getTime();
-      const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
-      return { startTimestamp: start, endTimestamp: end, periodLabel: `Year ${now.getFullYear()}` };
-    }
-    return { startTimestamp: 0, endTimestamp: Infinity, periodLabel: 'All Time' };
+  useEffect(() => {
+    const resp = currentData?.data;
+    if (!resp?.pagination || resp.pagination.page !== page) return;
+    const incoming = resp.logs || [];
+    setTotalCount(resp.pagination.total || 0);
+    setHasMore(Boolean(resp.pagination.hasMore));
+    setRawTasks((prev) => {
+      if (page === 1) return incoming;
+      const seen = new Set(prev.map((item) => item.id || item._id));
+      return [...prev, ...incoming.filter((item) => !seen.has(item.id || item._id))];
+    });
+  }, [currentData, page]);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || !hasMore || isFetching) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setPage((p) => p + 1);
+        }
+      },
+      { rootMargin: '250px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, isFetching, rawTasks.length]);
+
+  const periodLabel = useMemo(() => {
+    if (timeframe === 'day') return 'Today';
+    if (timeframe === 'week') return 'Last 7 days';
+    if (timeframe === 'month') return 'Last 30 days';
+    if (timeframe === 'year') return 'Last 12 months';
+    return 'All time';
   }, [timeframe]);
 
-  // Build log entries
   const allLogs: LogEntry[] = useMemo(() => {
-    const list: LogEntry[] = [];
+    return rawTasks.map((t: any) => {
+      const job = t.jobCardId && typeof t.jobCardId === 'object' ? t.jobCardId : {};
+      const compIso = t.completedAt || t.updatedAt || t.createdAt;
+      const compTime = compIso ? new Date(compIso).getTime() : Date.now();
+      const startIso = job.createdAt || t.createdAt;
+      const startTime = startIso ? new Date(startIso).getTime() : compTime;
+      const elapsedMins = Math.max(1, Math.round((compTime - startTime) / 60000));
+      const hours = Math.floor(elapsedMins / 60);
+      const mins = elapsedMins % 60;
+      const partnerList = (t.partners || [])
+        .map((p: any) => ({ name: p?.name || 'Technician', profileImageUrl: p?.profileImageUrl }))
+        .filter(Boolean);
+      const partnerNames = partnerList.map((p: any) => p.name);
 
-    jobs.forEach((job) => {
-      const jobCreatedTime = new Date(job.createdAt).getTime();
-      (job.tasks || []).forEach((t) => {
-        if (t.status === 'COMPLETED' && t.completedAt) {
-          const compTime = new Date(t.completedAt).getTime();
-          if (compTime >= startTimestamp && compTime <= endTimestamp) {
-            const elapsedMins = Math.max(1, Math.round((compTime - jobCreatedTime) / 60000));
-            const hours = Math.floor(elapsedMins / 60);
-            const mins = elapsedMins % 60;
-            const partnerList = ((t as any).partners || [])
-              .map((p: any) => ({ name: p.name || 'Technician', profileImageUrl: p.profileImageUrl }))
-              .filter(Boolean);
-            const partnerNames = partnerList.map((p: any) => p.name);
-
-            list.push({
-              taskId: t.id || (t as any)._id || Math.random().toString(),
-              workTitle: t.title,
-              vehicleName: job.vehicleName || 'Vehicle',
-              vehicleNumber: job.vehicleNumber || 'N/A',
-              vehicleColor: job.vehicleColor,
-              customerName: job.customerName,
-              completedByName: t.completedBy?.name || 'Technician',
-              completedByProfileImageUrl: t.completedBy?.profileImageUrl,
-              partnerNames,
-              partners: partnerList,
-              completedAtIso: t.completedAt,
-              completedAtFormatted: formatCompletedAt(t.completedAt),
-              elapsedMins,
-              durationText: hours > 0 ? `${hours}h ${mins}m` : `${elapsedMins}m`,
-              isShared: (t as any).isShared && partnerNames.length > 0,
-            });
-          }
-        }
-      });
+      return {
+        taskId: t.id || t._id || String(Math.random()),
+        workTitle: t.title || 'Completed Task',
+        vehicleName: job.vehicleName || 'Vehicle',
+        vehicleNumber: job.vehicleNumber || 'N/A',
+        vehicleColor: job.vehicleColor,
+        customerName: job.customerName,
+        completedByName: t.completedBy?.name || 'Technician',
+        completedByProfileImageUrl: t.completedBy?.profileImageUrl,
+        partnerNames,
+        partners: partnerList,
+        completedAtIso: compIso,
+        completedAtFormatted: formatCompletedAt(compIso),
+        elapsedMins,
+        durationText: hours > 0 ? `${hours}h ${mins}m` : `${elapsedMins}m`,
+        isShared: Boolean(t.isShared && partnerNames.length > 0),
+      };
     });
+  }, [rawTasks]);
 
-    return list.sort((a, b) => new Date(b.completedAtIso).getTime() - new Date(a.completedAtIso).getTime());
-  }, [jobs, startTimestamp, endTimestamp]);
-
-  const filteredLogs = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return allLogs;
-    return allLogs.filter(
-      (l) =>
-        l.workTitle.toLowerCase().includes(q) ||
-        l.vehicleName.toLowerCase().includes(q) ||
-        l.vehicleNumber.toLowerCase().includes(q) ||
-        l.completedByName.toLowerCase().includes(q)
-    );
-  }, [allLogs, searchQuery]);
+  const filteredLogs = allLogs;
 
   // Aggregate stats
   const stats = useMemo(() => {
@@ -214,8 +220,8 @@ export const WorkLogsPage: React.FC = () => {
         {/* ── Top Header & Navigation ── */}
         <PageHeader
           backTo="/dashboard"
-          title="Work Logs & History"
-          description="Live chronological ledger of garage tasks and technician operations."
+          title="Work Logs"
+          description="Completed task history"
           actions={
             <span className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 glass-ghost-btn px-3 py-1 rounded-full shadow-xs">
               {periodLabel}
@@ -253,7 +259,7 @@ export const WorkLogsPage: React.FC = () => {
             <div className="min-w-0">
               <p className="text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Completed</p>
               <p className="text-base sm:text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">
-                {allLogs.length}
+                {totalCount || allLogs.length}
               </p>
             </div>
           </div>
@@ -319,14 +325,14 @@ export const WorkLogsPage: React.FC = () => {
         </div>
 
         {/* ── Log Cards Timeline Feed ── */}
-        {isJobsLoading ? (
+        {isLoading && page === 1 ? (
           <PageShimmer label="Loading work logs..." cards={4} />
-        ) : filteredLogs.length === 0 ? (
+        ) : !isFetching && filteredLogs.length === 0 ? (
           <div className="py-12 px-4 rounded-3xl glass-modern-card text-center space-y-2">
             <Clock className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No logs found</p>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              {searchQuery ? 'No completed tasks match your search filter.' : 'No completed work records found for this period.'}
+              {searchQuery ? 'No matching completed tasks.' : 'No completed work for this period.'}
             </p>
           </div>
         ) : (
@@ -442,9 +448,13 @@ export const WorkLogsPage: React.FC = () => {
               </div>
             ))}
 
-            <p className="text-center text-[10px] font-mono text-slate-400 py-3">
-              ── End of logs ({filteredLogs.length} entries) ──
-            </p>
+            <ModernInfiniteLoader
+              sentinelRef={sentinelRef}
+              hasMore={hasMore}
+              isLoading={isFetching && page > 1}
+              totalCount={filteredLogs.length}
+              entityName="logs"
+            />
           </div>
         )}
       </main>
@@ -453,14 +463,14 @@ export const WorkLogsPage: React.FC = () => {
       <AnimatePresence>
         {selectedLog && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-slate-950/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-3.5 sm:p-4 pb-24 sm:pb-4 bg-slate-950/60 backdrop-blur-sm"
             onClick={() => setSelectedLog(null)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-2xl space-y-4"
+              className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-2xl space-y-4 max-h-[calc(88vh-5rem)] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start justify-between gap-3">

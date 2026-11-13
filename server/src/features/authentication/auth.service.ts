@@ -273,9 +273,8 @@ export class AuthService {
     }));
   }
 
-  async getAllUsers() {
-    const users = await userRepository.findAllUsers();
-    return users.map((user) => ({
+  private formatUserListItem(user: any) {
+    return {
       id: user._id.toString(),
       _id: user._id.toString(),
       name: user.name,
@@ -295,7 +294,40 @@ export class AuthService {
       dailyWageEffectiveDate: user.dailyWageEffectiveDate,
       updatedAt: user.updatedAt,
       createdAt: user.createdAt,
-    }));
+    };
+  }
+
+  async getAllUsers() {
+    const users = await userRepository.findAllUsers();
+    return users.map((u) => this.formatUserListItem(u));
+  }
+
+  async getPaginatedUsers(options: { page?: number; limit?: number; q?: string; role?: string; status?: string }) {
+    const [result, stats] = await Promise.all([
+      userRepository.findPaginatedUsers(options),
+      userRepository.getUserStats(),
+    ]);
+    return {
+      users: result.users.map((u) => this.formatUserListItem(u)),
+      stats,
+      pagination: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+        hasMore: result.hasMore,
+      },
+    };
+  }
+
+  async getUserStats() {
+    return await userRepository.getUserStats();
+  }
+
+  async getUserById(userId: string) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw new Error('Staff member not found.');
+    return this.formatUserListItem(user);
   }
 
   async toggleUserStatus(userId: string, status: 'ACTIVE' | 'BLOCKED') {

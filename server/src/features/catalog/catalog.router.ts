@@ -12,6 +12,7 @@ import {
   deleteCatalogItem,
   getCatalogItem,
   getCatalogItems,
+  getCatalogStats,
   getCategories,
   getItemHistory,
   adjustItemStock,
@@ -26,6 +27,7 @@ router.use(authMiddleware);
 router.get('/categories', getCategories);
 router.post('/categories', adminMiddleware, createCategory);
 
+router.get('/stats', getCatalogStats);
 router.get('/items', getCatalogItems);
 router.post('/items/quick-add', adminMiddleware, quickAddCatalogItem);
 router.post('/items', adminMiddleware, createCatalogItem);

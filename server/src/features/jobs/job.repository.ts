@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { JobCard, IJobCard } from '../../models/JobCard.model';
 import { Task, ITask } from '../../models/Task.model';
+import User from '../../models/User.model';
 import { catalogRepository } from '../catalog/catalog.repository';
 import { cacheService } from '../cache/cache.service';
 
@@ -113,7 +114,8 @@ export class JobRepository {
     search?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
-  }): Promise<{ jobs: IJobCard[]; total: number; page: number; totalPages: number }> {
+    workerId?: string;
+  }): Promise<{ jobs: IJobCard[]; total: number; page: number; limit: number; totalPages: number; hasMore: boolean }> {
     const page = Math.max(1, options.page || 1);
     const limit = Math.max(1, options.limit || 12);
     const skip = (page - 1) * limit;
@@ -127,7 +129,18 @@ export class JobRepository {
         query.status = 'COMPLETED';
       } else if (tabUpper === 'MY_JOBS') {
         query.status = 'IN_PROGRESS';
+      } else if (tabUpper === 'ALL_VEHICLES' || tabUpper === 'HISTORY') {
+        query.status = 'COMPLETED';
+        query.verifiedAt = { $ne: null, $exists: true };
       }
+    }
+
+    if (options.workerId && mongoose.Types.ObjectId.isValid(options.workerId)) {
+      const workerJobIds = await Task.distinct('jobCardId', {
+        status: 'COMPLETED',
+        $or: [{ completedBy: options.workerId }, { partners: options.workerId }],
+      });
+      query._id = { $in: workerJobIds };
     }
 
     if (options.search && options.search.trim()) {
@@ -165,7 +178,9 @@ export class JobRepository {
       query.createdAt = { $gte: startDate };
     }
 
-    const sortConfig: any = { isPinnedForAll: -1 };
+    const isHistoryTab =
+      options.tab?.toUpperCase() === 'ALL_VEHICLES' || options.tab?.toUpperCase() === 'HISTORY';
+    const sortConfig: any = isHistoryTab ? {} : { isPinnedForAll: -1 };
     const direction = options.sortOrder === 'asc' ? 1 : -1;
     if (options.sortBy === 'expectedDeliveryDate') {
       sortConfig.expectedDeliveryDate = direction;
@@ -173,6 +188,9 @@ export class JobRepository {
       sortConfig.vehicleName = direction;
     } else if (options.sortBy === 'createdAt') {
       sortConfig.createdAt = direction;
+    } else if (isHistoryTab) {
+      sortConfig.verifiedAt = -1;
+      sortConfig.createdAt = -1;
     } else {
       sortConfig.status = -1;
       sortConfig.createdAt = -1;
@@ -190,8 +208,119 @@ export class JobRepository {
     ]);
 
     const totalPages = Math.ceil(total / limit) || 1;
+    const hasMore = skip + jobs.length < total;
 
-    return { jobs, total, page, totalPages };
+    return { jobs, total, page, limit, totalPages, hasMore };
+  }
+
+  async findPaginatedCompletedTasks(options: {
+    page?: number;
+    limit?: number;
+    workerId?: string;
+    q?: string;
+    itemType?: string;
+    timeframe?: string;
+  }) {
+    const page = Math.max(1, options.page || 1);
+    const limit = Math.min(Math.max(1, options.limit || 25), 100);
+    const skip = (page - 1) * limit;
+
+    const query: any = { status: 'COMPLETED' };
+
+    if (options.itemType && ['PRODUCT', 'SERVICE'].includes(options.itemType)) {
+      query.itemType = options.itemType;
+    }
+
+    if (options.workerId && mongoose.Types.ObjectId.isValid(options.workerId)) {
+      query.$or = [{ completedBy: options.workerId }, { partners: options.workerId }];
+    }
+
+    if (options.timeframe && options.timeframe !== 'ALL' && options.timeframe !== 'all') {
+      const now = new Date();
+      let startDate = new Date();
+      switch (options.timeframe.toLowerCase()) {
+        case 'day':
+        case 'today':
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'week':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          startDate.setDate(now.getDate() - 30);
+          break;
+        case 'year':
+          startDate.setDate(now.getDate() - 365);
+          break;
+        default:
+          startDate = new Date(0);
+          break;
+      }
+      query.completedAt = { $gte: startDate };
+    }
+
+    const activeJobIds = await JobCard.find({ isDeleted: { $ne: true } }).distinct('_id');
+    query.jobCardId = { $in: activeJobIds };
+
+    if (options.q && options.q.trim()) {
+      const s = options.q.trim();
+      const escaped = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const cleanPlate = s.replace(/[\s-]+/g, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'i');
+      const plateRegex = new RegExp(cleanPlate, 'i');
+
+      const [matchingJobs, matchingUsers] = await Promise.all([
+        JobCard.find({
+          isDeleted: { $ne: true },
+          $or: [
+            { vehicleName: regex },
+            { vehicleNumber: regex },
+            { vehicleNumber: plateRegex },
+            { customerName: regex },
+          ],
+        }).distinct('_id'),
+        User.find({ name: regex }).distinct('_id'),
+      ]);
+
+      const searchOr: any[] = [{ title: regex }];
+      if (matchingJobs.length > 0) searchOr.push({ jobCardId: { $in: matchingJobs } });
+      if (matchingUsers.length > 0) {
+        searchOr.push({ completedBy: { $in: matchingUsers } });
+        searchOr.push({ partners: { $in: matchingUsers } });
+      }
+
+      query.$and = [{ $or: searchOr }];
+    }
+
+    const [tasks, total] = await Promise.all([
+      Task.find(query)
+        .populate('jobCardId', 'vehicleName vehicleNumber vehicleColor customerName thumbnailUrl status verifiedAt createdAt')
+        .populate('completedBy', 'name mobile role profileImageUrl')
+        .populate('partners', 'name mobile role profileImageUrl')
+        .populate({
+          path: 'inventoryItem',
+          select: 'title thumbnailUrl itemType sku price category',
+          populate: { path: 'category', select: 'name' },
+        })
+        .sort({ completedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Task.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    const hasMore = skip + tasks.length < total;
+
+    return {
+      tasks,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasMore,
+      },
+    };
   }
 
   async findTasksByJobCardId(jobCardId: string): Promise<ITask[]> {

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { ModernInfiniteLoader } from '../../../shared/components/common/ModernInfiniteLoader';
 import {
   Clock,
   CheckCircle2,
@@ -64,6 +65,9 @@ export const OvertimeTrackerConsole: React.FC<OvertimeTrackerConsoleProps> = ({
     return { total, pending, approved, rejected, approvedAmount, pendingAmount };
   }, [claims]);
 
+  const [visibleCount, setVisibleCount] = useState(15);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   // Filtered claims
   const filteredClaims = useMemo(() => {
     return claims.filter((claim) => {
@@ -79,6 +83,28 @@ export const OvertimeTrackerConsole: React.FC<OvertimeTrackerConsoleProps> = ({
       return true;
     });
   }, [claims, statusFilter, searchTerm]);
+
+  useEffect(() => {
+    setVisibleCount(15);
+  }, [statusFilter, searchTerm]);
+
+  useEffect(() => {
+    if (visibleCount >= filteredClaims.length || !sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isLoadingMore) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setVisibleCount((prev) => prev + 15);
+            setIsLoadingMore(false);
+          }, 150);
+        }
+      },
+      { rootMargin: '120px' }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [visibleCount, filteredClaims.length, isLoadingMore]);
 
   const handleApprove = async (claimId: string) => {
     try {
@@ -252,14 +278,12 @@ export const OvertimeTrackerConsole: React.FC<OvertimeTrackerConsoleProps> = ({
             No Overtime Requests Found
           </p>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-            {searchTerm || statusFilter !== 'ALL'
-              ? 'Try resetting the status filter or search query.'
-              : 'Overtime claims submitted by mechanics will appear here for review and tracking.'}
+            {searchTerm || statusFilter !== 'ALL' ? 'Try another filter' : 'No OT claims yet'}
           </p>
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredClaims.map((claim) => {
+          {filteredClaims.slice(0, visibleCount).map((claim) => {
             const amount = claim.amount || (claim.otHours || 0) * 150;
             return (
               <div
@@ -438,13 +462,21 @@ export const OvertimeTrackerConsole: React.FC<OvertimeTrackerConsoleProps> = ({
               </div>
             );
           })}
+          <ModernInfiniteLoader
+            sentinelRef={sentinelRef}
+            hasMore={visibleCount < filteredClaims.length}
+            isLoading={isLoadingMore}
+            totalCount={filteredClaims.length}
+            entityName="claims"
+            loadingLabel="Loading OT claims..."
+          />
         </div>
       )}
 
       {/* ── ADMIN REJECT OVERTIME MODAL ── */}
       {rejectingClaim && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl glass-modern-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-4 sm:p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-t-3xl sm:rounded-2xl glass-modern-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-4 sm:p-5 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
                 <span className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
@@ -476,12 +508,9 @@ export const OvertimeTrackerConsole: React.FC<OvertimeTrackerConsoleProps> = ({
                 value={rejectionReasonInput}
                 onChange={(e) => setRejectionReasonInput(e.target.value)}
                 rows={3}
-                placeholder="e.g. Work completed in regular hours / supervisor did not pre-authorize..."
+                placeholder="Reason (optional)"
                 className="w-full p-2.5 text-xs rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none"
               />
-              <p className="text-[10px] text-slate-400">
-                The mechanic will see this reason in their overtime audit tracker.
-              </p>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-white/5">

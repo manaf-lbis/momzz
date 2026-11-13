@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Wallet,
@@ -24,11 +24,11 @@ import {
   Share2,
   Printer,
   Copy,
-  BarChart3,
 } from 'lucide-react';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
+import { ModernInfiniteLoader } from '../../../shared/components/common/ModernInfiniteLoader';
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
 import {
   useGetAdminOverviewQuery,
@@ -127,7 +127,11 @@ export const PayrollDashboardPage: React.FC = () => {
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
+  const [visibleWorkersCount, setVisibleWorkersCount] = useState(12);
+  const [isLoadingMoreWorkers, setIsLoadingMoreWorkers] = useState(false);
+  const workersSentinelRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => { setVisibleWorkersCount(12); }, [searchQuery]);
   // Exclude Admin: ONLY Workers are shown in the salary list/roster
   const allRawWorkers = overviewData?.data?.workers || [];
   const workers = useMemo(() => allRawWorkers.filter((w) => w.role !== 'ADMIN'), [allRawWorkers]);
@@ -143,6 +147,24 @@ export const PayrollDashboardPage: React.FC = () => {
         w.mobile.includes(searchQuery)
     );
   }, [workers, searchQuery]);
+
+  const visibleWorkers = useMemo(() => filteredWorkers.slice(0, visibleWorkersCount), [filteredWorkers, visibleWorkersCount]);
+  const hasMoreWorkers = visibleWorkersCount < filteredWorkers.length;
+
+  useEffect(() => {
+    if (!workersSentinelRef.current || !hasMoreWorkers || activeSection !== 'ROSTER') return;
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMoreWorkers && !isLoadingMoreWorkers) {
+        setIsLoadingMoreWorkers(true);
+        setTimeout(() => {
+          setVisibleWorkersCount((prev) => Math.min(prev + 12, filteredWorkers.length));
+          setIsLoadingMoreWorkers(false);
+        }, 120);
+      }
+    }, { rootMargin: '160px' });
+    obs.observe(workersSentinelRef.current);
+    return () => obs.disconnect();
+  }, [hasMoreWorkers, isLoadingMoreWorkers, filteredWorkers.length, activeSection]);
 
   // Bulk select all workers toggle
   const toggleSelectAllWorkers = () => {
@@ -458,7 +480,7 @@ export const PayrollDashboardPage: React.FC = () => {
                     Pending Overtime Claims ({pendingOtClaims.length})
                   </h3>
                   <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
-                    Whole hours only @ ₹150/hr. Unapproved OT excluded from dues.
+                    ₹150/hr whole hours only.
                   </p>
                 </div>
               </div>
@@ -550,7 +572,7 @@ export const PayrollDashboardPage: React.FC = () => {
             <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
               {kpis.totalWorkers}
             </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Active workforce</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Staff</p>
           </div>
 
           <div className="p-3 sm:p-4 rounded-2xl glass-modern-card shadow-2xs">
@@ -576,85 +598,9 @@ export const PayrollDashboardPage: React.FC = () => {
             <p className="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400 mt-1">
               {formatCurrency(kpis.totalUnsettledNet)}
             </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Calculated dynamically</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Current dues</p>
           </div>
         </div>
-
-        {/* ── WORKFORCE PAYROLL DISTRIBUTION CARD ── */}
-        {workers.length > 0 && (
-          <div className="p-3.5 sm:p-4 rounded-2xl glass-modern-card border border-slate-200/80 dark:border-white/10 space-y-2.5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-              <div className="flex items-center gap-1.5">
-                <BarChart3 className="w-3.5 h-3.5 text-amber-500" />
-                <h3 className="text-xs font-bold uppercase tracking-wider font-mono text-slate-700 dark:text-slate-300">
-                  Current Cycle Workforce Liability Split
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-slate-400">
-                {workers.length} active worker accounts
-              </span>
-            </div>
-
-            {/* Proportion Bar */}
-            {(() => {
-              const totalGross = workers.reduce((s, w) => s + (w.unsettledGross || 0), 0);
-              const totalOt = workers.reduce((s, w) => s + (w.unsettledOtAmount || 0), 0);
-              const totalAdv = workers.reduce((s, w) => s + (w.unsettledAdvances || 0), 0);
-              const totalDeduct = workers.reduce((s, w) => s + (w.unsettledDeductions || 0), 0);
-              const totalPool = Math.max(1, totalGross + totalOt);
-
-              const grossPct = Math.round((totalGross / totalPool) * 100);
-              const otPct = Math.round((totalOt / totalPool) * 100);
-
-              return (
-                <div className="space-y-2">
-                  <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden flex">
-                    <div
-                      style={{ width: `${grossPct}%` }}
-                      className="h-full bg-emerald-500 transition-all duration-500"
-                      title={`Base Wages: ${formatCurrency(totalGross)}`}
-                    />
-                    <div
-                      style={{ width: `${otPct}%` }}
-                      className="h-full bg-sky-500 transition-all duration-500"
-                      title={`Overtime: ${formatCurrency(totalOt)}`}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] sm:text-xs font-mono pt-1 text-center">
-                    <div className="p-1.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
-                      <span className="text-slate-400 block text-[9px] uppercase font-sans">Gross Base</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200">
-                        {formatCurrency(totalGross)}
-                      </span>
-                    </div>
-
-                    <div className="p-1.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
-                      <span className="text-slate-400 block text-[9px] uppercase font-sans">Approved OT</span>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                        +{formatCurrency(totalOt)}
-                      </span>
-                    </div>
-
-                    <div className="p-1.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
-                      <span className="text-slate-400 block text-[9px] uppercase font-sans">Leave Floor Deductions</span>
-                      <span className="font-bold text-amber-600 dark:text-amber-400">
-                        -{formatCurrency(totalDeduct)}
-                      </span>
-                    </div>
-
-                    <div className="p-1.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
-                      <span className="text-slate-400 block text-[9px] uppercase font-sans">Advances Drawn</span>
-                      <span className="font-bold text-rose-600 dark:text-rose-400">
-                        -{formatCurrency(totalAdv)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
 
         {/* ── SECTION NAVIGATION TABS: ROSTER vs. OVERTIME TRACKER ── */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-white/[0.04] rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-2xs overflow-x-auto scrollbar-none">
@@ -668,7 +614,7 @@ export const PayrollDashboardPage: React.FC = () => {
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Staff Roster & Dues</span>
+            <span>Staff & Dues</span>
             <span
               className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
                 activeSection === 'ROSTER' ? 'bg-black/20 text-white' : 'bg-slate-200 dark:bg-white/10'
@@ -703,7 +649,7 @@ export const PayrollDashboardPage: React.FC = () => {
           {/* Section Header & Search */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <span>Staff Roster & Ledgers</span>
+              <span>Staff & Ledgers</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300">
                 {filteredWorkers.length}
               </span>
@@ -745,7 +691,7 @@ export const PayrollDashboardPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredWorkers.map((w) => (
+                  visibleWorkers.map((w) => (
                     <tr
                       key={w.workerId}
                       onClick={() => navigate(`/payroll/${w.workerId}`)}
@@ -875,7 +821,7 @@ export const PayrollDashboardPage: React.FC = () => {
                 No workers found.
               </div>
             ) : (
-              filteredWorkers.map((w) => (
+              visibleWorkers.map((w) => (
                 <div
                   key={w.workerId}
                   onClick={() => navigate(`/payroll/${w.workerId}`)}
@@ -991,6 +937,14 @@ export const PayrollDashboardPage: React.FC = () => {
               ))
             )}
           </div>
+          <ModernInfiniteLoader
+            sentinelRef={workersSentinelRef}
+            hasMore={hasMoreWorkers}
+            isLoading={isLoadingMoreWorkers}
+            totalCount={filteredWorkers.length}
+            entityName="staff"
+            loadingLabel="Loading staff..."
+          />
         </section>
         )}
 
@@ -1019,7 +973,7 @@ export const PayrollDashboardPage: React.FC = () => {
                   Mark Bulk Leave
                 </h3>
                 <p className="text-[11px] text-slate-400">
-                  Floor-100 penalty calculates automatically
+                  Select staff & dates
                 </p>
               </div>
               <button
@@ -1559,8 +1513,8 @@ export const PayrollDashboardPage: React.FC = () => {
                 />
                 <span className="text-[10px] text-slate-400 block">
                   {selectedWorker.dailyWage === 0
-                    ? "Marks the worker's very first day. All salary, attendance, and OT calculations start from this date."
-                    : 'Applies from this date onwards. Previous days retain historical wage rates.'}
+                    ? 'Start date for salary and attendance.'
+                    : 'Applies from this date onward.'}
                 </span>
               </div>
 
@@ -1575,10 +1529,10 @@ export const PayrollDashboardPage: React.FC = () => {
                     <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/25 text-xs text-blue-900 dark:text-blue-200 space-y-1 animate-fadeIn">
                       <div className="flex items-center gap-1.5 font-bold text-blue-700 dark:text-blue-300">
                         <Info className="w-3.5 h-3.5 shrink-0" />
-                        <span>Wage Change Impact Preview</span>
+                        <span>Wage Impact</span>
                       </div>
                       <p className="text-[11px] leading-relaxed">
-                        This worker has <strong>{unsettledDays}</strong> unsettled day(s). Updating from ₹{selectedWorker.dailyWage} to ₹{newWage} will {totalDiff >= 0 ? 'increase' : 'decrease'} their current payable dues by <strong>₹{Math.abs(totalDiff).toLocaleString('en-IN')}</strong> (from ₹{selectedWorker.netPayable.toLocaleString('en-IN')} to ₹{projectedPayable.toLocaleString('en-IN')}).
+                        {unsettledDays} unsettled day(s): {formatCurrency(selectedWorker.netPayable)} → {formatCurrency(projectedPayable)}
                       </p>
                     </div>
                   );
@@ -1712,8 +1666,8 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL: ADMIN REJECT OVERTIME MODAL ── */}
       {rejectingClaim && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl glass-modern-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-4 sm:p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full sm:max-w-md rounded-3xl sm:rounded-2xl glass-modern-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-4 sm:p-5 mb-20 sm:mb-0 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
                 <span className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
@@ -1748,9 +1702,7 @@ export const PayrollDashboardPage: React.FC = () => {
                 placeholder="e.g. Work completed in regular hours / supervisor did not pre-authorize..."
                 className="w-full p-2.5 text-xs rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none"
               />
-              <p className="text-[10px] text-slate-400">
-                The mechanic will see this reason in their overtime audit tracker.
-              </p>
+
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-white/5">

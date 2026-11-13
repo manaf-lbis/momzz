@@ -177,10 +177,39 @@ export class AuthController {
 
   async getAllUsers(req: Request, res: Response) {
     try {
+      const isPaginated = req.query.page !== undefined || req.query.paginated === 'true';
+      if (isPaginated) {
+        const result = await authService.getPaginatedUsers({
+          page: req.query.page ? Number(req.query.page) : 1,
+          limit: req.query.limit ? Number(req.query.limit) : 20,
+          q: req.query.q as string,
+          role: req.query.role as string,
+          status: req.query.status as string,
+        });
+        return sendSuccess(res, 'Users retrieved successfully.', result, 200);
+      }
       const users = await authService.getAllUsers();
       return sendSuccess(res, 'All users retrieved successfully.', users, 200);
     } catch (error: any) {
       return sendError(res, error.message || 'Failed to fetch users.', 400);
+    }
+  }
+
+  async getUserStats(_req: Request, res: Response) {
+    try {
+      const stats = await authService.getUserStats();
+      return sendSuccess(res, 'User stats retrieved successfully.', stats, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Failed to fetch user stats.', 400);
+    }
+  }
+
+  async getUserById(req: Request, res: Response) {
+    try {
+      const user = await authService.getUserById(req.params.userId);
+      return sendSuccess(res, 'Staff profile retrieved.', user, 200);
+    } catch (error: any) {
+      return sendError(res, error.message || 'Staff member not found.', 404);
     }
   }
 

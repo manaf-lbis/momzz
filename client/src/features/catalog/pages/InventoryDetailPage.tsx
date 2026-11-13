@@ -380,37 +380,39 @@ export const InventoryDetailPage: React.FC = () => {
       <Navbar glass />
 
       <main className="app-container relative z-10 flex-1 py-4 pb-32 sm:pb-36 md:pb-16 space-y-4">
-        {/* ── BREADCRUMB & ENTERPRISE HEADER ── */}
-        <div className="flex flex-col gap-2">
-          {/* Breadcrumb row */}
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-500 dark:text-slate-400">
-            <Link to="/inventory" className="hover:text-amber-500 transition">
-              Inventory
-            </Link>
-            <span>/</span>
-            <span className="text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[160px]">
-              {item.category?.name || 'General Spares'}
+        {/* Header & Breadcrumb */}
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 min-w-0">
+            <button
+              type="button"
+              onClick={() => navigate('/inventory')}
+              className="inline-flex items-center gap-1 px-2 py-1 -ml-1 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] text-slate-700 dark:text-slate-200 hover:text-amber-500 font-bold transition cursor-pointer shrink-0"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Inventory</span>
+            </button>
+            <span className="shrink-0">/</span>
+            <span className="text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[110px] sm:max-w-[160px]">
+              {item.category?.name || 'General'}
             </span>
-            <span>/</span>
+            <span className="shrink-0">/</span>
             <span className="text-amber-600 dark:text-amber-400 font-mono font-bold truncate">
               {item.sku || `#${item.id.slice(-6).toUpperCase()}`}
             </span>
           </div>
 
-          {/* Title & Action Strip */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-0.5">
+            <div className="flex items-start sm:items-center gap-3 min-w-0">
               <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
                 {isService ? <Wrench className="w-5 h-5" /> : <Package className="w-5 h-5" />}
               </div>
 
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
+                  <h1 className="text-base sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white break-words">
                     {item.title}
                   </h1>
 
-                  {/* Status Pills */}
                   {isService ? (
                     <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30">
                       Service
@@ -433,8 +435,8 @@ export const InventoryDetailPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex items-center gap-3 text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
-                  <span>Category: {item.category?.name || 'General'}</span>
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+                  <span>{item.category?.name || 'General'}</span>
                   <span>·</span>
                   <span className="flex items-center gap-1">
                     <span>SKU: {item.sku || 'N/A'}</span>
@@ -457,15 +459,14 @@ export const InventoryDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Actions Toolbar */}
             {isAdmin && (
-              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto shrink-0">
                 {isEditing ? (
                   <>
                     <button
                       type="button"
                       onClick={() => setIsEditing(false)}
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
+                      className="flex-1 sm:flex-initial px-3 py-2 sm:py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -473,10 +474,10 @@ export const InventoryDetailPage: React.FC = () => {
                       type="button"
                       disabled={isSaving || !draft.title.trim()}
                       onClick={handleSaveDraft}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs shadow-xs hover:bg-amber-400 transition cursor-pointer disabled:opacity-50"
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs shadow-xs hover:bg-amber-400 transition cursor-pointer disabled:opacity-50"
                     >
                       <Save className="w-3.5 h-3.5" />
-                      <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
+                      <span>{isSaving ? 'Saving...' : 'Save'}</span>
                     </button>
                   </>
                 ) : (
@@ -489,7 +490,7 @@ export const InventoryDetailPage: React.FC = () => {
                           setAdjustValue(1);
                           setIsAdjustModalOpen(true);
                         }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-mono font-bold hover:bg-amber-500 hover:text-slate-950 transition cursor-pointer"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-mono font-bold hover:bg-amber-500 hover:text-slate-950 transition cursor-pointer"
                       >
                         <SlidersHorizontal className="w-3.5 h-3.5" />
                         <span>Adjust Stock</span>
@@ -499,7 +500,7 @@ export const InventoryDetailPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                       <span>Edit</span>
@@ -509,8 +510,8 @@ export const InventoryDetailPage: React.FC = () => {
                       type="button"
                       disabled={isDeleting}
                       onClick={() => setShowDeleteConfirm(true)}
-                      className="p-1.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
-                      title="Archive Part"
+                      className="p-2 sm:p-1.5 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
+                      title="Delete Item"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -536,87 +537,126 @@ export const InventoryDetailPage: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* ── ENTERPRISE COMPACT KPI STRIP ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/80 dark:divide-white/[0.08] rounded-2xl bg-white/70 dark:bg-[#0c0d18]/70 border border-slate-200/80 dark:border-white/10 backdrop-blur-xl shadow-xs overflow-hidden">
-          {/* 1. On Hand */}
-          <div className="p-3 sm:p-3.5 flex flex-col justify-center">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-              On-Hand Stock
-            </span>
+        {/* Compact KPI Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-slate-200/80 dark:bg-white/[0.08] rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden">
+          <div className="p-3 sm:p-3.5 flex flex-col justify-center bg-white/85 dark:bg-[#0c0d18]/90">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">On-Hand</span>
             <div className="flex items-baseline gap-1 mt-0.5">
-              <span
-                className={`text-lg font-mono font-bold ${
-                  isOutOfStock
-                    ? 'text-rose-500'
-                    : isLowStock
-                    ? 'text-amber-500'
-                    : 'text-slate-900 dark:text-white'
-                }`}
-              >
+              <span className={`text-base sm:text-lg font-mono font-bold ${isOutOfStock ? 'text-rose-500' : isLowStock ? 'text-amber-500' : 'text-slate-900 dark:text-white'}`}>
                 {isService ? 'N/A' : stockQty}
               </span>
               {!isService && <span className="text-[10px] font-mono text-slate-400">units</span>}
             </div>
           </div>
-
-          {/* 2. Reorder Alert Level */}
-          <div className="p-3 sm:p-3.5 flex flex-col justify-center">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-              Reorder Point
-            </span>
-            <span className="text-lg font-mono font-bold text-slate-900 dark:text-white mt-0.5">
+          <div className="p-3 sm:p-3.5 flex flex-col justify-center bg-white/85 dark:bg-[#0c0d18]/90">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Min Stock</span>
+            <span className="text-base sm:text-lg font-mono font-bold text-slate-900 dark:text-white mt-0.5">
               {isService ? '—' : `${minQty} units`}
             </span>
           </div>
-
-          {/* 3. Unit Selling Price */}
-          <div className="p-3 sm:p-3.5 flex flex-col justify-center">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-              Unit Selling Price
-            </span>
-            <span className="text-lg font-mono font-bold text-slate-900 dark:text-white mt-0.5">
+          <div className="p-3 sm:p-3.5 flex flex-col justify-center bg-white/85 dark:bg-[#0c0d18]/90">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Unit Price</span>
+            <span className="text-base sm:text-lg font-mono font-bold text-slate-900 dark:text-white mt-0.5">
               {money(item.price)}
             </span>
           </div>
-
-          {/* 4. Stock Valuation */}
-          <div className="p-3 sm:p-3.5 flex flex-col justify-center">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-              Inventory Valuation
-            </span>
-            <span className="text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+          <div className="p-3 sm:p-3.5 flex flex-col justify-center bg-white/85 dark:bg-[#0c0d18]/90">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Valuation</span>
+            <span className="text-base sm:text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
               {isService ? '—' : money(totalStockValue)}
             </span>
           </div>
-
-          {/* 5. Total Units Used / Sold */}
-          <div className="p-3 sm:p-3.5 flex flex-col justify-center">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-              Total Units Outflow
-            </span>
+          <div className="p-3 sm:p-3.5 flex flex-col justify-center bg-white/85 dark:bg-[#0c0d18]/90">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Total Used</span>
             <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-lg font-mono font-bold text-amber-600 dark:text-amber-400">
+              <span className="text-base sm:text-lg font-mono font-bold text-amber-600 dark:text-amber-400">
                 {history?.summary?.totalSoldQty ?? 0}
               </span>
               <span className="text-[10px] font-mono text-slate-400">pcs</span>
             </div>
           </div>
-
-          {/* 6. Total Revenue */}
-          <div className="p-3 sm:p-3.5 flex flex-col justify-center">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-              Gross Outflow Value
-            </span>
-            <span className="text-lg font-mono font-bold text-slate-900 dark:text-white mt-0.5">
+          <div className="p-3 sm:p-3.5 flex flex-col justify-center bg-white/85 dark:bg-[#0c0d18]/90">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Revenue</span>
+            <span className="text-base sm:text-lg font-mono font-bold text-slate-900 dark:text-white mt-0.5">
               {money(history?.summary?.totalRevenue ?? 0)}
             </span>
           </div>
         </div>
 
-        {/* ── WORKSPACE 2-COLUMN WORKBENCH ── */}
+        {/* Inline Edit Card */}
+        {isAdmin && isEditing && (
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white/80 dark:bg-[#0c0d18]/80 border border-amber-500/30 backdrop-blur-xl shadow-xs space-y-3">
+            <div className="text-xs font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+              Edit Item Details
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={draft.title}
+                  onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                  className="w-full rounded-xl glass-modern-input px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1">Unit Price (₹)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={draft.price}
+                  onChange={(e) => setDraft({ ...draft, price: Number(e.target.value) || 0 })}
+                  className="w-full rounded-xl glass-modern-input px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1">SKU</label>
+                <input
+                  type="text"
+                  value={draft.sku}
+                  onChange={(e) => setDraft({ ...draft, sku: e.target.value })}
+                  className="w-full rounded-xl glass-modern-input px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                />
+              </div>
+              {!isService && (
+                <>
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1">Stock Qty</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={draft.stockQuantity}
+                      onChange={(e) => setDraft({ ...draft, stockQuantity: Number(e.target.value) || 0 })}
+                      className="w-full rounded-xl glass-modern-input px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1">Min Stock Alert</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={draft.minimumStockQuantity}
+                      onChange={(e) => setDraft({ ...draft, minimumStockQuantity: Number(e.target.value) || 0 })}
+                      className="w-full rounded-xl glass-modern-input px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+                </>
+              )}
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1">Notes</label>
+                <input
+                  type="text"
+                  value={draft.description}
+                  onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                  className="w-full rounded-xl glass-modern-input px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-          {/* ── LEFT COLUMN (Main Operations: Fast Stock Gauge & Movement Table) ── */}
-          <div className="lg:col-span-8 space-y-4">
+          <div className="lg:col-span-8 order-2 lg:order-1 space-y-4">
             {/* Quick On-Hand Stock Gauge & Rapid Stepper (Physical Parts Only) */}
             {!isService && (
               <div className="p-3.5 sm:p-4 rounded-2xl bg-white/70 dark:bg-[#0c0d18]/70 border border-slate-200/80 dark:border-white/10 backdrop-blur-xl shadow-xs space-y-2.5">
@@ -751,22 +791,81 @@ export const InventoryDetailPage: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Search within ledger */}
-                  <div className="relative">
+                  <div className="relative flex-1 sm:flex-initial">
                     <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search plate, ref, customer..."
+                      placeholder="Search plate, ref..."
                       value={movementSearch}
                       onChange={(e) => setMovementSearch(e.target.value)}
-                      className="pl-7 pr-2.5 py-1 rounded-lg bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none w-44 sm:w-52 font-mono placeholder:text-slate-400"
+                      className="pl-7 pr-2.5 py-1.5 sm:py-1 rounded-lg bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none w-full sm:w-52 font-mono placeholder:text-slate-400"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Data Table */}
-              <div className="overflow-x-auto">
+              {/* Mobile Movement Cards (< md) */}
+              <div className="md:hidden divide-y divide-slate-200/60 dark:divide-white/[0.06]">
+                {isLoadingHistory ? (
+                  <div className="py-10 text-center text-xs text-slate-400 font-mono">Loading history...</div>
+                ) : filteredMovements.length === 0 ? (
+                  <div className="py-10 text-center text-xs text-slate-400 font-mono">
+                    {movementSearch ? `No match for "${movementSearch}".` : 'No movements yet.'}
+                  </div>
+                ) : (
+                  filteredMovements.map((record) => {
+                    const isJob = record.type === 'JOB_CARD';
+                    return (
+                      <div key={record.id} className="p-3 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {isJob ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 shrink-0">
+                                <Car className="w-2.5 h-2.5" />
+                                Job
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 shrink-0">
+                                <ShoppingBag className="w-2.5 h-2.5" />
+                                Sale
+                              </span>
+                            )}
+                            {isJob && record.referenceId ? (
+                              <Link
+                                to={`/jobs/${record.referenceId}`}
+                                className="font-mono font-bold text-amber-600 dark:text-amber-400 hover:underline truncate flex items-center gap-0.5"
+                              >
+                                <span className="truncate">{record.reference}</span>
+                                <ArrowUpRight className="w-3 h-3 shrink-0" />
+                              </Link>
+                            ) : (
+                              <span className="font-mono font-bold text-slate-800 dark:text-slate-200 truncate">
+                                {record.reference}
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-mono font-bold text-slate-900 dark:text-white shrink-0">
+                            {money(record.totalPrice)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                          <span className="truncate font-medium">{record.target}</span>
+                          <span className="font-mono font-bold text-rose-500 shrink-0">
+                            {record.quantity} × {money(record.unitPrice)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-slate-400">
+                          <span>{formatDate(record.date)}</span>
+                          <span className="truncate">{record.operator || 'Staff'}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Desktop Data Table (>= md) */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs font-mono">
                   <thead>
                     <tr className="border-b border-slate-200/80 dark:border-white/[0.08] text-[10px] uppercase font-bold text-slate-400 bg-slate-50/30 dark:bg-white/[0.01]">
@@ -881,8 +980,8 @@ export const InventoryDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ── RIGHT COLUMN (Sidebar: Compact Media + Enterprise Metadata Table) ── */}
-          <div className="lg:col-span-4 space-y-4">
+          {/* Right Column: Gallery & Specs first on mobile */}
+          <div className="lg:col-span-4 order-1 lg:order-2 space-y-4">
             {/* 1. Compact Product Media Box */}
             <div className="p-3 rounded-2xl bg-white/70 dark:bg-[#0c0d18]/70 border border-slate-200/80 dark:border-white/10 backdrop-blur-xl shadow-xs space-y-2">
               <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-slate-100 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/10 flex items-center justify-center">
@@ -938,7 +1037,7 @@ export const InventoryDetailPage: React.FC = () => {
                     {editImages.map((img, idx) => (
                       <div key={img + idx} className="group relative w-12 h-10 rounded-lg overflow-hidden border">
                         <img src={img} alt="" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
                           <button
                             type="button"
                             onClick={() => setEditThumbnailIndex(idx)}
@@ -1072,10 +1171,10 @@ export const InventoryDetailPage: React.FC = () => {
         </div>
       </main>
 
-      {/* ── ENTERPRISE STOCK ADJUSTMENT MODAL (Dedicated High-Utility Dialog) ── */}
+      {/* Stock Adjustment Modal */}
       {isAdjustModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg rounded-2xl bg-white dark:bg-[#0e101a] border border-slate-200 dark:border-white/15 p-5 shadow-2xl space-y-4 font-sans text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-sm">
+          <div className="relative w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-white dark:bg-[#0e101a] border border-slate-200 dark:border-white/15 p-4 sm:p-5 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto shadow-2xl space-y-4 font-sans text-slate-900 dark:text-white">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10">
               <div>

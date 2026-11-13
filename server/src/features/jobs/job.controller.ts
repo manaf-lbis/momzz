@@ -384,6 +384,56 @@ export const getJobStats = async (req: Request, res: Response) => {
   }
 };
 
+export const getWorkLogs = async (req: Request, res: Response) => {
+  try {
+    const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 25;
+    const workerId = req.query.workerId as string | undefined;
+    const q = req.query.q as string | undefined;
+    const itemType = req.query.itemType as string | undefined;
+    const timeframe = req.query.timeframe as string | undefined;
+
+    const result = await jobRepository.findPaginatedCompletedTasks({
+      page,
+      limit,
+      workerId,
+      q,
+      itemType,
+      timeframe,
+    });
+
+    const formattedLogs = result.tasks.map((task: any) => {
+      const taskObj = task.toObject ? task.toObject() : { ...task };
+      const rawJob = taskObj.jobCardId;
+      const formattedJob =
+        rawJob && typeof rawJob === 'object'
+          ? mapJobCardImages({
+              ...rawJob,
+              id: rawJob._id?.toString() || rawJob.id,
+            })
+          : rawJob;
+
+      return mapTaskImages({
+        ...taskObj,
+        id: task._id.toString(),
+        jobCardId: formattedJob,
+      });
+    });
+
+    return sendSuccess(
+      res,
+      'Work logs retrieved successfully.',
+      {
+        logs: formattedLogs,
+        pagination: result.pagination,
+      },
+      200
+    );
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to fetch work logs.', 500);
+  }
+};
+
 export const getJobCards = async (req: Request, res: Response) => {
   try {
     const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
@@ -393,11 +443,13 @@ export const getJobCards = async (req: Request, res: Response) => {
     const search = req.query.search as string | undefined;
     const sortBy = req.query.sortBy as string | undefined;
     const sortOrder = req.query.sortOrder as 'asc' | 'desc' | undefined;
+    const workerId = req.query.workerId as string | undefined;
+    const paginated = req.query.paginated === 'true';
     const liveOnly = req.query.liveOnly === 'true';
 
     // Historical / Search / Paginated tabs (e.g. ALL_VEHICLES) load directly from MongoDB via indexes
-    if (page || limit || timeframe || tab || search || sortBy) {
-      const paginatedResult = await jobRepository.findPaginatedJobs({ page, limit, timeframe, tab, search, sortBy, sortOrder });
+    if (page || limit || timeframe || tab || search || sortBy || workerId || paginated) {
+      const paginatedResult = await jobRepository.findPaginatedJobs({ page, limit, timeframe, tab, search, sortBy, sortOrder, workerId });
       const jobIds = paginatedResult.jobs.map((j) => j._id);
       const taskMap = await jobRepository.findTasksForJobs(jobIds);
 
@@ -429,7 +481,9 @@ export const getJobCards = async (req: Request, res: Response) => {
           pagination: {
             total: paginatedResult.total,
             page: paginatedResult.page,
+            limit: paginatedResult.limit,
             totalPages: paginatedResult.totalPages,
+            hasMore: paginatedResult.hasMore,
           },
         },
         200

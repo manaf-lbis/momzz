@@ -28,6 +28,8 @@ router.get('/terms-status', authMiddleware, authController.getTermsStatus);
 router.post('/change-password', authMiddleware, validateRequest({ body: changePasswordSchema }), authController.changePassword);
 
 // Admin User Management Routes
+router.get('/users/stats', authMiddleware, authController.getUserStats);
+router.get('/users/:userId', authMiddleware, authController.getUserById);
 router.get('/users', authMiddleware, authController.getAllUsers);
 router.patch('/users/:userId', authMiddleware, adminMiddleware, authController.updateUserByAdmin);
 router.patch('/users/:userId/status', authMiddleware, adminMiddleware, validateRequest({ body: toggleUserStatusSchema }), authController.toggleUserStatus);

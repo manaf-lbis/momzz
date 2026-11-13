@@ -26,6 +26,65 @@ export class UserRepository {
     return await User.find({}).select('-password').sort({ isOnline: -1, lastSeen: -1, updatedAt: -1, createdAt: -1 });
   }
 
+  async findPaginatedUsers(options: {
+    page?: number;
+    limit?: number;
+    q?: string;
+    role?: string;
+    status?: string;
+  }): Promise<{ users: IUser[]; total: number; page: number; limit: number; totalPages: number; hasMore: boolean }> {
+    const page = Math.max(1, options.page || 1);
+    const limit = Math.min(Math.max(1, options.limit || 20), 100);
+    const skip = (page - 1) * limit;
+
+    const query: any = {};
+    if (options.role && options.role !== 'ALL') {
+      query.role = options.role.toUpperCase();
+    }
+    if (options.status && options.status !== 'ALL') {
+      const sUpper = options.status.toUpperCase();
+      if (sUpper === 'ONLINE') query.isOnline = true;
+      else if (sUpper === 'PENDING') query.isApproved = false;
+      else if (sUpper === 'BLOCKED' || sUpper === 'ACTIVE') query.status = sUpper;
+    }
+    if (options.q && options.q.trim()) {
+      const escaped = options.q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'i');
+      query.$or = [{ name: regex }, { mobile: regex }];
+    }
+
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .select('-password')
+        .sort({ isOnline: -1, lastSeen: -1, updatedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    return {
+      users,
+      total,
+      page,
+      limit,
+      totalPages,
+      hasMore: skip + users.length < total,
+    };
+  }
+
+  async getUserStats() {
+    const [totalUsers, onlineUsers, adminCount, workerCount, blockedUsers, pendingApproval] = await Promise.all([
+      User.countDocuments({}),
+      User.countDocuments({ isOnline: true }),
+      User.countDocuments({ role: 'ADMIN' }),
+      User.countDocuments({ role: 'WORKER' }),
+      User.countDocuments({ status: 'BLOCKED' }),
+      User.countDocuments({ isApproved: false }),
+    ]);
+    return { totalUsers, onlineUsers, adminCount, workerCount, blockedUsers, pendingApproval };
+  }
+
   async updateUserStatus(id: string, status: 'ACTIVE' | 'BLOCKED'): Promise<IUser | null> {
     return await User.findByIdAndUpdate(id, { status }, { new: true }).select('-password');
   }

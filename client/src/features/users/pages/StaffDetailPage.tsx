@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -31,15 +31,16 @@ import {
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
+import { ModernInfiniteLoader } from '../../../shared/components/common/ModernInfiniteLoader';
 import { AnimatedThemeToggle } from '../../../shared/components/magicui/AnimatedThemeToggle';
 import { NumberTicker } from '../../../shared/components/magicui/NumberTicker';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import {
-  useGetAllUsersQuery,
+  useGetUserByIdQuery,
   useUpdateUserByAdminMutation,
   useAdminResetPasswordMutation,
 } from '../../auth/api/authApi';
-import { useGetJobCardsQuery, JobCardData } from '../../jobs/api/jobApi';
+import { useGetJobCardsQuery, useGetWorkLogsQuery, JobCardData } from '../../jobs/api/jobApi';
 import { useGetWorkerSingleSheetQuery } from '../../payroll/api/payrollApi';
 import { User } from '../../auth/store/authSlice';
 
@@ -95,8 +96,23 @@ export const StaffDetailPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<DetailTab>('OVERVIEW');
   const [timeframe, setTimeframe] = useState<Timeframe>('month');
+
+  // Paginated Work Logs state
   const [logSearch, setLogSearch] = useState('');
+  const [debouncedLogSearch, setDebouncedLogSearch] = useState('');
+  const [logPage, setLogPage] = useState(1);
+  const [logRawItems, setLogRawItems] = useState<any[]>([]);
+  const [logHasMore, setLogHasMore] = useState(false);
+  const logSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Paginated Vehicles state
   const [vehicleSearch, setVehicleSearch] = useState('');
+  const [debouncedVehicleSearch, setDebouncedVehicleSearch] = useState('');
+  const [vehiclePage, setVehiclePage] = useState(1);
+  const [vehicleJobs, setVehicleJobs] = useState<JobCardData[]>([]);
+  const [vehicleHasMore, setVehicleHasMore] = useState(false);
+  const [baseVehicleTotal, setBaseVehicleTotal] = useState(0);
+  const vehicleSentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Modals & form state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -107,17 +123,41 @@ export const StaffDetailPage: React.FC = () => {
   const [resetSuccessMsg, setResetSuccessMsg] = useState('');
   const [actionErrorMsg, setActionErrorMsg] = useState('');
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedLogSearch(logSearch.trim()), 250);
+    return () => clearTimeout(t);
+  }, [logSearch]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedVehicleSearch(vehicleSearch.trim()), 250);
+    return () => clearTimeout(t);
+  }, [vehicleSearch]);
+
+  const lastLogSearchRef = useRef(`${id}::${debouncedLogSearch}`);
+  useEffect(() => {
+    const k = `${id}::${debouncedLogSearch}`;
+    if (lastLogSearchRef.current !== k) {
+      lastLogSearchRef.current = k;
+      setLogPage(1);
+      setLogRawItems([]);
+      setLogHasMore(false);
+    }
+  }, [id, debouncedLogSearch]);
+
+  const lastVehicleSearchRef = useRef(`${id}::${debouncedVehicleSearch}`);
+  useEffect(() => {
+    const k = `${id}::${debouncedVehicleSearch}`;
+    if (lastVehicleSearchRef.current !== k) {
+      lastVehicleSearchRef.current = k;
+      setVehiclePage(1);
+      setVehicleJobs([]);
+      setVehicleHasMore(false);
+    }
+  }, [id, debouncedVehicleSearch]);
+
   // Queries
-  const { data: usersData, isLoading: isUsersLoading } = useGetAllUsersQuery();
-  const { data: jobsData, isLoading: isJobsLoading } = useGetJobCardsQuery({ limit: 400 });
-
-  const [updateUserByAdmin, { isLoading: isUpdatingUser }] = useUpdateUserByAdminMutation();
-  const [adminResetPassword, { isLoading: isResettingPassword }] = useAdminResetPasswordMutation();
-
-  const allUsers: User[] = usersData?.data || [];
-  const staffMember = allUsers.find(
-    (u) => (u.id || (u as any)._id) === id
-  );
+  const { data: userResponse, isLoading: isUsersLoading } = useGetUserByIdQuery(id || '', { skip: !id });
+  const staffMember: User | undefined = userResponse?.data;
 
   const isWorker = staffMember?.role === 'WORKER';
   const { data: payrollSheetData } = useGetWorkerSingleSheetQuery(
@@ -127,155 +167,173 @@ export const StaffDetailPage: React.FC = () => {
   const payrollKpis = payrollSheetData?.data?.kpis;
   const payrollWorker = payrollSheetData?.data?.worker;
 
-  const allJobs: JobCardData[] = useMemo(() => {
-    if (!jobsData?.data) return [];
-    if (Array.isArray(jobsData.data)) return jobsData.data;
-    if ((jobsData.data as any).jobs) return (jobsData.data as any).jobs;
-    return [];
-  }, [jobsData]);
+  // Overview logs sample + period counter
+  const { data: overviewLogsData } = useGetWorkLogsQuery(
+    { page: 1, limit: 25, workerId: id, timeframe: 'all' },
+    { skip: !id }
+  );
+  const { data: periodLogsData } = useGetWorkLogsQuery(
+    { page: 1, limit: 1, workerId: id, timeframe },
+    { skip: !id || timeframe === 'all' }
+  );
 
-  // Extract all work logs performed by this staff member
-  const staffWorkLogs: StaffWorkLog[] = useMemo(() => {
-    if (!staffMember || !allJobs.length) return [];
-    const staffId = staffMember.id || (staffMember as any)._id;
-    const staffNameLower = staffMember.name.toLowerCase().trim();
+  // Server-paginated work logs for Work Logs tab
+  const {
+    currentData: logsPageData,
+    isLoading: isLogsLoading,
+    isFetching: isLogsFetching,
+  } = useGetWorkLogsQuery(
+    { page: logPage, limit: 20, workerId: id, q: debouncedLogSearch || undefined, timeframe: 'all' },
+    { skip: !id || activeTab !== 'WORK_LOGS' }
+  );
 
-    const logs: StaffWorkLog[] = [];
+  // Server-paginated vehicles handled
+  const {
+    currentData: vehiclesPageData,
+    isLoading: isVehiclesLoading,
+    isFetching: isVehiclesFetching,
+  } = useGetJobCardsQuery(
+    { page: vehiclePage, limit: 12, workerId: id, search: debouncedVehicleSearch || undefined, paginated: true },
+    { skip: !id }
+  );
 
-    for (const job of allJobs) {
-      const tasks = job.tasks || [];
-      const jobId = job.id || job._id || '';
+  useEffect(() => {
+    const resp = logsPageData?.data;
+    if (!resp?.pagination || resp.pagination.page !== logPage) return;
+    const incoming = resp.logs || [];
+    setLogHasMore(Boolean(resp.pagination.hasMore));
+    setLogRawItems((prev) => {
+      if (logPage === 1) return incoming;
+      const seen = new Set(prev.map((t) => t.id || t._id));
+      return [...prev, ...incoming.filter((t) => !seen.has(t.id || t._id))];
+    });
+  }, [logsPageData, logPage]);
 
-      for (const task of tasks) {
-        if (task.status !== 'COMPLETED' || !task.completedAt) continue;
-
-        const completedById =
-          (task as any).completedBy?.id ||
-          (task as any).completedBy?._id ||
-          (typeof (task as any).completedBy === 'string' ? (task as any).completedBy : '');
-        const completedByName = (task as any).completedBy?.name?.toLowerCase().trim() || '';
-
-        const partners = (task as any).partnerMechanics || [];
-        const isPartner = partners.some((p: any) => {
-          const pId = p.id || p._id || (typeof p === 'string' ? p : '');
-          const pName = p.name?.toLowerCase().trim() || '';
-          return pId === staffId || pName === staffNameLower;
-        });
-
-        const isPrimary = completedById === staffId || completedByName === staffNameLower;
-
-        if (isPrimary || isPartner) {
-          const isShared = (task as any).isShared || partners.length > 0;
-          const partnerNames = partners
-            .map((p: any) => p.name || 'Partner')
-            .filter((name: string) => name.toLowerCase().trim() !== staffNameLower);
-
-          const taskCompletedDate = new Date(task.completedAt);
-          const taskCreatedDate = new Date(task.createdAt || job.createdAt);
-          const durationMins = Math.max(
-            5,
-            Math.round((taskCompletedDate.getTime() - taskCreatedDate.getTime()) / 60000)
-          );
-
-          logs.push({
-            taskId: (task as any).id || (task as any)._id || Math.random().toString(),
-            taskTitle: task.title,
-            vehicleName: job.vehicleName,
-            vehicleNumber: job.vehicleNumber,
-            vehicleColor: job.vehicleColor,
-            customerName: job.customerName,
-            jobId,
-            completedAt: task.completedAt,
-            completedAtFormatted: formatAuditDate(task.completedAt),
-            isShared,
-            partnerNames,
-            durationMinutes: durationMins,
-          });
-        }
-      }
+  useEffect(() => {
+    const resp = vehiclesPageData?.data as any;
+    if (!resp?.pagination || resp.pagination.page !== vehiclePage) return;
+    if (!debouncedVehicleSearch) {
+      setBaseVehicleTotal(resp.pagination.total || 0);
     }
+    const incoming: JobCardData[] = resp.jobs || [];
+    setVehicleHasMore(Boolean(resp.pagination.hasMore));
+    setVehicleJobs((prev) => {
+      if (vehiclePage === 1) return incoming;
+      const seen = new Set(prev.map((j) => j.id || j._id));
+      return [...prev, ...incoming.filter((j) => !seen.has(j.id || j._id))];
+    });
+  }, [vehiclesPageData, vehiclePage, debouncedVehicleSearch]);
 
-    return logs.sort(
-      (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+  useEffect(() => {
+    if (activeTab !== 'WORK_LOGS') return;
+    const node = logSentinelRef.current;
+    if (!node || !logHasMore || isLogsFetching) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) setLogPage((p) => p + 1);
+      },
+      { rootMargin: '250px' }
     );
-  }, [staffMember, allJobs]);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [activeTab, logHasMore, isLogsFetching, logRawItems.length]);
 
-  // Extract all distinct vehicles handled by this staff
-  const vehiclesHandled = useMemo(() => {
-    if (!staffWorkLogs.length || !allJobs.length) return [];
-    const jobIdsSet = new Set(staffWorkLogs.map((l) => l.jobId));
+  useEffect(() => {
+    if (activeTab !== 'VEHICLES') return;
+    const node = vehicleSentinelRef.current;
+    if (!node || !vehicleHasMore || isVehiclesFetching) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) setVehiclePage((p) => p + 1);
+      },
+      { rootMargin: '250px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [activeTab, vehicleHasMore, isVehiclesFetching, vehicleJobs.length]);
 
-    return allJobs
-      .filter((j) => jobIdsSet.has(j.id || j._id || ''))
-      .map((job) => {
-        const staffTasksOnJob = staffWorkLogs.filter((l) => l.jobId === (job.id || job._id));
-        const totalJobTasks = job.tasks?.length || 0;
-        const completedJobTasks = job.tasks?.filter((t) => t.status === 'COMPLETED').length || 0;
-        return {
-          job,
-          tasksDoneByStaff: staffTasksOnJob.length,
-          totalJobTasks,
-          completedJobTasks,
-        };
-      });
-  }, [staffWorkLogs, allJobs]);
+  const [updateUserByAdmin, { isLoading: isUpdatingUser }] = useUpdateUserByAdminMutation();
+  const [adminResetPassword, { isLoading: isResettingPassword }] = useAdminResetPasswordMutation();
 
-  // Timeframe filtered work logs for stats calculations
-  const filteredLogsByTimeframe = useMemo(() => {
-    const now = new Date();
-    let startTimestamp = 0;
+  const staffNameLower = (staffMember?.name || '').toLowerCase().trim();
+  const mapTaskToWorkLog = useMemo(() => {
+    return (t: any): StaffWorkLog => {
+      const job = t.jobCardId && typeof t.jobCardId === 'object' ? t.jobCardId : {};
+      const jobId = job.id || job._id || (typeof t.jobCardId === 'string' ? t.jobCardId : '');
+      const compIso = t.completedAt || t.updatedAt || t.createdAt;
+      const startIso = job.createdAt || t.createdAt || compIso;
+      const durationMins = compIso
+        ? Math.max(5, Math.round((new Date(compIso).getTime() - new Date(startIso).getTime()) / 60000))
+        : 5;
+      const partnerList = (t.partners || t.partnerMechanics || []) as any[];
+      const isShared = Boolean(t.isShared || partnerList.length > 0);
+      const partnerNames = partnerList
+        .map((p: any) => p?.name || 'Partner')
+        .filter((name: string) => name.toLowerCase().trim() !== staffNameLower);
 
-    if (timeframe === 'day') {
-      startTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
-    } else if (timeframe === 'week') {
-      const dow = now.getDay();
-      const diffToMonday = dow === 0 ? -6 : 1 - dow;
-      startTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday, 0, 0, 0, 0).getTime();
-    } else if (timeframe === 'month') {
-      startTimestamp = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).getTime();
-    } else if (timeframe === 'year') {
-      startTimestamp = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0).getTime();
-    }
+      return {
+        taskId: t.id || t._id || String(Math.random()),
+        taskTitle: t.title || 'Completed Task',
+        vehicleName: job.vehicleName || 'Vehicle',
+        vehicleNumber: job.vehicleNumber || 'N/A',
+        vehicleColor: job.vehicleColor,
+        customerName: job.customerName,
+        jobId,
+        completedAt: compIso,
+        completedAtFormatted: formatAuditDate(compIso),
+        isShared,
+        partnerNames,
+        durationMinutes: durationMins,
+      };
+    };
+  }, [staffNameLower]);
 
-    if (startTimestamp === 0) return staffWorkLogs;
-    return staffWorkLogs.filter((l) => new Date(l.completedAt).getTime() >= startTimestamp);
-  }, [staffWorkLogs, timeframe]);
+  const staffWorkLogs: StaffWorkLog[] = useMemo(() => {
+    return (overviewLogsData?.data?.logs || []).map(mapTaskToWorkLog);
+  }, [overviewLogsData, mapTaskToWorkLog]);
+
+  const searchedLogs: StaffWorkLog[] = useMemo(() => {
+    return logRawItems.map(mapTaskToWorkLog);
+  }, [logRawItems, mapTaskToWorkLog]);
+
+  const searchedVehicles = useMemo(() => {
+    const sId = staffMember?.id || (staffMember as any)?._id || id || '';
+    return vehicleJobs.map((job) => {
+      const tasks = job.tasks || [];
+      const totalJobTasks = tasks.length;
+      const completedJobTasks = tasks.filter((t) => t.status === 'COMPLETED').length;
+      const tasksDoneByStaff = tasks.filter((t: any) => {
+        if (t.status !== 'COMPLETED') return false;
+        const cId = t.completedBy?.id || t.completedBy?._id || (typeof t.completedBy === 'string' ? t.completedBy : '');
+        const cName = t.completedBy?.name?.toLowerCase().trim() || '';
+        const partners = t.partners || t.partnerMechanics || [];
+        const isPartner = partners.some((p: any) => {
+          const pId = p?.id || p?._id || (typeof p === 'string' ? p : '');
+          const pName = p?.name?.toLowerCase().trim() || '';
+          return pId === sId || (staffNameLower && pName === staffNameLower);
+        });
+        return cId === sId || (staffNameLower && cName === staffNameLower) || isPartner;
+      }).length;
+      return {
+        job,
+        tasksDoneByStaff: tasksDoneByStaff || 1,
+        totalJobTasks,
+        completedJobTasks,
+      };
+    });
+  }, [vehicleJobs, staffMember, id, staffNameLower]);
 
   // Telemetry Aggregates
-  const totalTasksCompleted = staffWorkLogs.length;
+  const totalTasksCompleted = overviewLogsData?.data?.pagination?.total ?? staffWorkLogs.length;
   const soloTasksCompleted = staffWorkLogs.filter((l) => !l.isShared).length;
   const sharedTasksCompleted = staffWorkLogs.filter((l) => l.isShared).length;
-  const totalVehiclesCount = vehiclesHandled.length;
-  const periodTasksCount = filteredLogsByTimeframe.length;
+  const totalVehiclesCount = baseVehicleTotal || (vehiclesPageData?.data as any)?.pagination?.total || vehicleJobs.length;
+  const periodTasksCount =
+    timeframe === 'all' ? totalTasksCompleted : (periodLogsData?.data?.pagination?.total ?? staffWorkLogs.length);
 
-  const avgMinutesPerTask = totalTasksCompleted > 0
-    ? Math.round(staffWorkLogs.reduce((acc, l) => acc + l.durationMinutes, 0) / totalTasksCompleted)
+  const avgMinutesPerTask = staffWorkLogs.length > 0
+    ? Math.round(staffWorkLogs.reduce((acc, l) => acc + l.durationMinutes, 0) / staffWorkLogs.length)
     : 0;
-
-  // Search filtered logs
-  const searchedLogs = useMemo(() => {
-    if (!logSearch.trim()) return staffWorkLogs;
-    const query = logSearch.toLowerCase().trim();
-    return staffWorkLogs.filter(
-      (l) =>
-        l.taskTitle.toLowerCase().includes(query) ||
-        l.vehicleName.toLowerCase().includes(query) ||
-        l.vehicleNumber.toLowerCase().includes(query) ||
-        (l.customerName && l.customerName.toLowerCase().includes(query))
-    );
-  }, [staffWorkLogs, logSearch]);
-
-  // Search filtered vehicles
-  const searchedVehicles = useMemo(() => {
-    if (!vehicleSearch.trim()) return vehiclesHandled;
-    const query = vehicleSearch.toLowerCase().trim();
-    return vehiclesHandled.filter(
-      ({ job }) =>
-        job.vehicleName.toLowerCase().includes(query) ||
-        job.vehicleNumber.toLowerCase().includes(query) ||
-        (job.customerName && job.customerName.toLowerCase().includes(query))
-    );
-  }, [vehiclesHandled, vehicleSearch]);
 
   // Actions
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -333,7 +391,7 @@ export const StaffDetailPage: React.FC = () => {
     }
   };
 
-  if (isUsersLoading || isJobsLoading) {
+  if (isUsersLoading) {
     return (
       <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col">
         <div className="glass-ambient-glow" aria-hidden="true" />
@@ -362,7 +420,7 @@ export const StaffDetailPage: React.FC = () => {
             onClick={() => navigate('/users')}
             className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-xs active:scale-95 transition cursor-pointer"
           >
-            ← Back to Staff Roster
+            ← Back to Staff
           </button>
         </main>
       </div>
@@ -933,12 +991,14 @@ export const StaffDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {searchedLogs.length === 0 ? (
+              {isLogsLoading && logPage === 1 ? (
+                <PageShimmer label="Loading logs..." cards={3} />
+              ) : !isLogsFetching && searchedLogs.length === 0 ? (
                 <div className="py-12 text-center rounded-2xl glass-modern-card space-y-1.5">
                   <FileText className="w-8 h-8 text-slate-400 mx-auto" />
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-300">No work logs found</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-300">No work logs</p>
                   <p className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                    No task history matches your search query.
+                    No matches
                   </p>
                 </div>
               ) : (
@@ -999,6 +1059,13 @@ export const StaffDetailPage: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                  <ModernInfiniteLoader
+                    sentinelRef={logSentinelRef}
+                    hasMore={logHasMore}
+                    isLoading={isLogsFetching && logPage > 1}
+                    totalCount={searchedLogs.length}
+                    entityName="logs"
+                  />
                 </div>
               )}
             </div>
@@ -1026,17 +1093,20 @@ export const StaffDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {searchedVehicles.length === 0 ? (
+              {isVehiclesLoading && vehiclePage === 1 ? (
+                <PageShimmer label="Loading vehicles..." cards={4} />
+              ) : !isVehiclesFetching && searchedVehicles.length === 0 ? (
                 <div className="py-12 text-center rounded-2xl glass-modern-card space-y-1.5">
                   <Car className="w-8 h-8 text-slate-400 mx-auto" />
                   <p className="text-sm font-bold text-slate-800 dark:text-slate-300">No vehicles found</p>
                   <p className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                    No vehicles match your search query.
+                    No matches
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {searchedVehicles.map(({ job, tasksDoneByStaff, totalJobTasks, completedJobTasks }) => {
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {searchedVehicles.map(({ job, tasksDoneByStaff, totalJobTasks, completedJobTasks }) => {
                     const jobId = job.id || job._id;
                     const progress = totalJobTasks > 0 ? Math.round((completedJobTasks / totalJobTasks) * 100) : 0;
                     return (
@@ -1085,7 +1155,15 @@ export const StaffDetailPage: React.FC = () => {
                       </div>
                     );
                   })}
-                </div>
+                  </div>
+                  <ModernInfiniteLoader
+                    sentinelRef={vehicleSentinelRef}
+                    hasMore={vehicleHasMore}
+                    isLoading={isVehiclesFetching && vehiclePage > 1}
+                    totalCount={searchedVehicles.length}
+                    entityName="vehicles"
+                  />
+                </>
               )}
             </div>
           )}

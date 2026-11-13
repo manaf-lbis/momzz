@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ModernInfiniteLoader } from '../../../shared/components/common/ModernInfiniteLoader';
 import {
   CreditCard,
   Calendar,
@@ -46,16 +47,33 @@ export const SettlementHistoryBriefs: React.FC<SettlementHistoryBriefsProps> = (
     settlements.length > 0 ? settlements[0].id : null
   );
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const hasMoreBriefs = visibleCount < settlements.length;
+  const visibleSettlements = settlements.slice(0, visibleCount);
+  useEffect(() => { setVisibleCount(10); }, [settlements.length]);
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMoreBriefs) return;
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMoreBriefs && !isLoadingMore) {
+        setIsLoadingMore(true);
+        setTimeout(() => {
+          setVisibleCount((prev) => Math.min(prev + 10, settlements.length));
+          setIsLoadingMore(false);
+        }, 120);
+      }
+    }, { rootMargin: '140px' });
+    obs.observe(sentinelRef.current);
+    return () => obs.disconnect();
+  }, [hasMoreBriefs, isLoadingMore, settlements.length]);
 
   if (settlements.length === 0) {
     return (
       <div className="p-8 text-center glass-modern-card rounded-2xl space-y-2 text-slate-400">
         <CreditCard className="w-8 h-8 text-slate-300 dark:text-zinc-600 mx-auto" />
         <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-          No past settlement briefs recorded
-        </p>
-        <p className="text-[11px]">
-          When an admin settles dues with a payout, an itemized brief is automatically archived here.
+          No settlements yet
         </p>
       </div>
     );
@@ -100,7 +118,7 @@ Net Payout: ${formatCurrency(s.amount)} via ${s.paymentMethod || 'CASH'}`;
 
   return (
     <div className="space-y-3">
-      {settlements.map((s, idx) => {
+      {visibleSettlements.map((s, idx) => {
         const isExpanded = expandedId === s.id;
         const item = s.itemizedSummary || ({} as any);
 
@@ -191,16 +209,9 @@ Net Payout: ${formatCurrency(s.amount)} via ${s.paymentMethod || 'CASH'}`;
 
                 {/* Sub-breakdown chips */}
                 <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
-                  {item.allowedLeaveDays && item.allowedLeaveDays > 0 ? (
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
-                      <Sparkles className="w-2.5 h-2.5" />
-                      {item.allowedLeaveDays} Monthly Allowed Leave Included (Paid)
-                    </span>
-                  ) : null}
-
                   {item.totalIncentives && item.totalIncentives > 0 ? (
                     <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold">
-                      Includes {formatCurrency(item.totalIncentives)} in Performance Incentives
+                      Bonus +{formatCurrency(item.totalIncentives)}
                     </span>
                   ) : null}
 
@@ -263,6 +274,14 @@ Net Payout: ${formatCurrency(s.amount)} via ${s.paymentMethod || 'CASH'}`;
           </div>
         );
       })}
+      <ModernInfiniteLoader
+        sentinelRef={sentinelRef}
+        hasMore={hasMoreBriefs}
+        isLoading={isLoadingMore}
+        totalCount={settlements.length}
+        entityName="settlements"
+        loadingLabel="Loading settlements..."
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   useGetJobCardByIdQuery,
   useSetTaskStatusMutation,
@@ -74,6 +74,17 @@ const formatTaskDateTime = (dateString?: string) => {
 export const JobDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const goBack = () => {
+    const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
+    if (returnTo) {
+      navigate(returnTo);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/jobs');
+    }
+  };
   const { user, isAdmin } = useAuth();
 
   const [errorMessage, setErrorMessage] = useState('');
@@ -326,7 +337,7 @@ export const JobDetailPage: React.FC = () => {
     try {
       if (confirmDeleteModal.type === 'JOB_CARD' && currentJob) {
         await deleteJobCard({ jobCardId: currentJob.id || currentJob._id! }).unwrap();
-        navigate('/jobs');
+        goBack();
       } else if (confirmDeleteModal.type === 'TASK' && confirmDeleteModal.taskId) {
         await deleteTask({ taskId: confirmDeleteModal.taskId }).unwrap();
       }
@@ -407,7 +418,7 @@ export const JobDetailPage: React.FC = () => {
               The requested vehicle record could not be found or may have been deleted.
             </p>
             <button
-              onClick={() => navigate('/jobs')}
+              onClick={goBack}
               className="mt-2 px-5 py-2.5 bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase rounded-xl hover:opacity-95 shadow-md shadow-amber-400/20 active:scale-95 transition cursor-pointer"
             >
               ← Back to Active Jobs
@@ -428,7 +439,7 @@ export const JobDetailPage: React.FC = () => {
       <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 space-y-4">
         {/* ── TOP NAV / CLEAN HEADER ── */}
         <PageHeader
-          backTo="/jobs"
+          onBack={goBack}
           title={currentJob.vehicleName || 'Vehicle'}
           badge={
             <div className="flex items-center gap-1.5 flex-wrap">

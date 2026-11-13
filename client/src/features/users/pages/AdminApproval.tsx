@@ -67,7 +67,7 @@ export const AdminApproval: React.FC = () => {
               All Registrations Cleared
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-mono max-w-sm mx-auto">
-              Every mechanic and technician has been approved. New registrations will appear in this queue automatically.
+              No pending approvals.
             </p>
           </div>
         ) : (

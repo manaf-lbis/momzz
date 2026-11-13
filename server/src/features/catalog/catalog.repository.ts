@@ -20,12 +20,16 @@ export class CatalogRepository {
     return Category.create(data);
   }
 
-  async getItems(filters: { q?: string; itemType?: string; category?: string }) {
+  async getItems(filters: { q?: string; itemType?: string; category?: string; limit?: number }) {
     const query: any = { isDeleted: { $ne: true } };
     if (filters.itemType) query.itemType = filters.itemType;
     if (filters.category) query.category = filters.category;
 
-    const items = await Item.find(query).populate('category', 'name type').sort({ createdAt: -1 });
+    let itemQuery = Item.find(query).populate('category', 'name type').sort({ createdAt: -1 });
+    if (!filters.q && filters.limit && filters.limit > 0) {
+      itemQuery = itemQuery.limit(Math.min(filters.limit, 100));
+    }
+    const items = await itemQuery;
 
     if (!filters.q || !filters.q.trim()) {
       return items;
@@ -43,6 +47,126 @@ export class CatalogRepository {
       },
       180 // Threshold for high quality matches
     );
+  }
+
+  async getPaginatedItems(filters: {
+    q?: string;
+    itemType?: string;
+    category?: string;
+    stockFilter?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = Math.max(1, filters.page || 1);
+    const limit = Math.min(Math.max(1, filters.limit || 20), 100);
+    const skip = (page - 1) * limit;
+
+    const query: any = { isDeleted: { $ne: true } };
+    const andConditions: any[] = [];
+
+    if (filters.itemType && ['PRODUCT', 'SERVICE'].includes(filters.itemType)) {
+      query.itemType = filters.itemType;
+    }
+
+    if (filters.category && filters.category !== 'ALL') {
+      query.category = filters.category;
+    }
+
+    if (filters.stockFilter) {
+      const sf = filters.stockFilter.toUpperCase();
+      if (sf === 'PRODUCT' || sf === 'SERVICE') {
+        query.itemType = sf;
+      } else if (sf === 'LOW_STOCK') {
+        query.itemType = 'PRODUCT';
+        query.trackStock = { $ne: false };
+        andConditions.push({
+          $expr: {
+            $lte: [
+              { $ifNull: ['$stockQuantity', 0] },
+              { $ifNull: ['$minimumStockQuantity', 0] },
+            ],
+          },
+        });
+      }
+    }
+
+    if (filters.q && filters.q.trim()) {
+      const tokens = filters.q
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 6);
+
+      for (const token of tokens) {
+        const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escaped, 'i');
+        const matchingCategories = await Category.find({ name: regex }).select('_id').lean();
+        const catIds = matchingCategories.map((c) => c._id);
+
+        andConditions.push({
+          $or: [
+            { title: regex },
+            { sku: regex },
+            { description: regex },
+            ...(catIds.length ? [{ category: { $in: catIds } }] : []),
+          ],
+        });
+      }
+    }
+
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
+    }
+
+    const sort: Record<string, 1 | -1> =
+      filters.stockFilter?.toUpperCase() === 'LOW_STOCK'
+        ? { stockQuantity: 1, createdAt: -1 }
+        : { createdAt: -1 };
+
+    const [items, total] = await Promise.all([
+      Item.find(query)
+        .populate('category', 'name type')
+        .sort(sort)
+        .skip(skip)
+        .limit(limit),
+      Item.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    const hasMore = skip + items.length < total;
+
+    return {
+      items,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasMore,
+      },
+    };
+  }
+
+  async getCatalogStats() {
+    const baseQuery = { isDeleted: { $ne: true } };
+    const [totalCount, productCount, serviceCount, lowStockCount] = await Promise.all([
+      Item.countDocuments(baseQuery),
+      Item.countDocuments({ ...baseQuery, itemType: 'PRODUCT' }),
+      Item.countDocuments({ ...baseQuery, itemType: 'SERVICE' }),
+      Item.countDocuments({
+        ...baseQuery,
+        itemType: 'PRODUCT',
+        trackStock: { $ne: false },
+        $expr: {
+          $lte: [
+            { $ifNull: ['$stockQuantity', 0] },
+            { $ifNull: ['$minimumStockQuantity', 0] },
+          ],
+        },
+      }),
+    ]);
+
+    return { totalCount, productCount, serviceCount, lowStockCount };
   }
 
   async findItem(id: string) {
@@ -145,6 +269,88 @@ export class CatalogRepository {
       .populate('soldBy', 'name mobile role')
       .sort({ createdAt: -1 })
       .limit(limit);
+  }
+
+  async getPaginatedSales(filters: { q?: string; status?: string; page?: number; limit?: number }) {
+    const page = Math.max(1, filters.page || 1);
+    const limit = Math.min(Math.max(1, filters.limit || 20), 100);
+    const skip = (page - 1) * limit;
+
+    const query: any = {};
+    if (filters.status && filters.status !== 'ALL') {
+      query.status = filters.status;
+    }
+    if (filters.q && filters.q.trim()) {
+      const escaped = filters.q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'i');
+      query.$or = [
+        { invoiceNumber: regex },
+        { customerName: regex },
+        { customerMobile: regex },
+      ];
+    }
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const activeSalesMatch = { ...query, status: { $ne: 'CANCELLED' } };
+
+    const [sales, total, metricsAgg, todayAgg] = await Promise.all([
+      Sale.find(query)
+        .populate({
+          path: 'items.item',
+          select: 'title sku price category unit thumbnailUrl images itemType trackStock stockQuantity',
+          populate: { path: 'category', select: 'name type' },
+        })
+        .populate('soldBy', 'name mobile role')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Sale.countDocuments(query),
+      Sale.aggregate([
+        { $match: activeSalesMatch },
+        {
+          $group: {
+            _id: null,
+            totalSalesCount: { $sum: 1 },
+            totalRevenue: { $sum: { $ifNull: ['$grandTotal', 0] } },
+            totalDiscounts: { $sum: { $ifNull: ['$totalDiscount', 0] } },
+          },
+        },
+      ]),
+      Sale.aggregate([
+        { $match: { ...activeSalesMatch, createdAt: { $gte: startOfToday } } },
+        {
+          $group: {
+            _id: null,
+            todaySalesCount: { $sum: 1 },
+            todayRevenue: { $sum: { $ifNull: ['$grandTotal', 0] } },
+          },
+        },
+      ]),
+    ]);
+
+    const agg = metricsAgg[0] || { totalSalesCount: 0, totalRevenue: 0, totalDiscounts: 0 };
+    const tAgg = todayAgg[0] || { todaySalesCount: 0, todayRevenue: 0 };
+    const avgBillValue = agg.totalSalesCount > 0 ? Math.round(agg.totalRevenue / agg.totalSalesCount) : 0;
+
+    return {
+      sales,
+      metrics: {
+        totalSalesCount: agg.totalSalesCount,
+        totalRevenue: agg.totalRevenue,
+        todaySalesCount: tAgg.todaySalesCount,
+        todayRevenue: tAgg.todayRevenue,
+        totalDiscounts: agg.totalDiscounts,
+        avgBillValue,
+      },
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+        hasMore: skip + sales.length < total,
+      },
+    };
   }
 
   async updateSale(id: string, data: Partial<ISale>) {
