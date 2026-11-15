@@ -412,61 +412,61 @@ export const PayrollDashboardPage: React.FC = () => {
           }
         />
 
-        {/* ── MOBILE QUICK ACTION TILES (Native 4-Button Row - Mobile Only) ── */}
-        <div className="grid sm:hidden grid-cols-4 gap-1.5">
+        {/* ── MOBILE QUICK ACTION TILES (Native 4-Button Responsive Grid) ── */}
+        <div className="grid sm:hidden grid-cols-2 xs:grid-cols-4 gap-2">
           <button
             onClick={() => {
               setSelectedWorkerIds([]);
               setShowBulkLeaveModal(true);
             }}
-            className="flex flex-col items-center justify-center gap-1 p-2 rounded-2xl glass-modern-card text-center transition active:scale-95"
+            className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-amber-500/40"
           >
-            <span className="p-1.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
-              <Users className="w-3.5 h-3.5" />
+            <span className="p-2 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <Users className="w-4 h-4" />
             </span>
-            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate w-full">
               Leave
             </span>
           </button>
 
           <button
             onClick={() => {
-              setAdvanceWorkerId(workers[0]?.workerId || '');
+              setAdvanceWorkerId('');
               setShowAdvanceModal(true);
             }}
-            className="flex flex-col items-center justify-center gap-1 p-2 rounded-2xl glass-modern-card text-center transition active:scale-95"
+            className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-emerald-500/40"
           >
-            <span className="p-1.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <Banknote className="w-3.5 h-3.5" />
+            <span className="p-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <Banknote className="w-4 h-4" />
             </span>
-            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate w-full">
               Advance
             </span>
           </button>
 
           <button
             onClick={() => {
-              setIncentiveWorkerId(workers[0]?.workerId || '');
+              setIncentiveWorkerId('');
               setShowIncentiveModal(true);
             }}
-            className="flex flex-col items-center justify-center gap-1 p-2 rounded-2xl glass-modern-card text-center transition active:scale-95"
+            className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-amber-500/40"
           >
-            <span className="p-1.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
-              <Gift className="w-3.5 h-3.5" />
+            <span className="p-2 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <Gift className="w-4 h-4" />
             </span>
-            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate w-full">
               Incentive
             </span>
           </button>
 
           <button
             onClick={() => setShowHolidayModal(true)}
-            className="flex flex-col items-center justify-center gap-1 p-2 rounded-2xl glass-modern-card text-center transition active:scale-95"
+            className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-purple-500/40"
           >
-            <span className="p-1.5 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
-              <PartyPopper className="w-3.5 h-3.5" />
+            <span className="p-2 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
+              <PartyPopper className="w-4 h-4" />
             </span>
-            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate w-full">
               Holidays
             </span>
           </button>
@@ -491,58 +491,58 @@ export const PayrollDashboardPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-2.5">
               {pendingOtClaims.map((claim) => (
                 <div
                   key={claim.id}
-                  className="p-2.5 rounded-xl bg-white/70 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 flex flex-col justify-between gap-2"
+                  className="p-3 rounded-2xl bg-white/70 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 flex flex-col justify-between gap-2.5 shadow-2xs"
                 >
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-6 h-6 rounded-lg overflow-hidden shrink-0 bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-[10px] flex items-center justify-center shadow-2xs">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-xs flex items-center justify-center shadow-2xs">
                           {claim.workerProfileImageUrl ? (
                             <img src={claim.workerProfileImageUrl} alt={claim.workerName} className="w-full h-full object-cover" />
                           ) : (
                             <span>{claim.workerName?.charAt(0)?.toUpperCase()}</span>
                           )}
                         </div>
-                        <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                        <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
                           {claim.workerName}
                         </span>
                       </div>
-                      <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                      <span className="font-mono text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
                         +{formatCurrency(claim.potentialAmount)}
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      {claim.date} &bull; <span className="font-semibold">{claim.otHours}h OT</span>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {claim.date} &bull; <span className="font-semibold text-amber-600 dark:text-amber-400">{claim.otHours}h OT</span>
                     </div>
                     {claim.flaggedReason === 'CLAIMED_ON_FULL_LEAVE' && (
                       <div className="mt-1">
                         <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/30">
-                          <AlertCircle className="w-3 h-3 text-rose-500" />
+                          <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                           <span>Claimed on Full Leave Day</span>
                         </span>
                       </div>
                     )}
                     {claim.lastEditedAt && (
-                      <span className="text-[10px] text-amber-500 block mt-0.5">
+                      <span className="text-[10px] text-amber-500 block">
                         Edited by {claim.updatedByName || 'Admin'}
                       </span>
                     )}
                     {claim.note && (
-                      <p className="text-[10px] text-slate-500 italic mt-1 line-clamp-1">
+                      <p className="text-[11px] text-slate-500 italic line-clamp-2">
                         "{claim.note}"
                       </p>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-white/5">
+                  <div className="flex items-center gap-2 pt-1.5 border-t border-slate-100 dark:border-white/5">
                     <button
                       disabled={isUpdatingOt}
                       onClick={() => handleReviewOt(claim.id, 'APPROVED')}
-                      className="flex-1 py-1.5 px-2 text-[11px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1 transition active:scale-95"
+                      className="flex-1 py-2 sm:py-1.5 px-3 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition active:scale-95 shadow-2xs"
                     >
                       <Check className="w-3.5 h-3.5" />
                       Approve
@@ -553,7 +553,7 @@ export const PayrollDashboardPage: React.FC = () => {
                         setRejectingClaim(claim);
                         setRejectionReasonInput('');
                       }}
-                      className="py-1.5 px-3 text-[11px] font-bold rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-1 transition active:scale-95"
+                      className="py-2 sm:py-1.5 px-3.5 text-xs font-bold rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-1.5 transition active:scale-95"
                     >
                       <X className="w-3.5 h-3.5" />
                       Reject
@@ -567,43 +567,43 @@ export const PayrollDashboardPage: React.FC = () => {
 
         {/* ── KPI METRIC CARDS ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
-          <div className="p-3 sm:p-4 rounded-2xl glass-modern-card shadow-2xs">
+          <div className="p-3 sm:p-4 rounded-2xl glass-modern-card shadow-2xs min-w-0">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-xs font-mono uppercase text-slate-500 dark:text-slate-400">
+              <span className="text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 truncate">
                 Staff
               </span>
-              <Users className="w-4 h-4 text-blue-500" />
+              <Users className="w-4 h-4 text-blue-500 shrink-0" />
             </div>
-            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
+            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 truncate">
               {kpis.totalWorkers}
             </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Staff</p>
+            <p className="text-[11px] text-slate-400 mt-0.5 truncate">Staff Members</p>
           </div>
 
-          <div className="p-3 sm:p-4 rounded-2xl glass-modern-card shadow-2xs">
+          <div className="p-3 sm:p-4 rounded-2xl glass-modern-card shadow-2xs min-w-0">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-xs font-mono uppercase text-slate-500 dark:text-slate-400">
+              <span className="text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 truncate">
                 Pending OT
               </span>
-              <Clock className="w-4 h-4 text-purple-500" />
+              <Clock className="w-4 h-4 text-purple-500 shrink-0" />
             </div>
-            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
+            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 truncate">
               {kpis.totalPendingOtCount}
             </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Awaiting review</p>
+            <p className="text-[11px] text-slate-400 mt-0.5 truncate">Awaiting review</p>
           </div>
 
-          <div className="p-3 sm:p-4 rounded-2xl glass-modern-card shadow-2xs col-span-2 sm:col-span-1 border-amber-500/30">
+          <div className="p-3 sm:p-4 rounded-2xl glass-modern-card shadow-2xs col-span-2 sm:col-span-1 border-amber-500/30 min-w-0">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-xs font-mono uppercase text-amber-600 dark:text-amber-400 font-bold">
+              <span className="text-[11px] font-mono uppercase text-amber-600 dark:text-amber-400 font-bold truncate">
                 Total Unsettled Dues
               </span>
-              <Wallet className="w-4 h-4 text-amber-500" />
+              <Wallet className="w-4 h-4 text-amber-500 shrink-0" />
             </div>
-            <p className="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400 mt-1">
+            <p className="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400 mt-1 truncate">
               {formatCurrency(kpis.totalUnsettledNet)}
             </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Current dues</p>
+            <p className="text-[11px] text-slate-400 mt-0.5 truncate">Current dues</p>
           </div>
         </div>
 
@@ -892,19 +892,19 @@ export const PayrollDashboardPage: React.FC = () => {
                   {/* Micro Breakdown Row */}
                   <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-slate-100/70 dark:bg-white/[0.03] text-center text-[10px] font-mono">
                     <div>
-                      <span className="text-slate-400 block text-[9px] uppercase">Gross</span>
+                      <span className="text-slate-400 block text-[10px] uppercase">Gross</span>
                       <span className="font-semibold text-slate-700 dark:text-slate-300">
                         {formatCurrency(w.unsettledGross)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[9px] uppercase">Leaves</span>
+                      <span className="text-slate-400 block text-[10px] uppercase">Leaves</span>
                       <span className="font-semibold text-amber-600 dark:text-amber-400">
                         -{formatCurrency(w.unsettledDeductions)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[9px] uppercase">Advance</span>
+                      <span className="text-slate-400 block text-[10px] uppercase">Advance</span>
                       <span className="font-semibold text-rose-600 dark:text-rose-400">
                         -{formatCurrency(w.unsettledAdvances)}
                       </span>
@@ -913,11 +913,11 @@ export const PayrollDashboardPage: React.FC = () => {
 
                   {/* Net Dues & Actions Row */}
                   <div className="flex items-center justify-between pt-1">
-                    <div>
-                      <span className="text-[9px] text-slate-400 uppercase font-mono block">
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-slate-400 uppercase font-mono block">
                         Net Unsettled
                       </span>
-                      <span className="text-sm font-black font-mono text-amber-600 dark:text-amber-400">
+                      <span className="text-sm sm:text-base font-black font-mono text-amber-600 dark:text-amber-400 truncate block">
                         {formatCurrency(w.netPayable)}
                       </span>
                       {w.advanceOverhang && w.advanceOverhang > 0 ? (
@@ -927,7 +927,7 @@ export const PayrollDashboardPage: React.FC = () => {
                       ) : null}
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -935,7 +935,7 @@ export const PayrollDashboardPage: React.FC = () => {
                           setSettleAmount(w.netPayable);
                           setShowSettleModal(true);
                         }}
-                        className="px-3 py-1.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition active:scale-95"
+                        className="px-3.5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition active:scale-95"
                       >
                         Settle Dues
                       </button>
@@ -944,7 +944,8 @@ export const PayrollDashboardPage: React.FC = () => {
                           e.stopPropagation();
                           navigate(`/payroll/${w.workerId}`);
                         }}
-                        className="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-200 transition"
+                        className="p-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-200 transition"
+                        aria-label="View worker ledger"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
@@ -979,9 +980,9 @@ export const PayrollDashboardPage: React.FC = () => {
       {/* ── MODAL 1: MARK BULK LEAVE (Responsive Bottom-Sheet) ── */}
       {showBulkLeaveModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
             {/* Mobile Drag Handle */}
-            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
               <div>
@@ -995,7 +996,7 @@ export const PayrollDashboardPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowBulkLeaveModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1017,14 +1018,14 @@ export const PayrollDashboardPage: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto p-1.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-40 overflow-y-auto p-1.5 rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10">
                   {workers.map((w) => {
                     const isSelected = selectedWorkerIds.includes(w.workerId);
                     return (
                       <div
                         key={w.workerId}
                         onClick={() => toggleWorkerSelection(w.workerId)}
-                        className={`cursor-pointer p-2 rounded-lg border text-xs transition flex items-center justify-between gap-1 ${
+                        className={`cursor-pointer p-2.5 rounded-xl border text-xs transition flex items-center justify-between gap-1 ${
                           isSelected
                             ? 'bg-amber-500 text-white border-amber-500 font-bold shadow-xs'
                             : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
@@ -1079,9 +1080,9 @@ export const PayrollDashboardPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setLeaveDateMode('SINGLE')}
-                      className={`px-2 py-0.5 rounded-md font-semibold ${
+                      className={`px-3 py-1 rounded-lg font-semibold transition ${
                         leaveDateMode === 'SINGLE'
-                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold'
                           : 'text-slate-400'
                       }`}
                     >
@@ -1090,9 +1091,9 @@ export const PayrollDashboardPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setLeaveDateMode('RANGE')}
-                      className={`px-2 py-0.5 rounded-md font-semibold ${
+                      className={`px-3 py-1 rounded-lg font-semibold transition ${
                         leaveDateMode === 'RANGE'
-                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold'
                           : 'text-slate-400'
                       }`}
                     >
@@ -1174,8 +1175,8 @@ export const PayrollDashboardPage: React.FC = () => {
       {/* ── MODAL 2: RECORD ADVANCE ── */}
       {showAdvanceModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
-            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1184,7 +1185,7 @@ export const PayrollDashboardPage: React.FC = () => {
               </h3>
               <button
                 onClick={() => setShowAdvanceModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1196,10 +1197,12 @@ export const PayrollDashboardPage: React.FC = () => {
                   Select Staff
                 </label>
                 <select
+                  required
                   value={advanceWorkerId}
                   onChange={(e) => setAdvanceWorkerId(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 >
+                  <option value="">-- Choose Staff Member --</option>
                   {workers.map((w) => (
                     <option key={w.workerId} value={w.workerId}>
                       {w.name} ({w.mobile})
@@ -1253,14 +1256,14 @@ export const PayrollDashboardPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAdvanceModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                  className="flex-1 py-3 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 active:scale-95 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isRecordingAdvance}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
+                  className="flex-1 py-3 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs active:scale-95 transition"
                 >
                   {isRecordingAdvance ? 'Saving...' : 'Record Advance'}
                 </button>
@@ -1273,8 +1276,8 @@ export const PayrollDashboardPage: React.FC = () => {
       {/* ── MODAL: GIVE INCENTIVE (Reflects directly on payable & ledger) ── */}
       {showIncentiveModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
-            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1283,7 +1286,7 @@ export const PayrollDashboardPage: React.FC = () => {
               </h3>
               <button
                 onClick={() => setShowIncentiveModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1295,10 +1298,12 @@ export const PayrollDashboardPage: React.FC = () => {
                   Select Staff
                 </label>
                 <select
+                  required
                   value={incentiveWorkerId}
                   onChange={(e) => setIncentiveWorkerId(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 >
+                  <option value="">-- Choose Staff Member --</option>
                   {workers.map((w) => (
                     <option key={w.workerId} value={w.workerId}>
                       {w.name} ({w.mobile})
@@ -1356,14 +1361,14 @@ export const PayrollDashboardPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowIncentiveModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                  className="flex-1 py-3 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 active:scale-95 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isRecordingIncentive}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                  className="flex-1 py-3 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs active:scale-95 transition"
                 >
                   {isRecordingIncentive ? 'Saving...' : 'Award Incentive'}
                 </button>
@@ -1376,8 +1381,8 @@ export const PayrollDashboardPage: React.FC = () => {
       {/* ── MODAL 3: SETTLE DUES ── */}
       {showSettleModal && selectedWorker && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
-            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
               <div>
@@ -1389,7 +1394,7 @@ export const PayrollDashboardPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowSettleModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1464,14 +1469,14 @@ export const PayrollDashboardPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowSettleModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                  className="flex-1 py-3 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 active:scale-95 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSettling}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
+                  className="flex-1 py-3 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs active:scale-95 transition"
                 >
                   {isSettling ? 'Processing...' : 'Disburse & Settle'}
                 </button>
@@ -1484,8 +1489,8 @@ export const PayrollDashboardPage: React.FC = () => {
       {/* ── MODAL 4: EDIT WAGE OR MONTHLY SALARY ── */}
       {showWageModal && selectedWorker && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-sm bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
-            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+          <div className="w-full sm:max-w-sm bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
               <div>
@@ -1498,7 +1503,7 @@ export const PayrollDashboardPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowWageModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1599,14 +1604,14 @@ export const PayrollDashboardPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowWageModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                  className="flex-1 py-3 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 active:scale-95 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUpdatingWage}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                  className="flex-1 py-3 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs active:scale-95 transition"
                 >
                   {isUpdatingWage ? 'Updating...' : 'Save Wage'}
                 </button>
@@ -1619,8 +1624,8 @@ export const PayrollDashboardPage: React.FC = () => {
       {/* ── MODAL 5: GARAGE HOLIDAYS ── */}
       {showHolidayModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
-            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1629,7 +1634,7 @@ export const PayrollDashboardPage: React.FC = () => {
               </h3>
               <button
                 onClick={() => setShowHolidayModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1722,18 +1727,20 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL: ADMIN REJECT OVERTIME MODAL ── */}
       {rejectingClaim && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full sm:max-w-md rounded-3xl sm:rounded-2xl glass-modern-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-4 sm:p-5 mb-20 sm:mb-0 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl glass-modern-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-4 sm:p-5 mb-20 sm:mb-0 pb-safe shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
+
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 shrink-0">
                   <X className="w-5 h-5" />
                 </span>
-                <div>
-                  <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+                <div className="min-w-0">
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">
                     Reject Overtime Request
                   </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                     {rejectingClaim.workerName} &bull; {rejectingClaim.date} &bull; {rejectingClaim.otHours}h OT
                   </p>
                 </div>
@@ -1741,7 +1748,7 @@ export const PayrollDashboardPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setRejectingClaim(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1758,14 +1765,13 @@ export const PayrollDashboardPage: React.FC = () => {
                 placeholder="e.g. Work completed in regular hours / supervisor did not pre-authorize..."
                 className="w-full p-2.5 text-xs rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none"
               />
-
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
               <button
                 type="button"
                 onClick={() => setRejectingClaim(null)}
-                className="py-1.5 px-3 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition"
+                className="py-2.5 px-4 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 transition"
               >
                 Cancel
               </button>
@@ -1773,7 +1779,7 @@ export const PayrollDashboardPage: React.FC = () => {
                 type="button"
                 disabled={isUpdatingOt}
                 onClick={handleConfirmReject}
-                className="py-1.5 px-4 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-500 text-white shadow-2xs transition active:scale-95 disabled:opacity-50"
+                className="py-2.5 px-4 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-500 text-white shadow-2xs transition active:scale-95 disabled:opacity-50"
               >
                 {isUpdatingOt ? 'Rejecting...' : 'Confirm Rejection'}
               </button>

@@ -974,9 +974,9 @@ export const WorkerLedgerPage: React.FC = () => {
                     -{formatCurrency((activeMonthItem.leaveDeductions || 0) + (activeMonthItem.advances || 0))}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Month Net</span>
-                  <span className="font-black text-amber-600 dark:text-amber-400 text-sm">
+                <div className="col-span-2 sm:col-span-1 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 sm:p-0 sm:bg-transparent sm:border-0 flex sm:block items-center justify-between">
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 block uppercase font-bold">Month Net</span>
+                  <span className="font-black text-amber-600 dark:text-amber-400 text-sm sm:text-base">
                     {formatCurrency(activeMonthItem.netEarnings)}
                   </span>
                 </div>
@@ -1200,7 +1200,7 @@ export const WorkerLedgerPage: React.FC = () => {
                               <span className="text-sm font-black text-slate-900 dark:text-white block leading-none">
                                 {day.date.split('-')[2]}
                               </span>
-                              <span className="text-[9px] text-slate-400 uppercase font-sans">
+                              <span className="text-[10px] text-slate-400 uppercase font-sans">
                                 {day.dayName.slice(0, 3)}
                               </span>
                             </div>
@@ -1265,7 +1265,7 @@ export const WorkerLedgerPage: React.FC = () => {
                                     </span>
                                   )}
                                   {day.leaveLastEditedAt && (
-                                    <span className="text-[9px] text-amber-600/90 dark:text-amber-400/90 font-medium pl-0.5">
+                                    <span className="text-[10px] text-amber-600/90 dark:text-amber-400/90 font-medium pl-0.5">
                                       Edited by {day.leaveUpdatedByName || 'Admin'}
                                     </span>
                                   )}
@@ -1318,17 +1318,17 @@ export const WorkerLedgerPage: React.FC = () => {
                                     )}
                                   </span>
                                   {day.otFlaggedReason === 'CLAIMED_ON_FULL_LEAVE' && (
-                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25">
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25">
                                       On Leave Day
                                     </span>
                                   )}
                                   {day.otLastEditedAt && (
-                                    <span className="text-[9px] text-amber-600/90 dark:text-amber-400/90 font-medium pl-0.5">
+                                    <span className="text-[10px] text-amber-600/90 dark:text-amber-400/90 font-medium pl-0.5">
                                       Edited by {day.otUpdatedByName || 'Admin'}
                                     </span>
                                   )}
                                   {day.otStatus === 'REJECTED' && (
-                                    <span className="text-[9px] text-rose-600 dark:text-rose-400 font-medium pl-0.5">
+                                    <span className="text-[10px] text-rose-600 dark:text-rose-400 font-medium pl-0.5">
                                       {day.otRejectionReason ? `${day.otRejectionReason}` : 'Rejected'}
                                     </span>
                                   )}
@@ -1337,7 +1337,7 @@ export const WorkerLedgerPage: React.FC = () => {
 
                               {/* Settled Badge */}
                               {day.isSettled && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                   Settled
                                 </span>
                               )}
@@ -1358,7 +1358,7 @@ export const WorkerLedgerPage: React.FC = () => {
                               >
                                 {isInProgress ? '₹0' : `+${formatCurrency(day.netDailyPay)}`}
                               </span>
-                              <span className="text-[9px] text-amber-600 dark:text-amber-400 font-semibold block">
+                              <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold block">
                                 bal {formatCurrency(day.runningCumulativeBalance)}
                               </span>
                             </div>
@@ -1368,14 +1368,14 @@ export const WorkerLedgerPage: React.FC = () => {
 
                         {/* Note if any */}
                         {(day.adjustmentNote || day.shiftNote) && (
-                          <p className="text-[10px] text-slate-400 italic pl-10">
+                          <p className="text-[11px] text-slate-400 italic pl-4 sm:pl-8">
                             Note: {day.shiftNote || day.adjustmentNote}
                           </p>
                         )}
 
                         {/* Inline Transactions (Advances / Incentives / Settlements) */}
                         {day.inlineTransactions && day.inlineTransactions.length > 0 && (
-                          <div className="pl-10 space-y-1">
+                          <div className="pl-4 sm:pl-8 space-y-1.5">
                             {day.inlineTransactions.map((tx) => (
                               <div
                                 key={tx.id}
@@ -1473,10 +1473,10 @@ export const WorkerLedgerPage: React.FC = () => {
           onClick={() => setQuickMarkDate(null)}
         >
           <div
-            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-5 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl"
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 pb-safe mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-5 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-2.5">
               <div>
@@ -1505,7 +1505,7 @@ export const WorkerLedgerPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setQuickMarkDate(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1615,7 +1615,7 @@ export const WorkerLedgerPage: React.FC = () => {
                       key={hr}
                       type="button"
                       onClick={() => setQuickOtHours(hr)}
-                      className={`py-2 rounded-xl text-xs font-bold border transition ${
+                      className={`py-2.5 px-1 rounded-xl text-xs font-bold border transition ${
                         quickOtHours === hr
                           ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                           : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
@@ -1693,19 +1693,19 @@ export const WorkerLedgerPage: React.FC = () => {
                     placeholder="Amount ₹"
                     value={quickTxAmount}
                     onChange={(e) => setQuickTxAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-28 px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                    className="w-24 sm:w-28 px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                   />
                   <input
                     type="text"
                     placeholder={quickTxType === 'INCENTIVE' ? 'Reason' : 'Note (optional)'}
                     value={quickTxNote}
                     onChange={(e) => setQuickTxNote(e.target.value)}
-                    className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                    className="flex-1 min-w-0 px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                   />
                   <button
                     type="submit"
                     disabled={isRecordingAdvance || isRecordingIncentive || !quickTxAmount}
-                    className="p-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs flex items-center gap-1 active:scale-95 transition disabled:opacity-50"
+                    className="p-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs flex items-center gap-1 active:scale-95 transition disabled:opacity-50 shrink-0"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -1756,15 +1756,15 @@ export const WorkerLedgerPage: React.FC = () => {
       {/* ── MODAL: MOBILE QUICK ACTIONS SHEET ── */}
       {showMobileActionSheet && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn sm:hidden">
-          <div className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 mx-1 rounded-3xl p-4 space-y-3 shadow-2xl">
-            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto" />
+          <div className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 pb-safe mx-1 rounded-3xl p-4 space-y-3 shadow-2xl">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto mt-0.5 mb-2 shrink-0" />
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/10">
               <span className="text-xs font-bold uppercase tracking-wider font-mono text-slate-500">
                 Quick Actions • {worker?.name}
               </span>
               <button
                 onClick={() => setShowMobileActionSheet(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1775,10 +1775,23 @@ export const WorkerLedgerPage: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setShowMobileActionSheet(false);
+                  setPaySlipTargetMonth(activeMonthItem || monthlyBreakdown[0] || null);
+                  setShowPaySlipModal(true);
+                }}
+                className="p-3 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 flex flex-col items-center gap-1.5 active:scale-95 transition"
+              >
+                <Share2 className="w-5 h-5" />
+                <span className="text-xs font-bold">Pay Slip</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileActionSheet(false);
                   setSettleAmount(kpis.netPayable);
                   setShowSettleModal(true);
                 }}
-                className="p-3 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 flex flex-col items-center gap-1.5 active:scale-95 transition"
+                className="p-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs flex flex-col items-center gap-1.5 active:scale-95 transition"
               >
                 <CreditCard className="w-5 h-5" />
                 <span className="text-xs font-bold">Settle Dues</span>
@@ -1816,10 +1829,10 @@ export const WorkerLedgerPage: React.FC = () => {
                   setShowMobileActionSheet(false);
                   setShowOtModal(true);
                 }}
-                className="p-3 rounded-2xl bg-amber-600/10 hover:bg-amber-600/20 text-amber-700 dark:text-amber-400 border border-amber-600/20 flex flex-col items-center gap-1.5 active:scale-95 transition"
+                className="col-span-2 p-3 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs flex items-center justify-center gap-2 active:scale-95 transition"
               >
-                <Zap className="w-5 h-5" />
-                <span className="text-xs font-bold">Claim OT</span>
+                <Zap className="w-4 h-4" />
+                <span className="text-xs font-bold">Claim Overtime</span>
               </button>
             </div>
           </div>
@@ -1829,8 +1842,8 @@ export const WorkerLedgerPage: React.FC = () => {
       {/* ── MODAL 1: WORKER CLAIM OVERTIME (Responsive Bottom-Sheet) ── */}
       {showOtModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
-            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 pb-safe mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
               <div>
@@ -1842,7 +1855,7 @@ export const WorkerLedgerPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowOtModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1884,7 +1897,7 @@ export const WorkerLedgerPage: React.FC = () => {
                       key={hr}
                       type="button"
                       onClick={() => setOtHours(hr)}
-                      className={`py-2 rounded-xl text-xs font-bold border transition ${
+                      className={`py-2.5 rounded-xl text-xs font-bold border transition ${
                         otHours === hr
                           ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                           : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
@@ -1913,14 +1926,14 @@ export const WorkerLedgerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowOtModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                  className="flex-1 py-3 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 active:scale-95 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isClaimingOt}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                  className="flex-1 py-3 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs active:scale-95 transition"
                 >
                   {isClaimingOt ? 'Submitting...' : `Submit ${otHours}h (+₹${otHours * 150})`}
                 </button>
@@ -1933,7 +1946,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {/* ── MODAL 2: ADMIN GIVE ADVANCE ── */}
       {showAdvanceModal && worker && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -1943,7 +1956,7 @@ export const WorkerLedgerPage: React.FC = () => {
               </h3>
               <button
                 onClick={() => setShowAdvanceModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1960,7 +1973,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   required
                   value={advanceAmount}
                   onChange={(e) => setAdvanceAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -1973,7 +1986,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   required
                   value={advanceDate}
                   onChange={(e) => setAdvanceDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -1986,7 +1999,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   placeholder="e.g. Mid-week cash advance..."
                   value={advanceNote}
                   onChange={(e) => setAdvanceNote(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -1994,14 +2007,14 @@ export const WorkerLedgerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAdvanceModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                  className="flex-1 py-3 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isRecordingAdvance}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
+                  className="flex-1 py-3 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
                 >
                   {isRecordingAdvance ? 'Saving...' : 'Record Advance'}
                 </button>
@@ -2014,7 +2027,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {/* ── MODAL 3: ADMIN SETTLE DUES ── */}
       {showSettleModal && worker && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -2027,7 +2040,7 @@ export const WorkerLedgerPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowSettleModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2053,7 +2066,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   required
                   value={settleAmount}
                   onChange={(e) => setSettleAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -2064,7 +2077,7 @@ export const WorkerLedgerPage: React.FC = () => {
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as any)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 >
                   <option value="CASH">Cash</option>
                   <option value="UPI">UPI</option>
@@ -2081,7 +2094,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   required
                   value={settleEndDate}
                   onChange={(e) => setSettleEndDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -2094,7 +2107,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   placeholder="e.g. UPI Ref / Cash voucher..."
                   value={settleReference}
                   onChange={(e) => setSettleReference(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -2102,14 +2115,14 @@ export const WorkerLedgerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowSettleModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                  className="flex-1 py-3 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSettling}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
+                  className="flex-1 py-3 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
                 >
                   {isSettling ? 'Processing...' : 'Disburse & Settle'}
                 </button>
@@ -2122,7 +2135,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {/* ── MODAL 4: ADMIN AWARD INCENTIVE ── */}
       {showIncentiveModal && worker && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -2135,7 +2148,7 @@ export const WorkerLedgerPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowIncentiveModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2153,7 +2166,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   placeholder="e.g. 500"
                   value={incentiveAmount}
                   onChange={(e) => setIncentiveAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -2166,7 +2179,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   required
                   value={incentiveDate}
                   onChange={(e) => setIncentiveDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -2180,7 +2193,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   placeholder="e.g. Festival incentive, exceptional vehicle overhaul..."
                   value={incentiveNotes}
                   onChange={(e) => setIncentiveNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -2188,14 +2201,14 @@ export const WorkerLedgerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowIncentiveModal(false)}
-                  className="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                  className="flex-1 py-3 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isRecordingIncentive}
-                  className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                  className="flex-1 py-3 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
                 >
                   {isRecordingIncentive ? 'Awarding...' : 'Award Incentive'}
                 </button>
@@ -2208,7 +2221,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {/* ── MODAL 5: EDIT OR REMOVE LEAVE ── */}
       {showEditLeaveModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -2221,7 +2234,7 @@ export const WorkerLedgerPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowEditLeaveModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2243,7 +2256,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setEditingLeaveType('FULL_LEAVE')}
-                    className={`p-2.5 rounded-xl text-xs font-bold border transition ${
+                    className={`py-3 px-3 rounded-xl text-xs font-bold border transition ${
                       editingLeaveType === 'FULL_LEAVE'
                         ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                         : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
@@ -2254,7 +2267,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setEditingLeaveType('HALF_LEAVE')}
-                    className={`p-2.5 rounded-xl text-xs font-bold border transition ${
+                    className={`py-3 px-3 rounded-xl text-xs font-bold border transition ${
                       editingLeaveType === 'HALF_LEAVE'
                         ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                         : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
@@ -2274,7 +2287,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   placeholder="e.g. Personal emergency, doctor appointment..."
                   value={editingLeaveNote}
                   onChange={(e) => setEditingLeaveNote(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -2283,7 +2296,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   type="button"
                   onClick={handleDeleteLeave}
                   disabled={isDeletingLeave}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl text-rose-600 hover:bg-rose-500/10 transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold rounded-xl text-rose-600 hover:bg-rose-500/10 transition"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>{isDeletingLeave ? 'Removing...' : 'Remove'}</span>
@@ -2292,14 +2305,14 @@ export const WorkerLedgerPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowEditLeaveModal(false)}
-                    className="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                    className="px-3 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isUpdatingLeave}
-                    className="px-4 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                    className="px-4 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
                   >
                     {isUpdatingLeave ? 'Saving...' : 'Update Leave'}
                   </button>
@@ -2313,7 +2326,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {/* ── MODAL 6: EDIT OR REMOVE OT CLAIM ── */}
       {showEditOtModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -2326,7 +2339,7 @@ export const WorkerLedgerPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowEditOtModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2343,7 +2356,7 @@ export const WorkerLedgerPage: React.FC = () => {
                       key={hr}
                       type="button"
                       onClick={() => setEditingOtHours(hr)}
-                      className={`py-2 rounded-xl text-xs font-bold border transition ${
+                      className={`py-2.5 rounded-xl text-xs font-bold border transition ${
                         editingOtHours === hr
                           ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                           : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
@@ -2366,7 +2379,7 @@ export const WorkerLedgerPage: React.FC = () => {
                         key={st}
                         type="button"
                         onClick={() => setEditingOtStatus(st)}
-                        className={`py-1.5 rounded-xl text-xs font-bold border transition capitalize ${
+                        className={`py-2 rounded-xl text-xs font-bold border transition capitalize ${
                           editingOtStatus === st
                             ? st === 'APPROVED'
                               ? 'bg-emerald-600 text-white border-emerald-600'
@@ -2392,7 +2405,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   placeholder="e.g. Engine disassembly..."
                   value={editingOtNote}
                   onChange={(e) => setEditingOtNote(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -2401,7 +2414,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   type="button"
                   onClick={() => handleDeleteOtClaim()}
                   disabled={isDeletingOt}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl text-rose-600 hover:bg-rose-500/10 transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold rounded-xl text-rose-600 hover:bg-rose-500/10 transition"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>{isDeletingOt ? 'Cancelling...' : 'Cancel Claim'}</span>
@@ -2410,14 +2423,14 @@ export const WorkerLedgerPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowEditOtModal(false)}
-                    className="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                    className="px-3 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isUpdatingOt}
-                    className="px-4 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                    className="px-4 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
                   >
                     {isUpdatingOt ? 'Saving...' : 'Update Claim'}
                   </button>
@@ -2431,7 +2444,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {/* ── MODAL 7: SHARE SETTLEMENT PAY SLIP ── */}
       {shareSettlement && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -2447,7 +2460,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   setShareSettlement(null);
                   setCopiedSlip(false);
                 }}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2466,7 +2479,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   const text = generateSlipText(shareSettlement.tx, shareSettlement.day);
                   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
                 }}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs flex items-center justify-center gap-2 transition active:scale-95"
+                className="w-full py-3 px-4 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs flex items-center justify-center gap-2 transition active:scale-95"
               >
                 <Share2 className="w-4 h-4" />
                 <span>Share via WhatsApp</span>
@@ -2481,7 +2494,7 @@ export const WorkerLedgerPage: React.FC = () => {
                     setCopiedSlip(true);
                     setTimeout(() => setCopiedSlip(false), 3000);
                   }}
-                  className="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/15 flex items-center justify-center gap-1.5 transition"
+                  className="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/15 flex items-center justify-center gap-1.5 transition"
                 >
                   {copiedSlip ? (
                     <>
@@ -2499,7 +2512,7 @@ export const WorkerLedgerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="py-2 px-3 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/15 flex items-center justify-center gap-1.5 transition"
+                  className="py-2.5 px-3 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/15 flex items-center justify-center gap-1.5 transition"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print</span>

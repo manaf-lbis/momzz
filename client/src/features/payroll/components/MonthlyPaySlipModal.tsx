@@ -121,7 +121,7 @@ Issued on ${todayStr} • Momzz Garage Management System`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
       {/* Print-specific style */}
       <style>{`
         @media print {
@@ -149,36 +149,39 @@ Issued on ${todayStr} • Momzz Garage Management System`;
         }
       `}</style>
 
-      <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(88vh-4rem)] sm:max-h-[92vh] mb-20 sm:mb-0 pb-safe">
+        {/* Mobile Drag Indicator */}
+        <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-2.5 mb-1 shrink-0" />
+
         {/* Top Modal Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-white/10 shrink-0 bg-slate-50/70 dark:bg-white/[0.02]">
-          <div className="flex items-center gap-2">
-            <Share2 className="w-4 h-4 text-emerald-500" />
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-slate-100 dark:border-white/10 shrink-0 bg-slate-50/70 dark:bg-white/[0.02]">
+          <div className="flex items-center gap-2 min-w-0">
+            <Share2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
               Pay Slip Snapshot • {monthItem.monthLabel}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition"
+            className="p-2 -mr-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* Scrollable Printable Pay Slip Card */}
-        <div className="overflow-y-auto p-4 sm:p-6 space-y-4 flex-1">
+        <div className="overflow-y-auto p-3.5 sm:p-6 space-y-3 sm:space-y-4 flex-1">
           <div
             id="print-payslip-card"
-            className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 shadow-sm space-y-4"
+            className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 shadow-sm space-y-3.5 sm:space-y-4"
           >
             {/* Slip Header */}
             <div className="border-b border-slate-200 dark:border-white/10 pb-3 text-center sm:text-left flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <div className="flex items-center justify-center sm:justify-start gap-1.5 text-slate-900 dark:text-white font-black tracking-tight text-base sm:text-lg">
                   <Building2 className="w-5 h-5 text-amber-500 shrink-0" />
-                  <span>{garageName}</span>
+                  <span className="truncate">{garageName}</span>
                 </div>
                 <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5">
                   Monthly Wage Pay Slip
@@ -194,25 +197,25 @@ Issued on ${todayStr} • Momzz Garage Management System`;
 
             {/* Worker & Daily Wage Meta Grid */}
             <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5 text-xs font-mono">
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase block">Worker Name</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{worker.name}</span>
+              <div className="min-w-0">
+                <span className="text-[10px] text-slate-400 uppercase block truncate">Worker Name</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">{worker.name}</span>
               </div>
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase block">Designation / Role</span>
-                <span className="font-semibold text-slate-700 dark:text-slate-300">
+              <div className="min-w-0">
+                <span className="text-[10px] text-slate-400 uppercase block truncate">Designation</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300 truncate block">
                   {worker.role || 'Staff / Mechanic'}
                 </span>
               </div>
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase block">{isMonthly ? 'Salary Scheme' : 'Daily Wage Rate'}</span>
-                <span className="font-black text-amber-600 dark:text-amber-400">
-                  {isMonthly ? `₹${monthlySalary.toLocaleString('en-IN')} / mo` : `₹${dailyWage.toLocaleString('en-IN')} / day`}
+              <div className="min-w-0">
+                <span className="text-[10px] text-slate-400 uppercase block truncate">{isMonthly ? 'Scheme' : 'Daily Rate'}</span>
+                <span className="font-black text-amber-600 dark:text-amber-400 truncate block">
+                  {isMonthly ? `₹${monthlySalary.toLocaleString('en-IN')}/mo` : `₹${dailyWage.toLocaleString('en-IN')}/day`}
                 </span>
               </div>
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase block">Mobile Contact</span>
-                <span className="font-medium text-slate-600 dark:text-slate-400">
+              <div className="min-w-0">
+                <span className="text-[10px] text-slate-400 uppercase block truncate">Mobile</span>
+                <span className="font-medium text-slate-600 dark:text-slate-400 truncate block">
                   {worker.mobile || 'Not registered'}
                 </span>
               </div>
@@ -223,28 +226,28 @@ Issued on ${todayStr} • Momzz Garage Management System`;
               <span className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 font-mono tracking-wider block mb-1.5">
                 Attendance Breakdown
               </span>
-              <div className="grid grid-cols-4 gap-1.5 text-center text-xs font-mono">
-                <div className="p-2 rounded-xl bg-slate-100/80 dark:bg-white/[0.03]">
-                  <span className="text-slate-400 block text-[9px] uppercase">Working Days</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs font-mono">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-100/80 dark:bg-white/[0.03]">
+                  <span className="text-slate-400 block text-[10px] uppercase truncate">Working Days</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 text-sm sm:text-base">
                     {monthItem.workingDays}d
                   </span>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-100/80 dark:bg-white/[0.03]">
-                  <span className="text-slate-400 block text-[9px] uppercase">Sundays</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-100/80 dark:bg-white/[0.03]">
+                  <span className="text-slate-400 block text-[10px] uppercase truncate">Sundays</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300 text-sm sm:text-base">
                     {monthItem.sundays}d
                   </span>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-100/80 dark:bg-white/[0.03]">
-                  <span className="text-slate-400 block text-[9px] uppercase">Holidays</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-100/80 dark:bg-white/[0.03]">
+                  <span className="text-slate-400 block text-[10px] uppercase truncate">Holidays</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300 text-sm sm:text-base">
                     {monthItem.holidays}d
                   </span>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-100/80 dark:bg-white/[0.03]">
-                  <span className="text-slate-400 block text-[9px] uppercase">Leaves Taken</span>
-                  <span className="font-bold text-amber-600 dark:text-amber-400 text-sm">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-100/80 dark:bg-white/[0.03]">
+                  <span className="text-slate-400 block text-[10px] uppercase truncate">Leaves Taken</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400 text-sm sm:text-base">
                     {monthItem.leaveDays}d
                   </span>
                 </div>
@@ -259,59 +262,59 @@ Issued on ${todayStr} • Momzz Garage Management System`;
 
               <div className="space-y-1.5 text-xs font-mono">
                 {/* Earnings rows */}
-                <div className="flex justify-between py-1 px-2 rounded-lg bg-slate-50 dark:bg-white/[0.02]">
-                  <span className="text-slate-600 dark:text-slate-400">
+                <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-slate-50 dark:bg-white/[0.02] gap-2">
+                  <span className="text-slate-600 dark:text-slate-400 min-w-0 truncate">
                     {isMonthly
-                      ? `Base Monthly Salary (₹${monthlySalary.toLocaleString('en-IN')}/mo)`
-                      : `Base Daily Wages (${monthItem.workingDays} days × ₹${dailyWage})`}
+                      ? `Base Monthly Salary`
+                      : `Base Daily Wages (${monthItem.workingDays}d × ₹${dailyWage})`}
                   </span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 shrink-0">
                     ₹{grossBase.toLocaleString('en-IN')}
                   </span>
                 </div>
 
                 {monthItem.otAmount > 0 && (
-                  <div className="flex justify-between py-1 px-2 rounded-lg bg-emerald-500/5 text-emerald-700 dark:text-emerald-400">
-                    <span>Approved Overtime ({monthItem.otHours} hrs)</span>
-                    <span className="font-bold">+₹{monthItem.otAmount.toLocaleString('en-IN')}</span>
+                  <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 gap-2">
+                    <span className="min-w-0 truncate">Approved Overtime ({monthItem.otHours} hrs)</span>
+                    <span className="font-bold shrink-0">+₹{monthItem.otAmount.toLocaleString('en-IN')}</span>
                   </div>
                 )}
 
                 {Boolean(monthItem.incentives && monthItem.incentives > 0) && (
-                  <div className="flex justify-between py-1 px-2 rounded-lg bg-amber-500/5 text-amber-700 dark:text-amber-400">
-                    <span>Incentives / Day Rewards</span>
-                    <span className="font-bold">+₹{(monthItem.incentives || 0).toLocaleString('en-IN')}</span>
+                  <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-amber-500/5 text-amber-700 dark:text-amber-400 gap-2">
+                    <span className="min-w-0 truncate">Incentives / Day Rewards</span>
+                    <span className="font-bold shrink-0">+₹{(monthItem.incentives || 0).toLocaleString('en-IN')}</span>
                   </div>
                 )}
 
                 {/* Deductions rows */}
                 {monthItem.leaveDeductions > 0 && (
-                  <div className="flex justify-between py-1 px-2 rounded-lg bg-rose-500/5 text-rose-700 dark:text-rose-400">
-                    <span>Leave Deductions (unpaid leaves)</span>
-                    <span className="font-bold">-₹{monthItem.leaveDeductions.toLocaleString('en-IN')}</span>
+                  <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-rose-500/5 text-rose-700 dark:text-rose-400 gap-2">
+                    <span className="min-w-0 truncate">Leave Deductions</span>
+                    <span className="font-bold shrink-0">-₹{monthItem.leaveDeductions.toLocaleString('en-IN')}</span>
                   </div>
                 )}
 
                 {monthItem.advances > 0 && (
-                  <div className="flex justify-between py-1 px-2 rounded-lg bg-rose-500/5 text-rose-700 dark:text-rose-400">
-                    <span>Cash Advances Recovered</span>
-                    <span className="font-bold">-₹{monthItem.advances.toLocaleString('en-IN')}</span>
+                  <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-rose-500/5 text-rose-700 dark:text-rose-400 gap-2">
+                    <span className="min-w-0 truncate">Cash Advances Recovered</span>
+                    <span className="font-bold shrink-0">-₹{monthItem.advances.toLocaleString('en-IN')}</span>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Net Amount Highlight Banner */}
-            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-amber-500/15 border border-amber-500/30 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 block font-semibold">
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-amber-500/15 border border-amber-500/30 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 block font-semibold truncate">
                   Net Salary Payable
                 </span>
-                <span className="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400">
+                <span className="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400 truncate block">
                   ₹{netSalary.toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 {isSettled ? (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-xs">
                     <ShieldCheck className="w-3.5 h-3.5" />
@@ -327,48 +330,50 @@ Issued on ${todayStr} • Momzz Garage Management System`;
             </div>
 
             {/* Footer Disclaimer */}
-            <p className="text-[9px] text-slate-400 font-mono text-center pt-2 border-t border-slate-100 dark:border-white/5">
+            <p className="text-[10px] text-slate-400 font-mono text-center pt-2 border-t border-slate-100 dark:border-white/5">
               Momzz Garage Management • Daily wage attendance ledger snapshot
             </p>
           </div>
         </div>
 
         {/* Modal Action Buttons (No-print) */}
-        <div className="no-print p-3 sm:p-4 border-t border-slate-100 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] flex flex-wrap items-center gap-2 shrink-0">
+        <div className="no-print p-3 sm:p-4 border-t border-slate-100 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={handleWhatsAppShare}
-            className="flex-1 min-w-[130px] py-2.5 px-3 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 active:scale-95 transition shadow-xs"
+            className="w-full sm:flex-1 py-3 px-4 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 active:scale-95 transition shadow-xs"
           >
-            <Share2 className="w-3.5 h-3.5" />
+            <Share2 className="w-4 h-4" />
             <span>Send on WhatsApp</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="py-2.5 px-3 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 flex items-center gap-1.5 active:scale-95 transition"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? 'Copied!' : 'Copy Text'}</span>
-          </button>
+          <div className="grid grid-cols-3 gap-1.5 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="py-2.5 px-3 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 flex items-center justify-center gap-1.5 active:scale-95 transition"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copied ? 'Copied' : 'Copy'}</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="py-2.5 px-3 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 flex items-center gap-1.5 active:scale-95 transition"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print</span>
-          </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="py-2.5 px-3 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 flex items-center justify-center gap-1.5 active:scale-95 transition"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="py-2.5 px-3 text-xs font-semibold rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white transition"
-          >
-            Close
-          </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="py-2.5 px-3 text-xs font-semibold rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white transition flex items-center justify-center"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

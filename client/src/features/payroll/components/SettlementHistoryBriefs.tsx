@@ -132,27 +132,27 @@ Net Payout: ${formatCurrency(s.amount)} via ${s.paymentMethod || 'CASH'}`;
             {/* Brief Header Summary */}
             <div
               onClick={() => setExpandedId(isExpanded ? null : s.id)}
-              className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 cursor-pointer hover:bg-amber-500/[0.02]"
+              className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 cursor-pointer hover:bg-amber-500/[0.02]"
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 min-w-0">
                 <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5 sm:mt-0">
                   <CreditCard className="w-4 h-4" />
                 </div>
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
                       Payout Settlement • {formatCurrency(s.amount)}
                     </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/20">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/20 shrink-0">
                       {s.paymentMethod || 'CASH'}
                     </span>
                     {idx === 0 && (
-                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold shrink-0">
                         Latest
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                     {s.periodCovered
                       ? `${s.periodCovered.startDate} → ${s.periodCovered.endDate}`
                       : s.date}
@@ -161,13 +161,14 @@ Net Payout: ${formatCurrency(s.amount)} via ${s.paymentMethod || 'CASH'}`;
                 </div>
               </div>
 
-              <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+              <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 border-t sm:border-t-0 pt-1.5 sm:pt-0 border-slate-100 dark:border-white/5">
                 <span className="text-[11px] font-mono text-slate-400">
                   Settled by {s.settledByName || 'Admin'}
                 </span>
                 <button
                   type="button"
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="p-2 -mr-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+                  aria-label={isExpanded ? "Collapse brief" : "Expand brief"}
                 >
                   {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
@@ -176,32 +177,32 @@ Net Payout: ${formatCurrency(s.amount)} via ${s.paymentMethod || 'CASH'}`;
 
             {/* Expanded Itemized Brief */}
             {isExpanded && (
-              <div className="p-3 sm:p-4 pt-0 border-t border-slate-100 dark:border-white/5 space-y-3 animate-fadeIn">
+              <div className="p-3.5 sm:p-4 pt-0 border-t border-slate-100 dark:border-white/5 space-y-3 animate-fadeIn">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs font-mono pt-3">
-                  <div className="p-2 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
-                    <span className="text-slate-400 block text-[9px] uppercase font-sans">Working Days</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                    <span className="text-slate-400 block text-[10px] uppercase font-sans truncate">Working Days</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm sm:text-base">
                       {item.totalWorkingDays ?? '—'}
                     </span>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
-                    <span className="text-slate-400 block text-[9px] uppercase font-sans">Gross Base</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                    <span className="text-slate-400 block text-[10px] uppercase font-sans truncate">Gross Base</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm sm:text-base">
                       {formatCurrency(item.grossWages || 0)}
                     </span>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
-                    <span className="text-slate-400 block text-[9px] uppercase font-sans">Approved OT</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                    <span className="text-slate-400 block text-[10px] uppercase font-sans truncate">Approved OT</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm sm:text-base">
                       +{formatCurrency(item.totalOtAmount || 0)} ({item.totalOtHours || 0}h)
                     </span>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
-                    <span className="text-slate-400 block text-[9px] uppercase font-sans">Advances Deducted</span>
-                    <span className="font-bold text-rose-600 dark:text-rose-400">
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03]">
+                    <span className="text-slate-400 block text-[10px] uppercase font-sans truncate">Advances</span>
+                    <span className="font-bold text-rose-600 dark:text-rose-400 text-sm sm:text-base">
                       -{formatCurrency(item.totalAdvancesDeducted || 0)}
                     </span>
                   </div>
@@ -223,14 +224,14 @@ Net Payout: ${formatCurrency(s.amount)} via ${s.paymentMethod || 'CASH'}`;
                 </div>
 
                 {/* Action Buttons: 1-Click WhatsApp & Print */}
-                <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/5 flex-wrap">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleShareWhatsApp(s);
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition active:scale-95"
+                    className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition active:scale-95"
                   >
                     <Share2 className="w-3.5 h-3.5" />
                     <span>Share WhatsApp Slip</span>
@@ -242,7 +243,7 @@ Net Payout: ${formatCurrency(s.amount)} via ${s.paymentMethod || 'CASH'}`;
                       e.stopPropagation();
                       handleCopySlip(s);
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 transition active:scale-95"
+                    className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 transition active:scale-95"
                   >
                     {copiedId === s.id ? (
                       <>
@@ -263,7 +264,7 @@ Net Payout: ${formatCurrency(s.amount)} via ${s.paymentMethod || 'CASH'}`;
                       e.stopPropagation();
                       window.print();
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 transition active:scale-95"
+                    className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 transition active:scale-95"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     <span>Print Voucher</span>

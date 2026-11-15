@@ -399,3 +399,13 @@ header#desktop-navbar,
 .font-display {
   font-family: "Barlow Condensed", "Syne", "BankGothic Md BT Medium", "Bank Gothic", sans-serif;
 }
+
+/* Safe area padding utilities for mobile home indicators */
+@supports (padding: max(0px)) {
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+  .mb-safe {
+    margin-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+}
