@@ -52,20 +52,36 @@ export const MonthlyPaySlipModal: React.FC<MonthlyPaySlipModalProps> = ({
   const isMonthly = (monthItem.wageType || worker.wageType) === 'MONTHLY';
   const monthlySalary = monthItem.monthlySalary || worker.monthlySalary || 0;
   const dailyWage = worker.dailyWage || 0;
+
+  // Proper Mathematical Calculation:
+  // For Monthly: base is the agreed monthly salary (or gross month wages).
+  // For Daily: base is strictly the actual earned wages for days worked (workingDays × dailyWage).
   const grossBase = isMonthly
     ? (monthItem.grossWages || monthlySalary)
-    : (monthItem.grossWages !== undefined
-        ? monthItem.grossWages
-        : (monthItem.netBaseWages !== undefined
-            ? monthItem.netBaseWages + (monthItem.leaveDeductions || 0)
-            : monthItem.workingDays * dailyWage));
+    : (monthItem.workingDays * dailyWage);
+
   const grossEarnings = grossBase + (monthItem.otAmount || 0) + (monthItem.incentives || 0);
-  const totalDeductions = (monthItem.leaveDeductions || 0) + (monthItem.advances || 0);
+
+  // Leave deductions only apply to monthly salaried employees.
+  // For daily wage workers, unpaid leave days are already excluded from workingDays, so 0 leave deduction.
+  const leaveDeduction = isMonthly ? (monthItem.leaveDeductions || 0) : 0;
+  const totalDeductions = leaveDeduction + (monthItem.advances || 0);
   const netSalary = Math.max(0, grossEarnings - totalDeductions);
   const isSettled = monthItem.isSettled;
 
   // Build formatted text for WhatsApp and Clipboard
   const generateSlipText = () => {
+    const deductionsLines: string[] = [];
+    if (leaveDeduction > 0) {
+      deductionsLines.push(`• Leave Deductions: -₹${leaveDeduction.toLocaleString('en-IN')}`);
+    }
+    if (monthItem.advances > 0) {
+      deductionsLines.push(`• Advances Taken: -₹${monthItem.advances.toLocaleString('en-IN')}`);
+    }
+    if (deductionsLines.length === 0) {
+      deductionsLines.push(`• Deductions: ₹0`);
+    }
+
     return `🏢 *${garageName}*
 📄 *MONTHLY SALARY PAY SLIP*
 ━━━━━━━━━━━━━━━━━━━━
@@ -75,20 +91,17 @@ export const MonthlyPaySlipModal: React.FC<MonthlyPaySlipModalProps> = ({
 ${isMonthly ? `💰 *Salary Scheme:* Fixed Monthly (₹${monthlySalary.toLocaleString('en-IN')}/mo)` : `💰 *Daily Wage Rate:* ₹${dailyWage.toLocaleString('en-IN')} / day`}
 
 📊 *ATTENDANCE SUMMARY:*
-• Working Days Present: ${monthItem.workingDays} days
-• Sundays / Weekly Offs: ${monthItem.sundays} days ${isMonthly ? '(Paid)' : '(Off)'}
+• Working Days: ${monthItem.workingDays} days
+• Sundays: ${monthItem.sundays} days ${isMonthly ? '(Paid)' : '(Off)'}
 • Paid Holidays: ${monthItem.holidays} days
-• Leaves Taken: ${monthItem.leaveDays} days (Allowed: ${monthItem.allowedLeaveDays}d)
+• Leaves: ${monthItem.leaveDays} days
 
 💵 *EARNINGS:*
 • Base ${isMonthly ? 'Monthly Salary' : `Wages (${monthItem.workingDays}d × ₹${dailyWage})`}: ₹${grossBase.toLocaleString('en-IN')}
-• Overtime (${monthItem.otHours} hrs): +₹${(monthItem.otAmount || 0).toLocaleString('en-IN')}
-• Incentives: +₹${(monthItem.incentives || 0).toLocaleString('en-IN')}
-• *Gross Earnings:* ₹${grossEarnings.toLocaleString('en-IN')}
+${monthItem.otAmount > 0 ? `• Overtime (${monthItem.otHours} hrs): +₹${monthItem.otAmount.toLocaleString('en-IN')}\n` : ''}${monthItem.incentives && monthItem.incentives > 0 ? `• Incentives: +₹${monthItem.incentives.toLocaleString('en-IN')}\n` : ''}• *Gross Earnings:* ₹${grossEarnings.toLocaleString('en-IN')}
 
 📉 *DEDUCTIONS:*
-• Leave Deductions: -₹${(monthItem.leaveDeductions || 0).toLocaleString('en-IN')}
-• Advances Taken: -₹${(monthItem.advances || 0).toLocaleString('en-IN')}
+${deductionsLines.join('\n')}
 • *Total Deductions:* -₹${totalDeductions.toLocaleString('en-IN')}
 
 ━━━━━━━━━━━━━━━━━━━━
@@ -288,10 +301,10 @@ Issued on ${todayStr} • Momzz Garage Management System`;
                 )}
 
                 {/* Deductions rows */}
-                {monthItem.leaveDeductions > 0 && (
+                {leaveDeduction > 0 && (
                   <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-rose-500/5 text-rose-700 dark:text-rose-400 gap-2">
                     <span className="min-w-0 truncate">Leave Deductions</span>
-                    <span className="font-bold shrink-0">-₹{monthItem.leaveDeductions.toLocaleString('en-IN')}</span>
+                    <span className="font-bold shrink-0">-₹{leaveDeduction.toLocaleString('en-IN')}</span>
                   </div>
                 )}
 

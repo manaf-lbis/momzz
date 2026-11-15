@@ -362,12 +362,6 @@ export const PayrollDashboardPage: React.FC = () => {
           backTo="/dashboard"
           title="Payroll & Daily Wages"
           count={kpis.totalWorkers}
-          badge={
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold">
-              <Wallet className="w-3.5 h-3.5" />
-              Dynamic Engine
-            </span>
-          }
           actions={
             <div className="hidden sm:flex items-center gap-2">
               <button
@@ -412,61 +406,65 @@ export const PayrollDashboardPage: React.FC = () => {
           }
         />
 
-        {/* ── MOBILE QUICK ACTION TILES (Native 4-Button Responsive Grid) ── */}
-        <div className="grid sm:hidden grid-cols-2 xs:grid-cols-4 gap-2">
+        {/* ── MOBILE QUICK ACTION SHORTCUTS (Single Clean Compact Line) ── */}
+        <div className="grid sm:hidden grid-cols-4 gap-1.5">
           <button
+            type="button"
             onClick={() => {
               setSelectedWorkerIds([]);
               setShowBulkLeaveModal(true);
             }}
-            className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-amber-500/40"
+            className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-amber-500/40"
           >
-            <span className="p-2 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
-              <Users className="w-4 h-4" />
+            <span className="p-1 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <Users className="w-3.5 h-3.5" />
             </span>
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate w-full">
+            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
               Leave
             </span>
           </button>
 
           <button
+            type="button"
             onClick={() => {
               setAdvanceWorkerId('');
               setShowAdvanceModal(true);
             }}
-            className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-emerald-500/40"
+            className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-emerald-500/40"
           >
-            <span className="p-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <Banknote className="w-4 h-4" />
+            <span className="p-1 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <Banknote className="w-3.5 h-3.5" />
             </span>
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate w-full">
+            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
               Advance
             </span>
           </button>
 
           <button
+            type="button"
             onClick={() => {
               setIncentiveWorkerId('');
               setShowIncentiveModal(true);
             }}
-            className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-amber-500/40"
+            className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-amber-500/40"
           >
-            <span className="p-2 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
-              <Gift className="w-4 h-4" />
+            <span className="p-1 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <Gift className="w-3.5 h-3.5" />
             </span>
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate w-full">
+            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
               Incentive
             </span>
           </button>
 
           <button
+            type="button"
             onClick={() => setShowHolidayModal(true)}
-            className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-purple-500/40"
+            className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl glass-modern-card text-center transition active:scale-95 shadow-2xs hover:border-purple-500/40"
           >
-            <span className="p-2 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
-              <PartyPopper className="w-4 h-4" />
+            <span className="p-1 rounded-lg bg-purple-500/15 text-purple-600 dark:text-purple-400">
+              <PartyPopper className="w-3.5 h-3.5" />
             </span>
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate w-full">
+            <span className="text-[10px] font-bold text-slate-800 dark:text-slate-100 truncate w-full">
               Holidays
             </span>
           </button>
@@ -770,11 +768,13 @@ export const PayrollDashboardPage: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-4 font-mono text-slate-600 dark:text-slate-400">
-                        {formatCurrency(w.unsettledGross)}
+                        {formatCurrency(w.wageType !== 'MONTHLY' ? Math.max(0, w.unsettledGross - w.unsettledDeductions) : w.unsettledGross)}
                       </td>
 
                       <td className="py-3 px-4 font-mono text-amber-600 dark:text-amber-400">
-                        -{formatCurrency(w.unsettledDeductions)}
+                        {w.wageType !== 'MONTHLY' || w.unsettledDeductions === 0
+                          ? '₹0'
+                          : `-${formatCurrency(w.unsettledDeductions)}`}
                       </td>
 
                       <td className="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400">
@@ -890,26 +890,41 @@ export const PayrollDashboardPage: React.FC = () => {
                   </div>
 
                   {/* Micro Breakdown Row */}
-                  <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-slate-100/70 dark:bg-white/[0.03] text-center text-[10px] font-mono">
-                    <div>
-                      <span className="text-slate-400 block text-[10px] uppercase">Gross</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">
-                        {formatCurrency(w.unsettledGross)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px] uppercase">Leaves</span>
-                      <span className="font-semibold text-amber-600 dark:text-amber-400">
-                        -{formatCurrency(w.unsettledDeductions)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px] uppercase">Advance</span>
-                      <span className="font-semibold text-rose-600 dark:text-rose-400">
-                        -{formatCurrency(w.unsettledAdvances)}
-                      </span>
-                    </div>
-                  </div>
+                  {(() => {
+                    const isDaily = w.wageType !== 'MONTHLY';
+                    const displayGross = isDaily ? Math.max(0, w.unsettledGross - w.unsettledDeductions) : w.unsettledGross;
+                    const displayDeductions = isDaily ? 0 : w.unsettledDeductions;
+                    const displayOtInc = (w.unsettledOtAmount || 0) + (w.unsettledIncentives || 0);
+
+                    return (
+                      <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-slate-100/70 dark:bg-white/[0.03] text-center text-[10px] font-mono">
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase">{isDaily ? 'Wages' : 'Gross'}</span>
+                          <span className="font-semibold text-slate-700 dark:text-slate-300">
+                            {formatCurrency(displayGross)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase">
+                            {isDaily ? 'OT / Extra' : 'Leaves'}
+                          </span>
+                          <span
+                            className={`font-semibold ${
+                              isDaily ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                            }`}
+                          >
+                            {isDaily ? `+${formatCurrency(displayOtInc)}` : `-${formatCurrency(displayDeductions)}`}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase">Advance</span>
+                          <span className="font-semibold text-rose-600 dark:text-rose-400">
+                            -{formatCurrency(w.unsettledAdvances)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Net Dues & Actions Row */}
                   <div className="flex items-center justify-between pt-1">

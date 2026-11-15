@@ -26,6 +26,7 @@ import {
   UserX,
   Plus,
   AlertCircle,
+  MoreHorizontal,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
@@ -763,47 +764,40 @@ export const WorkerLedgerPage: React.FC = () => {
         )}
 
         {/* ── TOP HERO SUMMARY BAR ── */}
-        <div className="p-4 sm:p-5 rounded-2xl glass-modern-card border-amber-500/30 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
-          <div className="flex items-center gap-3">
+        <div className="p-4 sm:p-5 rounded-2xl glass-modern-card border-amber-500/30 flex items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 font-bold shrink-0">
               <Wallet className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-mono uppercase text-slate-500 dark:text-slate-400 font-bold">
-                  Net Unsettled Dues
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono uppercase text-slate-500 dark:text-slate-400 font-bold truncate">
+                  Unsettled Dues
                 </span>
-                {kpis.netPayable === 0 ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
-                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
-                    <span>Settled</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
-                    <span>Due</span>
-                  </span>
-                )}
-                {istCountdown.isBeforeCutoff && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/25">
-                    <Clock className="w-2.5 h-2.5 animate-pulse text-sky-500" />
-                    <span>{istCountdown.label}</span>
-                  </span>
-                )}
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    kpis.netPayable === 0
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                  }`}
+                >
+                  {kpis.netPayable === 0 ? 'Settled' : 'Due'}
+                </span>
               </div>
-              <p className="text-2xl sm:text-3xl font-black font-mono text-amber-600 dark:text-amber-400 mt-0.5">
+              <p className="text-2xl sm:text-3xl font-black font-mono text-amber-600 dark:text-amber-400 mt-0.5 truncate">
                 {formatCurrency(kpis.netPayable)}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={() => {
                 setPaySlipTargetMonth(activeMonthItem || monthlyBreakdown[0] || null);
                 setShowPaySlipModal(true);
               }}
-              className="px-3.5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 active:scale-95 transition shadow-xs"
+              className="px-3 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 active:scale-95 transition shadow-xs"
             >
               <Share2 className="w-3.5 h-3.5" />
               <span>Pay Slip</span>
@@ -816,10 +810,10 @@ export const WorkerLedgerPage: React.FC = () => {
                   setSettleAmount(kpis.netPayable);
                   setShowSettleModal(true);
                 }}
-                className="px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 flex items-center gap-1.5 active:scale-95 transition shadow-xs"
+                className="px-3 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 flex items-center gap-1.5 active:scale-95 transition shadow-xs"
               >
                 <CreditCard className="w-3.5 h-3.5" />
-                <span>Settle Dues</span>
+                <span>Settle</span>
               </button>
             )}
 
@@ -829,17 +823,18 @@ export const WorkerLedgerPage: React.FC = () => {
                   type="button"
                   onClick={() => setShowMobileActionSheet(true)}
                   className="p-2 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 active:scale-95 transition"
+                  title="Actions"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <MoreHorizontal className="w-4 h-4" />
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => setShowOtModal(true)}
-                  className="px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white flex items-center gap-1.5 active:scale-95 transition shadow-xs"
+                  className="px-3 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white flex items-center gap-1 active:scale-95 transition shadow-xs"
                 >
                   <Zap className="w-3.5 h-3.5" />
-                  <span>Claim OT</span>
+                  <span>OT</span>
                 </button>
               )}
             </div>
@@ -861,11 +856,6 @@ export const WorkerLedgerPage: React.FC = () => {
               <Layers className="w-3.5 h-3.5 text-blue-500" />
               <span>Monthly Breakdown</span>
             </div>
-            <span className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 rounded-md bg-amber-500/10">
-              {worker?.wageType === 'MONTHLY'
-                ? `Monthly Salary: ₹${(worker?.monthlySalary || 0).toLocaleString('en-IN')}/mo`
-                : `Daily Wage: ₹${worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage || 0}/day`}
-            </span>
           </div>
 
           {/* Amazon-style Scrollable Month Tabs */}
@@ -997,7 +987,7 @@ export const WorkerLedgerPage: React.FC = () => {
             }`}
           >
             <CalendarDays className="w-3.5 h-3.5" />
-            <span>Continuous Ledger</span>
+            <span>Ledger</span>
             <span
               className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
                 ledgerTab === 'STREAM' ? 'bg-black/20 text-white' : 'bg-slate-200 dark:bg-white/10'
@@ -1017,7 +1007,7 @@ export const WorkerLedgerPage: React.FC = () => {
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Settlement Briefs</span>
+            <span>Settlements</span>
             {settlements.length > 0 && (
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
@@ -1041,7 +1031,7 @@ export const WorkerLedgerPage: React.FC = () => {
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span>Overtime Tracker</span>
+            <span>Overtime</span>
             {pendingOtCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-amber-500 text-white font-bold animate-pulse">
                 {pendingOtCount}
@@ -1124,17 +1114,12 @@ export const WorkerLedgerPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-4 h-4 text-amber-500" />
                 <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider font-mono text-slate-700 dark:text-slate-300">
-                  Daily Stream {selectedMonth !== 'ALL' ? `• ${activeMonthItem?.monthLabel || selectedMonth}` : '• All Months'}
+                  Ledger {selectedMonth !== 'ALL' ? `• ${activeMonthItem?.monthLabel || selectedMonth}` : ''}
                 </h2>
                 <span className="text-[10px] font-mono font-bold text-slate-400 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5">
-                  {filteredDays.length} days
+                  {filteredDays.length}
                 </span>
               </div>
-              {isAdmin && (
-                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-medium">
-                  Tap day to mark
-                </span>
-              )}
             </div>
 
           {filteredDays.length === 0 ? (
@@ -1367,9 +1352,17 @@ export const WorkerLedgerPage: React.FC = () => {
                         </div>
 
                         {/* Note if any */}
-                        {(day.adjustmentNote || day.shiftNote) && (
-                          <p className="text-[11px] text-slate-400 italic pl-4 sm:pl-8">
-                            Note: {day.shiftNote || day.adjustmentNote}
+                        {Boolean(
+                          day.adjustmentNote ||
+                          (day.shiftNote &&
+                            day.shiftNote !== 'Paid Sunday' &&
+                            day.shiftNote !== 'Paid Leave' &&
+                            day.shiftNote !== 'In progress' &&
+                            day.shiftNote !== 'Half-day in progress' &&
+                            day.shiftNote !== 'Holiday')
+                        ) && (
+                          <p className="text-[11px] text-slate-400 italic pl-4 sm:pl-8 truncate">
+                            {day.adjustmentNote || day.shiftNote}
                           </p>
                         )}
 
@@ -1512,8 +1505,8 @@ export const WorkerLedgerPage: React.FC = () => {
             </div>
 
             {quickMarkDay.isSettled && (
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                This day is settled and locked.
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Settled & Locked
               </p>
             )}
 

@@ -1748,8 +1748,11 @@ export class PayrollService {
               lastSettledDate: worker.lastSettledDate,
               firstPayrollDate: snap.firstPayrollDate || getWorkerFirstPayrollDate(worker) || null,
               hasWageAssigned,
-              unsettledGross: snap.unsettledGross ?? 0,
-              unsettledDeductions: snap.unsettledDeductions ?? 0,
+              unsettledGross:
+                worker.wageType !== 'MONTHLY'
+                  ? Math.max(0, (snap.unsettledGross ?? 0) - (snap.unsettledDeductions ?? 0))
+                  : (snap.unsettledGross ?? 0),
+              unsettledDeductions: worker.wageType !== 'MONTHLY' ? 0 : (snap.unsettledDeductions ?? 0),
               unsettledOtAmount: snap.unsettledOtAmount ?? 0,
               unsettledAdvances: snap.unsettledAdvances ?? 0,
               unsettledIncentives: snap.unsettledIncentives ?? 0,
@@ -1784,8 +1787,14 @@ export class PayrollService {
             lastSettledDate: worker.lastSettledDate,
             firstPayrollDate: (sheet.worker as any).firstPayrollDate || getWorkerFirstPayrollDate(worker) || null,
             hasWageAssigned,
-            unsettledGross: sheet.kpis.unsettledGrossWages ?? sheet.kpis.grossWages,
-            unsettledDeductions: sheet.kpis.unsettledLeaveDeductions ?? sheet.kpis.totalLeaveDeductions,
+            unsettledGross:
+              worker.wageType !== 'MONTHLY'
+                ? (sheet.kpis.unsettledNetBaseWages ?? Math.max(0, (sheet.kpis.unsettledGrossWages || 0) - (sheet.kpis.unsettledLeaveDeductions || 0)))
+                : (sheet.kpis.unsettledGrossWages ?? sheet.kpis.grossWages),
+            unsettledDeductions:
+              worker.wageType !== 'MONTHLY'
+                ? 0
+                : (sheet.kpis.unsettledLeaveDeductions ?? sheet.kpis.totalLeaveDeductions),
             unsettledOtAmount: sheet.kpis.unsettledApprovedOtAmount ?? sheet.kpis.totalApprovedOtAmount,
             unsettledAdvances: sheet.kpis.totalUnsettledAdvances,
             unsettledIncentives: (sheet.kpis as any).totalUnsettledIncentives || 0,
