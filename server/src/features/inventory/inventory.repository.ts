@@ -3,14 +3,38 @@ import { advancedSearch, findDuplicateCandidates } from '../../shared/utils/sear
 
 export class InventoryRepository {
   async search(query: string, limit = 20): Promise<ITaskInventory[]> {
-    if (!query || !query.trim()) {
+    const trimmed = query?.trim();
+    if (!trimmed) {
       return await TaskInventory.find().sort({ name: 1 }).limit(limit);
     }
 
-    const allItems = await TaskInventory.find().sort({ name: 1 });
+    // Pre-filter with MongoDB query to prevent full-collection scans in memory
+    const escapedQuery = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let candidateItems = await TaskInventory.find({
+      $or: [
+        { name: { $regex: escapedQuery, $options: 'i' } },
+        { category: { $regex: escapedQuery, $options: 'i' } },
+      ],
+    })
+      .sort({ name: 1 })
+      .limit(100);
+
+    // If direct regex didn't yield enough, pull a bounded sample for fuzzy matching
+    if (candidateItems.length < limit) {
+      const extraItems = await TaskInventory.find()
+        .sort({ name: 1 })
+        .limit(200);
+      const seen = new Set(candidateItems.map((c) => c._id.toString()));
+      for (const item of extraItems) {
+        if (!seen.has(item._id.toString())) {
+          candidateItems.push(item);
+        }
+      }
+    }
+
     const ranked = advancedSearch<ITaskInventory>(
-      allItems,
-      query,
+      candidateItems,
+      trimmed,
       {
         getTitle: (item) => item.name,
         getCategory: (item) => item.category,
@@ -27,15 +51,20 @@ export class InventoryRepository {
 
   async upsertByName(name: string, category?: string): Promise<ITaskInventory> {
     const trimmed = name.trim();
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // Direct exact match check
-    const existingExact = await TaskInventory.findOne({ name: { $regex: `^${trimmed}$`, $options: 'i' } });
+    const existingExact = await TaskInventory.findOne({ name: { $regex: `^${escaped}$`, $options: 'i' } });
     if (existingExact) return existingExact;
 
-    // Check near duplicates to avoid small spelling/spacing duplicates
-    const all = await TaskInventory.find();
+    // Check near duplicates within a bounded candidate set sharing initial characters
+    const prefix = escaped.slice(0, 2);
+    const candidates = await TaskInventory.find(
+      prefix ? { name: { $regex: `^${prefix}`, $options: 'i' } } : {}
+    ).limit(100);
+
     const duplicates = findDuplicateCandidates<ITaskInventory>(
       trimmed,
-      all,
+      candidates,
       (item) => item.name,
       0.90 // 90% match for automatic duplicate reuse
     );

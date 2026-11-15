@@ -81,8 +81,10 @@ export const Login: React.FC = () => {
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <Input
+              id="login-mobile"
               label="Mobile Phone Number"
-              type="text"
+              type="tel"
+              autoComplete="tel"
               placeholder="e.g. 9876543210"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
@@ -91,8 +93,10 @@ export const Login: React.FC = () => {
             />
 
             <Input
+              id="login-password"
               label="Account Password"
               type="password"
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

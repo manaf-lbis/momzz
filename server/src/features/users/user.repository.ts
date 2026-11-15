@@ -149,15 +149,17 @@ export class UserRepository {
     return await User.findByIdAndUpdate(userId, { $set: updates }, { new: true }).select('-password');
   }
 
-  async setMcpToken(userId: string, token: string, tokenHash: string): Promise<IUser | null> {
+  async setMcpToken(userId: string, _token: string, tokenHash: string): Promise<IUser | null> {
     return await User.findByIdAndUpdate(
       userId,
       {
         $set: {
-          mcpToken: token,
           mcpTokenHash: tokenHash,
           mcpTokenCreatedAt: new Date(),
           mcpTokenRevoked: false,
+        },
+        $unset: {
+          mcpToken: 1, // Remove legacy plaintext token
         },
       },
       { new: true }

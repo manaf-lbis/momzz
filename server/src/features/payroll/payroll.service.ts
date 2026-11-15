@@ -1728,6 +1728,38 @@ export class PayrollService {
     const workerSummaries = await Promise.all(
       workers.map(async (worker) => {
         try {
+          const snap = worker.payrollSnapshot;
+          if (snap && snap.lastCalculatedAt) {
+            const hasWageAssigned =
+              worker.wageType === 'MONTHLY'
+                ? Boolean(worker.monthlySalary && worker.monthlySalary > 0)
+                : Boolean(worker.dailyWage && worker.dailyWage > 0);
+
+            return {
+              workerId: worker._id,
+              name: worker.name,
+              mobile: worker.mobile,
+              profileImageUrl: worker.profileImageUrl || '',
+              role: worker.role,
+              wageType: worker.wageType || 'DAILY',
+              monthlySalary: worker.monthlySalary || 0,
+              dailyWage: worker.dailyWage || 0,
+              dailyWageEffectiveDate: worker.dailyWageEffectiveDate,
+              lastSettledDate: worker.lastSettledDate,
+              firstPayrollDate: snap.firstPayrollDate || getWorkerFirstPayrollDate(worker) || null,
+              hasWageAssigned,
+              unsettledGross: snap.unsettledGross ?? 0,
+              unsettledDeductions: snap.unsettledDeductions ?? 0,
+              unsettledOtAmount: snap.unsettledOtAmount ?? 0,
+              unsettledAdvances: snap.unsettledAdvances ?? 0,
+              unsettledIncentives: snap.unsettledIncentives ?? 0,
+              netPayable: snap.netPayable ?? 0,
+              advanceOverhang: snap.advanceOverhang ?? 0,
+              unsettledWorkingDays: snap.unsettledWorkingDays ?? 0,
+              pendingOtCount: pendingOtWorkerMap.get(worker._id.toString()) || 0,
+            };
+          }
+
           const sheet = await this.getWorkerSingleSheet({
             workerId: worker._id.toString(),
             includeSettledHistory: true,

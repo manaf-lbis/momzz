@@ -23,8 +23,13 @@ const refreshAccessToken = (
   extraOptions: Parameters<BaseQueryFn>[2]
 ) => {
   if (!refreshRequest) {
+    const fallbackToken = localStorage.getItem('refreshToken');
     refreshRequest = Promise.resolve(baseQuery(
-      { url: '/auth/refresh', method: 'POST', body: { refreshToken: localStorage.getItem('refreshToken') } },
+      {
+        url: '/auth/refresh',
+        method: 'POST',
+        body: fallbackToken ? { refreshToken: fallbackToken } : undefined,
+      },
       api,
       extraOptions
     )).finally(() => {

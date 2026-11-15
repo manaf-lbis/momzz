@@ -171,6 +171,7 @@ export const DockIcon = ({
       <motion.button
         ref={ref}
         type="button"
+        aria-label={title}
         style={{ width, height: width }}
         onClick={onClick}
         className={cn(

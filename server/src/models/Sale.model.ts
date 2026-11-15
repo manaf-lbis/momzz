@@ -72,4 +72,8 @@ const SaleSchema = new Schema<ISale>(
   { timestamps: true }
 );
 
+SaleSchema.index({ status: 1, createdAt: -1 });
+SaleSchema.index({ soldBy: 1, createdAt: -1 });
+SaleSchema.index({ createdAt: -1 });
+
 export default mongoose.model<ISale>('Sale', SaleSchema);

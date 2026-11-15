@@ -53,11 +53,9 @@ export const invalidateMcpTokenCache = (userId?: string, mobile?: string): void 
 export const authenticateMcpRequest = async (req: Request): Promise<AuthUserContext> => {
   let clientId =
     (req.headers['x-client-id'] as string) ||
-    (req.query.clientId as string) ||
     req.body?.clientId;
   let clientSecret =
     (req.headers['x-client-secret'] as string) ||
-    (req.query.clientSecret as string) ||
     req.body?.clientSecret;
 
   const authHeader = req.headers.authorization;
@@ -113,7 +111,7 @@ export const authenticateMcpRequest = async (req: Request): Promise<AuthUserCont
   if (!clientId) {
     const tokenHash = hashToken(clientSecret);
     const dbUser = await UserModel.findOne({
-      $or: [{ mcpToken: clientSecret }, { mcpTokenHash: tokenHash }],
+      mcpTokenHash: tokenHash,
       mcpTokenRevoked: { $ne: true },
     }).lean();
 

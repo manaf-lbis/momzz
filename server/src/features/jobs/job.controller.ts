@@ -322,14 +322,28 @@ export const trackPublicJobs = async (req: Request, res: Response) => {
       return sendError(res, 'Vehicle number and either mobile number or email address are required.', 400);
     }
     const jobs = await jobRepository.findPublicJobs(vehicleNumber, { mobile, email });
-    const publicJobs = await Promise.all(jobs.map(async (job) => {
-      const tasks = await jobRepository.findTasksByJobCardId(job._id.toString());
+    const jobIds = jobs.map((j) => j._id);
+    const taskMap = await jobRepository.findTasksForJobs(jobIds);
+
+    const publicJobs = jobs.map((job) => {
+      const tasks = taskMap[job._id.toString()] || [];
       return {
-        id: job._id.toString(), vehicleName: job.vehicleName, vehicleNumber: job.vehicleNumber,
-        vehicleColor: job.vehicleColor, expectedDeliveryDate: job.expectedDeliveryDate, status: job.status, createdAt: job.createdAt, updatedAt: job.updatedAt,
-        tasks: tasks.map((task) => ({ id: task._id.toString(), title: task.title, status: task.status, completedAt: task.completedAt })),
+        id: job._id.toString(),
+        vehicleName: job.vehicleName,
+        vehicleNumber: job.vehicleNumber,
+        vehicleColor: job.vehicleColor,
+        expectedDeliveryDate: job.expectedDeliveryDate,
+        status: job.status,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+        tasks: tasks.map((task) => ({
+          id: task._id.toString(),
+          title: task.title,
+          status: task.status,
+          completedAt: task.completedAt,
+        })),
       };
-    }));
+    });
     return sendSuccess(res, 'Service history retrieved.', publicJobs);
   } catch (error: any) {
     return sendError(res, error.message || 'Unable to track service.', 500);
@@ -341,8 +355,6 @@ export const getJobCardById = async (req: Request, res: Response) => {
     const { jobCardId } = req.params;
     const job = await jobRepository.findJobById(jobCardId);
     if (!job) {
-      await cacheService.del('cache:jobs:live');
-      await cacheService.delByPrefix('cache:jobs');
       return sendError(res, 'Job card not found.', 404);
     }
 
@@ -350,13 +362,9 @@ export const getJobCardById = async (req: Request, res: Response) => {
     const allCompleted = tasks.length > 0 && tasks.every((t) => t.status === 'COMPLETED');
     const targetStatus = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
 
-    if (job.status !== targetStatus) {
-      await jobRepository.updateJobStatus(job._id.toString(), targetStatus);
-      job.status = targetStatus;
-    }
-
     const formatted = mapJobCardImages({
       ...job.toObject(),
+      status: targetStatus,
       id: job._id.toString(),
       tasks: tasks.map((t) => mapTaskImages({
         ...t.toObject(),
@@ -458,13 +466,9 @@ export const getJobCards = async (req: Request, res: Response) => {
         const allCompleted = tasks.length > 0 && tasks.every((t) => t.status === 'COMPLETED');
         const targetStatus = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
 
-        if (job.status !== targetStatus) {
-          jobRepository.updateJobStatus(job._id.toString(), targetStatus).catch(() => {});
-          job.status = targetStatus;
-        }
-
         return mapJobCardImages({
           ...job.toObject(),
+          status: targetStatus,
           id: job._id.toString(),
           tasks: tasks.map((t) => mapTaskImages({
             ...t.toObject(),

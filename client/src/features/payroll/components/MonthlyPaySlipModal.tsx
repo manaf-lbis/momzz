@@ -54,7 +54,11 @@ export const MonthlyPaySlipModal: React.FC<MonthlyPaySlipModalProps> = ({
   const dailyWage = worker.dailyWage || 0;
   const grossBase = isMonthly
     ? (monthItem.grossWages || monthlySalary)
-    : monthItem.workingDays * dailyWage;
+    : (monthItem.grossWages !== undefined
+        ? monthItem.grossWages
+        : (monthItem.netBaseWages !== undefined
+            ? monthItem.netBaseWages + (monthItem.leaveDeductions || 0)
+            : monthItem.workingDays * dailyWage));
   const grossEarnings = grossBase + (monthItem.otAmount || 0) + (monthItem.incentives || 0);
   const totalDeductions = (monthItem.leaveDeductions || 0) + (monthItem.advances || 0);
   const netSalary = Math.max(0, grossEarnings - totalDeductions);

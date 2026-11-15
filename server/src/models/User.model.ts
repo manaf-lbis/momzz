@@ -215,7 +215,7 @@ const UserSchema: Schema = new Schema(
     mcpTokenHash: {
       type: String,
       default: null,
-      index: true,
+      index: { sparse: true },
     },
     mcpTokenCreatedAt: {
       type: Date,

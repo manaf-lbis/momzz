@@ -32,7 +32,6 @@ router.get('/', getJobCards);
 router.get('/stats', getJobStats);
 router.get('/work-logs', getWorkLogs);
 router.get('/:jobCardId', getJobCardById);
-router.get('/:jobCardId', getJobCardById);
 
 router.post('/create', adminMiddleware, createJobWithTasks);
 router.patch('/tasks/:taskId/status', validateRequest({ body: setTaskStatusSchema }), setTaskStatus);

@@ -130,5 +130,6 @@ const WageTransactionSchema: Schema = new Schema(
 );
 
 WageTransactionSchema.index({ workerId: 1, date: -1 });
+WageTransactionSchema.index({ workerId: 1, type: 1, date: -1 });
 
 export default mongoose.model<IWageTransaction>('WageTransaction', WageTransactionSchema);

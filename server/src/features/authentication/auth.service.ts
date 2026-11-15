@@ -105,6 +105,7 @@ export class AuthService {
 
     const tokens = this.generateTokens(user);
     await userRepository.recordLoginAudit(mobile, 'SUCCESS', ipAddress);
+    await cacheService.del([`user:session:${user._id.toString()}`, `user:profile:${user._id.toString()}`]);
 
     // Save Refresh Token for Rotation
     const expiresAt = new Date();
@@ -452,14 +453,18 @@ export class AuthService {
     const rawUser = await (await import('../../models/User.model')).default.findById(userId);
     if (!rawUser) throw new Error('User account not found.');
 
+    const hasToken = Boolean(rawUser.mcpTokenHash || rawUser.mcpToken);
+    const tokenPreview = rawUser.mcpToken
+      ? `${rawUser.mcpToken.substring(0, 14)}...${rawUser.mcpToken.slice(-4)}`
+      : hasToken
+      ? 'momzz_pat_••••...••••'
+      : null;
+
     return {
       clientId: rawUser.mobile,
-      hasToken: Boolean(rawUser.mcpToken),
+      hasToken,
       isRevoked: Boolean(rawUser.mcpTokenRevoked),
-      tokenPreview: rawUser.mcpToken
-        ? `${rawUser.mcpToken.substring(0, 14)}...${rawUser.mcpToken.slice(-4)}`
-        : null,
-      fullToken: rawUser.mcpToken && !rawUser.mcpTokenRevoked ? rawUser.mcpToken : null,
+      tokenPreview,
       createdAt: rawUser.mcpTokenCreatedAt,
       lastUsedAt: rawUser.mcpTokenLastUsed,
     };
@@ -485,12 +490,12 @@ export class AuthService {
     }
 
     // 2. Validate token matches and is not revoked
-    if (!user.mcpToken || user.mcpTokenRevoked) {
+    if ((!user.mcpToken && !user.mcpTokenHash) || user.mcpTokenRevoked) {
       throw new Error('MCP token is not configured or has been revoked.');
     }
 
     const tokenHash = createHash('sha256').update(cleanSecret).digest('hex');
-    const matchesToken = user.mcpToken === cleanSecret || user.mcpTokenHash === tokenHash;
+    const matchesToken = user.mcpTokenHash === tokenHash || user.mcpToken === cleanSecret;
 
     if (!matchesToken) {
       throw new Error('Invalid Client Secret.');

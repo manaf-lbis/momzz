@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGetJobCardsQuery, useGetJobStatsQuery, useToggleJobPinMutation, JobCardData } from '../../jobs/api/jobApi';
@@ -310,11 +310,16 @@ export const JobsListPage: React.FC = () => {
 
   const { currentData: responseData, isLoading, isFetching, refetch } = useGetJobCardsQuery(queryParams);
 
-  const rawJobs: JobCardData[] = Array.isArray(responseData?.data)
-    ? (responseData!.data as unknown as JobCardData[])
-    : ((responseData?.data as any)?.jobs || []);
+  const rawJobs: JobCardData[] = useMemo(() => {
+    if (Array.isArray(responseData?.data)) {
+      return responseData.data as unknown as JobCardData[];
+    }
+    return (responseData?.data as any)?.jobs || [];
+  }, [responseData?.data]);
 
-  const pagination = !Array.isArray(responseData?.data) ? (responseData?.data as any)?.pagination : undefined;
+  const pagination = useMemo(() => {
+    return !Array.isArray(responseData?.data) ? (responseData?.data as any)?.pagination : undefined;
+  }, [responseData?.data]);
 
   // Accumulate jobs strictly when currentData matches requested page
   useEffect(() => {

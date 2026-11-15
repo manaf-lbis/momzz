@@ -80,28 +80,59 @@ export const initSocket = (server: HttpServer): Server => {
   });
 
   io.on('connection', async (socket: Socket) => {
-    const authUser = socket.data.user;
-    const currentUserId = authUser?.id;
+    let authUser = socket.data.user;
+    let currentUserId = authUser?.id;
+
+    const setupAuthenticatedUser = async (user: any) => {
+      socket.data.user = user;
+      const uId = user.id || user._id;
+      if (uId) {
+        socket.join('authenticated');
+        socket.join(`user:${uId}`);
+        try {
+          await userRepository.setUserOnlineStatus(uId, true);
+          if (io) {
+            io.to('authenticated').emit('user:status_changed', { userId: uId, isOnline: true });
+          }
+        } catch (err) {
+          console.error('[SOCKET] Error updating online status:', err);
+        }
+      }
+    };
 
     if (currentUserId) {
-      socket.join(`user:${currentUserId}`);
-
-      try {
-        await userRepository.setUserOnlineStatus(currentUserId, true);
-        if (io) {
-          io.emit('user:status_changed', { userId: currentUserId, isOnline: true });
-        }
-      } catch (err) {
-        console.error('[SOCKET] Error updating online status:', err);
-      }
+      await setupAuthenticatedUser(authUser);
     }
 
+    socket.on('authenticate', async (data: { token?: string }) => {
+      const token = data?.token;
+      if (!token) return;
+      try {
+        const isRevoked = await cacheService.isTokenBlacklisted(token);
+        if (isRevoked) return;
+        const decoded = jwt.verify(token, ENV.JWT_ACCESS_SECRET) as any;
+        if (decoded?.id) {
+          currentUserId = decoded.id;
+          await setupAuthenticatedUser(decoded);
+        }
+      } catch (err) {
+        // invalid token
+      }
+    });
+
+    socket.on('join', (targetUserId: string) => {
+      if (currentUserId && (currentUserId === targetUserId || socket.data.user?.role === 'ADMIN')) {
+        socket.join(`user:${targetUserId}`);
+      }
+    });
+
     socket.on('disconnect', async () => {
-      if (currentUserId) {
+      const activeId = socket.data.user?.id || currentUserId;
+      if (activeId) {
         try {
-          await userRepository.setUserOnlineStatus(currentUserId, false);
+          await userRepository.setUserOnlineStatus(activeId, false);
           if (io) {
-            io.emit('user:status_changed', { userId: currentUserId, isOnline: false });
+            io.to('authenticated').emit('user:status_changed', { userId: activeId, isOnline: false });
           }
         } catch (err) {
           console.error('[SOCKET] Error updating offline status:', err);
@@ -168,14 +199,14 @@ export const emitTaskDeleted = (jobCardId: string, taskId: string) => {
 export const emitUserApproved = (userId: string) => {
   if (io) {
     io.to(`user:${userId}`).emit('user:approved', { userId });
-    io.emit('user:approved_global', { userId });
+    io.to('authenticated').emit('user:approved_global', { userId });
   }
 };
 
 export const emitUserBlocked = (userId: string) => {
   if (io) {
     io.to(`user:${userId}`).emit('user:blocked', { userId });
-    io.emit('user:blocked_global', { userId });
+    io.to('authenticated').emit('user:blocked_global', { userId });
   }
 };
 
@@ -184,28 +215,28 @@ export const emitUserBlocked = (userId: string) => {
 export const emitPayrollIncentiveAwarded = (workerId: string, incentive: any) => {
   if (io) {
     io.to(`user:${workerId}`).emit('payroll:incentive_awarded', incentive);
-    io.emit('payroll:updated', { workerId, type: 'INCENTIVE' });
+    io.to('authenticated').emit('payroll:updated', { workerId, type: 'INCENTIVE' });
   }
 };
 
 export const emitPayrollOtReviewed = (workerId: string, otClaim: any) => {
   if (io) {
     io.to(`user:${workerId}`).emit('payroll:ot_reviewed', otClaim);
-    io.emit('payroll:updated', { workerId, type: 'OT_REVIEWED' });
+    io.to('authenticated').emit('payroll:updated', { workerId, type: 'OT_REVIEWED' });
   }
 };
 
 export const emitPayrollSettled = (workerId: string, settlement: any) => {
   if (io) {
     io.to(`user:${workerId}`).emit('payroll:settled', settlement);
-    io.emit('payroll:updated', { workerId, type: 'SETTLED' });
+    io.to('authenticated').emit('payroll:updated', { workerId, type: 'SETTLED' });
   }
 };
 
 export const emitPayrollWageUpdated = (workerId: string, wageData: any) => {
   if (io) {
     io.to(`user:${workerId}`).emit('payroll:wage_updated', wageData);
-    io.emit('payroll:updated', { workerId, type: 'WAGE_UPDATED' });
+    io.to('authenticated').emit('payroll:updated', { workerId, type: 'WAGE_UPDATED' });
   }
 };
 

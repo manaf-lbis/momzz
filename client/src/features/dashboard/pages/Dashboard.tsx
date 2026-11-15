@@ -138,9 +138,9 @@ export const Dashboard: React.FC = () => {
   ).length;
 
   const totalAllTasks = allJobs.reduce((s, j) => s + (j.tasks?.length || 0), 0);
-  const totalDone     = stats?.totalCompletedTasks ?? allJobs.reduce((s, j) =>
+  const totalDone     = allJobs.reduce((s, j) =>
     s + (j.tasks?.filter(t => t.status === "COMPLETED").length || 0), 0);
-  const velocity = totalAllTasks > 0 ? Math.round((totalDone / totalAllTasks) * 100) : 0;
+  const velocity = totalAllTasks > 0 ? Math.min(100, Math.max(0, Math.round((totalDone / totalAllTasks) * 100))) : 0;
 
   const pendingWorkers = pendingRes?.data?.length || 0;
   const totalUsers     = userStatsRes?.data?.totalUsers || 0;

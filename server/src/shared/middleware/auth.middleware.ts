@@ -104,11 +104,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       return sendError(res, 'Your account has been blocked by an administrator.', 403);
     }
 
-    if (!userDoc.isApproved && userDoc.role !== 'ADMIN') {
-      return sendError(res, 'Your account is awaiting administrator approval.', 403);
-    }
-
-    // Mandatory Terms & Conditions acceptance gate
+    // Exempt paths that any logged-in user (even unapproved or pending terms) can access
     const exemptPaths = [
       '/api/auth/accept-terms',
       '/api/auth/terms-status',
@@ -121,6 +117,10 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     ];
     const rawUrl = req.originalUrl.split('?')[0];
     const isExempt = exemptPaths.some((p) => rawUrl.endsWith(p) || req.path.endsWith(p));
+
+    if (!userDoc.isApproved && userDoc.role !== 'ADMIN' && !isExempt) {
+      return sendError(res, 'Your account is awaiting administrator approval.', 403);
+    }
 
     if (!isExempt && (userDoc.acceptedTermsVersion || '') !== CURRENT_TERMS_VERSION) {
       return sendError(

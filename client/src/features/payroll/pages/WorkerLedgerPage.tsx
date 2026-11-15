@@ -25,7 +25,9 @@ import {
   UserCheck,
   UserX,
   Plus,
+  AlertCircle,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
 import { PageShimmer } from '../../../shared/components/common/PageShimmer';
@@ -80,6 +82,15 @@ export const WorkerLedgerPage: React.FC = () => {
 
   const activeQuery = workerId && isAdmin ? workerSingleSheetQuery : mySingleSheetQuery;
   const { data, isLoading, refetch } = activeQuery;
+
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
+
+  const showToast = (text: string, type: 'error' | 'success' = 'error') => {
+    setToastMessage({ text, type });
+    setTimeout(() => {
+      setToastMessage((prev) => (prev?.text === text ? null : prev));
+    }, 4000);
+  };
 
   // Mutations
   const [markBatchLeave, { isLoading: isMarkingLeave }] = useMarkBatchLeaveMutation();
@@ -378,7 +389,7 @@ export const WorkerLedgerPage: React.FC = () => {
       setOtHours(1);
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to submit overtime claim');
+      showToast(err?.data?.message || 'Failed to submit overtime claim');
     }
   };
 
@@ -400,7 +411,7 @@ export const WorkerLedgerPage: React.FC = () => {
       setAdvanceNote('');
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to record cash advance');
+      showToast(err?.data?.message || 'Failed to record cash advance');
     }
   };
 
@@ -423,7 +434,7 @@ export const WorkerLedgerPage: React.FC = () => {
       setSettleReference('');
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to settle payroll');
+      showToast(err?.data?.message || 'Failed to settle payroll');
     }
   };
 
@@ -445,7 +456,7 @@ export const WorkerLedgerPage: React.FC = () => {
       setIncentiveNotes('');
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to award incentive');
+      showToast(err?.data?.message || 'Failed to award incentive');
     }
   };
 
@@ -465,7 +476,7 @@ export const WorkerLedgerPage: React.FC = () => {
       setShowEditLeaveModal(false);
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to update leave');
+      showToast(err?.data?.message || 'Failed to update leave');
     }
   };
 
@@ -479,7 +490,7 @@ export const WorkerLedgerPage: React.FC = () => {
       setShowEditLeaveModal(false);
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to remove leave');
+      showToast(err?.data?.message || 'Failed to remove leave');
     }
   };
 
@@ -500,7 +511,7 @@ export const WorkerLedgerPage: React.FC = () => {
       setShowEditOtModal(false);
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to update overtime claim');
+      showToast(err?.data?.message || 'Failed to update overtime claim');
     }
   };
 
@@ -515,7 +526,7 @@ export const WorkerLedgerPage: React.FC = () => {
       setShowEditOtModal(false);
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to cancel overtime claim');
+      showToast(err?.data?.message || 'Failed to cancel overtime claim');
     }
   };
 
@@ -528,7 +539,7 @@ export const WorkerLedgerPage: React.FC = () => {
       await deleteTransaction(id).unwrap();
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || `Failed to delete ${label}`);
+      showToast(err?.data?.message || `Failed to delete ${label}`);
     }
   };
 
@@ -569,7 +580,7 @@ export const WorkerLedgerPage: React.FC = () => {
       }
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to update attendance');
+      showToast(err?.data?.message || 'Failed to update attendance');
     }
   };
 
@@ -596,7 +607,7 @@ export const WorkerLedgerPage: React.FC = () => {
       }
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to save overtime');
+      showToast(err?.data?.message || 'Failed to save overtime');
     }
   };
 
@@ -605,7 +616,7 @@ export const WorkerLedgerPage: React.FC = () => {
       await updateOtStatus({ id: claimId, status }).unwrap();
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to update overtime status');
+      showToast(err?.data?.message || 'Failed to update overtime status');
     }
   };
 
@@ -632,7 +643,7 @@ export const WorkerLedgerPage: React.FC = () => {
       setQuickTxNote('');
       refetch();
     } catch (err: any) {
-      alert(err?.data?.message || 'Failed to record entry');
+      showToast(err?.data?.message || 'Failed to record entry');
     }
   };
 
@@ -1077,7 +1088,7 @@ export const WorkerLedgerPage: React.FC = () => {
                   await deleteOtClaim(claimId).unwrap();
                   refetch();
                 } catch (err: any) {
-                  alert(err?.data?.message || 'Failed to cancel overtime claim');
+                  showToast(err?.data?.message || 'Failed to cancel overtime claim');
                 }
               }}
             />
@@ -2522,6 +2533,32 @@ export const WorkerLedgerPage: React.FC = () => {
           garageName="MOMZZ AUTOMOTIVE GARAGE"
         />
       )}
+
+      {/* Floating Toast Notification Banner */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className={`fixed top-6 right-6 z-50 max-w-sm flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-xl border ${
+              toastMessage.type === 'error'
+                ? 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400'
+                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+            }`}
+          >
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <p className="text-xs sm:text-sm font-semibold">{toastMessage.text}</p>
+            <button
+              type="button"
+              onClick={() => setToastMessage(null)}
+              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

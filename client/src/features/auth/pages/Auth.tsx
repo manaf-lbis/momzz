@@ -152,6 +152,8 @@ export const AuthPage = () => {
               onClick={() => {
                 setIsLogin(true);
                 setErrorMsg('');
+                setFormData({ name: '', mobile: '', password: '', role: 'worker' });
+                setAgreeTerms(false);
               }}
               className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 isLogin
@@ -166,6 +168,8 @@ export const AuthPage = () => {
               onClick={() => {
                 setIsLogin(false);
                 setErrorMsg('');
+                setFormData({ name: '', mobile: '', password: '', role: 'worker' });
+                setAgreeTerms(false);
               }}
               className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 !isLogin
@@ -194,14 +198,16 @@ export const AuthPage = () => {
 
             {!isLogin && (
               <div>
-                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                <label htmlFor="auth-name" className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                   Full Name
                 </label>
                 <div className="relative">
                   <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
+                    id="auth-name"
                     type="text"
                     name="name"
+                    autoComplete="name"
                     value={formData.name}
                     onChange={handleInputChange}
                     placeholder="John Doe"
@@ -212,14 +218,16 @@ export const AuthPage = () => {
             )}
 
             <div>
-              <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+              <label htmlFor="auth-mobile" className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                 Mobile Number
               </label>
               <div className="relative">
                 <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
+                  id="auth-mobile"
                   type="tel"
                   name="mobile"
+                  autoComplete="tel"
                   maxLength={10}
                   value={formData.mobile}
                   onChange={handleInputChange}
@@ -230,14 +238,16 @@ export const AuthPage = () => {
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+              <label htmlFor="auth-password" className="block text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                 Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
+                  id="auth-password"
                   type="password"
                   name="password"
+                  autoComplete={isLogin ? 'current-password' : 'new-password'}
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="••••••••"

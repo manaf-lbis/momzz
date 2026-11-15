@@ -23,6 +23,11 @@ const getRefreshCookieOptions = (req: Request) => {
   };
 };
 
+const getClearCookieOptions = (req: Request) => {
+  const { maxAge, ...clearOptions } = getRefreshCookieOptions(req);
+  return clearOptions;
+};
+
 
 export class AuthController {
   async register(req: Request, res: Response) {
@@ -105,7 +110,7 @@ export class AuthController {
         200
       );
     } catch (error: any) {
-      res.clearCookie('refreshToken', getRefreshCookieOptions(req));
+      res.clearCookie('refreshToken', getClearCookieOptions(req));
       return sendError(res, error.message || 'Token rotation failed.', 401);
     }
   }
@@ -117,10 +122,10 @@ export class AuthController {
       const accessToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
 
       await authService.logout(refreshToken, accessToken);
-      res.clearCookie('refreshToken', getRefreshCookieOptions(req));
+      res.clearCookie('refreshToken', getClearCookieOptions(req));
       return sendSuccess(res, 'Logout successful.', null, 200);
     } catch (error: any) {
-      res.clearCookie('refreshToken', getRefreshCookieOptions(req));
+      res.clearCookie('refreshToken', getClearCookieOptions(req));
       return sendSuccess(res, 'Logout completed.', null, 200);
     }
   }

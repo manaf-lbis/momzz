@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import { randomBytes } from 'crypto';
 import Sale from '../../models/Sale.model';
 import Task from '../../models/Task.model';
 import Category from '../../models/Category.model';
@@ -287,7 +288,7 @@ export const uploadCatalogImage = async (req: Request, res: Response) => {
 const generateInvoiceNumber = () => {
   const d = new Date();
   const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  const randomSuffix = randomBytes(3).toString('hex').toUpperCase();
   return `INV-${dateStr}-${randomSuffix}`;
 };
 

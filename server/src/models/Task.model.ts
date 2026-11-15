@@ -56,6 +56,7 @@ const TaskSchema: Schema = new Schema(
 TaskSchema.index({ jobCardId: 1 });
 TaskSchema.index({ status: 1, completedBy: 1 });
 TaskSchema.index({ status: 1, completedAt: -1 });
+TaskSchema.index({ completedBy: 1, status: 1, completedAt: -1 });
 
 export const Task = mongoose.model<ITask>('Task', TaskSchema);
 export default Task;

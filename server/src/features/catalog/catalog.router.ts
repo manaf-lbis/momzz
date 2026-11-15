@@ -42,7 +42,7 @@ router.post('/upload', adminMiddleware, uploadCatalogImage);
 router.get('/sales', getSales);
 router.get('/sales/:id', getSaleById);
 router.post('/sales', createSale);
-router.patch('/sales/:id', updateSale);
-router.post('/sales/:id/cancel', cancelSale);
+router.patch('/sales/:id', adminMiddleware, updateSale);
+router.post('/sales/:id/cancel', adminMiddleware, cancelSale);
 
 export default router;

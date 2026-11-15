@@ -836,7 +836,29 @@ export class JobRepository {
       { new: true }
     );
 
-    // Keep the job card and its tasks so the record can be restored or audited later.
+    if (job) {
+      // Restore inventory stock for all tracked products associated with this job card's tasks
+      try {
+        const tasks = await Task.find({
+          jobCardId,
+          inventoryItem: { $ne: null },
+          itemType: 'PRODUCT',
+          stockTracked: { $ne: false },
+        });
+
+        for (const task of tasks) {
+          if (task.inventoryItem) {
+            await catalogRepository.restoreStock(
+              task.inventoryItem.toString(),
+              task.quantityUsed || 1
+            );
+          }
+        }
+      } catch (err) {
+        console.error('[JobRepository] Error restoring inventory stock on job deletion:', err);
+      }
+    }
+
     return !!job;
   }
 }
