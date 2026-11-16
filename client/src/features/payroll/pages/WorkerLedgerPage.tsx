@@ -665,20 +665,19 @@ export const WorkerLedgerPage: React.FC = () => {
           title={worker?.name || (!isAdmin ? user?.name : undefined) || 'Worker Ledger'}
           description="Payroll & daily ledger"
           icon={
-            (worker?.profileImageUrl || (!isAdmin ? user?.profileImageUrl : undefined)) ? (
-              <img
-                src={worker?.profileImageUrl || (!isAdmin ? user?.profileImageUrl : undefined)}
-                alt={worker?.name || user?.name || 'Worker'}
-                className="w-full h-full object-cover rounded-lg"
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = 'none';
-                }}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center font-bold text-xs">
-                {(worker?.name || user?.name || 'W')?.charAt(0)?.toUpperCase()}
-              </div>
-            )
+            <div className="relative w-full h-full flex items-center justify-center font-bold text-xs bg-gradient-to-br from-amber-500 to-amber-700 text-white rounded-lg overflow-hidden">
+              <span>{(worker?.name || user?.name || 'W')?.charAt(0)?.toUpperCase()}</span>
+              {(worker?.profileImageUrl || (!isAdmin ? user?.profileImageUrl : undefined)) && (
+                <img
+                  src={worker?.profileImageUrl || (!isAdmin ? user?.profileImageUrl : undefined)}
+                  alt={worker?.name || user?.name || 'Worker'}
+                  className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLElement).style.display = 'none';
+                  }}
+                />
+              )}
+            </div>
           }
           badge={
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -700,17 +699,6 @@ export const WorkerLedgerPage: React.FC = () => {
           }
           actions={
             <div className="hidden sm:flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setPaySlipTargetMonth(activeMonthItem || monthlyBreakdown[0] || null);
-                  setShowPaySlipModal(true);
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition active:scale-95"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>Pay Slip</span>
-              </button>
               <button
                 onClick={() => setShowOtModal(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-xs transition active:scale-95"
@@ -737,16 +725,6 @@ export const WorkerLedgerPage: React.FC = () => {
                   >
                     <Gift className="w-3.5 h-3.5 text-amber-500" />
                     <span>Incentive</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSettleAmount(kpis.netPayable);
-                      setShowSettleModal(true);
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 shadow-xs transition active:scale-95"
-                  >
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Settle Dues</span>
                   </button>
                 </>
               )}
@@ -909,11 +887,6 @@ export const WorkerLedgerPage: React.FC = () => {
                   <span className="text-sm font-black text-slate-900 dark:text-white">
                     {activeMonthItem.monthLabel}
                   </span>
-                  <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md bg-amber-500/10">
-                    {activeMonthItem.wageType === 'MONTHLY'
-                      ? `₹${(activeMonthItem.monthlySalary || worker?.monthlySalary || 0).toLocaleString('en-IN')}/mo`
-                      : `₹${worker?.dailyWage !== undefined ? worker.dailyWage : user?.dailyWage || 0}/day`}
-                  </span>
                   {activeMonthItem.isSettled ? (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
                       Settled
@@ -924,18 +897,6 @@ export const WorkerLedgerPage: React.FC = () => {
                     </span>
                   )}
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaySlipTargetMonth(activeMonthItem);
-                    setShowPaySlipModal(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition active:scale-95"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>Send Pay Slip</span>
-                </button>
               </div>
 
               {/* Month Compact Numbers Strip */}
@@ -1748,8 +1709,14 @@ export const WorkerLedgerPage: React.FC = () => {
 
       {/* ── MODAL: MOBILE QUICK ACTIONS SHEET ── */}
       {showMobileActionSheet && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn sm:hidden">
-          <div className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 pb-safe mx-1 rounded-3xl p-4 space-y-3 shadow-2xl">
+        <div
+          onClick={() => setShowMobileActionSheet(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn sm:hidden"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 pb-safe mx-1 rounded-3xl p-4 space-y-3 shadow-2xl"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto mt-0.5 mb-2 shrink-0" />
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/10">
               <span className="text-xs font-bold uppercase tracking-wider font-mono text-slate-500">
@@ -1834,8 +1801,14 @@ export const WorkerLedgerPage: React.FC = () => {
 
       {/* ── MODAL 1: WORKER CLAIM OVERTIME (Responsive Bottom-Sheet) ── */}
       {showOtModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 pb-safe mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl">
+        <div
+          onClick={() => setShowOtModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 pb-safe mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -1938,8 +1911,14 @@ export const WorkerLedgerPage: React.FC = () => {
 
       {/* ── MODAL 2: ADMIN GIVE ADVANCE ── */}
       {showAdvanceModal && worker && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
+        <div
+          onClick={() => setShowAdvanceModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -2019,8 +1998,14 @@ export const WorkerLedgerPage: React.FC = () => {
 
       {/* ── MODAL 3: ADMIN SETTLE DUES ── */}
       {showSettleModal && worker && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
+        <div
+          onClick={() => setShowSettleModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -2070,7 +2055,7 @@ export const WorkerLedgerPage: React.FC = () => {
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as any)}
-                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-zinc-900 dark:[&>option]:text-white"
                 >
                   <option value="CASH">Cash</option>
                   <option value="UPI">UPI</option>
@@ -2127,8 +2112,14 @@ export const WorkerLedgerPage: React.FC = () => {
 
       {/* ── MODAL 4: ADMIN AWARD INCENTIVE ── */}
       {showIncentiveModal && worker && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
+        <div
+          onClick={() => setShowIncentiveModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -2213,8 +2204,14 @@ export const WorkerLedgerPage: React.FC = () => {
 
       {/* ── MODAL 5: EDIT OR REMOVE LEAVE ── */}
       {showEditLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
+        <div
+          onClick={() => setShowEditLeaveModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -2318,8 +2315,14 @@ export const WorkerLedgerPage: React.FC = () => {
 
       {/* ── MODAL 6: EDIT OR REMOVE OT CLAIM ── */}
       {showEditOtModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
+        <div
+          onClick={() => setShowEditOtModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -2436,8 +2439,17 @@ export const WorkerLedgerPage: React.FC = () => {
 
       {/* ── MODAL 7: SHARE SETTLEMENT PAY SLIP ── */}
       {shareSettlement && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe">
+        <div
+          onClick={() => {
+            setShareSettlement(null);
+            setCopiedSlip(false);
+          }}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 mb-20 sm:mb-0 mx-1 sm:mx-0 rounded-3xl sm:rounded-2xl p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl pb-safe"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">

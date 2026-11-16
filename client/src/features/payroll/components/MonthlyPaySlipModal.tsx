@@ -134,7 +134,10 @@ Issued on ${todayStr} • Momzz Garage Management System`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-fadeIn"
+    >
       {/* Print-specific style */}
       <style>{`
         @media print {
@@ -162,7 +165,10 @@ Issued on ${todayStr} • Momzz Garage Management System`;
         }
       `}</style>
 
-      <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(88vh-4rem)] sm:max-h-[92vh] mb-20 sm:mb-0 pb-safe">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(88vh-4rem)] sm:max-h-[92vh] mb-20 sm:mb-0 pb-safe"
+      >
         {/* Mobile Drag Indicator */}
         <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-2.5 mb-1 shrink-0" />
 

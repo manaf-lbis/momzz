@@ -498,11 +498,17 @@ export const PayrollDashboardPage: React.FC = () => {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-xs flex items-center justify-center shadow-2xs">
-                          {claim.workerProfileImageUrl ? (
-                            <img src={claim.workerProfileImageUrl} alt={claim.workerName} className="w-full h-full object-cover" />
-                          ) : (
-                            <span>{claim.workerName?.charAt(0)?.toUpperCase()}</span>
+                        <div className="relative w-8 h-8 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-xs flex items-center justify-center shadow-2xs">
+                          <span>{claim.workerName?.charAt(0)?.toUpperCase()}</span>
+                          {claim.workerProfileImageUrl && (
+                            <img
+                              src={claim.workerProfileImageUrl}
+                              alt={claim.workerName}
+                              className="absolute inset-0 w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = 'none';
+                              }}
+                            />
                           )}
                         </div>
                         <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
@@ -702,18 +708,17 @@ export const PayrollDashboardPage: React.FC = () => {
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-xs flex items-center justify-center group-hover:scale-105 transition-transform">
-                            {w.profileImageUrl ? (
+                          <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-xs flex items-center justify-center group-hover:scale-105 transition-transform">
+                            <span>{w.name?.charAt(0)?.toUpperCase()}</span>
+                            {w.profileImageUrl && (
                               <img
                                 src={w.profileImageUrl}
                                 alt={w.name}
-                                className="w-full h-full object-cover"
+                                className="absolute inset-0 w-full h-full object-cover"
                                 onError={(e) => {
                                   (e.currentTarget as HTMLElement).style.display = 'none';
                                 }}
                               />
-                            ) : (
-                              <span>{w.name?.charAt(0)?.toUpperCase()}</span>
                             )}
                           </div>
                           <div className="min-w-0">
@@ -843,18 +848,17 @@ export const PayrollDashboardPage: React.FC = () => {
                   {/* Top Row: Worker Info & Wage */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
-                        {w.profileImageUrl ? (
+                      <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                        <span>{w.name?.charAt(0)?.toUpperCase()}</span>
+                        {w.profileImageUrl && (
                           <img
                             src={w.profileImageUrl}
                             alt={w.name}
-                            className="w-full h-full object-cover"
+                            className="absolute inset-0 w-full h-full object-cover"
                             onError={(e) => {
                               (e.currentTarget as HTMLElement).style.display = 'none';
                             }}
                           />
-                        ) : (
-                          <span>{w.name?.charAt(0)?.toUpperCase()}</span>
                         )}
                       </div>
                       <div className="min-w-0">
@@ -994,8 +998,14 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL 1: MARK BULK LEAVE (Responsive Bottom-Sheet) ── */}
       {showBulkLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+        <div
+          onClick={() => setShowBulkLeaveModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0"
+          >
             {/* Mobile Drag Handle */}
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
@@ -1189,8 +1199,14 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL 2: RECORD ADVANCE ── */}
       {showAdvanceModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+        <div
+          onClick={() => setShowAdvanceModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -1215,7 +1231,7 @@ export const PayrollDashboardPage: React.FC = () => {
                   required
                   value={advanceWorkerId}
                   onChange={(e) => setAdvanceWorkerId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-zinc-900 dark:[&>option]:text-white"
                 >
                   <option value="">-- Choose Staff Member --</option>
                   {workers.map((w) => (
@@ -1290,8 +1306,14 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL: GIVE INCENTIVE (Reflects directly on payable & ledger) ── */}
       {showIncentiveModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+        <div
+          onClick={() => setShowIncentiveModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -1316,7 +1338,7 @@ export const PayrollDashboardPage: React.FC = () => {
                   required
                   value={incentiveWorkerId}
                   onChange={(e) => setIncentiveWorkerId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-zinc-900 dark:[&>option]:text-white"
                 >
                   <option value="">-- Choose Staff Member --</option>
                   {workers.map((w) => (
@@ -1395,8 +1417,14 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL 3: SETTLE DUES ── */}
       {showSettleModal && selectedWorker && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+        <div
+          onClick={() => setShowSettleModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -1446,7 +1474,7 @@ export const PayrollDashboardPage: React.FC = () => {
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as any)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-zinc-900 dark:[&>option]:text-white"
                 >
                   <option value="CASH">Cash</option>
                   <option value="UPI">UPI</option>
@@ -1503,8 +1531,14 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL 4: EDIT WAGE OR MONTHLY SALARY ── */}
       {showWageModal && selectedWorker && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-sm bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+        <div
+          onClick={() => setShowWageModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-sm bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -1638,8 +1672,14 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL 5: GARAGE HOLIDAYS ── */}
       {showHolidayModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0">
+        <div
+          onClick={() => setShowHolidayModal(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-3xl sm:rounded-2xl p-4 sm:p-6 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto space-y-4 shadow-2xl mx-1 sm:mx-0"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-3">
@@ -1742,8 +1782,14 @@ export const PayrollDashboardPage: React.FC = () => {
 
       {/* ── MODAL: ADMIN REJECT OVERTIME MODAL ── */}
       {rejectingClaim && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl glass-modern-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-4 sm:p-5 mb-20 sm:mb-0 pb-safe shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div
+          onClick={() => setRejectingClaim(null)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl glass-modern-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-4 sm:p-5 mb-20 sm:mb-0 pb-safe shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150"
+          >
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-0.5 mb-2 shrink-0" />
 
             <div className="flex items-start justify-between">

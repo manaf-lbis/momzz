@@ -88,6 +88,17 @@
     background-color: #080911;
     color: #f8fafc;
   }
+
+  /* Universal styling for select options across all browsers & dark mode */
+  select option {
+    background-color: #ffffff;
+    color: #0f172a;
+  }
+  .dark select option,
+  html.dark select option {
+    background-color: #18181b !important;
+    color: #f8fafc !important;
+  }
 }
 
 @layer components {

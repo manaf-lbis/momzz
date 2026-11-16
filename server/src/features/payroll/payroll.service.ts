@@ -794,11 +794,13 @@ export class PayrollService {
     let runningBalance = params.includeSettledHistory !== false ? 0 : previousBalanceCarriedForward;
     const dayEntries: SingleSheetDayEntry[] = [];
 
-    // Pre-calculate total settlement payouts in this history/period to drive FIFO settlement allocation
+    // Pre-calculate total settlement payouts to drive FIFO settlement allocation
+    // If a last settlement exists, only settlements made AFTER the lastSettledDate are applied
+    const relevantSettlementTxs = lastSettledDateStr
+      ? transactions.filter((t) => t.type === 'PAYOUT_SETTLEMENT' && formatDateStr(new Date(t.date)) > lastSettledDateStr)
+      : transactions.filter((t) => t.type === 'PAYOUT_SETTLEMENT');
     const totalSettlementsInPeriod = round2(
-      transactions
-        .filter((t) => t.type === 'PAYOUT_SETTLEMENT')
-        .reduce((sum, t) => sum + (t.amount || 0), 0)
+      relevantSettlementTxs.reduce((sum, t) => sum + (t.amount || 0), 0)
     );
     let remainingSettlementCredit = totalSettlementsInPeriod;
 
@@ -986,7 +988,15 @@ export class PayrollService {
           ? 0.5
           : 0;
 
-      if (remainingSettlementCredit >= dayNetEarned && dayNetEarned > 0) {
+      if (lastSettledDateStr && dStr <= lastSettledDateStr) {
+        // Shift is on or before the last settlement date: completely settled!
+        isDaySettled = true;
+        dayUnsettledGross = 0;
+        dayUnsettledDeduction = 0;
+        dayUnsettledNetWage = 0;
+        dayUnsettledOtAmount = 0;
+        dayUnsettledWorkFraction = 0;
+      } else if (remainingSettlementCredit >= dayNetEarned && dayNetEarned > 0) {
         // Shift fully covered by settlement payout
         remainingSettlementCredit = round2(remainingSettlementCredit - dayNetEarned);
         isDaySettled = true;
@@ -1066,13 +1076,15 @@ export class PayrollService {
       });
     }
 
-    // In a single-sheet ledger, the worker's true net unsettled dues at the end of the calculation stream is the cumulative ledger balance
-    const finalLedgerBalance = dayEntries.length > 0
-      ? dayEntries[dayEntries.length - 1].runningCumulativeBalance
-      : round2(previousBalanceCarriedForward + totalUnsettledIncentives - totalUnsettledAdvances);
-
-    const netPayable = Math.max(0, round2(finalLedgerBalance));
-    const advanceOverhang = finalLedgerBalance < 0 ? Math.abs(round2(finalLedgerBalance)) : 0;
+    // In a single-sheet ledger, calculate true net unsettled dues consistently: wage + ot - advance
+    const calculatedUnsettledNet = Math.max(
+      0,
+      round2(unsettledNetBaseWages + unsettledApprovedOtAmount + totalUnsettledIncentives - totalUnsettledAdvances)
+    );
+    const netPayable = calculatedUnsettledNet;
+    const advanceOverhang = (unsettledNetBaseWages + unsettledApprovedOtAmount + totalUnsettledIncentives) < totalUnsettledAdvances
+      ? round2(totalUnsettledAdvances - (unsettledNetBaseWages + unsettledApprovedOtAmount + totalUnsettledIncentives))
+      : 0;
 
     const unsettledEarnings = round2(unsettledNetBaseWages + unsettledApprovedOtAmount + totalUnsettledIncentives);
 
@@ -1735,6 +1747,19 @@ export class PayrollService {
                 ? Boolean(worker.monthlySalary && worker.monthlySalary > 0)
                 : Boolean(worker.dailyWage && worker.dailyWage > 0);
 
+            const isDaily = worker.wageType !== 'MONTHLY';
+            const unsettledGross = isDaily
+              ? Math.max(0, (snap.unsettledGross ?? 0) - (snap.unsettledDeductions ?? 0))
+              : (snap.unsettledGross ?? 0);
+            const unsettledDeductions = isDaily ? 0 : (snap.unsettledDeductions ?? 0);
+            const unsettledOtAmount = snap.unsettledOtAmount ?? 0;
+            const unsettledAdvances = snap.unsettledAdvances ?? 0;
+            const unsettledIncentives = snap.unsettledIncentives ?? 0;
+            const netPayable = Math.max(
+              0,
+              round2(unsettledGross - unsettledDeductions + unsettledOtAmount + unsettledIncentives - unsettledAdvances)
+            );
+
             return {
               workerId: worker._id,
               name: worker.name,
@@ -1748,15 +1773,12 @@ export class PayrollService {
               lastSettledDate: worker.lastSettledDate,
               firstPayrollDate: snap.firstPayrollDate || getWorkerFirstPayrollDate(worker) || null,
               hasWageAssigned,
-              unsettledGross:
-                worker.wageType !== 'MONTHLY'
-                  ? Math.max(0, (snap.unsettledGross ?? 0) - (snap.unsettledDeductions ?? 0))
-                  : (snap.unsettledGross ?? 0),
-              unsettledDeductions: worker.wageType !== 'MONTHLY' ? 0 : (snap.unsettledDeductions ?? 0),
-              unsettledOtAmount: snap.unsettledOtAmount ?? 0,
-              unsettledAdvances: snap.unsettledAdvances ?? 0,
-              unsettledIncentives: snap.unsettledIncentives ?? 0,
-              netPayable: snap.netPayable ?? 0,
+              unsettledGross,
+              unsettledDeductions,
+              unsettledOtAmount,
+              unsettledAdvances,
+              unsettledIncentives,
+              netPayable,
               advanceOverhang: snap.advanceOverhang ?? 0,
               unsettledWorkingDays: snap.unsettledWorkingDays ?? 0,
               pendingOtCount: pendingOtWorkerMap.get(worker._id.toString()) || 0,
@@ -1774,6 +1796,17 @@ export class PayrollService {
               ? Boolean(worker.monthlySalary && worker.monthlySalary > 0)
               : Boolean(worker.dailyWage && worker.dailyWage > 0));
 
+          const isDaily = worker.wageType !== 'MONTHLY';
+          const unsettledGross =
+            isDaily
+              ? (sheet.kpis.unsettledNetBaseWages ?? Math.max(0, (sheet.kpis.unsettledGrossWages || 0) - (sheet.kpis.unsettledLeaveDeductions || 0)))
+              : (sheet.kpis.unsettledGrossWages ?? sheet.kpis.grossWages);
+          const unsettledDeductions =
+            isDaily
+              ? 0
+              : (sheet.kpis.unsettledLeaveDeductions ?? sheet.kpis.totalLeaveDeductions);
+          const unsettledOtAmount = sheet.kpis.unsettledApprovedOtAmount ?? sheet.kpis.totalApprovedOtAmount;
+
           return {
             workerId: worker._id,
             name: worker.name,
@@ -1787,18 +1820,21 @@ export class PayrollService {
             lastSettledDate: worker.lastSettledDate,
             firstPayrollDate: (sheet.worker as any).firstPayrollDate || getWorkerFirstPayrollDate(worker) || null,
             hasWageAssigned,
-            unsettledGross:
-              worker.wageType !== 'MONTHLY'
-                ? (sheet.kpis.unsettledNetBaseWages ?? Math.max(0, (sheet.kpis.unsettledGrossWages || 0) - (sheet.kpis.unsettledLeaveDeductions || 0)))
-                : (sheet.kpis.unsettledGrossWages ?? sheet.kpis.grossWages),
-            unsettledDeductions:
-              worker.wageType !== 'MONTHLY'
-                ? 0
-                : (sheet.kpis.unsettledLeaveDeductions ?? sheet.kpis.totalLeaveDeductions),
-            unsettledOtAmount: sheet.kpis.unsettledApprovedOtAmount ?? sheet.kpis.totalApprovedOtAmount,
+            unsettledGross,
+            unsettledDeductions,
+            unsettledOtAmount,
             unsettledAdvances: sheet.kpis.totalUnsettledAdvances,
             unsettledIncentives: (sheet.kpis as any).totalUnsettledIncentives || 0,
-            netPayable: sheet.kpis.netPayable,
+            netPayable: Math.max(
+              0,
+              round2(
+                unsettledGross -
+                  unsettledDeductions +
+                  unsettledOtAmount +
+                  ((sheet.kpis as any).totalUnsettledIncentives || 0) -
+                  sheet.kpis.totalUnsettledAdvances
+              )
+            ),
             advanceOverhang: sheet.kpis.advanceOverhang || 0,
             unsettledWorkingDays: sheet.kpis.unsettledWorkingDays || 0,
             pendingOtCount: pendingOtWorkerMap.get(worker._id.toString()) || 0,

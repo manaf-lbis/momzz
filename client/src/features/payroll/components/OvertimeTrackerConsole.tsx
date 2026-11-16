@@ -293,15 +293,17 @@ export const OvertimeTrackerConsole: React.FC<OvertimeTrackerConsoleProps> = ({
                 {/* Header row: Worker info + Status badge */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-xs flex items-center justify-center shadow-2xs">
-                      {claim.workerProfileImageUrl ? (
+                    <div className="relative w-8 h-8 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-amber-500 to-amber-700 text-white font-bold text-xs flex items-center justify-center shadow-2xs">
+                      <span>{claim.workerName?.charAt(0)?.toUpperCase() || 'W'}</span>
+                      {claim.workerProfileImageUrl && (
                         <img
                           src={claim.workerProfileImageUrl}
                           alt={claim.workerName}
-                          className="w-full h-full object-cover"
+                          className="absolute inset-0 w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
                         />
-                      ) : (
-                        <span>{claim.workerName?.charAt(0)?.toUpperCase() || 'W'}</span>
                       )}
                     </div>
                     <div className="min-w-0">
@@ -475,8 +477,14 @@ export const OvertimeTrackerConsole: React.FC<OvertimeTrackerConsoleProps> = ({
 
       {/* ── ADMIN REJECT OVERTIME MODAL ── */}
       {rejectingClaim && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md rounded-t-3xl sm:rounded-2xl glass-modern-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-4 sm:p-5 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150">
+        <div
+          onClick={() => setRejectingClaim(null)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-t-3xl sm:rounded-2xl glass-modern-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-4 sm:p-5 mb-20 sm:mb-0 pb-safe max-h-[calc(85vh-5rem)] overflow-y-auto shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150"
+          >
             {/* Mobile Drag Indicator */}
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20 mx-auto sm:hidden mt-1 mb-2 shrink-0" />
 
