@@ -126,7 +126,7 @@ export const LeftPanel: React.FC = () => {
       exact: true,
     },
     {
-      label: 'Spare Parts',
+      label: 'Stocks',
       path: '/inventory',
       icon: Package,
       exact: false,
@@ -167,7 +167,7 @@ export const LeftPanel: React.FC = () => {
       exact: false,
     },
     {
-      label: 'Add Inventory',
+      label: 'Add Stock Item',
       path: '/inventory/new',
       icon: PackagePlus,
       exact: true,

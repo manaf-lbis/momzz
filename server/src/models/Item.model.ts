@@ -5,10 +5,17 @@ export interface IItem extends Document {
   category: mongoose.Types.ObjectId;
   itemType: 'PRODUCT' | 'SERVICE';
   price: number;
+  costPrice?: number;
   stockQuantity?: number;
   trackStock: boolean;
   minimumStockQuantity?: number;
   sku?: string;
+  brand?: string;
+  unit?: string;
+  location?: string;
+  compatibleVehicles?: string[];
+  yearFrom?: number | string;
+  yearTo?: number | string;
   thumbnailUrl: string;
   images: string[];
   description?: string;
@@ -21,10 +28,17 @@ const ItemSchema = new Schema<IItem>({
   category: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
   itemType: { type: String, enum: ['PRODUCT', 'SERVICE'], required: true },
   price: { type: Number, required: true, min: 0 },
+  costPrice: { type: Number, min: 0, default: 0 },
   stockQuantity: { type: Number, min: 0, default: 0 },
   trackStock: { type: Boolean, default: true },
   minimumStockQuantity: { type: Number, min: 0, default: 0 },
   sku: { type: String, unique: true, sparse: true, trim: true },
+  brand: { type: String, trim: true, default: '' },
+  unit: { type: String, trim: true, default: 'pcs' },
+  location: { type: String, trim: true, default: '' },
+  compatibleVehicles: { type: [String], default: [] },
+  yearFrom: { type: Schema.Types.Mixed, default: null },
+  yearTo: { type: Schema.Types.Mixed, default: null },
   thumbnailUrl: { type: String, default: '' },
   images: { type: [String], default: [] },
   description: { type: String, trim: true, default: '' },

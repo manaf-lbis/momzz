@@ -835,7 +835,7 @@ export const Dashboard: React.FC = () => {
                     <Package className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div>
-                    <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight">Parts Inventory</p>
+                    <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight">Stock Inventory</p>
                     <p className="text-[10px] sm:text-xs font-mono text-slate-400 dark:text-slate-500">Catalog & stock levels</p>
                   </div>
                 </div>
@@ -846,7 +846,7 @@ export const Dashboard: React.FC = () => {
 
               <div className="flex items-center gap-1.5 sm:gap-2 pt-2.5 sm:pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
                 <span className="text-[10px] sm:text-xs font-mono text-sky-700 dark:text-sky-300 bg-sky-500/10 px-1.5 py-0.5 sm:px-2 rounded-md font-semibold">
-                  Spares
+                  Stocks
                 </span>
                 <span className="text-[10px] sm:text-xs font-mono text-sky-700 dark:text-sky-300 bg-sky-500/10 px-1.5 py-0.5 sm:px-2 rounded-md font-semibold">
                   Consumables

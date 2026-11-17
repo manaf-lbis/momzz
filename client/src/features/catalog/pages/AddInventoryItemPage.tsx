@@ -1,12 +1,24 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  Barcode,
+  Calendar,
+  Car,
+  Check,
+  ChevronDown,
+  ExternalLink,
   FolderPlus,
   ImagePlus,
+  Info,
+  Layers,
+  MapPin,
   Package,
   Plus,
+  Sparkles,
   Star,
+  Tag,
   Trash2,
+  TrendingUp,
   Wrench,
   X,
 } from 'lucide-react';
@@ -25,6 +37,29 @@ import { findDuplicateCandidates } from '../../../shared/utils/searchAlgorithm';
 const labelStyle =
   'block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5';
 
+// Popular Indian vehicle platform families & models for 1-click automotive compatibility
+const POPULAR_VEHICLE_SUGGESTIONS = [
+  { name: 'Maruti Swift', group: 'Hatchback' },
+  { name: 'Maruti Baleno', group: 'Platform Twin' },
+  { name: 'Toyota Glanza', group: 'Platform Twin' },
+  { name: 'Maruti Brezza', group: 'Platform Twin' },
+  { name: 'Toyota Urban Cruiser', group: 'Platform Twin' },
+  { name: 'Maruti Dzire', group: 'Sedan' },
+  { name: 'Hyundai i20', group: 'Hatchback' },
+  { name: 'Hyundai Creta', group: 'Platform Twin' },
+  { name: 'Kia Seltos', group: 'Platform Twin' },
+  { name: 'Hyundai Venue', group: 'Platform Twin' },
+  { name: 'Kia Sonet', group: 'Platform Twin' },
+  { name: 'Tata Nexon', group: 'SUV' },
+  { name: 'Tata Punch', group: 'Micro SUV' },
+  { name: 'Mahindra Thar', group: '4x4' },
+  { name: 'Mahindra Scorpio-N', group: 'SUV' },
+  { name: 'Toyota Innova Crysta', group: 'MPV' },
+  { name: 'Honda City', group: 'Sedan' },
+];
+
+const COMMON_UNITS = ['pcs', 'set', 'pair', 'ltr', 'box', 'kit', 'kg', 'meter'];
+
 export const AddInventoryItemPage: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,35 +68,51 @@ export const AddInventoryItemPage: React.FC = () => {
   const [form, setForm] = useState({
     title: '',
     price: '',
+    costPrice: '',
     itemType: 'PRODUCT' as 'PRODUCT' | 'SERVICE',
     categoryId: '',
     stockQuantity: '10',
     minimumStockQuantity: '2',
+    sku: '',
+    brand: '',
+    unit: 'pcs',
+    location: '',
+    yearFrom: '',
+    yearTo: '',
     description: '',
   });
 
-  const { data: categoryData, refetch: refetchCategories } = useGetCategoriesQuery();
+  // Compatible Vehicles Tag List
+  const [compatibleVehicles, setCompatibleVehicles] = useState<string[]>([]);
+  const [customVehicleInput, setCustomVehicleInput] = useState('');
+  const [showPlatformTwinHelp, setShowPlatformTwinHelp] = useState(false);
+
+  // Real-time duplicate & related search
   const trimmedDupQuery = form.title.trim();
+  const { data: categoryData, refetch: refetchCategories } = useGetCategoriesQuery();
   const { data: catalogData } = useGetCatalogQuery(
-    { q: trimmedDupQuery, limit: 20 },
+    { q: trimmedDupQuery.length >= 2 ? trimmedDupQuery : undefined, limit: 30 },
     { skip: trimmedDupQuery.length < 2 }
   );
+
   const [createCatalogItem, { isLoading: isCreating }] = useCreateCatalogItemMutation();
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
 
   const categories = categoryData?.data || [];
   const existingItems = catalogData?.data || [];
 
-  // Duplicate candidates check
+  // Duplicate candidates check with high sensitivity
   const duplicateCandidates = useMemo(() => {
-    if (!form.title.trim() || form.title.trim().length < 2) return [];
+    if (!trimmedDupQuery || trimmedDupQuery.length < 2) return [];
     return findDuplicateCandidates(
-      form.title,
+      trimmedDupQuery,
       existingItems,
       (item) => item.title,
-      0.82
+      0.72
     );
-  }, [form.title, existingItems]);
+  }, [trimmedDupQuery, existingItems]);
+
+  const [dismissDuplicateNotice, setDismissDuplicateNotice] = useState(false);
 
   // Multi-image state
   const [images, setImages] = useState<string[]>([]);
@@ -75,8 +126,65 @@ export const AddInventoryItemPage: React.FC = () => {
 
   const [error, setError] = useState('');
 
+  // Auto-calculated profit and margin percentage
+  const profitMetrics = useMemo(() => {
+    const sell = Number(form.price) || 0;
+    const cost = Number(form.costPrice) || 0;
+    if (sell <= 0) return null;
+    const profit = sell - cost;
+    const margin = cost > 0 ? ((profit / cost) * 100).toFixed(1) : '100.0';
+    return {
+      profit,
+      margin,
+      isProfitable: profit >= 0,
+    };
+  }, [form.price, form.costPrice]);
+
   const handleFieldChange = (key: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+    if (key === 'title') {
+      setDismissDuplicateNotice(false);
+    }
+  };
+
+  // Add / remove vehicle compatibility tags
+  const handleAddVehicleTag = (vehicleName: string) => {
+    const trimmed = vehicleName.trim();
+    if (!trimmed) return;
+    if (!compatibleVehicles.some((v) => v.toLowerCase() === trimmed.toLowerCase())) {
+      setCompatibleVehicles((prev) => [...prev, trimmed]);
+    }
+    setCustomVehicleInput('');
+  };
+
+  const handleRemoveVehicleTag = (index: number) => {
+    setCompatibleVehicles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleTogglePopularVehicle = (name: string) => {
+    if (compatibleVehicles.some((v) => v.toLowerCase() === name.toLowerCase())) {
+      setCompatibleVehicles((prev) => prev.filter((v) => v.toLowerCase() !== name.toLowerCase()));
+    } else {
+      setCompatibleVehicles((prev) => [...prev, name]);
+    }
+  };
+
+  // Preset Year Ranges
+  const handleApplyYearPreset = (from: string, to: string) => {
+    setForm((prev) => ({ ...prev, yearFrom: from, yearTo: to }));
+  };
+
+  // Auto-generate enterprise SKU
+  const handleAutoGenerateSku = () => {
+    const titleSlug = form.title
+      .trim()
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 4)
+      .toUpperCase();
+    const brandSlug = (form.brand || 'STK').slice(0, 3).toUpperCase();
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const generated = `${brandSlug}-${titleSlug || 'ITEM'}-${rand}`;
+    setForm((prev) => ({ ...prev, sku: generated }));
   };
 
   const handleImageFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,7 +233,7 @@ export const AddInventoryItemPage: React.FC = () => {
     e.preventDefault();
     setError('');
     if (!form.title.trim() || !form.price) {
-      setError('Title and price are required.');
+      setError('Title and selling price are required.');
       return;
     }
 
@@ -133,10 +241,18 @@ export const AddInventoryItemPage: React.FC = () => {
       await createCatalogItem({
         title: form.title.trim(),
         price: Number(form.price),
+        costPrice: form.costPrice ? Number(form.costPrice) : 0,
         itemType: form.itemType,
         category: form.categoryId || undefined,
         categoryId: form.categoryId || undefined,
-        description: form.description,
+        sku: form.sku.trim() || undefined,
+        brand: form.brand.trim() || undefined,
+        unit: form.unit.trim() || 'pcs',
+        location: form.location.trim() || undefined,
+        compatibleVehicles,
+        yearFrom: form.yearFrom ? Number(form.yearFrom) || form.yearFrom : undefined,
+        yearTo: form.yearTo ? (form.yearTo.toLowerCase() === 'present' ? 'Present' : Number(form.yearTo) || form.yearTo) : undefined,
+        description: form.description.trim(),
         stockQuantity: form.itemType === 'PRODUCT' ? Number(form.stockQuantity || 0) : 0,
         minimumStockQuantity: form.itemType === 'PRODUCT' ? Number(form.minimumStockQuantity || 0) : 0,
         thumbnailUrl: images[thumbnailIndex] || undefined,
@@ -146,112 +262,233 @@ export const AddInventoryItemPage: React.FC = () => {
 
       navigate('/inventory');
     } catch (err: any) {
-      setError(err?.data?.message || 'Failed to create item.');
+      setError(err?.data?.message || 'Failed to create stock item.');
     }
   };
 
   return (
     <div className="min-h-screen glass-canvas text-slate-900 dark:text-white flex flex-col selection:bg-amber-400/20 transition-colors duration-200">
-      {/* Ambient background aura */}
       <div className="glass-ambient-glow" aria-hidden="true" />
-
       <Navbar glass />
 
-      <main className="app-container relative z-10 flex-1 py-4 pb-36 sm:pb-40 md:pb-16 max-w-3xl mx-auto space-y-4">
-        {/* Page Header with BackButton */}
-        <PageHeader
-          backTo="/inventory"
-          title="Add New Item"
-          description="Create a product or workshop service in the catalog"
-        />
+      <main className="app-container relative z-10 flex-1 py-4 sm:py-6 pb-36 sm:pb-40 md:pb-16 max-w-7xl mx-auto space-y-5">
+        {/* Enterprise Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200/80 dark:border-white/10 pb-4">
+          <PageHeader
+            backTo="/inventory"
+            title="Add New Stock Item"
+            description="Enterprise inventory catalog, multi-model vehicle compatibility & pricing management"
+          />
+
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => navigate('/inventory')}
+              className="px-4 py-2 rounded-xl glass-ghost-btn text-xs font-bold text-slate-700 dark:text-slate-300 active:scale-95 transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isCreating || !form.title.trim() || !form.price}
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl glass-gold-btn text-xs sm:text-sm font-black text-slate-950 shadow-md active:scale-95 transition disabled:opacity-50 cursor-pointer"
+            >
+              <Plus className="h-4 w-4 stroke-[2.5]" />
+              <span>{isCreating ? 'Saving Stock...' : 'Save Stock Item'}</span>
+            </button>
+          </div>
+        </div>
 
         {error && (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-2.5 shadow-xs animate-shake">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Classification Bento */}
-          <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3">
-            <label className={labelStyle}>Item Classification</label>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => handleFieldChange('itemType', 'PRODUCT')}
-                className={`flex items-center justify-center gap-2 rounded-2xl py-3 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer ${
-                  form.itemType === 'PRODUCT'
-                    ? 'bg-amber-400 text-slate-950 shadow-md font-black'
-                    : 'glass-ghost-btn text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                <Package className="h-4 w-4" /> Physical Product
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFieldChange('itemType', 'SERVICE')}
-                className={`flex items-center justify-center gap-2 rounded-2xl py-3 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer ${
-                  form.itemType === 'SERVICE'
-                    ? 'bg-violet-600 text-white shadow-md font-black'
-                    : 'glass-ghost-btn text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                <Wrench className="h-4 w-4" /> Workshop Service
-              </button>
-            </div>
-          </div>
-
-          {/* Basic Info Bento */}
-          <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-4">
-            <label className={labelStyle}>Core Details</label>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                Item Title *
-              </label>
-              <input
-                required
-                type="text"
-                value={form.title}
-                onChange={(e) => handleFieldChange('title', e.target.value)}
-                placeholder="e.g. Engine Oil 10W-40, Wheel Alignment"
-                className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none"
-              />
-              {duplicateCandidates.length > 0 && (
-                <div className="mt-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 p-3 flex items-start gap-2 text-xs">
-                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold text-amber-700 dark:text-amber-300">
-                      Similar item found: "{duplicateCandidates[0].item.title}"
-                    </span>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      An item with a similar name already exists in your inventory.
-                    </p>
-                  </div>
-                </div>
-              )}
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+          {/* ══════════ LEFT COLUMN (Main Data Entry) ══════════ */}
+          <div className="lg:col-span-8 space-y-5">
+            {/* 1. Classification Selector */}
+            <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <label className={labelStyle}>1. Stock Classification</label>
+                <span className="text-[11px] font-mono text-slate-400">
+                  {form.itemType === 'PRODUCT' ? 'Tracked Inventory' : 'Labor & Time'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleFieldChange('itemType', 'PRODUCT')}
+                  className={`flex items-center justify-center gap-2 rounded-2xl py-3 px-3 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer border ${
+                    form.itemType === 'PRODUCT'
+                      ? 'bg-amber-400 border-amber-400 text-slate-950 shadow-md font-black'
+                      : 'bg-white/60 dark:bg-white/[0.04] border-slate-200/80 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:border-amber-400/40'
+                  }`}
+                >
+                  <Package className="h-4 w-4 shrink-0" />
+                  <span>Physical Stock Item</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFieldChange('itemType', 'SERVICE')}
+                  className={`flex items-center justify-center gap-2 rounded-2xl py-3 px-3 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer border ${
+                    form.itemType === 'SERVICE'
+                      ? 'bg-violet-600 border-violet-600 text-white shadow-md font-black'
+                      : 'bg-white/60 dark:bg-white/[0.04] border-slate-200/80 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:border-violet-500/40'
+                  }`}
+                >
+                  <Wrench className="h-4 w-4 shrink-0" />
+                  <span>Workshop Service</span>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* 2. Primary Identifiers & Real-time Duplicate Avoidance */}
+            <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <label className={labelStyle}>2. Core Identifiers</label>
+                <span className="text-[10px] text-amber-500 font-semibold flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" /> Live Duplicate Checker Active
+                </span>
+              </div>
+
+              {/* Title with Live Duplicate Finder */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                  Selling Price (₹) *
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                  Stock Item Title *
                 </label>
                 <input
                   required
-                  type="number"
-                  min="0"
-                  value={form.price}
-                  onChange={(e) => handleFieldChange('price', e.target.value)}
-                  placeholder="0"
-                  className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => handleFieldChange('title', e.target.value)}
+                  placeholder="e.g. 5D All-Weather Floor Mats, Mobil 1 5W-40 Synthetic Oil, Brake Pads..."
+                  className="w-full rounded-xl glass-modern-input px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-400/40"
                 />
+
+                {/* ── LIVE DUPLICATE / RELATED STOCK SUGGESTIONS TRAY ── */}
+                {duplicateCandidates.length > 0 && !dismissDuplicateNotice && (
+                  <div className="mt-3 rounded-2xl border border-amber-500/40 bg-amber-500/[0.08] dark:bg-amber-500/[0.05] p-3 sm:p-4 space-y-2.5 animate-fadeIn">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-xs">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span>
+                          {duplicateCandidates.length} Similar / Existing Stock{duplicateCandidates.length > 1 ? 's' : ''} Found
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDismissDuplicateNotice(true)}
+                        className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline"
+                      >
+                        Dismiss warning
+                      </button>
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                      To prevent accidental duplicate stock records, check if the item already exists in your inventory:
+                    </p>
+
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {duplicateCandidates.map(({ item, reason, similarity }) => (
+                        <div
+                          key={item.id || item._id}
+                          className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-white/80 dark:bg-zinc-900/90 border border-amber-500/20 text-xs shadow-2xs"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {item.thumbnailUrl ? (
+                              <img
+                                src={item.thumbnailUrl}
+                                alt={item.title}
+                                className="w-9 h-9 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-white/10"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                                <Package className="w-4 h-4" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-900 dark:text-white truncate">
+                                {item.title}
+                              </p>
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+                                <span>{item.category?.name || 'General'}</span>
+                                {item.sku && <span>• SKU: {item.sku}</span>}
+                                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                  In Stock: {item.stockQuantity}
+                                </span>
+                              </div>
+                              <span className="text-[9px] text-amber-600 dark:text-amber-400 italic">
+                                {reason} ({(similarity * 100).toFixed(0)}% match)
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="font-mono font-bold text-slate-900 dark:text-white text-xs">
+                              ₹{item.price.toLocaleString('en-IN')}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/inventory/${item.id || item._id}`)}
+                              className="p-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-[10px] transition active:scale-95 flex items-center gap-1 shadow-xs"
+                              title="View & manage this existing item"
+                            >
+                              <span>View Item</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Category Selector */}
+              {/* Brand & SKU */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                    Brand / Manufacturer
+                  </label>
+                  <input
+                    type="text"
+                    value={form.brand}
+                    onChange={(e) => handleFieldChange('brand', e.target.value)}
+                    placeholder="e.g. Bosch, MGP, Motul, Uno Minda"
+                    className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                      SKU / Part Number
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAutoGenerateSku}
+                      className="text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                    >
+                      <Barcode className="w-3 h-3" /> Auto Gen
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={form.sku}
+                    onChange={(e) => handleFieldChange('sku', e.target.value.toUpperCase())}
+                    placeholder="e.g. BOSCH-0986-F00"
+                    className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Category Dropdown with inline creation */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
                   Category
                 </label>
                 <div className="flex gap-2">
@@ -260,14 +497,14 @@ export const AddInventoryItemPage: React.FC = () => {
                     onChange={(e) => handleFieldChange('categoryId', e.target.value)}
                     className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none"
                   >
-                    <option value="" className="text-slate-900 dark:bg-slate-900">General</option>
+                    <option value="" className="text-slate-900 dark:bg-zinc-900">General Stocks</option>
                     {categories.map((cat) => (
                       <option
                         key={cat.id || cat._id}
                         value={cat.id || cat._id}
-                        className="text-slate-900 dark:bg-slate-900"
+                        className="text-slate-900 dark:bg-zinc-900"
                       >
-                        {cat.name}
+                        {cat.name} ({cat.type})
                       </option>
                     ))}
                   </select>
@@ -283,15 +520,15 @@ export const AddInventoryItemPage: React.FC = () => {
 
                 {/* Inline New Category Form */}
                 {showCategoryForm && (
-                  <div className="mt-3 rounded-2xl border border-amber-400/30 bg-amber-400/5 p-3 space-y-2">
+                  <div className="mt-3 rounded-2xl border border-amber-400/30 bg-amber-400/5 p-3 space-y-2 animate-fadeIn">
                     <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-                      Create Category
+                      Create Stock Category
                     </p>
                     <input
                       type="text"
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="Category name"
+                      placeholder="Category name (e.g. Brake Systems, Body Kits)"
                       className="w-full rounded-xl glass-modern-input px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -306,9 +543,9 @@ export const AddInventoryItemPage: React.FC = () => {
                         onChange={(e) => setNewCategoryType(e.target.value as any)}
                         className="rounded-lg glass-modern-input px-2 py-1 text-[11px] text-slate-900 dark:text-white"
                       >
-                        <option value="BOTH" className="text-slate-900 dark:bg-slate-900">Both Products & Services</option>
-                        <option value="PRODUCT" className="text-slate-900 dark:bg-slate-900">Products Only</option>
-                        <option value="SERVICE" className="text-slate-900 dark:bg-slate-900">Services Only</option>
+                        <option value="BOTH" className="text-slate-900 dark:bg-zinc-900">Both Products & Services</option>
+                        <option value="PRODUCT" className="text-slate-900 dark:bg-zinc-900">Products Only</option>
+                        <option value="SERVICE" className="text-slate-900 dark:bg-zinc-900">Services Only</option>
                       </select>
                       <button
                         type="button"
@@ -316,142 +553,515 @@ export const AddInventoryItemPage: React.FC = () => {
                         onClick={handleCreateCategory}
                         className="rounded-lg glass-gold-btn px-3 py-1 text-xs font-bold text-slate-950 active:scale-95 transition disabled:opacity-50 cursor-pointer"
                       >
-                        {isCreatingCategory ? 'Saving...' : 'Add'}
+                        {isCreatingCategory ? 'Saving...' : 'Add Category'}
                       </button>
                     </div>
                   </div>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Stock Quantities (Products only) */}
-          {form.itemType === 'PRODUCT' && (
-            <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3">
-              <label className={labelStyle}>Inventory Stock</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* 3. Vehicle Compatibility & Year Range (Automotive Specialized) */}
+            <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-4 shadow-xs border-amber-400/20">
+              <div className="flex items-center justify-between">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                    Initial Stock Count
+                  <label className={labelStyle}>3. Vehicle Compatibility & Year Range</label>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Specify vehicle models, shared platform variants, and applicable model years
+                  </p>
+                </div>
+                <span className="p-1.5 rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
+                  <Car className="w-4 h-4" />
+                </span>
+              </div>
+
+              {/* Model Year Range Inputs */}
+              <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/70 dark:border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                    Model Year Range Suitability
+                  </span>
+                  {(form.yearFrom || form.yearTo) && (
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 font-mono text-[11px] font-bold">
+                      {form.yearFrom || 'All'} - {form.yearTo || 'Present'}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      Year From (Start Year)
+                    </label>
+                    <input
+                      type="text"
+                      value={form.yearFrom}
+                      onChange={(e) => handleFieldChange('yearFrom', e.target.value)}
+                      placeholder="e.g. 2018"
+                      className="w-full rounded-xl glass-modern-input px-3 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      Year To (End Year / Present)
+                    </label>
+                    <input
+                      type="text"
+                      value={form.yearTo}
+                      onChange={(e) => handleFieldChange('yearTo', e.target.value)}
+                      placeholder="e.g. 2024 or Present"
+                      className="w-full rounded-xl glass-modern-input px-3 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Year Range Presets */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold mr-1">Presets:</span>
+                  {[
+                    { label: '2018 - 2024', from: '2018', to: '2024' },
+                    { label: '2020 - Present', from: '2020', to: 'Present' },
+                    { label: '2015 - 2020', from: '2015', to: '2020' },
+                    { label: 'All Years (Clear)', from: '', to: '' },
+                  ].map((p, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleApplyYearPreset(p.from, p.to)}
+                      className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-white/70 dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/10 hover:border-amber-400/50 text-slate-700 dark:text-slate-300 transition active:scale-95 cursor-pointer"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cross-Variant & Multi-Model Compatibility */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-amber-500" />
+                    Compatible Car Models & Variants ({compatibleVehicles.length})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPlatformTwinHelp((v) => !v)}
+                    className="text-[10px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                  >
+                    <Info className="w-3 h-3" /> Shared Platform Info
+                  </button>
+                </div>
+
+                {showPlatformTwinHelp && (
+                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-slate-700 dark:text-slate-300 space-y-1 animate-fadeIn">
+                    <p className="font-bold text-amber-700 dark:text-amber-400">
+                      💡 Shared Platform & Variant Matching:
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      Products like mats, filters, brake pads, and mirrors often share identical dimensions across brand twins (e.g. <b>Maruti Baleno & Toyota Glanza</b>, <b>Brezza & Urban Cruiser</b>, <b>Creta & Seltos</b>). Add both models so your team can find this stock under either vehicle during job cards and billing!
+                    </p>
+                  </div>
+                )}
+
+                {/* Custom Model / Variant Input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customVehicleInput}
+                    onChange={(e) => setCustomVehicleInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddVehicleTag(customVehicleInput);
+                      }
+                    }}
+                    placeholder="Type ANY custom model / variant (e.g. Swift Type 3, Glanza Facelift, Baleno Delta)..."
+                    className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-400/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddVehicleTag(customVehicleInput)}
+                    disabled={!customVehicleInput.trim()}
+                    className="shrink-0 px-4 py-2 rounded-xl glass-gold-btn text-xs font-bold text-slate-950 active:scale-95 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    + Add
+                  </button>
+                </div>
+
+                {/* Selected Vehicle Badges */}
+                {compatibleVehicles.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5 p-3 rounded-2xl bg-slate-100/70 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10">
+                    {compatibleVehicles.map((model, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-400/20 border border-amber-400/40 text-amber-900 dark:text-amber-200 text-xs font-semibold shadow-2xs animate-fadeIn"
+                      >
+                        <Car className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                        <span>{model}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveVehicleTag(idx)}
+                          className="hover:text-rose-500 rounded-full p-0.5 transition"
+                          title="Remove vehicle"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setCompatibleVehicles([])}
+                      className="text-[10px] text-rose-500 hover:underline font-semibold ml-auto px-1"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-400 italic px-1">
+                    No vehicle model selected yet. Click quick tags below or type custom variants.
+                  </p>
+                )}
+
+                {/* Popular Quick Suggestions */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                    Quick Add Common Vehicles & Shared Platforms:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                    {POPULAR_VEHICLE_SUGGESTIONS.map((s, idx) => {
+                      const isSelected = compatibleVehicles.some(
+                        (v) => v.toLowerCase() === s.name.toLowerCase()
+                      );
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleTogglePopularVehicle(s.name)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold border transition active:scale-95 cursor-pointer ${
+                            isSelected
+                              ? 'bg-amber-400 border-amber-400 text-slate-950 font-black shadow-xs'
+                              : 'bg-white/60 dark:bg-white/[0.04] border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-amber-400/40'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          <span>{s.name}</span>
+                          {s.group === 'Platform Twin' && !isSelected && (
+                            <span className="text-[9px] text-amber-500/80">• Twin</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Pricing, Margin & Inventory Quantities */}
+            <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-4 shadow-xs">
+              <label className={labelStyle}>4. Pricing & Inventory Controls</label>
+
+              {/* Price & Cost Price */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                    Selling Price (MRP / Bill ₹) *
                   </label>
                   <input
+                    required
                     type="number"
                     min="0"
-                    value={form.stockQuantity}
-                    onChange={(e) => handleFieldChange('stockQuantity', e.target.value)}
+                    step="0.01"
+                    value={form.price}
+                    onChange={(e) => handleFieldChange('price', e.target.value)}
                     placeholder="0"
                     className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                    Low Stock Alert Threshold
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                    Buying / Cost Price (₹)
                   </label>
                   <input
                     type="number"
                     min="0"
-                    value={form.minimumStockQuantity}
-                    onChange={(e) => handleFieldChange('minimumStockQuantity', e.target.value)}
+                    step="0.01"
+                    value={form.costPrice}
+                    onChange={(e) => handleFieldChange('costPrice', e.target.value)}
                     placeholder="0"
                     className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
                   />
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Multi-image Uploader Bento */}
-          <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <label className={labelStyle}>Media Photos (4:3)</label>
-              <span className="text-[10px] text-slate-400">Optional</span>
-            </div>
-
-            <div className="flex flex-wrap gap-2.5">
-              {images.map((img, idx) => (
-                <div key={idx} className="group relative h-16 w-20 shrink-0">
-                  <div
-                    className={`h-full w-full overflow-hidden rounded-xl border-2 transition-all ${
-                      thumbnailIndex === idx
-                        ? 'border-amber-400 shadow-md ring-2 ring-amber-400/30'
-                        : 'border-transparent'
-                    }`}
-                  >
-                    <img src={img} alt={`Upload ${idx + 1}`} className="h-full w-full object-cover" />
+              {/* Profit & Margin Indicator */}
+              {profitMetrics && (
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-bold">
+                    <TrendingUp className="w-4 h-4" />
+                    <span>Estimated Unit Margin</span>
                   </div>
-                  <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition bg-slate-950/50 rounded-xl">
-                    <button
-                      type="button"
-                      title="Set as primary thumbnail"
-                      onClick={() => setThumbnailIndex(idx)}
-                      className="h-5 w-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow"
-                    >
-                      <Star className="h-2.5 w-2.5" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Remove image"
-                      onClick={() => handleRemoveImage(idx)}
-                      className="h-5 w-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow"
-                    >
-                      <Trash2 className="h-2.5 w-2.5" />
-                    </button>
+                  <div className="flex items-center gap-2 font-mono">
+                    <span className="font-bold text-emerald-700 dark:text-emerald-300">
+                      Profit: ₹{profitMetrics.profit.toLocaleString('en-IN')}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 font-extrabold text-[11px]">
+                      +{profitMetrics.margin}%
+                    </span>
                   </div>
-                  {thumbnailIndex === idx && (
-                    <div className="absolute left-1 top-1 rounded bg-amber-400 px-1 py-0.5 shadow">
-                      <Star className="h-2 w-2 fill-slate-950 text-slate-950" />
-                    </div>
-                  )}
                 </div>
-              ))}
+              )}
 
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="h-16 w-20 shrink-0 rounded-xl border border-dashed border-amber-400/50 bg-amber-400/10 flex flex-col items-center justify-center gap-1 text-amber-500 hover:bg-amber-400/20 active:scale-95 transition cursor-pointer"
-              >
-                <ImagePlus className="h-4 w-4" />
-                <span className="text-[10px] font-bold">Add</span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageFileSelected}
-                className="hidden"
+              {/* Physical Stock Specific Controls */}
+              {form.itemType === 'PRODUCT' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                      Initial Stock Count
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.stockQuantity}
+                      onChange={(e) => handleFieldChange('stockQuantity', e.target.value)}
+                      placeholder="0"
+                      className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                      Unit of Measure
+                    </label>
+                    <select
+                      value={form.unit}
+                      onChange={(e) => handleFieldChange('unit', e.target.value)}
+                      className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none"
+                    >
+                      {COMMON_UNITS.map((u) => (
+                        <option key={u} value={u} className="text-slate-900 dark:bg-zinc-900">
+                          {u}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                      Low Stock Alert Threshold
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.minimumStockQuantity}
+                      onChange={(e) => handleFieldChange('minimumStockQuantity', e.target.value)}
+                      placeholder="2"
+                      className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none font-mono"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Warehouse / Shelf Location */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                  Storage Bin / Rack Location
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={form.location}
+                    onChange={(e) => handleFieldChange('location', e.target.value)}
+                    placeholder="e.g. Shelf A-3, Bin 12, Main Lubricant Bay"
+                    className="w-full rounded-xl glass-modern-input pl-10 pr-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Media Photos (Studio 4:3) */}
+            <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <label className={labelStyle}>5. Product Photos (4:3 Ratio)</label>
+                <span className="text-[10px] text-slate-400">Multiple Photos Supported</span>
+              </div>
+
+              <div className="flex flex-wrap gap-2.5">
+                {images.map((img, idx) => (
+                  <div key={idx} className="group relative h-20 w-24 shrink-0">
+                    <div
+                      className={`h-full w-full overflow-hidden rounded-2xl border-2 transition-all ${
+                        thumbnailIndex === idx
+                          ? 'border-amber-400 shadow-md ring-2 ring-amber-400/30'
+                          : 'border-slate-200/80 dark:border-white/10'
+                      }`}
+                    >
+                      <img src={img} alt={`Upload ${idx + 1}`} className="h-full w-full object-cover" />
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition bg-slate-950/60 rounded-2xl">
+                      <button
+                        type="button"
+                        title="Set as primary thumbnail"
+                        onClick={() => setThumbnailIndex(idx)}
+                        className="h-6 w-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow-xs active:scale-90 transition"
+                      >
+                        <Star className="h-3 w-3 fill-slate-950 text-slate-950" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Remove image"
+                        onClick={() => handleRemoveImage(idx)}
+                        className="h-6 w-6 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-xs active:scale-90 transition"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                    {thumbnailIndex === idx && (
+                      <div className="absolute left-1.5 top-1.5 rounded-md bg-amber-400 px-1 py-0.5 shadow-xs">
+                        <Star className="h-2.5 w-2.5 fill-slate-950 text-slate-950" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-20 w-24 shrink-0 rounded-2xl border-2 border-dashed border-amber-400/50 bg-amber-400/10 flex flex-col items-center justify-center gap-1 text-amber-600 dark:text-amber-400 hover:bg-amber-400/20 active:scale-95 transition cursor-pointer"
+                >
+                  <ImagePlus className="h-5 w-5" />
+                  <span className="text-[10px] font-bold">Add Photo</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageFileSelected}
+                  className="hidden"
+                />
+              </div>
+            </div>
+
+            {/* 6. Description & Specs */}
+            <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-2 shadow-xs">
+              <label className={labelStyle}>6. Technical Specs & Notes</label>
+              <textarea
+                rows={3}
+                value={form.description}
+                onChange={(e) => handleFieldChange('description', e.target.value)}
+                placeholder="Product specifications, OEM part cross-references, warranty details, installation notes..."
+                className="w-full rounded-xl glass-modern-input px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none resize-none"
               />
             </div>
           </div>
 
-          {/* Description Bento */}
-          <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-2">
-            <label className={labelStyle}>Description & Notes</label>
-            <textarea
-              rows={3}
-              value={form.description}
-              onChange={(e) => handleFieldChange('description', e.target.value)}
-              placeholder="Product specs, vehicle compatibility, or service details..."
-              className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none resize-none"
-            />
-          </div>
+          {/* ══════════ RIGHT COLUMN (Sticky Live Preview & Summary) ══════════ */}
+          <div className="lg:col-span-4 space-y-5 lg:sticky lg:top-20">
+            {/* Live Catalog Card Preview */}
+            <div className="rounded-3xl glass-modern-card p-4 sm:p-5 space-y-4 shadow-md border-amber-400/20">
+              <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-white/10 pb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5 text-amber-500" /> Live Catalog Preview
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                  {form.itemType === 'PRODUCT' ? 'Stock Item' : 'Service'}
+                </span>
+              </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2.5 pt-2">
-            <button
-              type="button"
-              onClick={() => navigate('/inventory')}
-              className="px-4 py-2 rounded-xl glass-ghost-btn text-xs font-bold text-slate-700 dark:text-slate-300 active:scale-95 transition cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isCreating}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl glass-gold-btn text-xs sm:text-sm font-black text-slate-950 shadow-md active:scale-95 transition disabled:opacity-50 cursor-pointer"
-            >
-              <Plus className="h-4 w-4 stroke-[2.5]" />
-              <span>{isCreating ? 'Creating...' : 'Save Item'}</span>
-            </button>
+              {/* Photo Card Preview */}
+              <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 flex items-center justify-center">
+                {images[thumbnailIndex] ? (
+                  <img
+                    src={images[thumbnailIndex]}
+                    alt="Stock preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-center p-4 text-slate-400 flex flex-col items-center gap-2">
+                    <Package className="w-8 h-8 stroke-1 text-slate-400" />
+                    <span className="text-[11px]">No Photo Uploaded</span>
+                  </div>
+                )}
+                {form.brand && (
+                  <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-lg bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold">
+                    {form.brand}
+                  </div>
+                )}
+              </div>
+
+              {/* Title & Metadata */}
+              <div className="space-y-2">
+                <h3 className="font-black text-sm sm:text-base text-slate-900 dark:text-white leading-snug line-clamp-2">
+                  {form.title.trim() || 'Stock Item Title Here'}
+                </h3>
+
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block uppercase">Selling Price</span>
+                    <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+                      ₹{(Number(form.price) || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+
+                  {form.itemType === 'PRODUCT' && (
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block uppercase">Available Stock</span>
+                      <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200">
+                        {form.stockQuantity || 0} {form.unit}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Compatibility Snippet */}
+                {compatibleVehicles.length > 0 && (
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-white/[0.06] space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Fits:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {compatibleVehicles.slice(0, 3).map((v, i) => (
+                        <span key={i} className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-semibold">
+                          {v}
+                        </span>
+                      ))}
+                      {compatibleVehicles.length > 3 && (
+                        <span className="text-[10px] text-slate-400 font-semibold self-center">
+                          +{compatibleVehicles.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Year Range Snippet */}
+                {(form.yearFrom || form.yearTo) && (
+                  <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Model Years: {form.yearFrom || 'All'} - {form.yearTo || 'Present'}</span>
+                  </div>
+                )}
+
+                {/* Storage Location Snippet */}
+                {form.location && (
+                  <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Location: {form.location}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Quick Save */}
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isCreating || !form.title.trim() || !form.price}
+                className="w-full inline-flex items-center justify-center gap-1.5 py-3 rounded-2xl glass-gold-btn text-xs sm:text-sm font-black text-slate-950 shadow-md active:scale-95 transition disabled:opacity-50 cursor-pointer"
+              >
+                <Plus className="h-4 w-4 stroke-[2.5]" />
+                <span>{isCreating ? 'Saving Stock...' : 'Save Stock Item'}</span>
+              </button>
+            </div>
           </div>
         </form>
       </main>
@@ -462,7 +1072,7 @@ export const AddInventoryItemPage: React.FC = () => {
           isOpen={!!cropSource}
           imageSrc={cropSource}
           aspectRatio={4 / 3}
-          title="Crop Item Photo (4:3 Landscape)"
+          title="Crop Stock Photo (4:3 Landscape)"
           onClose={() => setCropSource(null)}
           onCropComplete={handleCropComplete}
         />

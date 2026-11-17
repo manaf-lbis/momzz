@@ -90,14 +90,30 @@
   }
 
   /* Universal styling for select options across all browsers & dark mode */
+  select {
+    color-scheme: light;
+  }
   select option {
     background-color: #ffffff;
     color: #0f172a;
   }
+  .dark select,
+  html.dark select {
+    color-scheme: dark !important;
+    background-color: #18181b;
+    color: #f8fafc;
+  }
   .dark select option,
   html.dark select option {
+    color-scheme: dark !important;
     background-color: #18181b !important;
     color: #f8fafc !important;
+  }
+  .dark input,
+  html.dark input,
+  .dark textarea,
+  html.dark textarea {
+    color-scheme: dark;
   }
 }
 

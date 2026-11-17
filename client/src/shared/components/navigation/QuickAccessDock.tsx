@@ -117,7 +117,7 @@ export const QuickAccessDock: React.FC = () => {
 
           {/* 4. Inventory */}
           <DockIcon
-            title="Inventory"
+            title="Stocks"
             active={isInventoryActive}
             onClick={() => navigate('/inventory')}
           >

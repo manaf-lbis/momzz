@@ -43,7 +43,12 @@ export class CatalogRepository {
         getTitle: (item) => item.title,
         getSku: (item) => item.sku,
         getCategory: (item) => (item.category as any)?.name,
-        getDescription: (item) => item.description,
+        getDescription: (item) => [
+          item.description,
+          item.brand,
+          ...(item.compatibleVehicles || []),
+          item.yearFrom && item.yearTo ? `${item.yearFrom}-${item.yearTo}` : '',
+        ].filter(Boolean).join(' '),
       },
       180 // Threshold for high quality matches
     );

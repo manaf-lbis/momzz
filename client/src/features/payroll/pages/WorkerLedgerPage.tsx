@@ -1423,7 +1423,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {/* ── MODAL 0: DAY QUICK MARK SHEET ── */}
       {quickMarkDay && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
           onClick={() => setQuickMarkDate(null)}
         >
           <div
@@ -1711,7 +1711,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {showMobileActionSheet && (
         <div
           onClick={() => setShowMobileActionSheet(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn sm:hidden"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn sm:hidden"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1803,7 +1803,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {showOtModal && (
         <div
           onClick={() => setShowOtModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1913,7 +1913,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {showAdvanceModal && worker && (
         <div
           onClick={() => setShowAdvanceModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -2000,7 +2000,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {showSettleModal && worker && (
         <div
           onClick={() => setShowSettleModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -2114,7 +2114,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {showIncentiveModal && worker && (
         <div
           onClick={() => setShowIncentiveModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -2206,7 +2206,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {showEditLeaveModal && (
         <div
           onClick={() => setShowEditLeaveModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -2317,7 +2317,7 @@ export const WorkerLedgerPage: React.FC = () => {
       {showEditOtModal && (
         <div
           onClick={() => setShowEditOtModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -2444,7 +2444,7 @@ export const WorkerLedgerPage: React.FC = () => {
             setShareSettlement(null);
             setCopiedSlip(false);
           }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}

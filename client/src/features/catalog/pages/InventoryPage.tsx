@@ -123,7 +123,7 @@ export const InventoryPage: React.FC = () => {
     () => [
       { key: 'ALL' as StockFilterType, label: `All (${stats?.totalCount ?? 0})` },
       { key: 'LOW_STOCK' as StockFilterType, label: `Low Stock (${stats?.lowStockCount ?? 0})` },
-      { key: 'PRODUCT' as StockFilterType, label: `Spares (${stats?.productCount ?? 0})` },
+      { key: 'PRODUCT' as StockFilterType, label: `Stocks (${stats?.productCount ?? 0})` },
       { key: 'SERVICE' as StockFilterType, label: `Services (${stats?.serviceCount ?? 0})` },
     ],
     [stats]
@@ -144,9 +144,9 @@ export const InventoryPage: React.FC = () => {
         {/* Header */}
         <PageHeader
           backTo="/dashboard"
-          title="Inventory"
+          title="Stocks"
           count={totalCount || undefined}
-          description="Parts & services"
+          description="Stocks & services"
           actions={
             <div className="flex items-center gap-2">
               {isAdmin && (
@@ -156,7 +156,7 @@ export const InventoryPage: React.FC = () => {
                   className="inline-flex shrink-0 items-center justify-center gap-1.5 px-3.5 py-1.5 sm:py-2 rounded-xl glass-gold-btn text-xs sm:text-sm font-black text-slate-950 shadow-md active:scale-95 transition cursor-pointer"
                 >
                   <Plus className="h-4 w-4 stroke-[2.5]" />
-                  <span>Add Part</span>
+                  <span>Add Stock</span>
                 </button>
               )}
             </div>

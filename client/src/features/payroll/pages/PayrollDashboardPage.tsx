@@ -773,13 +773,11 @@ export const PayrollDashboardPage: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-4 font-mono text-slate-600 dark:text-slate-400">
-                        {formatCurrency(w.wageType !== 'MONTHLY' ? Math.max(0, w.unsettledGross - w.unsettledDeductions) : w.unsettledGross)}
+                        {formatCurrency(w.unsettledGross)}
                       </td>
 
                       <td className="py-3 px-4 font-mono text-amber-600 dark:text-amber-400">
-                        {w.wageType !== 'MONTHLY' || w.unsettledDeductions === 0
-                          ? '₹0'
-                          : `-${formatCurrency(w.unsettledDeductions)}`}
+                        {w.unsettledDeductions > 0 ? `-${formatCurrency(w.unsettledDeductions)}` : '₹0'}
                       </td>
 
                       <td className="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400">
@@ -894,41 +892,28 @@ export const PayrollDashboardPage: React.FC = () => {
                   </div>
 
                   {/* Micro Breakdown Row */}
-                  {(() => {
-                    const isDaily = w.wageType !== 'MONTHLY';
-                    const displayGross = isDaily ? Math.max(0, w.unsettledGross - w.unsettledDeductions) : w.unsettledGross;
-                    const displayDeductions = isDaily ? 0 : w.unsettledDeductions;
-                    const displayOtInc = (w.unsettledOtAmount || 0) + (w.unsettledIncentives || 0);
-
-                    return (
-                      <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-slate-100/70 dark:bg-white/[0.03] text-center text-[10px] font-mono">
-                        <div>
-                          <span className="text-slate-400 block text-[9px] uppercase">{isDaily ? 'Wages' : 'Gross'}</span>
-                          <span className="font-semibold text-slate-700 dark:text-slate-300">
-                            {formatCurrency(displayGross)}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block text-[9px] uppercase">
-                            {isDaily ? 'OT / Extra' : 'Leaves'}
-                          </span>
-                          <span
-                            className={`font-semibold ${
-                              isDaily ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
-                            }`}
-                          >
-                            {isDaily ? `+${formatCurrency(displayOtInc)}` : `-${formatCurrency(displayDeductions)}`}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block text-[9px] uppercase">Advance</span>
-                          <span className="font-semibold text-rose-600 dark:text-rose-400">
-                            -{formatCurrency(w.unsettledAdvances)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-slate-100/70 dark:bg-white/[0.03] text-center text-[10px] font-mono">
+                    <div>
+                      <span className="text-slate-400 block text-[9px] uppercase">Base Wages</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        {formatCurrency(w.unsettledGross)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[9px] uppercase">
+                        Overtime
+                      </span>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                        +{formatCurrency(w.unsettledOtAmount)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[9px] uppercase">Deductions</span>
+                      <span className="font-semibold text-rose-600 dark:text-rose-400">
+                        -{formatCurrency((w.unsettledDeductions || 0) + (w.unsettledAdvances || 0))}
+                      </span>
+                    </div>
+                  </div>
 
                   {/* Net Dues & Actions Row */}
                   <div className="flex items-center justify-between pt-1">
@@ -1000,7 +985,7 @@ export const PayrollDashboardPage: React.FC = () => {
       {showBulkLeaveModal && (
         <div
           onClick={() => setShowBulkLeaveModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1201,7 +1186,7 @@ export const PayrollDashboardPage: React.FC = () => {
       {showAdvanceModal && (
         <div
           onClick={() => setShowAdvanceModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1308,7 +1293,7 @@ export const PayrollDashboardPage: React.FC = () => {
       {showIncentiveModal && (
         <div
           onClick={() => setShowIncentiveModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1419,7 +1404,7 @@ export const PayrollDashboardPage: React.FC = () => {
       {showSettleModal && selectedWorker && (
         <div
           onClick={() => setShowSettleModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1533,7 +1518,7 @@ export const PayrollDashboardPage: React.FC = () => {
       {showWageModal && selectedWorker && (
         <div
           onClick={() => setShowWageModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1674,7 +1659,7 @@ export const PayrollDashboardPage: React.FC = () => {
       {showHolidayModal && (
         <div
           onClick={() => setShowHolidayModal(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1784,7 +1769,7 @@ export const PayrollDashboardPage: React.FC = () => {
       {rejectingClaim && (
         <div
           onClick={() => setRejectingClaim(null)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}

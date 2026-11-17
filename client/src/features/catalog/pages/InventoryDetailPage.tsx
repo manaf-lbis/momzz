@@ -1267,7 +1267,7 @@ export const InventoryDetailPage: React.FC = () => {
                 <div className="p-3 flex items-center justify-between">
                   <span className="text-slate-400">Type</span>
                   <span className="text-slate-800 dark:text-slate-200 font-semibold">
-                    {isService ? 'Labor / Workshop Service' : 'Physical Spare Part'}
+                    {isService ? 'Labor / Workshop Service' : 'Physical Stock Item'}
                   </span>
                 </div>
 
@@ -1541,7 +1541,7 @@ export const InventoryDetailPage: React.FC = () => {
           isOpen={!!cropSource}
           imageSrc={cropSource}
           aspectRatio={4 / 3}
-          title="Crop Spare Part Photo (4:3 Landscape)"
+          title="Crop Stock Photo (4:3 Landscape)"
           onClose={() => setCropSource(null)}
           onCropComplete={handleCropComplete}
         />
@@ -1690,8 +1690,8 @@ export const InventoryDetailPage: React.FC = () => {
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={confirmDelete}
-        title="Archive Spare Part"
-        message={`Are you sure you want to archive "${item.title}"? It will no longer appear in the active spare parts catalog.`}
+        title="Archive Stock Item"
+        message={`Are you sure you want to archive "${item.title}"? It will no longer appear in the active stocks inventory.`}
         confirmText="Archive Part"
         cancelText="Cancel"
         variant="danger"
