@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Barcode,
@@ -14,6 +14,8 @@ import {
   MapPin,
   Package,
   Plus,
+  RotateCcw,
+  Search,
   Sparkles,
   Star,
   Tag,
@@ -26,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../../shared/components/navbar/Navbar';
 import { PageHeader } from '../../../shared/components/common/PageHeader';
 import {
+  CatalogItem,
   useCreateCatalogItemMutation,
   useCreateCategoryMutation,
   useGetCategoriesQuery,
@@ -87,32 +90,86 @@ export const AddInventoryItemPage: React.FC = () => {
   const [customVehicleInput, setCustomVehicleInput] = useState('');
   const [showPlatformTwinHelp, setShowPlatformTwinHelp] = useState(false);
 
-  // Real-time duplicate & related search
-  const trimmedDupQuery = form.title.trim();
+  // ── DEBOUNCING FOR LIVE DUPLICATE SEARCH (280ms) ──
+  const [debouncedTitle, setDebouncedTitle] = useState('');
+  const [isDebouncing, setIsDebouncing] = useState(false);
+
+  useEffect(() => {
+    const raw = form.title.trim();
+    if (raw === debouncedTitle) {
+      setIsDebouncing(false);
+      return;
+    }
+    setIsDebouncing(true);
+    const timer = setTimeout(() => {
+      setDebouncedTitle(raw);
+      setIsDebouncing(false);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [form.title, debouncedTitle]);
+
+  // Load existing catalog items
   const { data: categoryData, refetch: refetchCategories } = useGetCategoriesQuery();
-  const { data: catalogData } = useGetCatalogQuery(
-    { q: trimmedDupQuery.length >= 2 ? trimmedDupQuery : undefined, limit: 30 },
-    { skip: trimmedDupQuery.length < 2 }
+  // 1. Full catalog cache
+  const { data: fullCatalogData, isLoading: isLoadingCatalog } = useGetCatalogQuery();
+  // 2. Query search server for targeted match tokens
+  const trimmedSearchToken = debouncedTitle.slice(0, 25);
+  const { data: searchCatalogData, isFetching: isSearchingServer } = useGetCatalogQuery(
+    { q: trimmedSearchToken, limit: 50 },
+    { skip: trimmedSearchToken.length < 2 }
   );
 
   const [createCatalogItem, { isLoading: isCreating }] = useCreateCatalogItemMutation();
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
 
   const categories = categoryData?.data || [];
-  const existingItems = catalogData?.data || [];
 
-  // Duplicate candidates check with high sensitivity
+  // Merge full catalog items and targeted server search items
+  const existingItems = useMemo<CatalogItem[]>(() => {
+    const map = new Map<string, CatalogItem>();
+    for (const it of fullCatalogData?.data || []) {
+      const key = it.id || (it as any)._id;
+      if (key) map.set(key, it);
+    }
+    for (const it of searchCatalogData?.data || []) {
+      const key = it.id || (it as any)._id;
+      if (key) map.set(key, it);
+    }
+    return Array.from(map.values());
+  }, [fullCatalogData, searchCatalogData]);
+
+  // Duplicate candidates check with optimized automotive similarity
+  const [dismissDuplicateNotice, setDismissDuplicateNotice] = useState(false);
+
   const duplicateCandidates = useMemo(() => {
-    if (!trimmedDupQuery || trimmedDupQuery.length < 2) return [];
-    return findDuplicateCandidates(
-      trimmedDupQuery,
+    if (!debouncedTitle || debouncedTitle.length < 2) return [];
+
+    const matches = findDuplicateCandidates(
+      debouncedTitle,
       existingItems,
       (item) => item.title,
-      0.72
+      0.60
     );
-  }, [trimmedDupQuery, existingItems]);
 
-  const [dismissDuplicateNotice, setDismissDuplicateNotice] = useState(false);
+    // Also detect duplicate SKU if entered
+    const cleanSku = form.sku.trim().toUpperCase();
+    if (cleanSku) {
+      for (const item of existingItems) {
+        if (item.sku && item.sku.trim().toUpperCase() === cleanSku) {
+          const itemId = item.id || (item as any)._id;
+          if (!matches.some((m) => (m.item.id || (m.item as any)._id) === itemId)) {
+            matches.unshift({
+              item,
+              similarity: 1.0,
+              reason: `Exact SKU Match: "${item.sku}"`,
+            });
+          }
+        }
+      }
+    }
+
+    return matches;
+  }, [debouncedTitle, existingItems, form.sku]);
 
   // Multi-image state
   const [images, setImages] = useState<string[]>([]);
@@ -357,92 +414,146 @@ export const AddInventoryItemPage: React.FC = () => {
 
               {/* Title with Live Duplicate Finder */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
-                  Stock Item Title *
-                </label>
-                <input
-                  required
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => handleFieldChange('title', e.target.value)}
-                  placeholder="e.g. 5D All-Weather Floor Mats, Mobil 1 5W-40 Synthetic Oil, Brake Pads..."
-                  className="w-full rounded-xl glass-modern-input px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-400/40"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    Stock Item Title *
+                  </label>
+                  {isDebouncing || isSearchingServer ? (
+                    <span className="text-[10px] text-amber-500 font-mono flex items-center gap-1 animate-pulse">
+                      <Sparkles className="w-3 h-3" /> Checking duplicates...
+                    </span>
+                  ) : duplicateCandidates.length > 0 && !dismissDuplicateNotice ? (
+                    <span className="text-[10px] text-rose-500 font-bold flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" /> {duplicateCandidates.length} existing similar item{duplicateCandidates.length > 1 ? 's' : ''} found
+                    </span>
+                  ) : debouncedTitle.length >= 2 ? (
+                    <span className="text-[10px] text-emerald-500 font-semibold flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Unique Title Verified
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="relative">
+                  <input
+                    required
+                    type="text"
+                    value={form.title}
+                    onChange={(e) => handleFieldChange('title', e.target.value)}
+                    placeholder="e.g. 5D All-Weather Floor Mats, Mobil 1 5W-40 Synthetic Oil, Brake Pads..."
+                    className={`w-full rounded-xl glass-modern-input px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 ${
+                      duplicateCandidates.length > 0 && !dismissDuplicateNotice
+                        ? 'border-amber-500/60 focus:ring-amber-500/40 bg-amber-500/[0.02]'
+                        : 'focus:ring-amber-400/40'
+                    }`}
+                  />
+                  {form.title && (
+                    <button
+                      type="button"
+                      onClick={() => handleFieldChange('title', '')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+                      title="Clear Title"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
 
                 {/* ── LIVE DUPLICATE / RELATED STOCK SUGGESTIONS TRAY ── */}
                 {duplicateCandidates.length > 0 && !dismissDuplicateNotice && (
-                  <div className="mt-3 rounded-2xl border border-amber-500/40 bg-amber-500/[0.08] dark:bg-amber-500/[0.05] p-3 sm:p-4 space-y-2.5 animate-fadeIn">
-                    <div className="flex items-center justify-between gap-2">
+                  <div className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-500/[0.08] dark:bg-amber-500/[0.06] p-3 sm:p-4 space-y-3 animate-fadeIn shadow-xs">
+                    <div className="flex items-center justify-between gap-2 border-b border-amber-500/20 pb-2.5">
                       <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-xs">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
                         <span>
-                          {duplicateCandidates.length} Similar / Existing Stock{duplicateCandidates.length > 1 ? 's' : ''} Found
+                          {duplicateCandidates.length} Existing Stock{duplicateCandidates.length > 1 ? 's' : ''} in Inventory Match This Name
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setDismissDuplicateNotice(true)}
-                        className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline"
+                        className="text-[10px] font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 underline"
                       >
                         Dismiss warning
                       </button>
                     </div>
 
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                      To prevent accidental duplicate stock records, check if the item already exists in your inventory:
+                    <p className="text-[11px] text-slate-700 dark:text-slate-300">
+                      We found existing items with identical or closely matching keywords. Check if you want to update an existing record instead of creating a duplicate:
                     </p>
 
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                      {duplicateCandidates.map(({ item, reason, similarity }) => (
-                        <div
-                          key={item.id || item._id}
-                          className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-white/80 dark:bg-zinc-900/90 border border-amber-500/20 text-xs shadow-2xs"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            {item.thumbnailUrl ? (
-                              <img
-                                src={item.thumbnailUrl}
-                                alt={item.title}
-                                className="w-9 h-9 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-white/10"
-                              />
-                            ) : (
-                              <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
-                                <Package className="w-4 h-4" />
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <p className="font-bold text-slate-900 dark:text-white truncate">
-                                {item.title}
-                              </p>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
-                                <span>{item.category?.name || 'General'}</span>
-                                {item.sku && <span>• SKU: {item.sku}</span>}
-                                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                  In Stock: {item.stockQuantity}
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {duplicateCandidates.map(({ item, reason, similarity }) => {
+                        const itemId = item.id || (item as any)._id;
+                        const matchPercent = Math.round(similarity * 100);
+                        const isHighDuplicate = similarity >= 0.85;
+
+                        return (
+                          <div
+                            key={itemId}
+                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl border text-xs shadow-2xs transition-all ${
+                              isHighDuplicate
+                                ? 'bg-amber-50 dark:bg-zinc-900/90 border-amber-400/40 ring-1 ring-amber-400/20'
+                                : 'bg-white/80 dark:bg-zinc-900/80 border-slate-200/80 dark:border-white/10'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5 min-w-0">
+                              {item.thumbnailUrl ? (
+                                <img
+                                  src={item.thumbnailUrl}
+                                  alt={item.title}
+                                  className="w-10 h-10 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-white/10 mt-0.5"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                                  <Package className="w-5 h-5" />
+                                </div>
+                              )}
+                              <div className="min-w-0 space-y-0.5">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-bold text-slate-900 dark:text-white truncate">
+                                    {item.title}
+                                  </p>
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded-md font-mono text-[9px] font-bold ${
+                                      isHighDuplicate
+                                        ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400'
+                                        : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                                    }`}
+                                  >
+                                    {matchPercent}% Match
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 font-mono flex-wrap">
+                                  <span>{item.category?.name || 'General'}</span>
+                                  {item.sku && <span>• SKU: {item.sku}</span>}
+                                  {item.brand && <span>• {item.brand}</span>}
+                                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                    Stock: {item.stockQuantity} {item.unit || 'pcs'}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-amber-700 dark:text-amber-300 font-medium block">
+                                  {reason}
                                 </span>
                               </div>
-                              <span className="text-[9px] text-amber-600 dark:text-amber-400 italic">
-                                {reason} ({(similarity * 100).toFixed(0)}% match)
+                            </div>
+
+                            <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-white/5">
+                              <span className="font-mono font-black text-slate-900 dark:text-white text-sm">
+                                ₹{item.price.toLocaleString('en-IN')}
                               </span>
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/inventory/${itemId}`)}
+                                className="px-2.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs transition active:scale-95 flex items-center gap-1 shadow-xs cursor-pointer"
+                                title="Open & manage this existing stock item"
+                              >
+                                <span>View Item</span>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="font-mono font-bold text-slate-900 dark:text-white text-xs">
-                              ₹{item.price.toLocaleString('en-IN')}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/inventory/${item.id || item._id}`)}
-                              className="p-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-[10px] transition active:scale-95 flex items-center gap-1 shadow-xs"
-                              title="View & manage this existing item"
-                            >
-                              <span>View Item</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1049,6 +1160,26 @@ export const AddInventoryItemPage: React.FC = () => {
                     <span>Location: {form.location}</span>
                   </div>
                 )}
+
+                {/* Duplicate Status Card in Preview */}
+                <div className="pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
+                  {duplicateCandidates.length > 0 ? (
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+                      <span>{duplicateCandidates.length} potential duplicate(s) in inventory</span>
+                    </div>
+                  ) : debouncedTitle.length >= 2 ? (
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                      <Check className="w-4 h-4 shrink-0 text-emerald-500" />
+                      <span>Unique stock title confirmed</span>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/[0.03] text-[11px] text-slate-400 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 shrink-0" />
+                      <span>Type title to check duplicates</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Bottom Quick Save */}

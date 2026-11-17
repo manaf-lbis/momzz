@@ -361,24 +361,61 @@ export function advancedSearch<T>(
 /**
  * Checks if a candidate title is a duplicate or near-duplicate of an existing item.
  */
+const AUTOMOTIVE_STOP_WORDS = new Set(['for', 'of', 'the', 'in', 'and', 'with', 'to', 'a', 'an', 'type', 'car', 'auto']);
+
+function stemAutomotiveToken(word: string): string {
+  if (word.length > 3 && word.endsWith('s') && !word.endsWith('ss')) {
+    return word.slice(0, -1);
+  }
+  return word;
+}
+
+function getMeaningfulTokens(text: string): string[] {
+  const norm = normalizeSearchText(text);
+  if (!norm) return [];
+  return norm
+    .split(' ')
+    .filter((t) => t.length > 0 && !AUTOMOTIVE_STOP_WORDS.has(t))
+    .map(stemAutomotiveToken);
+}
+
+function computeTokenSimilarity(t1: string, t2: string): number {
+  if (t1 === t2) return 1.0;
+  const maxLen = Math.max(t1.length, t2.length);
+  if (maxLen === 0) return 1.0;
+  return Math.max(0, 1 - damerauLevenshtein(t1, t2) / maxLen);
+}
+
+
+/**
+ * Checks if a candidate title is a duplicate or near-duplicate of an existing item.
+ * Supports automotive platform variants, reordered keywords, stripped alphanumeric containment,
+ * and fuzzy typo tolerance.
+ */
 export function findDuplicateCandidates<T>(
   candidateTitle: string,
   existingItems: T[],
   getTitle: (item: T) => string,
-  threshold = 0.82
+  threshold = 0.60
 ): Array<{ item: T; similarity: number; reason: string }> {
-  const normCandidate = normalizeSearchText(candidateTitle);
-  const stripCandidate = stripToAlphanumeric(candidateTitle);
-  const candidateTokens = tokenize(normCandidate).sort().join(' ');
+  if (!candidateTitle || !candidateTitle.trim() || candidateTitle.trim().length < 2) return [];
+
+  const rawCandidate = candidateTitle.trim();
+  const normCandidate = normalizeSearchText(rawCandidate);
+  const stripCandidate = stripToAlphanumeric(rawCandidate);
+  const tokensCandidate = getMeaningfulTokens(normCandidate);
+  const sortedTokensCandidate = [...tokensCandidate].sort().join(' ');
 
   const duplicates: Array<{ item: T; similarity: number; reason: string }> = [];
 
   for (const item of existingItems) {
     const rawExisting = getTitle(item);
+    if (!rawExisting || !rawExisting.trim()) continue;
+
     const normExisting = normalizeSearchText(rawExisting);
     const stripExisting = stripToAlphanumeric(rawExisting);
-    const existingTokens = tokenize(normExisting).sort().join(' ');
 
+    // 1. Exact normalized match
     if (normCandidate === normExisting) {
       duplicates.push({
         item,
@@ -388,33 +425,117 @@ export function findDuplicateCandidates<T>(
       continue;
     }
 
+    // 2. Exact stripped match (ignores punctuation & spaces, e.g. "10W-40" vs "10w40")
     if (stripCandidate === stripExisting && stripCandidate.length >= 3) {
       duplicates.push({
         item,
         similarity: 0.98,
-        reason: `Spelling/spacing identical to "${rawExisting}"`,
+        reason: `Identical spelling/spacing to "${rawExisting}"`,
       });
       continue;
     }
 
-    if (candidateTokens === existingTokens && candidateTokens.length >= 4) {
+    // 3. Substring containment on stripped text (e.g. "mobil15w40" inside "mobil15w40syntheticengineoil")
+    if (stripCandidate.length >= 4 && stripExisting.length >= 4) {
+      if (stripExisting.includes(stripCandidate)) {
+        duplicates.push({
+          item,
+          similarity: 0.92,
+          reason: `Matches base of "${rawExisting}"`,
+        });
+        continue;
+      }
+      if (stripCandidate.includes(stripExisting)) {
+        duplicates.push({
+          item,
+          similarity: 0.91,
+          reason: `Extends existing "${rawExisting}"`,
+        });
+        continue;
+      }
+    }
+
+    const tokensExisting = getMeaningfulTokens(normExisting);
+    if (tokensCandidate.length === 0 || tokensExisting.length === 0) continue;
+
+    // 4. Sorted token match (same words in different order)
+    const sortedTokensExisting = [...tokensExisting].sort().join(' ');
+    if (sortedTokensCandidate === sortedTokensExisting && sortedTokensCandidate.length >= 3) {
       duplicates.push({
         item,
         similarity: 0.95,
-        reason: `Same words as "${rawExisting}"`,
+        reason: `Same core words as "${rawExisting}"`,
       });
       continue;
     }
 
-    const editSim = editSimilarity(normCandidate, normExisting);
-    const bigramSim = ngramSimilarity(normCandidate, normExisting, 2);
-    const combinedSim = editSim * 0.6 + bigramSim * 0.4;
+    // 5. Token containment & Jaccard overlap
+    let matchCountCandidate = 0;
+    let totalScore = 0;
+    for (const tC of tokensCandidate) {
+      let best = 0;
+      for (const tE of tokensExisting) {
+        const sim = computeTokenSimilarity(tC, tE);
+        if (sim > best) best = sim;
+      }
+      if (best >= 0.75) {
+        matchCountCandidate++;
+        totalScore += best;
+      }
+    }
 
-    if (combinedSim >= threshold) {
+    let matchCountExisting = 0;
+    for (const tE of tokensExisting) {
+      let best = 0;
+      for (const tC of tokensCandidate) {
+        const sim = computeTokenSimilarity(tE, tC);
+        if (sim > best) best = sim;
+      }
+      if (best >= 0.75) matchCountExisting++;
+    }
+
+    const existingContainment = tokensExisting.length > 0 ? matchCountExisting / tokensExisting.length : 0;
+    const candidateContainment = tokensCandidate.length > 0 ? matchCountCandidate / tokensCandidate.length : 0;
+
+    const unionCount = tokensCandidate.length + tokensExisting.length - matchCountCandidate;
+    const jaccard = unionCount > 0 ? totalScore / unionCount : 0;
+    const bigram = ngramSimilarity(normCandidate, normExisting, 2);
+
+    // If existing item's keywords are almost all inside the candidate (e.g. "Swift 5D Mat" inside "5D Mat for Swift Type 3")
+    if (existingContainment >= 0.75 && tokensExisting.length >= 2) {
+      const sim = Math.min(0.92, Math.max(0.75, 0.75 + (existingContainment * 0.12) + (jaccard * 0.10)));
       duplicates.push({
         item,
-        similarity: Math.round(combinedSim * 100) / 100,
-        reason: `Very similar name to "${rawExisting}" (${Math.round(combinedSim * 100)}% match)`,
+        similarity: Math.round(sim * 100) / 100,
+        reason: `Contains keywords from "${rawExisting}" (${Math.round(sim * 100)}% match)`,
+      });
+      continue;
+    }
+
+    // If candidate keywords are almost all inside existing item
+    if (candidateContainment >= 0.75 && tokensCandidate.length >= 2) {
+      const sim = Math.min(0.90, Math.max(0.72, 0.70 + (candidateContainment * 0.12) + (jaccard * 0.10)));
+      duplicates.push({
+        item,
+        similarity: Math.round(sim * 100) / 100,
+        reason: `Strong keyword overlap with "${rawExisting}" (${Math.round(sim * 100)}% match)`,
+      });
+      continue;
+    }
+
+    // Levenshtein & N-gram blended similarity for typos
+    const maxLen = Math.max(normCandidate.length, normExisting.length);
+    const editSim = maxLen > 0 ? Math.max(0, 1 - damerauLevenshtein(normCandidate, normExisting) / maxLen) : 0;
+    const blended = Math.max(
+      jaccard * 0.60 + bigram * 0.40,
+      editSim * 0.50 + bigram * 0.50
+    );
+
+    if (blended >= threshold) {
+      duplicates.push({
+        item,
+        similarity: Math.round(blended * 100) / 100,
+        reason: `Similar title to "${rawExisting}" (${Math.round(blended * 100)}% match)`,
       });
     }
   }
