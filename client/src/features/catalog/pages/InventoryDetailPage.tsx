@@ -14,6 +14,7 @@ import {
   X,
   Copy,
   Check,
+  Calendar,
   Car,
   ShoppingBag,
   History,
@@ -539,6 +540,25 @@ export const InventoryDetailPage: React.FC = () => {
                     )}
                   </span>
                 </div>
+
+                {/* Suitable Car Variants & Year Range */}
+                {((item.compatibleVehicles && item.compatibleVehicles.length > 0) || item.yearFrom || item.yearTo) && (
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                    {item.compatibleVehicles && item.compatibleVehicles.length > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/10 dark:bg-amber-400/10 text-amber-700 dark:text-amber-300 font-semibold text-xs border border-amber-500/20">
+                        <Car className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span>Fits: {item.compatibleVehicles.join(', ')}</span>
+                      </span>
+                    )}
+
+                    {(item.yearFrom || item.yearTo) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-mono text-xs border border-slate-200/60 dark:border-white/10">
+                        <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span>Model Years: {item.yearFrom || 'All'} - {item.yearTo || 'Present'}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1262,6 +1282,42 @@ export const InventoryDetailPage: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Brand */}
+                {item.brand && (
+                  <div className="p-3 flex items-center justify-between">
+                    <span className="text-slate-400">Brand</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-semibold">{item.brand}</span>
+                  </div>
+                )}
+
+                {/* Model Year Range */}
+                {(item.yearFrom || item.yearTo) && (
+                  <div className="p-3 flex items-center justify-between">
+                    <span className="text-slate-400">Year Range</span>
+                    <span className="font-mono text-amber-600 dark:text-amber-400 font-semibold">
+                      {item.yearFrom || 'All'} - {item.yearTo || 'Present'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Compatible Vehicles */}
+                {item.compatibleVehicles && item.compatibleVehicles.length > 0 && (
+                  <div className="p-3 space-y-1.5">
+                    <span className="text-slate-400 text-xs block">Compatible Vehicles</span>
+                    <div className="flex flex-wrap gap-1">
+                      {item.compatibleVehicles.map((v, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-400/15 border border-amber-400/30 text-amber-900 dark:text-amber-200 text-[11px] font-semibold"
+                        >
+                          <Car className="w-2.5 h-2.5 text-amber-500" />
+                          <span>{v}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Classification */}
                 <div className="p-3 flex items-center justify-between">

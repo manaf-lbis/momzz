@@ -1253,8 +1253,10 @@ export const JobDetailPage: React.FC = () => {
                                 <span className="bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-white/5 truncate max-w-[130px]">
                                   SKU: {task.inventoryItem.sku}
                                 </span>
-                              ) : (task.inventoryItem?.id || task.inventoryItem?._id) ? (
-                                <span>ID: {(task.inventoryItem.id || task.inventoryItem._id)!.slice(-6).toUpperCase()}</span>
+                              ) : task.inventoryItem?.category?.name ? (
+                                <span className="bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-white/5 truncate max-w-[130px]">
+                                  {task.inventoryItem.category.name}
+                                </span>
                               ) : null}
 
                               {task.quantityUsed && task.quantityUsed > 1 && (

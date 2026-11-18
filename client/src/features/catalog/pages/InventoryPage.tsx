@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Car,
+  Calendar,
   AlertTriangle,
   AlertCircle,
   CheckCircle2,
@@ -372,17 +374,40 @@ export const InventoryPage: React.FC = () => {
                         {item.title}
                       </h2>
 
-                      <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                        {item.sku ? (
-                          <span className="bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-white/5 truncate max-w-[120px]">
+                      {/* Suitable Car Variants & Year Range (Replaces ID) */}
+                      <div className="flex items-center gap-1.5 mt-1 text-[10px] flex-wrap">
+                        {item.compatibleVehicles && item.compatibleVehicles.length > 0 ? (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/10 dark:bg-amber-400/10 text-amber-700 dark:text-amber-300 font-semibold text-[10px] border border-amber-500/20 truncate max-w-[220px]"
+                            title={`Fits: ${item.compatibleVehicles.join(', ')}${item.yearFrom || item.yearTo ? ` (${item.yearFrom || ''}${item.yearFrom && item.yearTo ? '-' : ''}${item.yearTo || ''})` : ''}`}
+                          >
+                            <Car className="w-3 h-3 text-amber-500 shrink-0" />
+                            <span className="truncate">{item.compatibleVehicles.join(', ')}</span>
+                            {(item.yearFrom || item.yearTo) && (
+                              <span className="text-[9px] font-mono opacity-80 shrink-0">
+                                ({item.yearFrom || ''}{item.yearFrom && item.yearTo ? '-' : ''}{item.yearTo || ''})
+                              </span>
+                            )}
+                          </span>
+                        ) : (item.yearFrom || item.yearTo) ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-mono text-[10px] border border-slate-200/60 dark:border-white/5">
+                            <Calendar className="w-3 h-3 text-amber-500 shrink-0" />
+                            <span>{item.yearFrom || 'All'} - {item.yearTo || 'Present'}</span>
+                          </span>
+                        ) : item.brand ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-medium text-[10px] border border-slate-200/60 dark:border-white/5 truncate max-w-[140px]">
+                            {item.brand}
+                          </span>
+                        ) : null}
+
+                        {item.sku && (
+                          <span className="bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-white/5 font-mono text-slate-500 dark:text-slate-400 text-[9px] truncate max-w-[120px]">
                             SKU: {item.sku}
                           </span>
-                        ) : (
-                          <span>ID: {itemId.slice(-6).toUpperCase()}</span>
                         )}
 
-                        {item.description && (
-                          <span className="truncate max-w-[140px] text-slate-500 dark:text-slate-400 font-sans" title={item.description}>
+                        {item.description && (!item.compatibleVehicles || item.compatibleVehicles.length === 0) && !item.sku && (
+                          <span className="truncate max-w-[140px] text-slate-500 dark:text-slate-400 font-sans text-[10px]" title={item.description}>
                             &bull; {item.description}
                           </span>
                         )}

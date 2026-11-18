@@ -34,32 +34,12 @@ import {
   useGetCategoriesQuery,
   useGetCatalogQuery,
 } from '../../catalog/api/catalogApi';
+import { useGetJobCardsQuery } from '../../jobs/api/jobApi';
 import { ImageCropperModal } from '../../../shared/components/common/ImageCropperModal';
 import { findDuplicateCandidates } from '../../../shared/utils/searchAlgorithm';
 
 const labelStyle =
   'block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5';
-
-// Popular Indian vehicle platform families & models for 1-click automotive compatibility
-const POPULAR_VEHICLE_SUGGESTIONS = [
-  { name: 'Maruti Swift', group: 'Hatchback' },
-  { name: 'Maruti Baleno', group: 'Platform Twin' },
-  { name: 'Toyota Glanza', group: 'Platform Twin' },
-  { name: 'Maruti Brezza', group: 'Platform Twin' },
-  { name: 'Toyota Urban Cruiser', group: 'Platform Twin' },
-  { name: 'Maruti Dzire', group: 'Sedan' },
-  { name: 'Hyundai i20', group: 'Hatchback' },
-  { name: 'Hyundai Creta', group: 'Platform Twin' },
-  { name: 'Kia Seltos', group: 'Platform Twin' },
-  { name: 'Hyundai Venue', group: 'Platform Twin' },
-  { name: 'Kia Sonet', group: 'Platform Twin' },
-  { name: 'Tata Nexon', group: 'SUV' },
-  { name: 'Tata Punch', group: 'Micro SUV' },
-  { name: 'Mahindra Thar', group: '4x4' },
-  { name: 'Mahindra Scorpio-N', group: 'SUV' },
-  { name: 'Toyota Innova Crysta', group: 'MPV' },
-  { name: 'Honda City', group: 'Sedan' },
-];
 
 const COMMON_UNITS = ['pcs', 'set', 'pair', 'ltr', 'box', 'kit', 'kg', 'meter'];
 
@@ -118,6 +98,9 @@ export const AddInventoryItemPage: React.FC = () => {
     { q: trimmedSearchToken, limit: 50 },
     { skip: trimmedSearchToken.length < 2 }
   );
+
+  // 3. Garage job cards to dynamically source vehicle models/variants
+  const { data: jobCardsData } = useGetJobCardsQuery();
 
   const [createCatalogItem, { isLoading: isCreating }] = useCreateCatalogItemMutation();
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
@@ -218,13 +201,62 @@ export const AddInventoryItemPage: React.FC = () => {
     setCompatibleVehicles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleTogglePopularVehicle = (name: string) => {
-    if (compatibleVehicles.some((v) => v.toLowerCase() === name.toLowerCase())) {
-      setCompatibleVehicles((prev) => prev.filter((v) => v.toLowerCase() !== name.toLowerCase()));
-    } else {
-      setCompatibleVehicles((prev) => [...prev, name]);
+  // Dynamically extract all saved vehicle models from inventory & job cards
+  const savedVehiclesList = useMemo(() => {
+    const counts = new Map<string, number>();
+    const displayNameMap = new Map<string, string>();
+
+    // 1. From existing stock items
+    for (const it of existingItems) {
+      if (Array.isArray(it.compatibleVehicles)) {
+        for (const raw of it.compatibleVehicles) {
+          const trimmed = (raw || '').trim();
+          if (trimmed.length >= 2) {
+            const lower = trimmed.toLowerCase();
+            counts.set(lower, (counts.get(lower) || 0) + 1);
+            if (!displayNameMap.has(lower)) {
+              displayNameMap.set(lower, trimmed);
+            }
+          }
+        }
+      }
     }
-  };
+
+    // 2. From garage job cards
+    const rawJobs: any[] = Array.isArray(jobCardsData?.data)
+      ? jobCardsData.data
+      : Array.isArray(jobCardsData?.data?.jobs)
+      ? jobCardsData.data.jobs
+      : [];
+
+    for (const j of rawJobs) {
+      const name = (j?.vehicleName || '').trim();
+      if (name.length >= 2) {
+        const lower = name.toLowerCase();
+        counts.set(lower, (counts.get(lower) || 0) + 1);
+        if (!displayNameMap.has(lower)) {
+          displayNameMap.set(lower, name);
+        }
+      }
+    }
+
+    // Sort by frequency of use
+    return Array.from(counts.keys())
+      .sort((a, b) => (counts.get(b) || 0) - (counts.get(a) || 0))
+      .map((k) => displayNameMap.get(k)!);
+  }, [existingItems, jobCardsData]);
+
+  // Filter saved suggestions based on user input (or top frequent if input is empty)
+  const filteredSavedSuggestions = useMemo(() => {
+    const query = customVehicleInput.trim().toLowerCase();
+    const unselected = savedVehiclesList.filter(
+      (v) => !compatibleVehicles.some((c) => c.toLowerCase() === v.toLowerCase())
+    );
+    if (!query) {
+      return unselected.slice(0, 16);
+    }
+    return unselected.filter((v) => v.toLowerCase().includes(query)).slice(0, 16);
+  }, [customVehicleInput, savedVehiclesList, compatibleVehicles]);
 
   // Preset Year Ranges
   const handleApplyYearPreset = (from: string, to: string) => {
@@ -787,7 +819,7 @@ export const AddInventoryItemPage: React.FC = () => {
                         handleAddVehicleTag(customVehicleInput);
                       }
                     }}
-                    placeholder="Type ANY custom model / variant (e.g. Swift Type 3, Glanza Facelift, Baleno Delta)..."
+                    placeholder="Type car model or variant (e.g. Swift Type 3, Baleno, Creta, Wagon R)..."
                     className="w-full rounded-xl glass-modern-input px-3.5 py-2 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-400/40"
                   />
                   <button
@@ -830,41 +862,51 @@ export const AddInventoryItemPage: React.FC = () => {
                   </div>
                 ) : (
                   <p className="text-[11px] text-slate-400 italic px-1">
-                    No vehicle model selected yet. Click quick tags below or type custom variants.
+                    No vehicle model selected yet. Type to search saved vehicles or add custom variants.
                   </p>
                 )}
 
-                {/* Popular Quick Suggestions */}
-                <div className="space-y-1.5 pt-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">
-                    Quick Add Common Vehicles & Shared Platforms:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
-                    {POPULAR_VEHICLE_SUGGESTIONS.map((s, idx) => {
-                      const isSelected = compatibleVehicles.some(
-                        (v) => v.toLowerCase() === s.name.toLowerCase()
-                      );
-                      return (
+                {/* Dynamic Saved Vehicle Suggestions & Autocomplete */}
+                {filteredSavedSuggestions.length > 0 ? (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-500" />
+                        {customVehicleInput.trim()
+                          ? `Matching Saved Vehicles (${filteredSavedSuggestions.length}):`
+                          : `Saved Garage & Stock Vehicles (${savedVehiclesList.length}):`}
+                      </span>
+                      <span className="text-[10px] text-slate-400">Click to add</span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                      {filteredSavedSuggestions.map((name) => (
                         <button
-                          key={idx}
+                          key={name}
                           type="button"
-                          onClick={() => handleTogglePopularVehicle(s.name)}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold border transition active:scale-95 cursor-pointer ${
-                            isSelected
-                              ? 'bg-amber-400 border-amber-400 text-slate-950 font-black shadow-xs'
-                              : 'bg-white/60 dark:bg-white/[0.04] border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-amber-400/40'
-                          }`}
+                          onClick={() => handleAddVehicleTag(name)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-white/70 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 hover:border-amber-400/50 hover:bg-amber-400/10 text-slate-700 dark:text-slate-300 transition active:scale-95 cursor-pointer"
                         >
-                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                          <span>{s.name}</span>
-                          {s.group === 'Platform Twin' && !isSelected && (
-                            <span className="text-[9px] text-amber-500/80">• Twin</span>
-                          )}
+                          <Plus className="w-3 h-3 text-amber-500" />
+                          <span>{name}</span>
                         </button>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : customVehicleInput.trim() ? (
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between">
+                    <span>
+                      New variant: <b>"{customVehicleInput.trim()}"</b>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleAddVehicleTag(customVehicleInput)}
+                      className="px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-950 font-bold text-xs cursor-pointer"
+                    >
+                      Press Enter or click + Add
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
 
